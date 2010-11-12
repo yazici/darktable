@@ -3396,85 +3396,7 @@ void CLASS wavelet_denoise()
 
 #endif
 
-void CLASS pre_interpolate_median_filter()
-{
-  if(half_size) return;
-  ushort (*pixo)[4];
-  ushort (*pixi)[4];
-  ushort (*img )[4];
-  int pass, c, i, j, k, row, col, rows;
-  const int num_passes = 1;
-  static const uchar opt[] =	/* Optimal 9-element median search */
-  { 1,2, 4,5, 7,8, 0,1, 3,4, 6,7, 1,2, 4,5, 7,8,
-    0,3, 5,8, 4,7, 3,6, 1,4, 2,5, 4,7, 4,2, 6,4, 4,2 };
 
-  img = (ushort (*)[4]) calloc (height*width, sizeof *image);
-  merror (img, "pre_interpolate_median_filter()");
-  memcpy(img,image,height*width*sizeof *image);
-  for (pass=0; pass < num_passes; pass++)
-  {
-    for (c=0; c < 3; c+=2)
-    {
-      rows = 3;
-      if(FC(rows,3) != c && FC(rows,4) != c) rows++;
-#ifdef _OPENMP
-  #pragma omp parallel for default(shared) private(pixo,pixi,row,col,k,i,j) schedule(static)
-#endif
-      for (row=rows;row<height-3;row+=2)
-      {
-        int med[9];
-        col = 3;
-        if(FC(row,col) != c) col++;
-        pixo = &image[width * row + col];
-        pixi = &img  [width * row + col];
-        for(;col<width-3;col+=2)
-        {
-          for (k=0, i = -2*width; i <= 2*width; i += 2*width)
-            for (j = i-2; j <= i+2; j+=2)
-              med[k++] = pixi[j][c];
-          for (i=0; i < (int)(sizeof opt); i+=2)
-            if     (med[opt[i]] > med[opt[i+1]])
-              SWAP (med[opt[i]] , med[opt[i+1]]);
-          pixo[0][c] = med[4];
-          pixo+=2;
-          pixi+=2;
-        }
-      }
-    }
-  }
-  // now green:
-  const int lim[6] = {0, 1, 2, 1, 0};
-  for (pass=0; pass < num_passes; pass++)
-  {
-#ifdef _OPENMP
-  #pragma omp parallel for default(shared) private(pixo,pixi,row,col,c,k,i,j) schedule(static)
-#endif
-    for (row=3;row<height-3;row++)
-    {
-      int med[9];
-      int cx[6];
-      col = 3;
-      if(FC(row,col) != 1 && FC(row,col) != 3) col++;
-      c = FC(row,col);
-      for(k=0;k<6;k++) cx[k] = (c == 1) ? ((k & 1) ? 3 : 1) : ((k & 1) ? 1 : 3);
-      pixo = &image[width * row + col];
-      pixi = &img  [width * row + col];
-      for(;col<width-3;col+=2)
-      {
-        for (k=0, i = 0; i < 6; i ++)
-          for (j = -lim[i]; j <= lim[i]; j+=2)
-            med[k++] = pixi[width*(i-2) + j][cx[i]];
-        for (i=0; i < (int)(sizeof opt); i+=2)
-          if     (med[opt[i]] > med[opt[i+1]])
-            SWAP (med[opt[i]] , med[opt[i+1]]);
-        pixo[0][c] = med[4];
-        pixo+=2;
-        pixi+=2;
-      }
-    }
-  }
-  free (img);
-}
 
 // green equilibration
 void CLASS green_matching()
@@ -3508,7 +3430,7 @@ void CLASS green_matching()
 
       m1=(o1_1+o1_2+o1_3+o1_4)/4.0;
       m2=(o2_1+o2_2+o2_3+o2_4)/4.0;
-         if (m2 > .0) {
+
       c1=(abs(o1_1-o1_2)+abs(o1_1-o1_3)+abs(o1_1-o1_4)+abs(o1_2-o1_3)+abs(o1_3-o1_4)+abs(o1_2-o1_4))/6.0;
       c2=(abs(o2_1-o2_2)+abs(o2_1-o2_3)+abs(o2_1-o2_4)+abs(o2_2-o2_3)+abs(o2_3-o2_4)+abs(o2_2-o2_4))/6.0;
       if((img[j*width+i][3]<maximum*0.95)&&(c1<maximum*thr)&&(c2<maximum*thr))
@@ -3516,7 +3438,6 @@ void CLASS green_matching()
         f = image[j*width+i][3]*m1/m2;
         image[j*width+i][3]=f>0xffff?0xffff:f;
       }
-    }
     }
   free(img);
 }
@@ -4319,19 +4240,6 @@ void CLASS median_filter()
   }
 }
 
-/*DCB*/
-#include "internal/dcb_demosaicing.c"
-/* VCD*/
-#include "internal/ahd_interpolate_mod.c"
-#include "internal/ahd_partial_interpolate.c"
-#include "internal/refinement.c"
-#include "internal/vcd_interpolate.c"
-#include "internal/es_median_filter.c"
-#include "internal/median_filter_new.c"
-/*AMaZE*/
-#include "internal/amaze_demosaicing.c"
-#include "internal/amaze_ca_correct.c"
-
 void CLASS blend_highlights()
 {
   int clip=INT_MAX, row, col, c, i, j;
@@ -5070,9 +4978,6 @@ int CLASS parse_tiff_ifd (int base)
       case 6:   height = get2();  break;
       case 7:   width += get2();  break;
       case 9:  filters = get2();  break;
-      case 14: case 15: case 16:
- 	maximum = get2();
-	break;
       case 17: case 18:
 	if (type == 3 && len == 1)
             {
@@ -6728,60 +6633,60 @@ void CLASS adobe_coeff (const char *p_make, const char *p_model)
     { "PENTAX K-7", 0, 0,
 	{ 9142,-2947,-678,-8648,16967,1663,-2224,2898,8615 } },
     { "PENTAX 645D", 0, 0x3e00,
- 	{ 10646,-3593,-1158,-3329,11699,1831,-667,2874,6287 } },
-     { "Panasonic DMC-FZ8", 0, 0,
+	{ 10646,-3593,-1158,-3329,11699,1831,-667,2874,6287 } },
+    { "Panasonic DMC-FZ8", 0, 0xf7f,
 	{ 8986,-2755,-802,-6341,13575,3077,-1476,2144,6379 } },
     { "Panasonic DMC-FZ18", 0, 0,
 	{ 9932,-3060,-935,-5809,13331,2753,-1267,2155,5575 } },
-    { "Panasonic DMC-FZ28", 15, 0,
+    { "Panasonic DMC-FZ28", 15, 0xf96,
 	{ 10109,-3488,-993,-5412,12812,2916,-1305,2140,5543 } },
-    { "Panasonic DMC-FZ30", 0, 0,
+    { "Panasonic DMC-FZ30", 0, 0xf94,
 	{ 10976,-4029,-1141,-7918,15491,2600,-1670,2071,8246 } },
     { "Panasonic DMC-FZ3", 143, 0,
 	{ 9938,-2780,-890,-4604,12393,2480,-1117,2304,4620 } },
-     { "Panasonic DMC-FZ40", 143, 0,
- 	{ 13639,-5535,-1371,-1698,9633,2430,316,1152,4108 } },
-     { "Panasonic DMC-FZ50", 0, 0,
+    { "Panasonic DMC-FZ40", 143, 0,
+	{ 13639,-5535,-1371,-1698,9633,2430,316,1152,4108 } },
+    { "Panasonic DMC-FZ50", 0, 0,
 	{ 7906,-2709,-594,-6231,13351,3220,-1922,2631,6537 } },
     { "LEICA V-LUX1", 0, 0,
- 	{ 7906,-2709,-594,-6231,13351,3220,-1922,2631,6537 } },
-     { "Panasonic DMC-L10", 15, 0,
+	{ 7906,-2709,-594,-6231,13351,3220,-1922,2631,6537 } },
+    { "Panasonic DMC-L10", 15, 0xf96,
 	{ 8025,-1942,-1050,-7920,15904,2100,-2456,3005,7039 } },
-    { "Panasonic DMC-L1", 0, 0,
- 	{ 8054,-1885,-1025,-8349,16367,2040,-2805,3542,7629 } },
-     { "LEICA DIGILUX 3", 0, 0,
+    { "Panasonic DMC-L1", 0, 0xf7f,
+	{ 8054,-1885,-1025,-8349,16367,2040,-2805,3542,7629 } },
+    { "LEICA DIGILUX 3", 0, 0xf7f,
 	{ 8054,-1885,-1025,-8349,16367,2040,-2805,3542,7629 } },
     { "Panasonic DMC-LC1", 0, 0,
- 	{ 11340,-4069,-1275,-7555,15266,2448,-2960,3426,7685 } },
-     { "LEICA DIGILUX 2", 0, 0,
 	{ 11340,-4069,-1275,-7555,15266,2448,-2960,3426,7685 } },
-    { "Panasonic DMC-LX1", 0, 0,
+    { "LEICA DIGILUX 2", 0, 0,
+	{ 11340,-4069,-1275,-7555,15266,2448,-2960,3426,7685 } },
+    { "Panasonic DMC-LX1", 0, 0xf7f,
 	{ 10704,-4187,-1230,-8314,15952,2501,-920,945,8927 } },
-    { "LEICA D-LUX2", 0, 0,
- 	{ 10704,-4187,-1230,-8314,15952,2501,-920,945,8927 } },
-     { "Panasonic DMC-LX2", 0, 0,
- 	{ 8048,-2810,-623,-6450,13519,3272,-1700,2146,7049 } },
-     { "LEICA D-LUX3", 0, 0,
+    { "LEICA D-LUX2", 0, 0xf7f,
+	{ 10704,-4187,-1230,-8314,15952,2501,-920,945,8927 } },
+    { "Panasonic DMC-LX2", 0, 0,
+	{ 8048,-2810,-623,-6450,13519,3272,-1700,2146,7049 } },
+    { "LEICA D-LUX3", 0, 0,
 	{ 8048,-2810,-623,-6450,13519,3272,-1700,2146,7049 } },
     { "Panasonic DMC-LX3", 15, 0,
- 	{ 8128,-2668,-655,-6134,13307,3161,-1782,2568,6083 } },
-     { "LEICA D-LUX4", 15, 0,
+	{ 8128,-2668,-655,-6134,13307,3161,-1782,2568,6083 } },
+    { "LEICA D-LUX4", 15, 0,
 	{ 8128,-2668,-655,-6134,13307,3161,-1782,2568,6083 } },
     { "Panasonic DMC-LX5", 143, 0,
- 	{ 10909,-4295,-948,-1333,9306,2399,22,1738,4582 } },
-     { "Panasonic DMC-FZ100", 143, 0,
- 	{ 16197,-6146,-1761,-2393,10765,1869,366,2238,5248 } },
-     { "Panasonic DMC-FX150", 15, 0,
+	{ 10909,-4295,-948,-1333,9306,2399,22,1738,4582 } },
+    { "Panasonic DMC-FZ100", 143, 0xfff,
+	{ 16197,-6146,-1761,-2393,10765,1869,366,2238,5248 } },
+    { "Panasonic DMC-FX150", 15, 0xfff,
 	{ 9082,-2907,-925,-6119,13377,3058,-1797,2641,5609 } },
     { "Panasonic DMC-G10", 0, 0,
 	{ 10113,-3400,-1114,-4765,12683,2317,-377,1437,6710 } },
-    { "Panasonic DMC-G1", 15, 0,
+    { "Panasonic DMC-G1", 15, 0xf94,
 	{ 8199,-2065,-1056,-8124,16156,2033,-2458,3022,7220 } },
-    { "Panasonic DMC-G2", 15, 0,
+    { "Panasonic DMC-G2", 15, 0xf3c,
 	{ 10113,-3400,-1114,-4765,12683,2317,-377,1437,6710 } },
-    { "Panasonic DMC-GF1", 15, 0, 
+    { "Panasonic DMC-GF1", 15, 0xf92,
 	{ 7888,-1902,-1011,-8106,16085,2099,-2353,2866,7330 } },
-    { "Panasonic DMC-GH1", 15, 0,
+    { "Panasonic DMC-GH1", 15, 0xf92,
 	{ 6299,-1466,-532,-6535,13852,2969,-2331,3112,5984 } },
     { "Phase One H 20", 0, 0,		/* DJC */
 	{ 1313,1855,-109,-6715,15908,808,-327,1840,6020 } },
@@ -7233,16 +7138,16 @@ void CLASS identify()
   if (height == 2624 && width == 3936)	/* Pentax K10D and Samsung GX10 */
     { height  = 2616;   width  = 3896; }
   if (height == 3136 && width == 4864)  /* Pentax K20D and Samsung GX20 */
-     { height  = 3124;   width  = 4688; filters = 0x16161616; }
-   if (!strcmp(model,"K-r"))
-     {			width  = 4309; filters = 0x16161616; }
-   if (!strcmp(model,"K-5"))
-     { left_margin = 10; width  = 4950; filters = 0x16161616; }
-   if (!strcmp(model,"K-7"))
-     { height  = 3122;   width  = 4684; filters = 0x16161616; top_margin = 2; }
-   if (!strcmp(model,"645D"))
-     { height  = 5502;   width  = 7328; filters = 0x61616161; top_margin = 29;
-       left_margin = 48; }
+    { height  = 3124;   width  = 4688; filters = 0x16161616; }
+  if (!strcmp(model,"K-r") || !strcmp(model,"K-x"))
+    {			width  = 4309; filters = 0x16161616; }
+  if (!strcmp(model,"K-5"))
+    { left_margin = 10; width  = 4950; filters = 0x16161616; }
+  if (!strcmp(model,"K-7"))
+    { height  = 3122;   width  = 4684; filters = 0x16161616; top_margin = 2; }
+  if (!strcmp(model,"645D"))
+    { height  = 5502;   width  = 7328; filters = 0x61616161; top_margin = 29;
+      left_margin = 48; }
   if (height == 3014 && width == 4096)	/* Ricoh GX200 */
 			width  = 4014;
   if (dng_version) {
@@ -7807,9 +7712,6 @@ konica_400z:
     data_error = -1;
   } else if (!strcmp(model,"*ist DS")) {
     height -= 2;
-  } else if (!strcmp(model,"K-x")) {
-    width = 4309;
-    filters = 0x16161616;
   } else if (!strcmp(model,"Optio S")) {
     if (fsize == 3178560) {
       height = 1540;

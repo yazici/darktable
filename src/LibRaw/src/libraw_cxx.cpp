@@ -201,7 +201,6 @@ LibRaw:: LibRaw(unsigned int flags)
     imgdata.params.auto_bright_thr = LIBRAW_DEFAULT_AUTO_BRIGHTNESS_THRESHOLD;
     imgdata.params.adjust_maximum_thr= LIBRAW_DEFAULT_ADJUST_MAXIMUM_THRESHOLD;
     imgdata.params.green_matching = 0;
-    imgdata.params.pre_interpolate_median_filter = 0;
     imgdata.parent_class = this;
     imgdata.progress_flags = 0;
     tls = new LibRaw_TLS;
@@ -1550,8 +1549,6 @@ void LibRaw::subtract_black()
 int LibRaw::dcraw_process(void)
 {
     int quality,i;
-    int iterations=-1, dcb_enhance=1;
-    int eeci_refine_fl=0, es_med_passes_fl=0;
 
 
     CHECK_ORDER_LOW(LIBRAW_PROGRESS_LOAD_RAW);
@@ -1602,18 +1599,9 @@ int LibRaw::dcraw_process(void)
 
         if (O.user_sat > 0) C.maximum = O.user_sat;
 
-	if (O.dcb_iterations >= 0) iterations = O.dcb_iterations;
-	if (O.dcb_enhance_fl >=0 ) dcb_enhance = O.dcb_enhance_fl;
-	if (O.eeci_refine >=0 ) eeci_refine_fl = O.eeci_refine;
-	if (O.es_med_passes >0 ) es_med_passes_fl = O.es_med_passes;
-
         if (O.green_matching)
             {
                 green_matching();
-            }
-        if (O.pre_interpolate_median_filter)
-            {
-                pre_interpolate_median_filter();
             }
 
         if ( O.document_mode < 2)
@@ -1623,16 +1611,8 @@ int LibRaw::dcraw_process(void)
             }
 
         pre_interpolate();
-        SET_PROC_FLAG(LIBRAW_PROGRESS_PRE_INTERPOLATE);
 
-        if (O.amaze_ca_refine)
-            {
-                CA_correct_RT();
-            }
-        if (O.fbdd_noiserd)
-            {
-                fbdd(O.fbdd_noiserd);	
-            }
+        SET_PROC_FLAG(LIBRAW_PROGRESS_PRE_INTERPOLATE);
 
         if (P1.filters && !O.document_mode) 
             {
