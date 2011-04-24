@@ -724,7 +724,19 @@ static void _iop_gui_enabled_blend_cb(GtkToggleButton *b,_iop_gui_blend_data_t *
 static void
 _blendop_mode_callback (GtkComboBox *combo, _iop_gui_blend_data_t *data)
 {
-  data->module->blend_params->mode = 1+gtk_combo_box_get_active(data->blend_modes_combo);
+  int flags = data->module->blend_params->mode & DEVELOP_BLEND_MASK_FLAG;
+  data->module->blend_params->mode = (1+gtk_combo_box_get_active(data->blend_modes_combo)) | flags;
+  dt_dev_add_history_item(darktable.develop, data->module, TRUE);
+}
+
+static void
+_blendop_masks_callback (GtkComboBox *combo, _iop_gui_blend_data_t *data)
+{
+  data->module->blend_params->mask_id = gtk_combo_box_get_active(data->masks_combo);
+  data->module->blend_params->mode = data->module->blend_params->mask_id ? 
+        data->module->blend_params->mode | DEVELOP_BLEND_MASK_FLAG : 
+        data->module->blend_params->mode&(~DEVELOP_BLEND_MASK_FLAG);
+  
   dt_dev_add_history_item(darktable.develop, data->module, TRUE);
 }
 
@@ -825,6 +837,7 @@ GtkWidget *dt_iop_gui_get_expander(dt_iop_module_t *module)
     /* add masks combo */
     bd->masks_combo = GTK_COMBO_BOX(gtk_combo_box_new_text());
     gtk_combo_box_append_text(GTK_COMBO_BOX(bd->masks_combo), _("none"));
+    gtk_combo_box_append_text(GTK_COMBO_BOX(bd->masks_combo), _("stars"));
     gtk_combo_box_set_active(bd->masks_combo,0);
     
 
@@ -833,7 +846,10 @@ GtkWidget *dt_iop_gui_get_expander(dt_iop_module_t *module)
     g_signal_connect (G_OBJECT (bd->opacity_slider), "value-changed",
                       G_CALLBACK (_blendop_opacity_callback), bd);
     g_signal_connect (G_OBJECT (bd->blend_modes_combo), "changed",
-                      G_CALLBACK (_blendop_mode_callback), bd);
+                      G_CALLBACK (_blendop_mode_callback), bd); 
+          
+    g_signal_connect (G_OBJECT (bd->masks_combo), "changed",
+                      G_CALLBACK (_blendop_masks_callback), bd);
 
     gtk_box_pack_start(GTK_BOX(btb), GTK_WIDGET(bd->enable), FALSE, FALSE, 0);
     gtk_box_pack_start(GTK_BOX(btb), GTK_WIDGET(gtk_hseparator_new()), TRUE, TRUE, 0);
