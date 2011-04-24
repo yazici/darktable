@@ -1,7 +1,8 @@
 /*
     This file is part of darktable,
     copyright (c) 2009--2010 johannes hanika.
-
+    copyright (c) 2011 henrik andersson
+    
     darktable is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
     the Free Software Foundation, either version 3 of the License, or
@@ -469,7 +470,7 @@ dt_dev_pixelpipe_process_rec(dt_dev_pixelpipe_t *pipe, dt_develop_t *dev, void *
     dt_get_times(&start);
     
     /* render mask if needed */
-    dt_develop_blend_process(module, piece, input, *output, &roi_in, roi_out);
+    dt_develop_masks_process(module, piece, input, *output, &roi_in, roi_out);
 
 #ifdef HAVE_OPENCL
     if(module->process_cl && piece->process_cl_ready)
