@@ -41,7 +41,7 @@ typedef struct _iop_gui_blend_data_t
   dt_iop_module_t *module;
   GtkToggleButton *enable;
   GtkVBox *box;
-  GtkComboBox *blend_modes_combo;
+  GtkComboBox *blend_modes_combo, *masks_combo;
   GtkWidget *opacity_slider;
 } _iop_gui_blend_data_t;
 
@@ -792,6 +792,7 @@ GtkWidget *dt_iop_gui_get_expander(dt_iop_module_t *module)
     bd->box = GTK_VBOX(gtk_vbox_new(FALSE,DT_GUI_IOP_MODULE_CONTROL_SPACING));
     GtkWidget *btb = gtk_hbox_new(FALSE,5);
     GtkWidget *bhb = gtk_hbox_new(FALSE,0);
+    GtkWidget *mhb = gtk_hbox_new(FALSE,0);
     GtkWidget *dummybox = gtk_hbox_new(FALSE,0); // hack to indent the drop down box
 
     bd->enable = GTK_TOGGLE_BUTTON(gtk_check_button_new_with_label(_("blend")));
@@ -821,6 +822,12 @@ GtkWidget *dt_iop_gui_get_expander(dt_iop_module_t *module)
     gtk_object_set(GTK_OBJECT(bd->opacity_slider), "tooltip-text", _("set the opacity of the blending"), (char *)NULL);
     gtk_object_set(GTK_OBJECT(bd->blend_modes_combo), "tooltip-text", _("choose blending mode"), (char *)NULL);
 
+    /* add masks combo */
+    bd->masks_combo = GTK_COMBO_BOX(gtk_combo_box_new_text());
+    gtk_combo_box_append_text(GTK_COMBO_BOX(bd->masks_combo), _("none"));
+    gtk_combo_box_set_active(bd->masks_combo,0);
+    
+
     g_signal_connect (G_OBJECT (bd->enable), "toggled",
                       G_CALLBACK (_iop_gui_enabled_blend_cb), bd);
     g_signal_connect (G_OBJECT (bd->opacity_slider), "value-changed",
@@ -834,10 +841,14 @@ GtkWidget *dt_iop_gui_get_expander(dt_iop_module_t *module)
     gtk_box_pack_start(GTK_BOX(bhb), GTK_WIDGET(label), FALSE, FALSE, 5);
     gtk_box_pack_start(GTK_BOX(bhb), GTK_WIDGET(bd->blend_modes_combo), TRUE, TRUE, 5);
 
-    gtk_box_pack_start(GTK_BOX(dummybox), bd->opacity_slider, TRUE, TRUE, 5);
+    gtk_box_pack_start(GTK_BOX(mhb), GTK_WIDGET(gtk_label_new(_("mask"))), FALSE, FALSE, 5);
+    gtk_box_pack_start(GTK_BOX(mhb), GTK_WIDGET(bd->masks_combo), TRUE, TRUE, 5);
 
+    gtk_box_pack_start(GTK_BOX(dummybox), bd->opacity_slider, TRUE, TRUE, 5);
+    
     gtk_box_pack_start(GTK_BOX(bd->box), bhb,TRUE,TRUE,0);
     gtk_box_pack_start(GTK_BOX(bd->box), dummybox,TRUE,TRUE,0);
+    gtk_box_pack_start(GTK_BOX(bd->box), mhb, TRUE, TRUE,0 );
 
     gtk_box_pack_end(GTK_BOX(iopw), GTK_WIDGET(bd->box),TRUE,TRUE,0);
     gtk_box_pack_end(GTK_BOX(iopw), btb,TRUE,TRUE,0);
