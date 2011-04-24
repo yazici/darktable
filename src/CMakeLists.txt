@@ -40,6 +40,7 @@ FILE(GLOB SOURCE_FILES
   "develop/imageop.c"
   "develop/pixelpipe.c"
   "develop/blend.c"
+  "develop/masks.c"
   "dtgtk/*.c" 
   "gui/background_jobs.c"  
   "gui/contrast.c"  
