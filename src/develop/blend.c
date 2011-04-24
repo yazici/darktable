@@ -127,7 +127,8 @@ void dt_develop_blend_process (struct dt_iop_module_t *self, struct dt_dev_pixel
   if (!d || d->mode==0) return;
 
   /* select the blend operator */
-  switch (d->mode)
+  const int mode = (d->mode&=~DEVELOP_BLEND_MASK_FLAG);
+  switch (mode)
   {
     case DEVELOP_BLEND_LIGHTEN:
       blend = _blend_lighten;
@@ -182,14 +183,15 @@ void dt_develop_blend_process (struct dt_iop_module_t *self, struct dt_dev_pixel
       break;
   }
 
-  if (!(d->mode & DEVELOP_BLEND_MASK_FLAG))
+  if (d->mode)
   {
+    
+    const gboolean use_mask = (d->mode & DEVELOP_BLEND_MASK_FLAG)?TRUE:FALSE;
     /* defaults to 3 cannels */
     int channels = 3;
 
     /* get the clipped opacity value  0 - 1 */
     const float opacity = fmin(fmax(0,(d->opacity/100.0)),1.0);
-
 
     /* get channel max values depending on colorspace */
     float max[4] = {1.0,1.0,1.0,1.0};
@@ -209,26 +211,28 @@ void dt_develop_blend_process (struct dt_iop_module_t *self, struct dt_dev_pixel
     for (int y=0; y<roi_out->height; y++)
       for (int x=0; x<roi_out->width; x++)
       {
+        
         int index=(y*roi_out->width+x);
+        float local_opacity = use_mask ? opacity * out[4*index+3] : opacity;
         if (cst == iop_cs_Lab)
         {
           index*=ch;
           /* if in Lab space, just blend Lightness and copy ab from source */
-          out[index] = (in[index] * (1.0-opacity)) + (blend(max[0], in[index], out[index]) * opacity);
+          out[index] = (in[index] * (1.0-local_opacity)) + (blend(max[0], in[index], out[index]) * local_opacity);
           out[index+1] = in[index+1];
           out[index+2] = in[index+2];
         }
         else if (cst == iop_cs_RAW)
         {
           /* handle blend of raw data */
-          out[index] = (in[index] * (1.0-opacity)) + (blend(max[0], in[index], out[index]) * opacity);
+          out[index] = (in[index] * (1.0-local_opacity)) + (blend(max[0], in[index], out[index]) * local_opacity);
         }
         else
         {
           index*=ch;
           /* else assume raw,rgb, and blend each channel */
           for (int k=index; k<(index+channels); k++)
-            out[k] = (in[k] * (1.0-opacity)) + (blend(max[k-index], in[k], out[k]) * opacity);
+            out[k] = (in[k] * (1.0-local_opacity)) + (blend(max[k-index], in[k], out[k]) * local_opacity);
         }
       }
   }
