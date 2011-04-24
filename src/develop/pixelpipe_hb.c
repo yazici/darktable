@@ -17,6 +17,7 @@
 */
 #include "develop/pixelpipe.h"
 #include "develop/blend.h"
+#include "develop/masks.h"
 #include "gui/gtk.h"
 #include "control/control.h"
 #include "common/opencl.h"
@@ -466,6 +467,10 @@ dt_dev_pixelpipe_process_rec(dt_dev_pixelpipe_t *pipe, dt_develop_t *dev, void *
     }
     dt_times_t start;
     dt_get_times(&start);
+    
+    /* render mask if needed */
+    dt_develop_blend_process(module, piece, input, *output, &roi_in, roi_out);
+
 #ifdef HAVE_OPENCL
     if(module->process_cl && piece->process_cl_ready)
     {
