@@ -21,7 +21,6 @@
 
 #include "develop/pixelpipe.h"
 
-#define DEVELOP_BLEND_MASK_FLAG				0x80
 #define DEVELOP_BLEND_DISABLED				0x00
 #define DEVELOP_BLEND_NORMAL				0x01
 #define DEVELOP_BLEND_LIGHTEN				0x02
@@ -48,8 +47,6 @@ typedef struct dt_develop_blend_params_t
   /** id of mask in current pipeline */
   unsigned int mask_id;
 } dt_develop_blend_params_t;
-
-#define DT_DEVELOP_BLEND_WITH_MASK(p) ((p->mode&DEVELOP_BLEND_MASK_FLAG)?1:0)
 
 /** apply blend */
 void dt_develop_blend_process (struct dt_iop_module_t *self, struct dt_dev_pixelpipe_iop_t *piece, void *i, void *o, const struct dt_iop_roi_t *roi_in, const struct dt_iop_roi_t *roi_out);

@@ -724,8 +724,7 @@ static void _iop_gui_enabled_blend_cb(GtkToggleButton *b,_iop_gui_blend_data_t *
 static void
 _blendop_mode_callback (GtkComboBox *combo, _iop_gui_blend_data_t *data)
 {
-  int flags = data->module->blend_params->mode & DEVELOP_BLEND_MASK_FLAG;
-  data->module->blend_params->mode = (1+gtk_combo_box_get_active(data->blend_modes_combo)) | flags;
+  data->module->blend_params->mode = (1+gtk_combo_box_get_active(data->blend_modes_combo));
   dt_dev_add_history_item(darktable.develop, data->module, TRUE);
 }
 
@@ -733,10 +732,6 @@ static void
 _blendop_masks_callback (GtkComboBox *combo, _iop_gui_blend_data_t *data)
 {
   data->module->blend_params->mask_id = gtk_combo_box_get_active(data->masks_combo);
-  data->module->blend_params->mode = data->module->blend_params->mask_id ? 
-        data->module->blend_params->mode | DEVELOP_BLEND_MASK_FLAG : 
-        data->module->blend_params->mode&(~DEVELOP_BLEND_MASK_FLAG);
-  
   dt_dev_add_history_item(darktable.develop, data->module, TRUE);
 }
 
