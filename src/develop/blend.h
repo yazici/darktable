@@ -41,14 +41,15 @@
 typedef struct dt_develop_blend_params_t
 {
   /** blending mode */
-  unsigned char mode;
+  uint32_t mode;
   /** mixing opacity */
   float opacity;
   /** id of mask in current pipeline */
-  unsigned int mask_id;
+  uint32_t mask_id;
 } dt_develop_blend_params_t;
 
 /** apply blend */
 void dt_develop_blend_process (struct dt_iop_module_t *self, struct dt_dev_pixelpipe_iop_t *piece, void *i, void *o, const struct dt_iop_roi_t *roi_in, const struct dt_iop_roi_t *roi_out);
 
 #endif
+
