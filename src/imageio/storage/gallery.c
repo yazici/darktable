@@ -32,7 +32,6 @@
 #include "dtgtk/paint.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include <glade/glade.h>
 
 DT_MODULE(1)
 
@@ -74,7 +73,7 @@ static void
 button_clicked (GtkWidget *widget, dt_imageio_module_storage_t *self)
 {
   gallery_t *d = (gallery_t *)self->gui_data;
-  GtkWidget *win = glade_xml_get_widget (darktable.gui->main_window, "main_window");
+  GtkWidget *win = dt_ui_main_window(darktable.gui->ui);
   GtkWidget *filechooser = gtk_file_chooser_dialog_new (_("select directory"),
                            GTK_WINDOW (win),
                            GTK_FILE_CHOOSER_ACTION_SELECT_FOLDER,
@@ -211,6 +210,10 @@ store (dt_imageio_module_data_t *sdata, const int imgid, dt_imageio_module_forma
       snprintf(d->filename+strlen(d->filename), 1024-strlen(d->filename), "_$(SEQUENCE)");
     }
 
+    gchar* fixed_path = dt_util_fix_path(d->filename);
+    g_strlcpy(d->filename, fixed_path, 1024);
+    g_free(fixed_path);
+
     d->vp->filename = dirname;
     d->vp->jobcode = "export";
     d->vp->img = img;
@@ -338,7 +341,7 @@ static void
 copy_res(const char *src, const char *dst)
 {
   char share[1024];
-  dt_get_datadir(share, 1024);
+  dt_util_get_datadir(share, 1024);
   gchar *sourcefile = g_build_filename(share, src, NULL);
   char* content = NULL;
   FILE *fin = fopen(sourcefile, "rb");

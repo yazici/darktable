@@ -1,6 +1,6 @@
 /*
     This file is part of darktable,
-    copyright (c) 2010 tobias ellinghaus.
+    copyright (c) 2010-2011 tobias ellinghaus, Henrik Andersson.
 
     darktable is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -20,9 +20,11 @@
 #include "common/metadata.h"
 #include "common/debug.h"
 #include "control/control.h"
+#include "control/signal.h"
 #include "control/conf.h"
 #include "libs/lib.h"
 #include "gui/gtk.h"
+#include "dtgtk/button.h"
 
 DT_MODULE(1)
 
@@ -49,7 +51,12 @@ const char* name()
 
 uint32_t views()
 {
-  return DT_LIGHTTABLE_VIEW|DT_CAPTURE_VIEW;
+  return DT_VIEW_LIGHTTABLE | DT_VIEW_TETHERING;
+}
+
+uint32_t container()
+{
+  return DT_UI_CONTAINER_PANEL_RIGHT_CENTER;
 }
 
 static void fill_combo_box_entry(GtkComboBoxEntry **box, uint32_t count, GList **items, gboolean *multi)
@@ -121,13 +128,13 @@ static void update(dt_lib_module_t *user_data, gboolean early_bark_out)
   // using dt_metadata_get() is not possible here. we want to do all this in a single pass, everything else takes ages.
   if(imgsel < 0)  // selected images
   {
-    DT_DEBUG_SQLITE3_PREPARE_V2(darktable.db, "select key, value from meta_data where id in (select imgid from selected_images) group by key, value order by value", -1, &stmt, NULL);
+    DT_DEBUG_SQLITE3_PREPARE_V2(dt_database_get(darktable.db), "select key, value from meta_data where id in (select imgid from selected_images) group by key, value order by value", -1, &stmt, NULL);
   }
   else     // single image under mouse cursor
   {
     char query[1024];
     snprintf(query, 1024, "select key, value from meta_data where id = %d group by key, value order by value", imgsel);
-    DT_DEBUG_SQLITE3_PREPARE_V2(darktable.db, query, -1, &stmt, NULL);
+    DT_DEBUG_SQLITE3_PREPARE_V2(dt_database_get(darktable.db), query, -1, &stmt, NULL);
   }
   while(sqlite3_step(stmt) == SQLITE_ROW)
   {
@@ -170,6 +177,7 @@ static void update(dt_lib_module_t *user_data, gboolean early_bark_out)
   g_list_free(g_list_first(publisher));
   g_list_free(g_list_first(rights));
 }
+
 
 static gboolean expose(GtkWidget *widget, GdkEventExpose *event, gpointer user_data)
 {
@@ -230,7 +238,7 @@ static void apply_button_clicked(GtkButton *button, gpointer user_data)
 static void enter_pressed(GtkEntry *entry, gpointer user_data)
 {
   write_metadata(user_data);
-  gtk_window_set_focus(GTK_WINDOW(glade_xml_get_widget(darktable.gui->main_window, "main_window")), NULL);
+  gtk_window_set_focus(GTK_WINDOW(dt_ui_main_window(darktable.gui->ui)), NULL);
 }
 
 void gui_reset(dt_lib_module_t *self)
@@ -241,6 +249,19 @@ void gui_reset(dt_lib_module_t *self)
 int position()
 {
   return 510;
+}
+
+static void _mouse_over_image_callback(gpointer instace,gpointer user_data) 
+{
+  dt_lib_module_t *self=(dt_lib_module_t *)user_data;
+  /* lets trigger an expose for a redraw of widget */
+  gtk_widget_queue_draw(GTK_WIDGET(self->widget));
+} 
+
+void init_key_accels()
+{
+  gtk_button_init_accel(darktable.control->accels_lighttable,"<Darktable>/lighttable/plugins/metadata/clear");
+  gtk_button_init_accel(darktable.control->accels_lighttable,"<Darktable>/lighttable/plugins/metadata/apply");
 }
 
 void gui_init(dt_lib_module_t *self)
@@ -258,9 +279,8 @@ void gui_init(dt_lib_module_t *self)
   self->widget = gtk_table_new(6, 2, FALSE);
   gtk_table_set_row_spacings(GTK_TABLE(self->widget), 5);
 
-  g_signal_connect(self->widget, "expose-event", G_CALLBACK(expose), (gpointer)self);
-  darktable.gui->redraw_widgets = g_list_append(darktable.gui->redraw_widgets, self->widget);
-
+  g_signal_connect(self->widget, "expose-event", G_CALLBACK(expose), self);
+ 
   label = gtk_label_new(_("title"));
   gtk_misc_set_alignment(GTK_MISC(label), 0.0, 0.5);
   gtk_table_attach(GTK_TABLE(self->widget), label, 0, 1, 0, 1, GTK_EXPAND|GTK_FILL, 0, 0, 0);
@@ -332,12 +352,14 @@ void gui_init(dt_lib_module_t *self)
   hbox = GTK_BOX(gtk_hbox_new(TRUE, 5));
 
   button = gtk_button_new_with_label(_("clear"));
+  gtk_button_set_accel(GTK_BUTTON(button),darktable.control->accels_lighttable,"<Darktable>/lighttable/plugins/metadata/clear");
   g_object_set(G_OBJECT(button), "tooltip-text", _("remove metadata from selected images"), (char *)NULL);
   gtk_box_pack_start(hbox, button, FALSE, TRUE, 0);
   g_signal_connect(G_OBJECT (button), "clicked",
                    G_CALLBACK (clear_button_clicked), (gpointer)self);
 
   button = gtk_button_new_with_label(_("apply"));
+  gtk_button_set_accel(GTK_BUTTON(button),darktable.control->accels_lighttable,"<Darktable>/lighttable/plugins/metadata/apply");
   g_object_set(G_OBJECT(button), "tooltip-text", _("write metadata for selected images"), (char *)NULL);
   g_signal_connect(G_OBJECT (button), "clicked",
                    G_CALLBACK (apply_button_clicked), (gpointer)self);
@@ -345,12 +367,15 @@ void gui_init(dt_lib_module_t *self)
 
   gtk_table_attach(GTK_TABLE(self->widget), GTK_WIDGET(hbox), 0, 2, 5, 6, GTK_EXPAND|GTK_FILL, 0, 0, 0);
 
-  update(self, FALSE);
+  /* lets signup for mouse over image change signals */
+  dt_control_signal_connect(darktable.signals,DT_SIGNAL_MOUSE_OVER_IMAGE_CHANGE, 
+			    G_CALLBACK(_mouse_over_image_callback), self);
+
 }
 
 void gui_cleanup(dt_lib_module_t *self)
 {
-  darktable.gui->redraw_widgets = g_list_remove(darktable.gui->redraw_widgets, self->widget);
+  dt_control_signal_disconnect(darktable.signals,G_CALLBACK(_mouse_over_image_callback),self);
   free(self->data);
   self->data = NULL;
 }
@@ -377,11 +402,6 @@ void init_presets(dt_lib_module_t *self)
   add_rights_preset(self, _("CC-by-nc-sa"), _("Creative Commons Attribution-NonCommercial-ShareAlike (CC-BY-NC-SA)"));
   add_rights_preset(self, _("CC-by-nc-nd"), _("Creative Commons Attribution-NonCommercial-NoDerivs (CC-BY-NC-ND)"));
   add_rights_preset(self, _("all rights reserved"), _("All rights reserved."));
-}
-
-// FIXME: Is this ever called?
-void init(dt_iop_module_t *module)
-{
 }
 
 void* get_params(dt_lib_module_t *self, int *size)

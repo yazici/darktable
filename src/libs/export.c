@@ -1,6 +1,7 @@
 /*
     This file is part of darktable,
     copyright (c) 2009--2010 johannes hanika.
+    copyright (c) 2011 henrik andersson.
 
     darktable is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -28,8 +29,8 @@
 #include "gui/presets.h"
 #include <stdlib.h>
 #include <gtk/gtk.h>
-#include <glade/glade.h>
 #include <gdk/gdkkeysyms.h>
+#include "dtgtk/button.h"
 
 DT_MODULE(1)
 
@@ -68,7 +69,12 @@ name ()
 
 uint32_t views()
 {
-  return DT_LIGHTTABLE_VIEW;
+  return DT_VIEW_LIGHTTABLE;
+}
+
+uint32_t container()
+{
+  return DT_UI_CONTAINER_PANEL_RIGHT_CENTER;
 }
 
 static void
@@ -76,12 +82,6 @@ export_button_clicked (GtkWidget *widget, gpointer user_data)
 {
   // Let's get the max dimension restriction if any...
   dt_control_export();
-}
-
-static void
-key_accel_callback(void *d)
-{
-  export_button_clicked(NULL, d);
 }
 
 static void
@@ -483,8 +483,8 @@ gui_init (dt_lib_module_t *self)
 
   // read datadir/color/out/*.icc
   char datadir[1024], confdir[1024], dirname[1024], filename[1024];
-  dt_get_user_config_dir(confdir, 1024);
-  dt_get_datadir(datadir, 1024);
+  dt_util_get_user_config_dir(confdir, 1024);
+  dt_util_get_datadir(datadir, 1024);
   cmsHPROFILE tmpprof;
   const gchar *d_name;
   snprintf(dirname, 1024, "%s/color/out", confdir);
@@ -499,9 +499,12 @@ gui_init (dt_lib_module_t *self)
       tmpprof = cmsOpenProfileFromFile(filename, "r");
       if(tmpprof)
       {
+	char *lang = getenv("LANG");
+	if (!lang) lang = "en_US";
+
         dt_lib_export_profile_t *prof = (dt_lib_export_profile_t *)g_malloc0(sizeof(dt_lib_export_profile_t));
         char name[1024];
-        cmsGetProfileInfoASCII(tmpprof, cmsInfoDescription, getenv("LANG"), getenv("LANG")+3, name, 1024);
+        cmsGetProfileInfoASCII(tmpprof, cmsInfoDescription, lang, lang+3, name, 1024);
         g_strlcpy(prof->name, name, sizeof(prof->name));
         g_strlcpy(prof->filename, d_name, sizeof(prof->filename));
         prof->pos = ++pos;
@@ -555,6 +558,7 @@ gui_init (dt_lib_module_t *self)
                     (gpointer)d);
 
   GtkButton *button = GTK_BUTTON(gtk_button_new_with_label(_("export")));
+  gtk_button_set_accel(GTK_BUTTON(button),darktable.control->accels_lighttable,"<Darktable>/lighttable/plugins/export/export");
   g_object_set(G_OBJECT(button), "tooltip-text", _("export with current settings (ctrl-e)"), (char *)NULL);
   gtk_table_attach(GTK_TABLE(self->widget), GTK_WIDGET(button), 1, 2, 10, 11, GTK_EXPAND|GTK_FILL, 0, 0, 0);
 
@@ -569,13 +573,11 @@ gui_init (dt_lib_module_t *self)
                     (gpointer)0);
 
   self->gui_reset(self);
-  dt_gui_key_accel_register(GDK_CONTROL_MASK, GDK_e, key_accel_callback, NULL);
 }
 
 void
 gui_cleanup (dt_lib_module_t *self)
 {
-  dt_gui_key_accel_unregister(key_accel_callback);
   dt_lib_export_t *d = (dt_lib_export_t *)self->data;
   GtkWidget *old = gtk_bin_get_child(GTK_BIN(d->format_box));
   if(old) gtk_container_remove(d->format_box, old);
@@ -748,6 +750,11 @@ set_params (dt_lib_module_t *self, const void *params, int size)
   if(ssize) res += smod->set_params(smod, sdata, ssize);
   if(fsize) res += fmod->set_params(fmod, fdata, fsize);
   return res;
+}
+
+void init_key_accels(dt_lib_module_t *self)
+{
+  gtk_button_init_accel(darktable.control->accels_lighttable,"<Darktable>/lighttable/plugins/export/export");
 }
 
 // kate: tab-indents: off; indent-width 2; replace-tabs on; indent-mode cstyle; remove-trailing-space on;

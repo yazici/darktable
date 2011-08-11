@@ -35,7 +35,6 @@
 #include "dtgtk/gradientslider.h"
 #include "gui/gtk.h"
 #include "gui/presets.h"
-#include "LibRaw/libraw/libraw.h"
 
 #define CLIP(x) ((x<0)?0.0:(x>1.0)?1.0:x)
 DT_MODULE(1)
@@ -50,7 +49,7 @@ dt_iop_relight_params_t;
 
 void init_presets (dt_iop_module_t *self)
 {
-  DT_DEBUG_SQLITE3_EXEC(darktable.db, "begin", NULL, NULL, NULL);
+  DT_DEBUG_SQLITE3_EXEC(dt_database_get(darktable.db), "begin", NULL, NULL, NULL);
 
   dt_gui_presets_add_generic(_("fill-light 0.25EV with 4 zones"), self->op, &(dt_iop_relight_params_t)
   {
@@ -61,7 +60,7 @@ void init_presets (dt_iop_module_t *self)
     -0.25,0.25,4.0
   } , sizeof(dt_iop_relight_params_t), 1);
 
-  DT_DEBUG_SQLITE3_EXEC(darktable.db, "commit", NULL, NULL, NULL);
+  DT_DEBUG_SQLITE3_EXEC(dt_database_get(darktable.db), "commit", NULL, NULL, NULL);
 }
 
 typedef struct dt_iop_relight_gui_data_t
@@ -98,56 +97,10 @@ groups ()
   return IOP_GROUP_EFFECT;
 }
 
-static inline float
-f (const float t, const float c, const float x)
+void init_key_accels()
 {
-  return (t/(1.0f + powf(c, -x*6.0f)) + (1.0f-t)*(x*.5f+.5f));
-}
-
-static inline void hue2rgb(float m1,float m2,float hue,float *channel)
-{
-  if(hue<0.0) hue+=1.0;
-  else if(hue>1.0) hue-=1.0;
-
-  if( (6.0*hue) < 1.0) *channel=(m1+(m2-m1)*hue*6.0);
-  else if((2.0*hue) < 1.0) *channel=m2;
-  else if((3.0*hue) < 2.0) *channel=(m1+(m2-m1)*((2.0/3.0)-hue)*6.0);
-  else *channel=m1;
-}
-
-void rgb2hsl(float r,float g,float b,float *h,float *s,float *l)
-{
-  float pmax=fmax(r,fmax(g,b));
-  float pmin=fmin(r,fmin(g,b));
-  float delta=(pmax-pmin);
-
-  *h=*s=*l=0;
-  *l=(pmin+pmax)/2.0;
-
-  if(pmax!=pmin)
-  {
-    *s=*l<0.5?delta/(pmax+pmin):delta/(2.0-pmax-pmin);
-
-    if(pmax==r) *h=(g-b)/delta;
-    if(pmax==g) *h=2.0+(b-r)/delta;
-    if(pmax==b) *h=4.0+(r-g)/delta;
-    *h/=6.0;
-    if(*h<0.0) *h+=1.0;
-    else if(*h>1.0) *h-=1.0;
-  }
-}
-
-static inline void hsl2rgb(float *r,float *g,float *b,float h,float s,float l)
-{
-  float m1,m2;
-  *r=*g=*b=l;
-  if( s==0) return;
-  m2=l<0.5?l*(1.0+s):l+s-l*s;
-  m1=(2.0*l-m2);
-  hue2rgb(m1,m2,h +(1.0/3.0), r);
-  hue2rgb(m1,m2,h, g);
-  hue2rgb(m1,m2,h - (1.0/3.0), b);
-
+  dtgtk_slider_init_accel(darktable.control->accels_darkroom,"<Darktable>/darkroom/plugins/relight/exposure");
+  dtgtk_slider_init_accel(darktable.control->accels_darkroom,"<Darktable>/darkroom/plugins/relight/width");
 }
 
 #define GAUSS(a,b,c,x) (a*pow(2.718281828,(-pow((x-b),2)/(pow(c,2)))))
@@ -281,6 +234,8 @@ void gui_update(struct dt_iop_module_t *self)
   self->request_color_pick = 0;
   self->color_picker_box[0] = self->color_picker_box[1] = .25f;
   self->color_picker_box[2] = self->color_picker_box[3] = .75f;
+  self->color_picker_point[0] = self->color_picker_point[1] = 0.5f;
+
 
   dt_iop_relight_gui_data_t *g = (dt_iop_relight_gui_data_t *)self->gui_data;
   dt_iop_relight_params_t *p = (dt_iop_relight_params_t *)module->params;
@@ -294,7 +249,7 @@ void init(dt_iop_module_t *module)
   module->params = malloc(sizeof(dt_iop_relight_params_t));
   module->default_params = malloc(sizeof(dt_iop_relight_params_t));
   module->default_enabled = 0;
-  module->priority = 720;
+  module->priority = 624; // module order created by iop_dependencies.py, do not edit!
   module->params_size = sizeof(dt_iop_relight_params_t);
   module->gui_data = NULL;
   dt_iop_relight_params_t tmp = (dt_iop_relight_params_t)
@@ -355,6 +310,8 @@ void gui_init(struct dt_iop_module_t *self)
   dtgtk_slider_set_unit(g->scale1, "EV");
   dtgtk_slider_set_force_sign(g->scale1, TRUE);
   dtgtk_slider_set_label(g->scale2, _("width"));
+  dtgtk_slider_set_accel(g->scale1,darktable.control->accels_darkroom,"<Darktable>/darkroom/plugins/relight/exposure");
+  dtgtk_slider_set_accel(g->scale2,darktable.control->accels_darkroom,"<Darktable>/darkroom/plugins/relight/width");
 
   /* lightnessslider */
   GtkBox *hbox=GTK_BOX (gtk_hbox_new (FALSE,2));

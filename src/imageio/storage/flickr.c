@@ -188,7 +188,7 @@ _flickr_api_context_t static *_flickr_api_authenticate(dt_storage_flickr_gui_dat
     text1 = g_strdup(_("step 1: a new window or tab of your browser should have been loaded. you have to login into your flickr account there and authorize darktable to upload photos before continuing."));
     text2 = g_strdup(_("step 2: click the ok button once you are done."));
 
-    GtkWidget *window = glade_xml_get_widget (darktable.gui->main_window, "main_window");
+    GtkWidget *window = dt_ui_main_window(darktable.gui->ui);
     GtkWidget *flickr_auth_dialog = gtk_message_dialog_new (GTK_WINDOW (window),
                                     GTK_DIALOG_DESTROY_WITH_PARENT,
                                     GTK_MESSAGE_INFO,
@@ -534,7 +534,7 @@ gui_init (dt_imageio_module_storage_t *self)
   */
   GHashTable* table = dt_pwstorage_get("flickr");
   gchar* _username = g_strdup( g_hash_table_lookup(table, "username"));
-  gchar* _password = g_strdup( g_hash_table_lookup(table, "token"));
+  //gchar* _password = g_strdup( g_hash_table_lookup(table, "token"));
   g_hash_table_destroy(table);
   gtk_entry_set_text( ui->entry1,  _username == NULL?"":_username );
 //  gtk_entry_set_text( ui->entry2,  _password == NULL?"":_password );
@@ -608,12 +608,17 @@ gui_init (dt_imageio_module_storage_t *self)
 //  g_signal_connect(G_OBJECT(ui->entry2), "changed", G_CALLBACK(flickr_entry_changed), (gpointer)ui);
   g_signal_connect(G_OBJECT(ui->comboBox1), "changed", G_CALLBACK(flickr_album_changed), (gpointer)ui);
 
+  /**
+ dont' populate the combo on startup, save 3 second
+
   // If username and password is stored, let's populate the combo
   if( _username && _password )
   {
     ui->user_token = _password;
     refresh_albums(ui);
   }
+  */
+
   if( _username )
     g_free (_username);
   gtk_combo_box_set_active( ui->comboBox1, 0);
@@ -643,7 +648,7 @@ store (dt_imageio_module_data_t *sdata, const int imgid, dt_imageio_module_forma
 
   /* construct a temporary file name */
   char fname[4096]= {0};
-  dt_get_user_local_dir (fname,4096);
+  dt_util_get_user_local_dir (fname,4096);
   g_strlcat (fname,"/tmp",4096);
   g_mkdir_with_parents(fname,0700);
   g_strlcat (fname,"/darktable.XXXXXX.",4096);
@@ -831,13 +836,6 @@ set_params(dt_imageio_module_format_t *self, void *params, int size)
   // gui stuff not updated, as sensitive user data is not stored in the preset.
   // TODO: store name/hash in kwallet/etc module and get encrypted stuff from there!
   return 0;
-}
-
-int dimension(dt_imageio_module_storage_t *self, uint32_t *width, uint32_t *height)
-{
-  *width=4000;
-  *height=4000;
-  return 1;
 }
 
 int supported(dt_imageio_module_storage_t *storage, dt_imageio_module_format_t *format)

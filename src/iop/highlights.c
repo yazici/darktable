@@ -85,7 +85,18 @@ groups ()
   return IOP_GROUP_BASIC;
 }
 
+int
+flags ()
+{
+  return IOP_FLAGS_ALLOW_TILING;
+}
 
+void init_key_accels()
+{
+  dtgtk_slider_init_accel(darktable.control->accels_darkroom,"<Darktable>/darkroom/plugins/highlights/blend L");
+  dtgtk_slider_init_accel(darktable.control->accels_darkroom,"<Darktable>/darkroom/plugins/highlights/blend C");
+  dtgtk_slider_init_accel(darktable.control->accels_darkroom,"<Darktable>/darkroom/plugins/highlights/blend h");
+}
 
 static const float xyz_rgb[3][3] =    /* XYZ from RGB */
 {
@@ -148,25 +159,30 @@ lch_to_rgb(float lch[3], float rgb[3])
 }
 
 #ifdef HAVE_OPENCL
-void
+int
 process_cl (struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, cl_mem dev_in, cl_mem dev_out, const dt_iop_roi_t *roi_in, const dt_iop_roi_t *roi_out)
 {
   dt_iop_highlights_data_t *d = (dt_iop_highlights_data_t *)piece->data;
   dt_iop_highlights_global_data_t *gd = (dt_iop_highlights_global_data_t *)self->data;
 
-  cl_int err;
+  cl_int err = -999;
   const int devid = piece->pipe->devid;
   size_t sizes[] = {roi_in->width, roi_in->height, 1};
   const float clip = fminf(piece->pipe->processed_maximum[0], fminf(piece->pipe->processed_maximum[1], piece->pipe->processed_maximum[2]));
-  dt_opencl_set_kernel_arg(darktable.opencl, devid, gd->kernel_highlights, 0, sizeof(cl_mem), (void *)&dev_in);
-  dt_opencl_set_kernel_arg(darktable.opencl, devid, gd->kernel_highlights, 1, sizeof(cl_mem), (void *)&dev_out);
-  dt_opencl_set_kernel_arg(darktable.opencl, devid, gd->kernel_highlights, 2, sizeof(int), (void *)&d->mode);
-  dt_opencl_set_kernel_arg(darktable.opencl, devid, gd->kernel_highlights, 3, sizeof(float), (void *)&clip);
-  dt_opencl_set_kernel_arg(darktable.opencl, devid, gd->kernel_highlights, 4, sizeof(float), (void *)&d->blendL);
-  dt_opencl_set_kernel_arg(darktable.opencl, devid, gd->kernel_highlights, 5, sizeof(float), (void *)&d->blendC);
-  dt_opencl_set_kernel_arg(darktable.opencl, devid, gd->kernel_highlights, 6, sizeof(float), (void *)&d->blendh);
-  err = dt_opencl_enqueue_kernel_2d(darktable.opencl, devid, gd->kernel_highlights, sizes);
-  if(err != CL_SUCCESS) fprintf(stderr, "couldn't enqueue highlights kernel! %d\n", err);
+  dt_opencl_set_kernel_arg(devid, gd->kernel_highlights, 0, sizeof(cl_mem), (void *)&dev_in);
+  dt_opencl_set_kernel_arg(devid, gd->kernel_highlights, 1, sizeof(cl_mem), (void *)&dev_out);
+  dt_opencl_set_kernel_arg(devid, gd->kernel_highlights, 2, sizeof(int), (void *)&d->mode);
+  dt_opencl_set_kernel_arg(devid, gd->kernel_highlights, 3, sizeof(float), (void *)&clip);
+  dt_opencl_set_kernel_arg(devid, gd->kernel_highlights, 4, sizeof(float), (void *)&d->blendL);
+  dt_opencl_set_kernel_arg(devid, gd->kernel_highlights, 5, sizeof(float), (void *)&d->blendC);
+  dt_opencl_set_kernel_arg(devid, gd->kernel_highlights, 6, sizeof(float), (void *)&d->blendh);
+  err = dt_opencl_enqueue_kernel_2d(devid, gd->kernel_highlights, sizes);
+  if(err != CL_SUCCESS) goto error;
+  return TRUE;
+
+error:
+  dt_print(DT_DEBUG_OPENCL, "[opencl_highlights] couldn't enqueue kernel! %d\n", err);
+  return FALSE;
 }
 #endif
 
@@ -284,13 +300,13 @@ void init_global(dt_iop_module_so_t *module)
   const int program = 2; // basic.cl, from programs.conf
   dt_iop_highlights_global_data_t *gd = (dt_iop_highlights_global_data_t *)malloc(sizeof(dt_iop_highlights_global_data_t));
   module->data = gd;
-  gd->kernel_highlights = dt_opencl_create_kernel(darktable.opencl, program, "highlights");
+  gd->kernel_highlights = dt_opencl_create_kernel(program, "highlights");
 }
 
 void cleanup_global(dt_iop_module_so_t *module)
 {
   dt_iop_highlights_global_data_t *gd = (dt_iop_highlights_global_data_t *)module->data;
-  dt_opencl_free_kernel(darktable.opencl, gd->kernel_highlights);
+  dt_opencl_free_kernel(gd->kernel_highlights);
   free(module->data);
   module->data = NULL;
 }
@@ -330,8 +346,8 @@ void gui_update(struct dt_iop_module_t *self)
 
 void reload_defaults(dt_iop_module_t *module)
 {
-  // only on for non-hdr raw images:
-  if(module->dev->image->filters && module->dev->image->bpp != sizeof(float))
+  // only on for raw images:
+  if(module->dev->image->flags & DT_IMAGE_RAW)
     module->default_enabled = 1;
   else
     module->default_enabled = 0;
@@ -349,7 +365,7 @@ void init(dt_iop_module_t *module)
   // module->data = malloc(sizeof(dt_iop_highlights_data_t));
   module->params = malloc(sizeof(dt_iop_highlights_params_t));
   module->default_params = malloc(sizeof(dt_iop_highlights_params_t));
-  module->priority = 256;
+  module->priority = 145; // module order created by iop_dependencies.py, do not edit!
   module->default_enabled = 1;
   module->params_size = sizeof(dt_iop_highlights_params_t);
   module->gui_data = NULL;
@@ -394,6 +410,9 @@ void gui_init(struct dt_iop_module_t *self)
   dtgtk_slider_set_label(g->blendL,_("blend L"));
   dtgtk_slider_set_label(g->blendC,_("blend C"));
   dtgtk_slider_set_label(g->blendh,_("blend h"));
+  dtgtk_slider_set_accel(g->blendL,darktable.control->accels_darkroom,"<Darktable>/darkroom/plugins/highlights/blend L");
+  dtgtk_slider_set_accel(g->blendC,darktable.control->accels_darkroom,"<Darktable>/darkroom/plugins/highlights/blend C");
+  dtgtk_slider_set_accel(g->blendh,darktable.control->accels_darkroom,"<Darktable>/darkroom/plugins/highlights/blend h");
   dtgtk_slider_set_default_value(g->blendL, p->blendL);
   dtgtk_slider_set_default_value(g->blendC, p->blendC);
   dtgtk_slider_set_default_value(g->blendh, p->blendh);

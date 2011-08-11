@@ -83,7 +83,7 @@
       <applyto>/apps/darktable/mipmap_cache_thumbnails</applyto>
       <owner>darktable</owner>
       <type>int</type>
-      <default>30000</default>
+      <default>1000</default>
       <gettext_domain>darktable</gettext_domain>
       <locale name="C">
         <short>small thumbnails to keep in main memory cache</short>
@@ -128,6 +128,45 @@
       <locale name="C">
         <short>write a redundant sidecar file for each image</short>
         <long>these files can later be re-imported into a different database, preserving your changes to the image.</long>
+      </locale>
+    </schema>
+
+    <schema><!--tab:core-->
+      <key>/schemas/apps/darktable/opencl</key>
+      <applyto>/apps/darktable/opencl</applyto>
+      <owner>darktable</owner>
+      <type>bool</type>
+      <default>flase</default>
+      <gettext_domain>darktable</gettext_domain>
+      <locale name="C">
+        <short>activate OpenCL support (experimental)</short>
+        <long>if found, use OpenCL runtime on your system for improved processing speed. this code is still experimental and not complete. please report crashes to forum darktable-devel at sourceforge.net</long>
+      </locale>
+    </schema>
+
+    <schema>
+      <key>/schemas/apps/darktable/opencl_library</key>
+      <applyto>/apps/darktable/opencl_runtime</applyto>
+      <owner>darktable</owner>
+      <type>string</type>
+      <default></default>
+      <gettext_domain>darktable</gettext_domain>
+      <locale name="C">
+        <short>system library with opencl runtime</short>
+        <long>opencl runtime library is normally detected automatically by darktable. if your opencl runtime is at an unusual place and cannot be detected, enter the full pathname here. leave empty for default behavior.</long>
+      </locale>
+    </schema>
+
+    <schema>
+      <key>/schemas/apps/darktable/opencl_memory_requirement</key>
+      <applyto>/apps/darktable/opencl_memory_requirement</applyto>
+      <owner>darktable</owner>
+      <type>int</type>
+      <default>768</default>
+      <gettext_domain>darktable</gettext_domain>
+      <locale name="C">
+        <short>minmum amount of GPU memory (MB) required to activate opencl</short>
+        <long>opencl will only be activated if your graphics card has at least this amount of memory. reducing the value will allow cards with less GPU memory to be used - but at the risk of lower system stability and occasional crashes. values below 256 will be treated as 256.</long>
       </locale>
     </schema>
 
@@ -1455,6 +1494,19 @@
       <locale name="C">
         <short></short>
         <long></long>
+      </locale>
+    </schema>
+
+    <schema><!--tab:core-->
+      <key>/schemas/apps/darktable/plugins/lighttable/export/force_lcms2</key>
+      <applyto>/apps/darktable/plugins/lighttable/export/force_lcms2</applyto>
+      <owner>darktable</owner>
+      <type>bool</type>
+      <default>FALSE</default>
+      <gettext_domain>darktable</gettext_domain>
+      <locale name="C">
+        <short>always use lcms2 during export</short>
+        <long>this is about 28x as slow as the default.</long>
       </locale>
     </schema>
 

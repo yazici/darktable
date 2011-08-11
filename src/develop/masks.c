@@ -25,8 +25,8 @@
 static char *_masks_load_svg(char *filename) 
 {
   gchar configdir[1024],datadir[1024], *ffilename;
-  dt_get_datadir(datadir, 1024);
-  dt_get_user_config_dir(configdir, 1024);
+  dt_util_get_datadir(datadir, 1024);
+  dt_util_get_user_config_dir(configdir, 1024);
   g_strlcat(datadir,"/watermarks/",1024);
   g_strlcat(configdir,"/watermarks/",1024);
   g_strlcat(datadir,filename,1024);

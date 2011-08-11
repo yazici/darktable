@@ -25,6 +25,7 @@
 #include "gui/gtk.h"
 #include "dtgtk/label.h"
 #include <gdk/gdkkeysyms.h>
+#include "dtgtk/button.h"
 
 DT_MODULE(1)
 
@@ -80,7 +81,12 @@ name ()
 
 uint32_t views()
 {
-  return DT_CAPTURE_VIEW;
+  return DT_VIEW_TETHERING;
+}
+
+uint32_t container()
+{
+  return DT_UI_CONTAINER_PANEL_RIGHT_CENTER;
 }
 
 
@@ -95,6 +101,10 @@ position ()
   return 998;
 }
 
+void init_key_accels()
+{
+  gtk_button_init_accel(darktable.control->accels_capture,"<Darktable>/capture/plugins/camera/capture image(s)");
+}
 /** Property changed*/
 void property_changed_callback(GtkComboBox *cb,gpointer data)
 {
@@ -169,7 +179,7 @@ static void _camera_property_value_changed(const dt_camera_t *camera,const char 
       }
       while( gtk_tree_model_iter_next(model,&iter) == TRUE);
   }
-  dt_control_gui_queue_draw();
+  dt_control_queue_redraw_center();
 }
 
 /** Invoked when accesibility of a property is changed. */
@@ -238,7 +248,7 @@ _capture_button_clicked(GtkWidget *widget, gpointer user_data)
 
 static void _osd_button_clicked(GtkWidget *widget, gpointer user_data)
 {
-  dt_control_gui_queue_draw();
+  dt_control_queue_redraw_center();
 }
 
 static void _property_choice_callback(GtkMenuItem *item, gpointer user_data)
@@ -452,6 +462,7 @@ gui_init (dt_lib_module_t *self)
   gtk_box_pack_start(GTK_BOX(hbox), GTK_WIDGET(vbox2), TRUE, TRUE, 5);
   gtk_box_pack_start(GTK_BOX(self->widget), GTK_WIDGET(hbox), FALSE, FALSE, 5);
   lib->gui.button1=gtk_button_new_with_label(_("capture image(s)"));
+  gtk_button_set_accel(GTK_BUTTON(lib->gui.button1),darktable.control->accels_capture,"<Darktable>/capture/plugins/camera/capture image(s)");
   gtk_box_pack_start(GTK_BOX(self->widget), GTK_WIDGET(lib->gui.button1), FALSE, FALSE, 5);
 
   g_object_set(G_OBJECT(lib->gui.tb1), "tooltip-text", _("toggle delayed capture mode"), (char *)NULL);

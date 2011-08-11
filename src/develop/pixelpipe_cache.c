@@ -18,6 +18,7 @@
 
 #include "develop/pixelpipe_cache.h"
 #include "develop/pixelpipe_hb.h"
+#include "libs/lib.h"
 #include <stdlib.h>
 
 
@@ -78,11 +79,23 @@ uint64_t dt_dev_pixelpipe_cache_hash(int imgid, const dt_iop_roi_t *roi, dt_dev_
   for(int k=0; k<module&&pieces; k++)
   {
     dt_dev_pixelpipe_iop_t *piece = (dt_dev_pixelpipe_iop_t *)pieces->data;
-    hash = ((hash << 5) + hash) ^ piece->hash;
-    if(piece->module->request_color_pick)
+    dt_develop_t *dev = piece->module->dev;
+    if(!(dev->gui_module && (dev->gui_module->operation_tags_filter() &  piece->module->operation_tags())))
     {
-      const char *str = (const char *)piece->module->color_picker_box;
-      for(int i=0; i<sizeof(float)*4; i++) hash = ((hash << 5) + hash) ^ str[i];
+      hash = ((hash << 5) + hash) ^ piece->hash;
+      if(piece->module->request_color_pick)
+      {
+        if(darktable.lib->proxy.colorpicker.size)
+        {
+          const char *str = (const char *)piece->module->color_picker_box;
+          for(int i=0; i<sizeof(float)*4; i++) hash = ((hash << 5) + hash) ^ str[i];
+        }
+        else
+        {
+          const char *str = (const char *)piece->module->color_picker_point;
+          for(int i=0; i<sizeof(float)*2; i++) hash = ((hash << 5) + hash) ^ str[i];
+        }
+      }
     }
     pieces = g_list_next(pieces);
   }

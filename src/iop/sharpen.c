@@ -57,7 +57,9 @@ dt_iop_sharpen_data_t;
 
 typedef struct dt_iop_sharpen_global_data_t
 {
-  int kernel_sharpen;
+  int kernel_sharpen_hblur;
+  int kernel_sharpen_vblur;
+  int kernel_sharpen_mix;
 }
 dt_iop_sharpen_global_data_t;
 
@@ -77,47 +79,150 @@ groups ()
 int
 flags ()
 {
-  return IOP_FLAGS_SUPPORTS_BLENDING;
+  return IOP_FLAGS_SUPPORTS_BLENDING | IOP_FLAGS_ALLOW_TILING;
 }
 
+void init_key_accels()
+{
+  dtgtk_slider_init_accel(darktable.control->accels_darkroom,"<Darktable>/darkroom/plugins/sharpen/radius");
+  dtgtk_slider_init_accel(darktable.control->accels_darkroom,"<Darktable>/darkroom/plugins/sharpen/amount");
+  dtgtk_slider_init_accel(darktable.control->accels_darkroom,"<Darktable>/darkroom/plugins/sharpen/threshold");
+}
+#if 0
 #ifdef HAVE_OPENCL
-void
+int
 process_cl (struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, cl_mem dev_in, cl_mem dev_out, const dt_iop_roi_t *roi_in, const dt_iop_roi_t *roi_out)
 {
   dt_iop_sharpen_data_t *d = (dt_iop_sharpen_data_t *)piece->data;
   dt_iop_sharpen_global_data_t *gd = (dt_iop_sharpen_global_data_t *)self->data;
+  cl_mem dev_m = NULL;
+  cl_int err = -999;
 
-  cl_int err;
   const int devid = piece->pipe->devid;
   const int rad = MIN(MAXR, ceilf(d->radius * roi_in->scale / piece->iscale));
+
   if(rad == 0)
   {
     size_t origin[] = {0, 0, 0};
     size_t region[] = {roi_in->width, roi_in->height, 1};
-    err = clEnqueueCopyImage(darktable.opencl->dev[devid].cmd_queue, dev_in, dev_out, origin, origin, region, 0, NULL, NULL);
-    return;
+    err = dt_opencl_enqueue_copy_image(devid, dev_in, dev_out, origin, origin, region);
+    if (err != CL_SUCCESS) goto error;
+    return TRUE;
   }
+  // init gaussian kernel
   float mat[2*(MAXR+1)];
   const int wd = 2*rad+1;
   float *m = mat + rad;
   const float sigma2 = (1.0f/(2.5*2.5))*(d->radius*roi_in->scale/piece->iscale)*(d->radius*roi_in->scale/piece->iscale);
   float weight = 0.0f;
-  // init gaussian kernel
   for(int l=-rad; l<=rad; l++) weight += m[l] = expf(- (l*l)/(2.f*sigma2));
   for(int l=-rad; l<=rad; l++) m[l] /= weight;
   size_t sizes[] = {roi_in->width, roi_in->height, 1};
-  cl_mem dev_m = dt_opencl_copy_host_to_device_constant(sizeof(float)*wd, devid, mat);
-  dt_opencl_set_kernel_arg(darktable.opencl, devid, gd->kernel_sharpen, 0, sizeof(cl_mem), (void *)&dev_in);
-  dt_opencl_set_kernel_arg(darktable.opencl, devid, gd->kernel_sharpen, 1, sizeof(cl_mem), (void *)&dev_out);
-  dt_opencl_set_kernel_arg(darktable.opencl, devid, gd->kernel_sharpen, 2, sizeof(cl_mem), (void *)&dev_m);
-  dt_opencl_set_kernel_arg(darktable.opencl, devid, gd->kernel_sharpen, 3, sizeof(int), (void *)&rad);
-  dt_opencl_set_kernel_arg(darktable.opencl, devid, gd->kernel_sharpen, 4, sizeof(float), (void *)&d->amount);
-  dt_opencl_set_kernel_arg(darktable.opencl, devid, gd->kernel_sharpen, 5, sizeof(float), (void *)&d->threshold);
-  err = dt_opencl_enqueue_kernel_2d(darktable.opencl, devid, gd->kernel_sharpen, sizes);
-  if(err != CL_SUCCESS) fprintf(stderr, "couldn't enqueue sharpen kernel! %d\n", err);
-  clReleaseMemObject(dev_m);
+  dev_m = dt_opencl_copy_host_to_device_constant(devid, sizeof(float)*wd, mat);
+  if (dev_m == NULL) goto error;
+  dt_opencl_set_kernel_arg(devid, gd->kernel_sharpen, 0, sizeof(cl_mem), (void *)&dev_in);
+  dt_opencl_set_kernel_arg(devid, gd->kernel_sharpen, 1, sizeof(cl_mem), (void *)&dev_out);
+  dt_opencl_set_kernel_arg(devid, gd->kernel_sharpen, 2, sizeof(cl_mem), (void *)&dev_m);
+  dt_opencl_set_kernel_arg(devid, gd->kernel_sharpen, 3, sizeof(int), (void *)&rad);
+  dt_opencl_set_kernel_arg(devid, gd->kernel_sharpen, 4, sizeof(float), (void *)&d->amount);
+  dt_opencl_set_kernel_arg(devid, gd->kernel_sharpen, 5, sizeof(float), (void *)&d->threshold);
+  err = dt_opencl_enqueue_kernel_2d(devid, gd->kernel_sharpen, sizes);
+  if(err != CL_SUCCESS) goto error;
+  dt_opencl_release_mem_object(dev_m);
+  return TRUE;
+
+error:
+  if (dev_m != NULL) dt_opencl_release_mem_object(dev_m);
+  dt_print(DT_DEBUG_OPENCL, "[opencl_sharpen] couldn't enqueue kernel! %d\n", err);
+  return FALSE;
 }
 #endif
+#endif
+
+
+#ifdef HAVE_OPENCL
+int
+process_cl (struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, cl_mem dev_in, cl_mem dev_out, const dt_iop_roi_t *roi_in, const dt_iop_roi_t *roi_out)
+{
+  dt_iop_sharpen_data_t *d = (dt_iop_sharpen_data_t *)piece->data;
+  dt_iop_sharpen_global_data_t *gd = (dt_iop_sharpen_global_data_t *)self->data;
+  cl_mem dev_m = NULL;
+  cl_int err = -999;
+
+  const int devid = piece->pipe->devid;
+  const int rad = MIN(MAXR, ceilf(d->radius * roi_in->scale / piece->iscale));
+  const int wd = 2*rad+1;
+  float mat[wd];
+
+  if(rad == 0)
+  {
+    size_t origin[] = {0, 0, 0};
+    size_t region[] = {roi_in->width, roi_in->height, 1};
+    err = dt_opencl_enqueue_copy_image(devid, dev_in, dev_out, origin, origin, region);
+    if (err != CL_SUCCESS) goto error;
+    return TRUE;
+  }
+
+  // init gaussian kernel
+
+  float *m = mat + rad;
+  const float sigma2 = (1.0f/(2.5*2.5))*(d->radius*roi_in->scale/piece->iscale)*(d->radius*roi_in->scale/piece->iscale);
+  float weight = 0.0f;
+  for(int l=-rad; l<=rad; l++) weight += m[l] = expf(- (l*l)/(2.f*sigma2));
+  for(int l=-rad; l<=rad; l++) m[l] /= weight;
+
+  dev_m = dt_opencl_copy_host_to_device_constant(devid, sizeof(float)*wd, mat);
+  if (dev_m == NULL) goto error;
+
+  size_t sizes[] = {roi_in->width, roi_in->height, 1};
+
+  /* horizontal blur */
+  dt_opencl_set_kernel_arg(devid, gd->kernel_sharpen_hblur, 0, sizeof(cl_mem), (void *)&dev_in);
+  dt_opencl_set_kernel_arg(devid, gd->kernel_sharpen_hblur, 1, sizeof(cl_mem), (void *)&dev_out);
+  dt_opencl_set_kernel_arg(devid, gd->kernel_sharpen_hblur, 2, sizeof(cl_mem), (void *)&dev_m);
+  dt_opencl_set_kernel_arg(devid, gd->kernel_sharpen_hblur, 3, sizeof(int), (void *)&rad);
+  err = dt_opencl_enqueue_kernel_2d(devid, gd->kernel_sharpen_hblur, sizes);
+  if(err != CL_SUCCESS) goto error;
+
+  /* vertical blur */
+  dt_opencl_set_kernel_arg(devid, gd->kernel_sharpen_vblur, 0, sizeof(cl_mem), (void *)&dev_out);
+  dt_opencl_set_kernel_arg(devid, gd->kernel_sharpen_vblur, 1, sizeof(cl_mem), (void *)&dev_out);
+  dt_opencl_set_kernel_arg(devid, gd->kernel_sharpen_vblur, 2, sizeof(cl_mem), (void *)&dev_m);
+  dt_opencl_set_kernel_arg(devid, gd->kernel_sharpen_vblur, 3, sizeof(int), (void *)&rad);
+  err = dt_opencl_enqueue_kernel_2d(devid, gd->kernel_sharpen_vblur, sizes);
+  if(err != CL_SUCCESS) goto error;
+
+  /* mixing out and in -> out */
+  dt_opencl_set_kernel_arg(devid, gd->kernel_sharpen_mix, 0, sizeof(cl_mem), (void *)&dev_in);
+  dt_opencl_set_kernel_arg(devid, gd->kernel_sharpen_mix, 1, sizeof(cl_mem), (void *)&dev_out);
+  dt_opencl_set_kernel_arg(devid, gd->kernel_sharpen_mix, 2, sizeof(cl_mem), (void *)&dev_out);
+  dt_opencl_set_kernel_arg(devid, gd->kernel_sharpen_mix, 3, sizeof(float), (void *)&d->amount);
+  dt_opencl_set_kernel_arg(devid, gd->kernel_sharpen_mix, 4, sizeof(float), (void *)&d->threshold);
+  err = dt_opencl_enqueue_kernel_2d(devid, gd->kernel_sharpen_mix, sizes);
+  if(err != CL_SUCCESS) goto error;
+
+  if (dev_m != NULL) clReleaseMemObject(dev_m);
+  return TRUE;
+
+error:
+  if (dev_m != NULL) dt_opencl_release_mem_object(dev_m);
+  dt_print(DT_DEBUG_OPENCL, "[opencl_sharpen] couldn't enqueue kernel! %d\n", err);
+  return FALSE;
+}
+#endif
+
+
+void tiling_callback  (struct dt_iop_module_t *self, struct dt_dev_pixelpipe_iop_t *piece, const dt_iop_roi_t *roi_in, const dt_iop_roi_t *roi_out, float *factor, unsigned *overhead, unsigned *overlap)
+{
+  dt_iop_sharpen_data_t *d = (dt_iop_sharpen_data_t *)piece->data;
+  const int rad = MIN(MAXR, ceilf(d->radius * roi_in->scale / piece->iscale));
+
+  *factor = 2;
+  *overhead = 0;
+  *overlap = rad;
+  return;
+}
+
 
 void process (struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, void *ivoid, void *ovoid, const dt_iop_roi_t *roi_in, const dt_iop_roi_t *roi_out)
 {
@@ -315,7 +420,7 @@ void init(dt_iop_module_t *module)
   module->params = malloc(sizeof(dt_iop_sharpen_params_t));
   module->default_params = malloc(sizeof(dt_iop_sharpen_params_t));
   module->default_enabled = 1;
-  module->priority = 850;
+  module->priority = 666; // module order created by iop_dependencies.py, do not edit!
   module->params_size = sizeof(dt_iop_sharpen_params_t);
   module->gui_data = NULL;
   dt_iop_sharpen_params_t tmp = (dt_iop_sharpen_params_t)
@@ -328,10 +433,12 @@ void init(dt_iop_module_t *module)
 
 void init_global(dt_iop_module_so_t *module)
 {
-  const int program = 2; // basic.cl, from programs.conf
+  const int program = 7; // sharpen.cl, from programs.conf
   dt_iop_sharpen_global_data_t *gd = (dt_iop_sharpen_global_data_t *)malloc(sizeof(dt_iop_sharpen_global_data_t));
   module->data = gd;
-  gd->kernel_sharpen = dt_opencl_create_kernel(darktable.opencl, program, "sharpen");
+  gd->kernel_sharpen_hblur = dt_opencl_create_kernel(program, "sharpen_hblur");
+  gd->kernel_sharpen_vblur = dt_opencl_create_kernel(program, "sharpen_vblur");
+  gd->kernel_sharpen_mix = dt_opencl_create_kernel(program, "sharpen_mix");
 }
 
 void cleanup(dt_iop_module_t *module)
@@ -345,7 +452,9 @@ void cleanup(dt_iop_module_t *module)
 void cleanup_global(dt_iop_module_so_t *module)
 {
   dt_iop_sharpen_global_data_t *gd = (dt_iop_sharpen_global_data_t *)module->data;
-  dt_opencl_free_kernel(darktable.opencl, gd->kernel_sharpen);
+  dt_opencl_free_kernel(gd->kernel_sharpen_hblur);
+  dt_opencl_free_kernel(gd->kernel_sharpen_vblur);
+  dt_opencl_free_kernel(gd->kernel_sharpen_mix);
   free(module->data);
   module->data = NULL;
 }
@@ -363,12 +472,15 @@ void gui_init(struct dt_iop_module_t *self)
   g->scale1 = DTGTK_SLIDER(dtgtk_slider_new_with_range(DARKTABLE_SLIDER_BAR,0.0, 8.0000, 0.100, p->radius, 3));
   g_object_set (GTK_OBJECT(g->scale1), "tooltip-text", _("spatial extent of the unblurring"), (char *)NULL);
   dtgtk_slider_set_label(g->scale1,_("radius"));
+  dtgtk_slider_set_accel(g->scale1,darktable.control->accels_darkroom,"<Darktable>/darkroom/plugins/sharpen/radius");
   g->scale2 = DTGTK_SLIDER(dtgtk_slider_new_with_range(DARKTABLE_SLIDER_BAR,0.0, 2.0000, 0.010, p->amount, 3));
   g_object_set (GTK_OBJECT(g->scale2), "tooltip-text", _("strength of the sharpen"), (char *)NULL);
   dtgtk_slider_set_label(g->scale2,_("amount"));
+  dtgtk_slider_set_accel(g->scale2,darktable.control->accels_darkroom,"<Darktable>/darkroom/plugins/sharpen/amount");
   g->scale3 = DTGTK_SLIDER(dtgtk_slider_new_with_range(DARKTABLE_SLIDER_BAR,0.0, 1.0000, 0.001, p->threshold, 3));
   g_object_set (GTK_OBJECT(g->scale3), "tooltip-text", _("threshold to activate sharpen"), (char *)NULL);
   dtgtk_slider_set_label(g->scale3,_("threshold"));
+  dtgtk_slider_set_accel(g->scale3,darktable.control->accels_darkroom,"<Darktable>/darkroom/plugins/sharpen/threshold");
   gtk_box_pack_start(GTK_BOX(g->vbox), GTK_WIDGET(g->scale1), TRUE, TRUE, 0);
   gtk_box_pack_start(GTK_BOX(g->vbox), GTK_WIDGET(g->scale2), TRUE, TRUE, 0);
   gtk_box_pack_start(GTK_BOX(g->vbox), GTK_WIDGET(g->scale3), TRUE, TRUE, 0);

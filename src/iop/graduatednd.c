@@ -28,13 +28,13 @@
 #include "develop/develop.h"
 #include "develop/imageop.h"
 #include "control/control.h"
+#include "common/colorspaces.h"
 #include "common/debug.h"
 #include "dtgtk/slider.h"
 #include "dtgtk/gradientslider.h"
 #include "dtgtk/resetlabel.h"
 #include "gui/gtk.h"
 #include "gui/presets.h"
-#include "LibRaw/libraw/libraw.h"
 
 #define CLIP(x) ((x<0)?0.0:(x>1.0)?1.0:x)
 DT_MODULE(1)
@@ -52,7 +52,7 @@ dt_iop_graduatednd_params_t;
 
 void init_presets (dt_iop_module_t *self)
 {
-  DT_DEBUG_SQLITE3_EXEC(darktable.db, "begin", NULL, NULL, NULL);
+  DT_DEBUG_SQLITE3_EXEC(dt_database_get(darktable.db), "begin", NULL, NULL, NULL);
 
   dt_gui_presets_add_generic(_("neutral grey ND2 (soft)"), self->op, &(dt_iop_graduatednd_params_t)
   {
@@ -107,7 +107,7 @@ void init_presets (dt_iop_module_t *self)
     2,0,0,50,0.082927,0.25
   } , sizeof(dt_iop_graduatednd_params_t), 1);
 
-  DT_DEBUG_SQLITE3_EXEC(darktable.db, "commit", NULL, NULL, NULL);
+  DT_DEBUG_SQLITE3_EXEC(dt_database_get(darktable.db), "commit", NULL, NULL, NULL);
 }
 
 typedef struct dt_iop_graduatednd_gui_data_t
@@ -146,6 +146,13 @@ groups ()
   return IOP_GROUP_EFFECT;
 }
 
+void init_key_accels()
+{
+  dtgtk_slider_init_accel(darktable.control->accels_darkroom,"<Darktable>/darkroom/plugins/graduatednd/density");
+  dtgtk_slider_init_accel(darktable.control->accels_darkroom,"<Darktable>/darkroom/plugins/graduatednd/compression");
+  dtgtk_slider_init_accel(darktable.control->accels_darkroom,"<Darktable>/darkroom/plugins/graduatednd/rotation");
+  dtgtk_slider_init_accel(darktable.control->accels_darkroom,"<Darktable>/darkroom/plugins/graduatednd/split");
+}
 static inline float
 f (const float t, const float c, const float x)
 {
@@ -157,30 +164,6 @@ typedef struct dt_iop_vector_2d_t
   double x;
   double y;
 } dt_iop_vector_2d_t;
-
-static inline void hue2rgb(float m1,float m2,float hue,float *channel)
-{
-  if(hue<0.0) hue+=1.0;
-  else if(hue>1.0) hue-=1.0;
-
-  if( (6.0*hue) < 1.0) *channel=(m1+(m2-m1)*hue*6.0);
-  else if((2.0*hue) < 1.0) *channel=m2;
-  else if((3.0*hue) < 2.0) *channel=(m1+(m2-m1)*((2.0/3.0)-hue)*6.0);
-  else *channel=m1;
-}
-
-static inline void hsl2rgb(float *r,float *g,float *b,float h,float s,float l)
-{
-  float m1,m2;
-  *r=*g=*b=l;
-  if( s==0) return;
-  m2=l<0.5?l*(1.0+s):l+s-l*s;
-  m1=(2.0*l-m2);
-  hue2rgb(m1,m2,h +(1.0/3.0), r);
-  hue2rgb(m1,m2,h, g);
-  hue2rgb(m1,m2,h - (1.0/3.0), b);
-
-}
 
 // static int
 // get_grab(float pointerx, float pointery, float zoom_scale){
@@ -271,7 +254,7 @@ int
 mouse_moved(struct dt_iop_module_t *self, double x, double y, int which)
 {
   //TODO see vignette.c ...
-  dt_control_gui_queue_draw();
+  dt_control_queue_redraw_center();
   return 0;
 }
 
@@ -292,9 +275,7 @@ int button_released(struct dt_iop_module_t *self, double x, double y, int which,
 
 void process (struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, void *ivoid, void *ovoid, const dt_iop_roi_t *roi_in, const dt_iop_roi_t *roi_out)
 {
-  dt_iop_graduatednd_data_t *data = (dt_iop_graduatednd_data_t *)piece->data;
-  float *in  = (float *)ivoid;
-  float *out = (float *)ovoid;
+  const dt_iop_graduatednd_data_t *data = (dt_iop_graduatednd_data_t *)piece->data;
   const int ch = piece->colors;
 
   const int ix= (roi_in->x);
@@ -303,46 +284,63 @@ void process (struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, void 
   const float ih=piece->buf_in.height*roi_out->scale;
   const float hw=iw/2.0;
   const float hh=ih/2.0;
-  float v=(-data->rotation/180)*M_PI;
+  const float hw_inv=1.0/hw;
+  const float hh_inv=1.0/hh;
+  const float v=(-data->rotation/180)*M_PI;
   const float sinv=sin(v);
   const float cosv=cos(v);
   const float filter_radie=sqrt((hh*hh)+(hw*hw))/hh;
+  const float offset=data->offset/100.0*2;
 
   float color[3];
-  hsl2rgb(&color[0],&color[1],&color[2],data->hue,data->saturation,0.5);
+  hsl2rgb(color,data->hue,data->saturation,0.5);
+  if (data->density < 0)
+    for ( int l=0; l<3; l++ )
+      color[l] = 1.0-color[l];
 
+#if 1
+  const float filter_compression = 1.0/filter_radie/(1.0-(0.5+(data->compression/100.0)*0.9/2.0))*0.5;
+#else
+  const float compression = data->compression/100.0f;
+  const float t = 1.0f - .8f/(.8f + compression);
+  const float c = 1.0f + 1000.0f*powf(4.0, compression);
+#endif
 
 #ifdef _OPENMP
-  #pragma omp parallel for default(none) shared(roi_out, in, out, color, data) schedule(static)
+  #pragma omp parallel for default(none) shared(roi_out, color, data, ivoid, ovoid) schedule(static)
 #endif
   for(int y=0; y<roi_out->height; y++)
   {
-    for(int x=0; x<roi_out->width; x++)
+    int k=roi_out->width*y*ch;
+    const float *in = (float*)ivoid + k;
+    float *out = (float*)ovoid + k;
+    for(int x=0; x<roi_out->width; x++, in+=ch, out+=ch)
     {
-      int k=(roi_out->width*y+x)*ch;
 
       /* first rotate and offset */
-      dt_iop_vector_2d_t pv= {-1,-1};
-      float sx=-1.0+((ix+x)/iw)*2.0;
-      float sy=-1.0+((iy+y)/ih)*2.0;
-      pv.x=cosv*sx-sinv*sy;
-      pv.y=sinv*sx-cosv*sy;
-      pv.y+=-1.0+((data->offset/100.0)*2);
+      const float sx=-1.0+(ix+x)*hw_inv;
+      const float sy=-1.0+(iy+y)*hh_inv;
+      const dt_iop_vector_2d_t pv= {
+	cosv*sx-sinv*sy,
+	sinv*sx-cosv*sy-1.0+offset
+      };
 
-      float length=pv.y/filter_radie;
 #if 1
-      float compression = (data->compression/100.0)*0.9;
-      length/=1.0-(0.5+(compression/2.0));
-      float density = ( 1.0 / exp2f (data->density * CLIP( ((1.0+length)/2.0)) ) );
+      const float length=pv.y*filter_compression;
+      const float density = (data->density > 0)
+	? exp2f(-data->density * CLIP( 0.5+length ))
+	: exp2f(data->density * CLIP( 0.5-length ));
 #else
-      const float compression = data->compression/100.0f;
-      const float t = 1.0f - .8f/(.8f + compression);
-      const float c = 1.0f + 1000.0f*powf(4.0, compression);
+      const float length=pv.y/filter_radie;
       const float density = 1.0f/exp2f(data->density*f(t, c, length));
 #endif
 
-      for( int l=0; l<3; l++)
-        out[k+l] = fmaxf(0.0, (in[k+l]*(density/(1.0-(1.0-density)*color[l])) ));
+      if (data->density > 0)
+	for( int l=0; l<3; l++)
+	  out[l] = fmaxf(0.0, in[l]*density / (1.0-(1.0-density)*color[l]) );
+      else
+	for( int l=0; l<3; l++)
+	  out[l] = fmaxf(0.0, in[l]/density * (1.0-(1.0-density)*color[l]) );
 
     }
   }
@@ -448,7 +446,7 @@ void init(dt_iop_module_t *module)
   module->params = malloc(sizeof(dt_iop_graduatednd_params_t));
   module->default_params = malloc(sizeof(dt_iop_graduatednd_params_t));
   module->default_enabled = 0;
-  module->priority = 258;
+  module->priority = 208; // module order created by iop_dependencies.py, do not edit!
   module->params_size = sizeof(dt_iop_graduatednd_params_t);
   module->gui_data = NULL;
   dt_iop_graduatednd_params_t tmp = (dt_iop_graduatednd_params_t)
@@ -478,7 +476,7 @@ hue_callback(GtkDarktableGradientSlider *slider, gpointer user_data)
   //fprintf(stderr," hue: %f, saturation: %f\n",hue,dtgtk_gradient_slider_get_value(g->gslider2));
   double saturation=1.0;
   float color[3];
-  hsl2rgb(&color[0],&color[1],&color[2],hue,saturation,0.5);
+  hsl2rgb(color,hue,saturation,0.5);
 
   GdkColor c;
   c.red=color[0]*65535.0;
@@ -491,11 +489,8 @@ hue_callback(GtkDarktableGradientSlider *slider, gpointer user_data)
     return;
   gtk_widget_draw(GTK_WIDGET(g->gslider2),NULL);
 
-  if(dtgtk_gradient_slider_is_dragging(slider)==FALSE)
-  {
-    p->hue = dtgtk_gradient_slider_get_value(slider);
-    dt_dev_add_history_item(darktable.develop, self, TRUE);
-  }
+  p->hue = dtgtk_gradient_slider_get_value(slider);
+  dt_dev_add_history_item(darktable.develop, self, TRUE);
 }
 
 static void
@@ -504,11 +499,8 @@ saturation_callback(GtkDarktableGradientSlider *slider, gpointer user_data)
   dt_iop_module_t *self = (dt_iop_module_t *)user_data;
   dt_iop_graduatednd_params_t *p = (dt_iop_graduatednd_params_t *)self->params;
 
-  if(dtgtk_gradient_slider_is_dragging(slider)==FALSE)
-  {
-    p->saturation = dtgtk_gradient_slider_get_value(slider);
-    dt_dev_add_history_item(darktable.develop, self, TRUE);
-  }
+  p->saturation = dtgtk_gradient_slider_get_value(slider);
+  dt_dev_add_history_item(darktable.develop, self, TRUE);
 }
 
 
@@ -528,7 +520,7 @@ void gui_init(struct dt_iop_module_t *self)
   g->label5 = dtgtk_reset_label_new(_("hue"), self, &p->hue, sizeof(float));
   g->label6 = dtgtk_reset_label_new(_("saturation"), self, &p->saturation, sizeof(float));
 
-  g->scale1 = DTGTK_SLIDER(dtgtk_slider_new_with_range(DARKTABLE_SLIDER_BAR,0.0, 8.0, 0.1, p->density, 2));
+  g->scale1 = DTGTK_SLIDER(dtgtk_slider_new_with_range(DARKTABLE_SLIDER_BAR,-8.0, 8.0, 0.1, p->density, 2));
   g->scale2 = DTGTK_SLIDER(dtgtk_slider_new_with_range(DARKTABLE_SLIDER_BAR,0.0, 100.0, 1.0, p->compression, 0));
   dtgtk_slider_set_format_type(g->scale2,DARKTABLE_SLIDER_FORMAT_PERCENT);
   g->scale3 = DTGTK_SLIDER(dtgtk_slider_new_with_range(DARKTABLE_SLIDER_BAR,-180, 180,0.5, p->rotation, 2));
@@ -543,6 +535,11 @@ void gui_init(struct dt_iop_module_t *self)
   dtgtk_slider_set_unit(g->scale3,"°");
   dtgtk_slider_set_label(g->scale4,_("split"));
   dtgtk_slider_set_unit(g->scale4,"%");
+
+  dtgtk_slider_set_accel(g->scale1,darktable.control->accels_darkroom,"<Darktable>/darkroom/plugins/graduatednd/density");
+  dtgtk_slider_set_accel(g->scale2,darktable.control->accels_darkroom,"<Darktable>/darkroom/plugins/graduatednd/compression");
+  dtgtk_slider_set_accel(g->scale3,darktable.control->accels_darkroom,"<Darktable>/darkroom/plugins/graduatednd/rotation");
+  dtgtk_slider_set_accel(g->scale4,darktable.control->accels_darkroom,"<Darktable>/darkroom/plugins/graduatednd/split");
 
   gtk_box_pack_start(GTK_BOX(g->vbox), GTK_WIDGET(g->scale1), TRUE, TRUE, 0);
   gtk_box_pack_start(GTK_BOX(g->vbox), GTK_WIDGET(g->scale2), TRUE, TRUE, 0);

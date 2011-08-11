@@ -23,6 +23,7 @@
 #include "libs/lib.h"
 #include "gui/gtk.h"
 #include <gdk/gdkkeysyms.h>
+#include "dtgtk/button.h"
 
 DT_MODULE(1)
 
@@ -34,7 +35,12 @@ name ()
 
 uint32_t views()
 {
-  return DT_LIGHTTABLE_VIEW;
+  return DT_VIEW_LIGHTTABLE;
+}
+
+uint32_t container()
+{
+  return DT_UI_CONTAINER_PANEL_RIGHT_CENTER;
 }
 
 static void
@@ -53,48 +59,41 @@ button_clicked(GtkWidget *widget, gpointer user_data)
   switch((long int)user_data)
   {
     case 0: // all
-      DT_DEBUG_SQLITE3_EXEC(darktable.db, "delete from selected_images", NULL, NULL, NULL);
-      DT_DEBUG_SQLITE3_EXEC(darktable.db, fullq, NULL, NULL, NULL);
+      DT_DEBUG_SQLITE3_EXEC(dt_database_get(darktable.db), "delete from selected_images", NULL, NULL, NULL);
+      DT_DEBUG_SQLITE3_EXEC(dt_database_get(darktable.db), fullq, NULL, NULL, NULL);
       break;
     case 1: // none
-      DT_DEBUG_SQLITE3_EXEC(darktable.db, "delete from selected_images", NULL, NULL, NULL);
+      DT_DEBUG_SQLITE3_EXEC(dt_database_get(darktable.db), "delete from selected_images", NULL, NULL, NULL);
       break;
     case 2: // invert
-      DT_DEBUG_SQLITE3_EXEC(darktable.db, "create temp table tmp_selection (imgid integer)", NULL, NULL, NULL);
-      DT_DEBUG_SQLITE3_EXEC(darktable.db, "insert into tmp_selection select imgid from selected_images", NULL, NULL, NULL);
-      DT_DEBUG_SQLITE3_EXEC(darktable.db, "delete from selected_images", NULL, NULL, NULL);
-      DT_DEBUG_SQLITE3_EXEC(darktable.db, fullq, NULL, NULL, NULL);
-      DT_DEBUG_SQLITE3_EXEC(darktable.db, "delete from selected_images where imgid in (select imgid from tmp_selection)", NULL, NULL, NULL);
-      DT_DEBUG_SQLITE3_EXEC(darktable.db, "delete from tmp_selection", NULL, NULL, NULL);
-      DT_DEBUG_SQLITE3_EXEC(darktable.db, "drop table tmp_selection", NULL, NULL, NULL);
+      DT_DEBUG_SQLITE3_EXEC(dt_database_get(darktable.db), "insert into memory.tmp_selection select imgid from selected_images", NULL, NULL, NULL);
+      DT_DEBUG_SQLITE3_EXEC(dt_database_get(darktable.db), "delete from selected_images", NULL, NULL, NULL);
+      DT_DEBUG_SQLITE3_EXEC(dt_database_get(darktable.db), fullq, NULL, NULL, NULL);
+      DT_DEBUG_SQLITE3_EXEC(dt_database_get(darktable.db), "delete from selected_images where imgid in (select imgid from memory.tmp_selection)", NULL, NULL, NULL);
+      DT_DEBUG_SQLITE3_EXEC(dt_database_get(darktable.db), "delete from memory.tmp_selection", NULL, NULL, NULL);
       break;
     case 4: // untouched
       dt_collection_set_filter_flags (collection, (dt_collection_get_filter_flags(collection)|COLLECTION_FILTER_UNALTERED));
       dt_collection_update (collection);
       snprintf (fullq, 2048, "insert into selected_images %s", dt_collection_get_query (collection));
-      DT_DEBUG_SQLITE3_EXEC(darktable.db, "delete from selected_images", NULL, NULL, NULL);
-      DT_DEBUG_SQLITE3_EXEC(darktable.db, fullq, NULL, NULL, NULL);
+      DT_DEBUG_SQLITE3_EXEC(dt_database_get(darktable.db), "delete from selected_images", NULL, NULL, NULL);
+      DT_DEBUG_SQLITE3_EXEC(dt_database_get(darktable.db), fullq, NULL, NULL, NULL);
       break;
     default: // case 3: same film roll
-      DT_DEBUG_SQLITE3_EXEC(darktable.db, "create temp table tmp_selection (imgid integer)", NULL, NULL, NULL);
-      DT_DEBUG_SQLITE3_EXEC(darktable.db, "insert into tmp_selection select imgid from selected_images", NULL, NULL, NULL);
-      DT_DEBUG_SQLITE3_EXEC(darktable.db, "delete from selected_images", NULL, NULL, NULL);
-      DT_DEBUG_SQLITE3_EXEC(darktable.db, "insert into selected_images select id from images where film_id in (select film_id from images as a join tmp_selection as b on a.id = b.imgid)", NULL, NULL, NULL);
-      DT_DEBUG_SQLITE3_EXEC(darktable.db, "delete from tmp_selection", NULL, NULL, NULL);
-      DT_DEBUG_SQLITE3_EXEC(darktable.db, "drop table tmp_selection", NULL, NULL, NULL);
+      DT_DEBUG_SQLITE3_EXEC(dt_database_get(darktable.db), "create temp table memory.tmp_selection (imgid integer)", NULL, NULL, NULL);
+      DT_DEBUG_SQLITE3_EXEC(dt_database_get(darktable.db), "insert into memory.tmp_selection select imgid from selected_images", NULL, NULL, NULL);
+      DT_DEBUG_SQLITE3_EXEC(dt_database_get(darktable.db), "delete from selected_images", NULL, NULL, NULL);
+      DT_DEBUG_SQLITE3_EXEC(dt_database_get(darktable.db), "insert into selected_images select id from images where film_id in (select film_id from images as a join memory.tmp_selection as b on a.id = b.imgid)", NULL, NULL, NULL);
+      DT_DEBUG_SQLITE3_EXEC(dt_database_get(darktable.db), "delete from memory.tmp_selection", NULL, NULL, NULL);
       break;
   }
 
   /* free temporary collection and redraw visual*/
   dt_collection_free(collection);
 
-  dt_control_queue_draw_all();
+  dt_control_queue_redraw_center();
 }
 
-static void key_accel_callback(void *d)
-{
-  button_clicked(NULL, d);
-}
 
 void
 gui_reset (dt_lib_module_t *self)
@@ -117,15 +116,15 @@ gui_init (dt_lib_module_t *self)
   hbox = GTK_BOX(gtk_hbox_new(TRUE, 5));
 
   button = gtk_button_new_with_label(_("select all"));
+  gtk_button_set_accel(GTK_BUTTON(button),darktable.control->accels_lighttable,"<Darktable>/lighttable/plugins/select/select all");
   g_object_set(G_OBJECT(button), "tooltip-text", _("select all images in current collection (ctrl-a)"), (char *)NULL);
   gtk_box_pack_start(hbox, button, TRUE, TRUE, 0);
-  dt_gui_key_accel_register(GDK_CONTROL_MASK, GDK_a, key_accel_callback, (void *)0);
   g_signal_connect(G_OBJECT(button), "clicked", G_CALLBACK(button_clicked), (gpointer)0);
 
   button = gtk_button_new_with_label(_("select none"));
+  gtk_button_set_accel(GTK_BUTTON(button),darktable.control->accels_lighttable,"<Darktable>/lighttable/plugins/select/select none");
   g_object_set(G_OBJECT(button), "tooltip-text", _("clear selection (ctrl-shift-a)"), (char *)NULL);
   gtk_box_pack_start(hbox, button, TRUE, TRUE, 0);
-  dt_gui_key_accel_register(GDK_CONTROL_MASK|GDK_SHIFT_MASK, GDK_A, key_accel_callback, (void *)1);
   g_signal_connect(G_OBJECT(button), "clicked", G_CALLBACK(button_clicked), (gpointer)1);
 
   gtk_box_pack_start(GTK_BOX(self->widget), GTK_WIDGET(hbox), TRUE, TRUE, 0);
@@ -133,11 +132,12 @@ gui_init (dt_lib_module_t *self)
 
   button = gtk_button_new_with_label(_("invert selection"));
   g_object_set(G_OBJECT(button), "tooltip-text", _("select unselected images\nin current collection (ctrl-!)"), (char *)NULL);
+  gtk_button_set_accel(GTK_BUTTON(button),darktable.control->accels_lighttable,"<Darktable>/lighttable/plugins/select/invert selection");
   gtk_box_pack_start(hbox, button, TRUE, TRUE, 0);
-  dt_gui_key_accel_register(GDK_CONTROL_MASK|GDK_SHIFT_MASK, GDK_exclam, key_accel_callback, (void *)2);
   g_signal_connect(G_OBJECT(button), "clicked", G_CALLBACK(button_clicked), (gpointer)2);
 
   button = gtk_button_new_with_label(_("select film roll"));
+  gtk_button_set_accel(GTK_BUTTON(button),darktable.control->accels_lighttable,"<Darktable>/lighttable/plugins/select/select film roll");
   g_object_set(G_OBJECT(button), "tooltip-text", _("select all images which are in the same\nfilm roll as the selected images"), (char *)NULL);
   gtk_box_pack_start(hbox, button, TRUE, TRUE, 0);
   g_signal_connect(G_OBJECT(button), "clicked", G_CALLBACK(button_clicked), (gpointer)3);
@@ -146,6 +146,7 @@ gui_init (dt_lib_module_t *self)
   hbox = GTK_BOX(gtk_hbox_new(TRUE, 5));
 
   button = gtk_button_new_with_label(_("select untouched"));
+  gtk_button_set_accel(GTK_BUTTON(button),darktable.control->accels_lighttable,"<Darktable>/lighttable/plugins/select/select untouched");
   g_object_set(G_OBJECT(button), "tooltip-text", _("select untouched images in\ncurrent collection"), (char *)NULL);
   gtk_box_pack_start(hbox, button, TRUE, TRUE, 0);
   g_signal_connect(G_OBJECT(button), "clicked", G_CALLBACK(button_clicked), (gpointer)4);
@@ -158,6 +159,13 @@ gui_init (dt_lib_module_t *self)
 void
 gui_cleanup (dt_lib_module_t *self)
 {
-  dt_gui_key_accel_unregister(key_accel_callback);
 }
 
+void init_key_accels(dt_lib_module_t *self)
+{
+  gtk_button_init_accel(darktable.control->accels_lighttable,"<Darktable>/lighttable/plugins/select/select all");
+  gtk_button_init_accel(darktable.control->accels_lighttable,"<Darktable>/lighttable/plugins/select/select none");
+  gtk_button_init_accel(darktable.control->accels_lighttable,"<Darktable>/lighttable/plugins/select/invert selection");
+  gtk_button_init_accel(darktable.control->accels_lighttable,"<Darktable>/lighttable/plugins/select/select film roll");
+  gtk_button_init_accel(darktable.control->accels_lighttable,"<Darktable>/lighttable/plugins/select/select untouched");
+}

@@ -25,7 +25,6 @@
 #include "common/colorspaces.h"
 #include "common/darktable.h"
 #include "common/debug.h"
-#include "gui/histogram.h"
 #include "develop/develop.h"
 #include "control/control.h"
 #include "control/conf.h"
@@ -91,6 +90,10 @@ groups ()
 }
 
 
+void init_key_accels()
+{
+  dtgtk_slider_init_accel(darktable.control->accels_darkroom,"<Darktable>/darkroom/plugins/lowlight/blue shift");
+}
 static float
 lookup(const float *lut, const float i)
 {
@@ -204,7 +207,7 @@ void init(dt_iop_module_t *module)
   module->params = malloc(sizeof(dt_iop_lowlight_params_t));
   module->default_params = malloc(sizeof(dt_iop_lowlight_params_t));
   module->default_enabled = 0; // we're a rather slow and rare op.
-  module->priority = 526;
+  module->priority = 520; // module order created by iop_dependencies.py, do not edit!
   module->params_size = sizeof(dt_iop_lowlight_params_t);
   module->gui_data = NULL;
   dt_iop_lowlight_params_t tmp;
@@ -227,7 +230,7 @@ void init_presets (dt_iop_module_t *self)
 {
   dt_iop_lowlight_params_t p;
 
-  DT_DEBUG_SQLITE3_EXEC(darktable.db, "begin", NULL, NULL, NULL);
+  DT_DEBUG_SQLITE3_EXEC(dt_database_get(darktable.db), "begin", NULL, NULL, NULL);
 
   p.transition_x[0] = 0.000000;
   p.transition_x[1] = 0.200000;
@@ -383,7 +386,7 @@ void init_presets (dt_iop_module_t *self)
   p.blueness = 50.0f;
   dt_gui_presets_add_generic(_("night"), self->op, &p, sizeof(p), 1);
 
-  DT_DEBUG_SQLITE3_EXEC(darktable.db, "commit", NULL, NULL, NULL);
+  DT_DEBUG_SQLITE3_EXEC(dt_database_get(darktable.db), "commit", NULL, NULL, NULL);
 }
 
 // fills in new parameters based on mouse position (in 0,1)
@@ -505,7 +508,7 @@ lowlight_expose(GtkWidget *widget, GdkEventExpose *event, gpointer user_data)
     cairo_set_source_rgba(cr, .7, .7, .7, .6);
     cairo_move_to(cr, 0, - height*c->draw_min_ys[0]);
     for(int k=1; k<DT_IOP_LOWLIGHT_RES; k++)    cairo_line_to(cr, k*width/(float)(DT_IOP_LOWLIGHT_RES-1), - height*c->draw_min_ys[k]);
-    for(int k=DT_IOP_LOWLIGHT_RES-2; k>=0; k--) cairo_line_to(cr, k*width/(float)(DT_IOP_LOWLIGHT_RES-1), - height*c->draw_max_ys[k]);
+    for(int k=DT_IOP_LOWLIGHT_RES-1; k>=0; k--) cairo_line_to(cr, k*width/(float)(DT_IOP_LOWLIGHT_RES-1), - height*c->draw_max_ys[k]);
     cairo_close_path(cr);
     cairo_fill(cr);
     // draw mouse focus circle
@@ -718,6 +721,7 @@ void gui_init(struct dt_iop_module_t *self)
   dtgtk_slider_set_label(c->scale_blueness,_("blue shift"));
   dtgtk_slider_set_unit(c->scale_blueness,"%");
   dtgtk_slider_set_format_type(c->scale_blueness,DARKTABLE_SLIDER_FORMAT_PERCENT);
+  dtgtk_slider_set_accel(c->scale_blueness,darktable.control->accels_darkroom,"<Darktable>/darkroom/plugins/lowlight/blue shift");
   g_object_set(G_OBJECT(c->scale_blueness), "tooltip-text", _("blueness in shadows"), (char *)NULL);
 
   gtk_box_pack_start(GTK_BOX(self->widget), GTK_WIDGET(c->scale_blueness), TRUE, TRUE, 5);

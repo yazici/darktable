@@ -21,6 +21,7 @@
 #include "common/image_cache.h"
 #include "common/debug.h"
 #include "common/history.h"
+#include "libs/lib.h"
 #include "control/conf.h"
 #include "control/control.h"
 #include "develop/develop.h"
@@ -31,18 +32,10 @@
 #include <glib.h>
 #include <string.h>
 #include <strings.h>
-#include <glade/glade.h>
 #include <math.h>
-
-static void
-collection_updated(void *d)
-{
-  dt_control_queue_draw_all();
-}
 
 void dt_view_manager_init(dt_view_manager_t *vm)
 {
-  dt_collection_listener_register(collection_updated, NULL);
   vm->film_strip_dragging = 0;
   vm->film_strip_on = 0;
   vm->film_strip_size = dt_conf_get_float("plugins/filmstrip/size");
@@ -52,8 +45,15 @@ void dt_view_manager_init(dt_view_manager_t *vm)
   if(dt_view_load_module(&vm->film_strip, "filmstrip"))
     fprintf(stderr, "[view_manager_init] failed to load film strip view!\n");
 
+  /* prepare statements */
+  DT_DEBUG_SQLITE3_PREPARE_V2(dt_database_get(darktable.db), "select * from selected_images where imgid = ?1", -1, &vm->statements.is_selected, NULL);
+  DT_DEBUG_SQLITE3_PREPARE_V2(dt_database_get(darktable.db), "delete from selected_images where imgid = ?1", -1, &vm->statements.delete_from_selected, NULL);
+  DT_DEBUG_SQLITE3_PREPARE_V2(dt_database_get(darktable.db), "insert into selected_images values (?1)", -1, &vm->statements.make_selected, NULL);
+  DT_DEBUG_SQLITE3_PREPARE_V2(dt_database_get(darktable.db), "select num from history where imgid = ?1", -1, &vm->statements.have_history, NULL);
+  DT_DEBUG_SQLITE3_PREPARE_V2(dt_database_get(darktable.db), "select color from color_labels where imgid=?1", -1, &vm->statements.get_color, NULL); 
+
   int res=0, midx=0;
-  char *modules[] = {"darkroom","lighttable","capture",NULL};
+  char *modules[] = {"lighttable","darkroom","capture",NULL};
   char *module = modules[midx];
   while(module != NULL)
   {
@@ -72,7 +72,6 @@ void dt_view_manager_init(dt_view_manager_t *vm)
 
 void dt_view_manager_cleanup(dt_view_manager_t *vm)
 {
-  dt_collection_listener_unregister(collection_updated);
   for(int k=0; k<vm->num_views; k++) dt_view_unload_module(vm->view + k);
 }
 
@@ -101,7 +100,7 @@ int dt_view_load_module(dt_view_t *view, const char *module)
   view->height = view->width = 100; // set to non-insane defaults before first expose/configure.
   g_strlcpy(view->module_name, module, 64);
   char plugindir[1024];
-  dt_get_plugindir(plugindir, 1024);
+  dt_util_get_plugindir(plugindir, 1024);
   g_strlcat(plugindir, "/views", 1024);
   gchar *libname = g_module_build_path(plugindir, (const gchar *)module);
   view->module = g_module_open(libname, G_MODULE_BIND_LAZY);
@@ -119,6 +118,7 @@ int dt_view_load_module(dt_view_t *view, const char *module)
     goto out;
   }
   if(!g_module_symbol(view->module, "name",            (gpointer)&(view->name)))            view->name = NULL;
+  if(!g_module_symbol(view->module, "view",            (gpointer)&(view->view)))            view->view = NULL;
   if(!g_module_symbol(view->module, "init",            (gpointer)&(view->init)))            view->init = NULL;
   if(!g_module_symbol(view->module, "cleanup",         (gpointer)&(view->cleanup)))         view->cleanup = NULL;
   if(!g_module_symbol(view->module, "expose",          (gpointer)&(view->expose)))          view->expose = NULL;
@@ -161,22 +161,165 @@ void dt_vm_remove_child(GtkWidget *widget, gpointer data)
 
 int dt_view_manager_switch (dt_view_manager_t *vm, int k)
 {
-  // destroy old module list
-  GtkContainer *table = GTK_CONTAINER(glade_xml_get_widget (darktable.gui->main_window, "module_list"));
-  gtk_container_foreach(table, (GtkCallback)dt_vm_remove_child, (gpointer)table);
+  // Before switching views, restore accelerators if disabled
+  if(!darktable.control->key_accelerators_on)
+    dt_control_key_accelerators_on(darktable.control);
 
+  // destroy old module list
   int error = 0;
   dt_view_t *v = vm->view + vm->current_view;
-  int newv = vm->current_view;
-  if(k < vm->num_views) newv = k;
-  dt_view_t *nv = vm->view + newv;
-  if(nv->try_enter) error = nv->try_enter(nv);
-  if(!error)
+
+  /* Special case when entering nothing (just before leaving dt) */
+  if ( k==DT_MODE_NONE )
   {
+    /* iterator plugins and cleanup plugins in current view */
+    GList *plugins = g_list_last(darktable.lib->plugins);
+    while (plugins)
+      {
+	dt_lib_module_t *plugin = (dt_lib_module_t *)(plugins->data);
+
+	if (!plugin && !plugin->views)
+	  fprintf(stderr,"module %s doesnt have views flags\n",plugin->name());
+
+	/* does this module belong to current view ?*/
+	if (plugin->views() & v->view(v) )
+	  plugin->gui_cleanup(plugin);
+
+	/* get next plugin */
+	plugins = g_list_previous(plugins);
+      }
+
+    /* leave the current view*/
     if(vm->current_view >= 0 && v->leave) v->leave(v);
-    vm->current_view = newv;
-    if(newv >= 0 && nv->enter) nv->enter(nv);
+
+    /* remove all widets in all containers */
+    for(int l=0;l<DT_UI_CONTAINER_SIZE;l++)
+      dt_ui_container_clear(darktable.gui->ui, l);
+
+    vm->current_view = -1 ;
+    return 0 ;
   }
+
+  int newv = vm->current_view;
+  if (k < vm->num_views) newv = k;
+  dt_view_t *nv = vm->view + newv;
+
+  if (nv->try_enter) 
+    error = nv->try_enter(nv);
+
+  if (!error)
+  {
+     GList *plugins;
+    
+    /* cleanup current view before initialization of new  */
+    if (vm->current_view >=0)
+    {
+      /* leave current view */
+      if(v->leave) v->leave(v);
+   
+      /* iterator plugins and cleanup plugins in current view */
+      plugins = g_list_last(darktable.lib->plugins);
+      while (plugins)
+      {
+	  dt_lib_module_t *plugin = (dt_lib_module_t *)(plugins->data);
+	  
+	  if (!plugin && !plugin->views)
+	    fprintf(stderr,"module %s doesnt have views flags\n",plugin->name());
+	  
+	  /* does this module belong to current view ?*/
+	  if (plugin->views() & v->view(v) )
+	    plugin->gui_cleanup(plugin);
+
+	  /* get next plugin */
+	  plugins = g_list_previous(plugins);
+      }
+
+      /* remove all widets in all containers */
+      for(int l=0;l<DT_UI_CONTAINER_SIZE;l++)
+	dt_ui_container_clear(darktable.gui->ui, l);
+    }
+
+    /* change current view to the new view */
+    vm->current_view = newv;
+
+    /* lets add plugins related to new view into panels */
+    plugins = g_list_last(darktable.lib->plugins);
+    while (plugins)
+    {
+      dt_lib_module_t *plugin = (dt_lib_module_t *)(plugins->data);
+      if( plugin->views() & nv->view(v) )
+      {
+	/* module should be in this view, lets initialize */                                                                         
+	plugin->gui_init(plugin);
+
+	/* add module widget to the ui */
+	GtkWidget *w = NULL;
+	w = dt_lib_gui_get_expander(plugin);
+
+	/* add module to it's container */
+	dt_ui_container_add_widget(darktable.gui->ui, plugin->container(), w);
+
+      }
+
+      /* lets get next plugin */
+      plugins = g_list_previous(plugins);
+    }
+
+    /* hide/show modules as last config */
+    plugins = g_list_last(darktable.lib->plugins);
+    while (plugins)
+    {
+      dt_lib_module_t *plugin = (dt_lib_module_t *)(plugins->data);
+      if(plugin->views() & nv->view(v))
+      {
+	/* set expanded if last mode was that */
+	char var[1024];
+	gboolean expanded = FALSE;
+	if (plugin->expandable())
+	{
+	  snprintf(var, 1024, "plugins/lighttable/%s/expanded", plugin->plugin_name);
+	  expanded = dt_conf_get_bool(var);
+	  gtk_expander_set_expanded (plugin->expander, expanded);
+	
+	  /* show all widgets in expander */
+	  gtk_widget_show_all(GTK_WIDGET(plugin->expander));
+	}
+
+	/* show/hide plugin widget depending on expanded flag or if plugin
+	   not is expandeable() */
+	if(expanded || !plugin->expandable()) 
+	  gtk_widget_show_all(plugin->widget);
+	else         
+	  gtk_widget_hide_all(plugin->widget);	
+      }
+
+      /* lets get next plugin */
+      plugins = g_list_previous(plugins); 
+    }
+  
+ 
+   /* enter view */
+   if(newv >= 0 && nv->enter) nv->enter(nv);
+ 
+   /* raise view changed signal */
+    dt_control_signal_raise(darktable.signals, DT_SIGNAL_VIEWMANAGER_VIEW_CHANGED);
+ 
+   /* add endmarkers to left and right center containers */
+   GtkWidget *endmarker = gtk_drawing_area_new();
+   dt_ui_container_add_widget(darktable.gui->ui, DT_UI_CONTAINER_PANEL_LEFT_CENTER, endmarker);
+   g_signal_connect (G_OBJECT (endmarker), "expose-event",
+                     G_CALLBACK (dt_control_expose_endmarker), 0);
+   gtk_widget_set_size_request(endmarker, -1, 50);
+   gtk_widget_show(endmarker);
+   
+   endmarker = gtk_drawing_area_new();
+   dt_ui_container_add_widget(darktable.gui->ui, DT_UI_CONTAINER_PANEL_RIGHT_CENTER, endmarker);
+   g_signal_connect (G_OBJECT (endmarker), "expose-event",
+		     G_CALLBACK (dt_control_expose_endmarker), (gpointer)1);
+   gtk_widget_set_size_request(endmarker, -1, 50);
+   gtk_widget_show(endmarker);   
+  }
+
   return error;
 }
 
@@ -207,8 +350,8 @@ void dt_view_manager_expose (dt_view_manager_t *vm, cairo_t *cr, int32_t width, 
     vm->film_strip.height = height * vm->film_strip_size;
     vm->film_strip.width  = width;
     cairo_rectangle(cr, -10, v->height, width+20, tb);
-    GtkWidget *widget = glade_xml_get_widget (darktable.gui->main_window, "center");
-    GtkStyle *style = gtk_widget_get_style(widget);
+ 
+    GtkStyle *style = gtk_widget_get_style(dt_ui_center(darktable.gui->ui));
     cairo_set_source_rgb (cr,
                           style->bg[GTK_STATE_NORMAL].red/65535.0,
                           style->bg[GTK_STATE_NORMAL].green/65535.0,
@@ -231,8 +374,10 @@ void dt_view_manager_expose (dt_view_manager_t *vm, cairo_t *cr, int32_t width, 
     vm->film_strip.expose(&(vm->film_strip), cr, vm->film_strip.width, vm->film_strip.height, px, py);
     cairo_restore(cr);
   }
+
   if(v->expose)
   {
+    /* expose the view */
     cairo_rectangle(cr, 0, 0, v->width, v->height);
     cairo_clip(cr);
     cairo_new_path(cr);
@@ -243,6 +388,23 @@ void dt_view_manager_expose (dt_view_manager_t *vm, cairo_t *cr, int32_t width, 
       py = -1.0;
     }
     v->expose(v, cr, v->width, v->height, px, py);
+  
+    /* expose plugins */
+    GList *plugins = g_list_last(darktable.lib->plugins);
+    while (plugins)
+    {
+      dt_lib_module_t *plugin = (dt_lib_module_t *)(plugins->data);
+      
+      if (!plugin && !plugin->views)
+        fprintf(stderr,"module %s doesnt have views flags\n",plugin->name());
+	  
+      /* does this module belong to current view ?*/
+      if (plugin->gui_post_expose && plugin->views() & v->view(v) )
+	plugin->gui_post_expose(plugin,cr,v->width,v->height,px,py );
+
+      /* get next plugin */
+      plugins = g_list_previous(plugins);
+    } 
   }
 }
 
@@ -284,7 +446,29 @@ void dt_view_manager_mouse_moved (dt_view_manager_t *vm, double x, double y, int
   }
   else if(vm->film_strip_on && v->height + tb < y && vm->film_strip.mouse_moved)
     vm->film_strip.mouse_moved(&vm->film_strip, x, y - v->height - tb, which);
-  else if(v->mouse_moved) v->mouse_moved(v, x, y, which);
+  else
+  {
+    /* lets check if any plugins want to handle mouse move */
+    gboolean handled = FALSE;
+    GList *plugins = g_list_last(darktable.lib->plugins);
+    while (plugins)
+    {
+      dt_lib_module_t *plugin = (dt_lib_module_t *)(plugins->data);
+    
+      /* does this module belong to current view ?*/
+      if (plugin->mouse_moved && plugin->views() & v->view(v) )
+	if(plugin->mouse_moved(plugin, x, y, which))
+	  handled = TRUE;
+      
+      /* get next plugin */
+      plugins = g_list_previous(plugins);
+    } 
+
+    /* if not handled by any plugin let pass to view handler*/
+    if(!handled && v->mouse_moved) 
+      v->mouse_moved(v, x, y, which);
+  }
+    
 
   int state = vm->film_strip_on && (v->height + tb > y) && (y > v->height);
   if(state && !oldstate)      dt_control_change_cursor(GDK_SB_V_DOUBLE_ARROW);
@@ -300,7 +484,29 @@ int dt_view_manager_button_released (dt_view_manager_t *vm, double x, double y, 
   dt_control_change_cursor(GDK_LEFT_PTR);
   if(vm->film_strip_on && v->height + darktable.control->tabborder < y && vm->film_strip.button_released)
     return vm->film_strip.button_released(&vm->film_strip, x, y - v->height - darktable.control->tabborder, which, state);
-  else if(v->button_released) return v->button_released(v, x, y, which, state);
+  else
+  {
+    /* lets check if any plugins want to handle button press */
+    gboolean handled = FALSE;
+    GList *plugins = g_list_last(darktable.lib->plugins);
+    while (plugins)
+    {
+      dt_lib_module_t *plugin = (dt_lib_module_t *)(plugins->data);
+    
+      /* does this module belong to current view ?*/
+      if (plugin->button_released && plugin->views() & v->view(v) )
+	if(plugin->button_released(plugin, x, y, which,state))
+	  handled = TRUE;
+      
+      /* get next plugin */
+      plugins = g_list_previous(plugins);
+    } 
+
+    /* if not handled by any plugin let pass to view handler*/
+    if(!handled && v->button_released) 
+      v->button_released(v, x, y, which,state);
+  } 
+
   return 0;
 }
 
@@ -316,24 +522,56 @@ int dt_view_manager_button_pressed (dt_view_manager_t *vm, double x, double y, i
   }
   else if(vm->film_strip_on && v->height + darktable.control->tabborder < y && vm->film_strip.button_pressed)
     return vm->film_strip.button_pressed(&vm->film_strip, x, y - v->height - darktable.control->tabborder, which, type, state);
-  else if(v->button_pressed) return v->button_pressed(v, x, y, which, type, state);
+  else
+  {
+    /* lets check if any plugins want to handle button press */
+    gboolean handled = FALSE;
+    GList *plugins = g_list_last(darktable.lib->plugins);
+    while (plugins)
+    {
+      dt_lib_module_t *plugin = (dt_lib_module_t *)(plugins->data);
+    
+      /* does this module belong to current view ?*/
+      if (plugin->button_pressed && plugin->views() & v->view(v) )
+	if(plugin->button_pressed(plugin, x, y, which,type,state))
+	  handled = TRUE;
+      
+      /* get next plugin */
+      plugins = g_list_previous(plugins);
+    } 
+
+    /* if not handled by any plugin let pass to view handler*/
+    if(!handled && v->button_pressed) 
+      v->button_pressed(v, x, y, which,type,state);
+  }
+
   return 0;
 }
 
-int dt_view_manager_key_pressed (dt_view_manager_t *vm, uint16_t which)
+int dt_view_manager_key_pressed (dt_view_manager_t *vm, guint key, guint state)
 {
+  int film_strip_result = 0;
   if(vm->current_view < 0) return 0;
   dt_view_t *v = vm->view + vm->current_view;
-  if(v->key_pressed) return v->key_pressed(v, which);
-  return 0;
+  if(vm->film_strip_on)
+    film_strip_result = (vm->film_strip.key_pressed)(&vm->film_strip,
+                                                     key, state);
+  if(v->key_pressed)
+    return v->key_pressed(v, key, state) || film_strip_result;
+  return film_strip_result;
 }
 
-int dt_view_manager_key_released (dt_view_manager_t *vm, uint16_t which)
+int dt_view_manager_key_released (dt_view_manager_t *vm, guint key, guint state)
 {
+  int film_strip_result = 0;
   if(vm->current_view < 0) return 0;
   dt_view_t *v = vm->view + vm->current_view;
-  if(v->key_released) return v->key_released(v, which);
-  return 0;
+  if(vm->film_strip_on)
+    film_strip_result = (vm->film_strip.key_pressed)(&vm->film_strip,
+                                                     key, state);
+  if(v->key_released)
+    return v->key_released(v, key, state) || film_strip_result;
+  return film_strip_result;
 }
 
 void dt_view_manager_configure (dt_view_manager_t *vm, int width, int height)
@@ -374,13 +612,13 @@ void dt_view_set_scrollbar(dt_view_t *view, float hpos, float hsize, float hwins
   view->hscroll_size = hsize;
   view->hscroll_viewport_size = hwinsize;
   GtkWidget *widget;
-  widget = glade_xml_get_widget (darktable.gui->main_window, "leftborder");
+  widget = darktable.gui->widgets.left_border;
   gtk_widget_queue_draw(widget);
-  widget = glade_xml_get_widget (darktable.gui->main_window, "rightborder");
+  widget = darktable.gui->widgets.right_border;
   gtk_widget_queue_draw(widget);
-  widget = glade_xml_get_widget (darktable.gui->main_window, "bottomborder");
+  widget = darktable.gui->widgets.bottom_border;
   gtk_widget_queue_draw(widget);
-  widget = glade_xml_get_widget (darktable.gui->main_window, "topborder");
+  widget = darktable.gui->widgets.top_border;
   gtk_widget_queue_draw(widget);
 }
 
@@ -422,15 +660,25 @@ void dt_view_image_expose(dt_image_t *img, dt_view_image_over_t *image_over, int
   int selected = 0, altered = 0, imgsel;
   DT_CTL_GET_GLOBAL(imgsel, lib_image_mouse_over_id);
   // if(img->flags & DT_IMAGE_SELECTED) selected = 1;
-  sqlite3_stmt *stmt;
-  DT_DEBUG_SQLITE3_PREPARE_V2(darktable.db, "select * from selected_images where imgid = ?1", -1, &stmt, NULL);
-  DT_DEBUG_SQLITE3_BIND_INT(stmt, 1, imgid);
-  if(sqlite3_step(stmt) == SQLITE_ROW) selected = 1;
-  sqlite3_finalize(stmt);
-  DT_DEBUG_SQLITE3_PREPARE_V2(darktable.db, "select num from history where imgid = ?1", -1, &stmt, NULL);
-  DT_DEBUG_SQLITE3_BIND_INT(stmt, 1, imgid);
-  if(sqlite3_step(stmt) == SQLITE_ROW) altered = 1;
-  sqlite3_finalize(stmt);
+
+  /* clear and reset statements */
+  DT_DEBUG_SQLITE3_CLEAR_BINDINGS(darktable.view_manager->statements.is_selected);
+  DT_DEBUG_SQLITE3_CLEAR_BINDINGS(darktable.view_manager->statements.have_history);
+  DT_DEBUG_SQLITE3_RESET(darktable.view_manager->statements.is_selected);
+  DT_DEBUG_SQLITE3_RESET(darktable.view_manager->statements.have_history);
+
+  /* bind imgid to prepared statments */
+  DT_DEBUG_SQLITE3_BIND_INT(darktable.view_manager->statements.is_selected, 1, imgid);
+  DT_DEBUG_SQLITE3_BIND_INT(darktable.view_manager->statements.have_history, 1, imgid); 
+
+  /* lets check if imgid is selected */
+  if(sqlite3_step(darktable.view_manager->statements.is_selected) == SQLITE_ROW) 
+    selected = 1;
+
+  /* lets check if imgid has history */
+  if(sqlite3_step(darktable.view_manager->statements.have_history) == SQLITE_ROW) 
+    altered = 1;
+  
   if(selected == 1)
   {
     outlinecol = 0.4;
@@ -667,11 +915,10 @@ void dt_view_image_expose(dt_image_t *img, dt_view_image_over_t *image_over, int
       {
         if(darktable.gui->center_tooltip == 0) // no tooltip yet, so add one
         {
-          GtkWidget *widget = glade_xml_get_widget (darktable.gui->main_window, "center");
           char* tooltip = dt_history_get_items_as_string(img->id);
           if(tooltip != NULL)
           {
-            g_object_set(G_OBJECT(widget), "tooltip-text", tooltip, (char *)NULL);
+            g_object_set(G_OBJECT(dt_ui_center(darktable.gui->ui)), "tooltip-text", tooltip, (char *)NULL);
             g_free(tooltip);
           }
         }
@@ -689,18 +936,21 @@ void dt_view_image_expose(dt_image_t *img, dt_view_image_over_t *image_over, int
     const float x = zoom == 1 ? (0.07)*fscale : .21*width;
     const float y = zoom == 1 ? 0.17*fscale: 0.1*height;
     const float r = zoom == 1 ? 0.01*fscale : 0.03*width;
-    sqlite3_stmt *stmt;
-    DT_DEBUG_SQLITE3_PREPARE_V2(darktable.db, "select color from color_labels where imgid=?1", -1, &stmt, NULL);
-    DT_DEBUG_SQLITE3_BIND_INT(stmt, 1, imgid);
-    while(sqlite3_step(stmt) == SQLITE_ROW)
+
+    /* clear and reset prepared statement */
+    DT_DEBUG_SQLITE3_CLEAR_BINDINGS(darktable.view_manager->statements.get_color);
+    DT_DEBUG_SQLITE3_RESET(darktable.view_manager->statements.get_color); 
+
+    /* setup statement and iterate rows */
+    DT_DEBUG_SQLITE3_BIND_INT(darktable.view_manager->statements.get_color, 1, imgid);
+    while(sqlite3_step(darktable.view_manager->statements.get_color) == SQLITE_ROW)
     {
       cairo_save(cr);
-      int col = sqlite3_column_int(stmt, 0);
+      int col = sqlite3_column_int(darktable.view_manager->statements.get_color, 0);
       // see src/dtgtk/paint.c
       dtgtk_cairo_paint_label(cr, x+(3*r*col)-5*r, y-r, r*2, r*2, col);
       cairo_restore(cr);
     }
-    sqlite3_finalize(stmt);
   }
 
   if(img && (zoom == 1))
@@ -729,27 +979,82 @@ void dt_view_image_expose(dt_image_t *img, dt_view_image_over_t *image_over, int
 }
 
 
-
-void dt_view_toggle_selection(int iid)
+/**
+ * \brief Set the selection bit to a given value for the specified image
+ * \param[in] imgid The image id
+ * \param[in] value The boolean value for the bit
+ */
+void dt_view_set_selection(int imgid, int value)
 {
-  sqlite3_stmt *stmt;
-  DT_DEBUG_SQLITE3_PREPARE_V2(darktable.db, "select * from selected_images where imgid = ?1", -1, &stmt, NULL);
-  DT_DEBUG_SQLITE3_BIND_INT(stmt, 1, iid);
-  if(sqlite3_step(stmt) == SQLITE_ROW)
+  /* clear and reset statement */
+  DT_DEBUG_SQLITE3_CLEAR_BINDINGS(darktable.view_manager->statements.is_selected);
+  DT_DEBUG_SQLITE3_RESET(darktable.view_manager->statements.is_selected);
+
+  /* setup statement and iterate over rows */
+  DT_DEBUG_SQLITE3_BIND_INT(darktable.view_manager->statements.is_selected, 1, imgid);
+
+  if(sqlite3_step(darktable.view_manager->statements.is_selected) == SQLITE_ROW)
   {
-    sqlite3_finalize(stmt);
-    DT_DEBUG_SQLITE3_PREPARE_V2(darktable.db, "delete from selected_images where imgid = ?1", -1, &stmt, NULL);
-    DT_DEBUG_SQLITE3_BIND_INT(stmt, 1, iid);
-    sqlite3_step(stmt);
-    sqlite3_finalize(stmt);
+    if(!value)
+    {
+      /* Value is set and should be unset; get rid of it */
+
+      /* clear and reset statement */
+      DT_DEBUG_SQLITE3_CLEAR_BINDINGS(darktable.view_manager->statements.delete_from_selected);
+      DT_DEBUG_SQLITE3_RESET(darktable.view_manager->statements.delete_from_selected);
+
+      /* setup statement and execute */
+      DT_DEBUG_SQLITE3_BIND_INT(darktable.view_manager->statements.delete_from_selected, 1, imgid);
+      sqlite3_step(darktable.view_manager->statements.delete_from_selected);
+    }
+  }
+  else if(value)
+  {
+    /* Select bit is unset and should be set; add it */
+    
+    /* clear and reset statement */ 
+    DT_DEBUG_SQLITE3_CLEAR_BINDINGS(darktable.view_manager->statements.make_selected);
+    DT_DEBUG_SQLITE3_RESET(darktable.view_manager->statements.make_selected);
+    
+    /* setup statement and execute */  
+    DT_DEBUG_SQLITE3_BIND_INT(darktable.view_manager->statements.make_selected, 1, imgid);
+    sqlite3_step(darktable.view_manager->statements.make_selected);
+  }
+ 
+}
+
+/**
+ * \brief Toggle the selection bit in the database for the specified image
+ * \param[in] imgid The image id
+ */
+void dt_view_toggle_selection(int imgid)
+{
+
+  /* clear and reset statement */
+  DT_DEBUG_SQLITE3_CLEAR_BINDINGS(darktable.view_manager->statements.is_selected);
+  DT_DEBUG_SQLITE3_RESET(darktable.view_manager->statements.is_selected);
+
+  /* setup statement and iterate over rows */
+  DT_DEBUG_SQLITE3_BIND_INT(darktable.view_manager->statements.is_selected, 1, imgid);
+  if(sqlite3_step(darktable.view_manager->statements.is_selected) == SQLITE_ROW)
+  {
+    /* clear and reset statement */
+    DT_DEBUG_SQLITE3_CLEAR_BINDINGS(darktable.view_manager->statements.delete_from_selected);
+    DT_DEBUG_SQLITE3_RESET(darktable.view_manager->statements.delete_from_selected);
+
+    /* setup statement and execute */
+    DT_DEBUG_SQLITE3_BIND_INT(darktable.view_manager->statements.delete_from_selected, 1, imgid);
+    sqlite3_step(darktable.view_manager->statements.delete_from_selected);
   }
   else
   {
-    sqlite3_finalize(stmt);
-    DT_DEBUG_SQLITE3_PREPARE_V2(darktable.db, "insert into selected_images values (?1)", -1, &stmt, NULL);
-    DT_DEBUG_SQLITE3_BIND_INT(stmt, 1, iid);
-    sqlite3_step(stmt);
-    sqlite3_finalize(stmt);
+    /* clear and reset statement */
+    DT_DEBUG_SQLITE3_CLEAR_BINDINGS(darktable.view_manager->statements.make_selected);
+    DT_DEBUG_SQLITE3_RESET(darktable.view_manager->statements.make_selected);
+
+    /* setup statement and execute */
+    DT_DEBUG_SQLITE3_BIND_INT(darktable.view_manager->statements.make_selected, 1, imgid);
+    sqlite3_step(darktable.view_manager->statements.make_selected);
   }
 }
 
@@ -760,22 +1065,27 @@ uint32_t dt_view_film_strip_get_active_image(dt_view_manager_t *vm)
 
 void dt_view_film_strip_set_active_image(dt_view_manager_t *vm,int iid)
 {
-  sqlite3_stmt *stmt;
-  // First off clear all selected images...
-  DT_DEBUG_SQLITE3_EXEC(darktable.db, "delete from selected_images", NULL, NULL, NULL);
+  /* First off clear all selected images... */
+  DT_DEBUG_SQLITE3_EXEC(dt_database_get(darktable.db), "delete from selected_images", NULL, NULL, NULL);
 
-  // Then insert a selection of image id
-  DT_DEBUG_SQLITE3_PREPARE_V2(darktable.db, "insert into selected_images values (?1)", -1, &stmt, NULL);
-  DT_DEBUG_SQLITE3_BIND_INT(stmt, 1, iid);
-  sqlite3_step(stmt);
-  sqlite3_finalize(stmt);
+  /* clear and reset statement */
+  DT_DEBUG_SQLITE3_CLEAR_BINDINGS(darktable.view_manager->statements.make_selected);
+  DT_DEBUG_SQLITE3_RESET(darktable.view_manager->statements.make_selected);
+
+  /* setup statement and execute */
+  DT_DEBUG_SQLITE3_BIND_INT(darktable.view_manager->statements.make_selected, 1, iid);
+  sqlite3_step(darktable.view_manager->statements.make_selected);
+
   vm->film_strip_scroll_to=vm->film_strip_active_image=iid;
 }
 
 void dt_view_film_strip_open(dt_view_manager_t *vm, void (*activated)(const int imgid, void*), void *data)
 {
   dt_view_t *self = (dt_view_t *)data;
-  dt_develop_t *dev = (dt_develop_t *)self->data;
+  dt_develop_t *dev = NULL;
+
+  if(!strcmp(self->name(self),"darkroom"))
+    dev = (dt_develop_t *)self->data;
 
   vm->film_strip_activated = activated;
   vm->film_strip_data = data;
@@ -786,7 +1096,7 @@ void dt_view_film_strip_open(dt_view_manager_t *vm, void (*activated)(const int 
   const int ht = darktable.control->height - 2*tb;
   dt_view_manager_configure (vm, wd, ht);
   
-  if(dev->image)
+  if(dev && dev->image)
     dt_view_film_strip_scroll_to(vm, dev->image->id);
 }
 
@@ -831,13 +1141,13 @@ void dt_view_film_strip_prefetch()
   {
     int imgid = -1;
     sqlite3_stmt *stmt;
-    DT_DEBUG_SQLITE3_PREPARE_V2(darktable.db, "select imgid from selected_images", -1, &stmt, NULL);
+    DT_DEBUG_SQLITE3_PREPARE_V2(dt_database_get(darktable.db), "select imgid from selected_images", -1, &stmt, NULL);
     if(sqlite3_step(stmt) == SQLITE_ROW)
       imgid = sqlite3_column_int(stmt, 0);
     sqlite3_finalize(stmt);
 
     snprintf(query, 1024, "select rowid from (%s) where id=?3", qin);
-    DT_DEBUG_SQLITE3_PREPARE_V2(darktable.db, query, -1, &stmt, NULL);
+    DT_DEBUG_SQLITE3_PREPARE_V2(dt_database_get(darktable.db), query, -1, &stmt, NULL);
     DT_DEBUG_SQLITE3_BIND_INT(stmt, 1,  0);
     DT_DEBUG_SQLITE3_BIND_INT(stmt, 2, -1);
     DT_DEBUG_SQLITE3_BIND_INT(stmt, 3, imgid);
@@ -845,7 +1155,7 @@ void dt_view_film_strip_prefetch()
       offset = sqlite3_column_int(stmt, 0) - 1;
     sqlite3_finalize(stmt);
 
-    DT_DEBUG_SQLITE3_PREPARE_V2(darktable.db, qin, -1, &stmt, NULL);
+    DT_DEBUG_SQLITE3_PREPARE_V2(dt_database_get(darktable.db), qin, -1, &stmt, NULL);
     DT_DEBUG_SQLITE3_BIND_INT(stmt, 1, offset+1);
     DT_DEBUG_SQLITE3_BIND_INT(stmt, 2, 2);
     while(sqlite3_step(stmt) == SQLITE_ROW)
@@ -857,6 +1167,12 @@ void dt_view_film_strip_prefetch()
     }
     sqlite3_finalize(stmt);
   }
+}
+
+void dt_view_manager_view_toolbox_add(dt_view_manager_t *vm,GtkWidget *tool)
+{
+  if (vm->proxy.view_toolbox.module)
+    vm->proxy.view_toolbox.add(vm->proxy.view_toolbox.module,tool);
 }
 
 // kate: tab-indents: off; indent-width 2; replace-tabs on; indent-mode cstyle; remove-trailing-space on;

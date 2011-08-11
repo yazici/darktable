@@ -18,27 +18,45 @@
 #ifndef DT_LIB_H
 #define DT_LIB_H
 
+#include "views/view.h"
 #include "common/darktable.h"
 #include <gmodule.h>
 #include <gtk/gtk.h>
 
 struct dt_lib_module_t;
+struct dt_colorpicker_sample_t;
+
 /** struct responsible for all library related shared routines and plugins. */
 typedef struct dt_lib_t
 {
   GList *plugins;
   struct dt_lib_module_t *gui_module;
+
+  /** Proxy functions for communication with views */
+  struct
+  {
+    /** Colorpicker plugin hooks */
+    struct
+    {
+      struct dt_lib_module_t *module;
+      uint8_t *picked_color_rgb_mean;
+      uint8_t *picked_color_rgb_min;
+      uint8_t *picked_color_rgb_max;
+      float *picked_color_lab_mean;
+      float *picked_color_lab_min;
+      float *picked_color_lab_max;
+      GSList *live_samples;
+      struct dt_colorpicker_sample_t *selected_sample;
+      int size;
+      int display_samples;
+      int restrict_histogram;
+      void (*update_panel)(struct dt_lib_module_t *self);
+      void (*update_samples)(struct dt_lib_module_t *self);
+    } colorpicker;
+
+  } proxy;
 }
 dt_lib_t;
-
-typedef enum dt_lib_view_support_t
-{
-  DT_LIGHTTABLE_VIEW=1,
-  DT_DARKTABLE_VIEW=2,
-  DT_CAPTURE_VIEW=4,
-  DT_LEFT_PANEL_VIEW=8
-}
-dt_lib_view_support_t;
 
 typedef struct dt_lib_module_t
 {
@@ -59,6 +77,12 @@ typedef struct dt_lib_module_t
   const char* (*name)     ();
   /** get the views which the module should be loaded in. */
   uint32_t (*views)       ();
+  /** get the container which the module should be placed in */
+  uint32_t (*container)   ();
+  /** check if module should use a expander or not, default implementation
+      will make the module expandable and storing the expanding state, 
+      if not the module will always be shown without the expander. */
+  int (*expandable) ();
 
   /** callback methods for gui. */
   /** construct widget. */
@@ -75,7 +99,6 @@ typedef struct dt_lib_module_t
   int  (*mouse_moved)     (struct dt_lib_module_t *self, double x, double y, int which);
   int  (*button_released) (struct dt_lib_module_t *self, double x, double y, int which, uint32_t state);
   int  (*button_pressed)  (struct dt_lib_module_t *self, double x, double y, int which, int type, uint32_t state);
-  int  (*key_pressed)     (struct dt_lib_module_t *self, uint16_t which);
   int  (*scrolled)        (struct dt_lib_module_t *self, double x, double y, int up);
   void (*configure)       (struct dt_lib_module_t *self, int width, int height);
   int  (*position)        ();
@@ -83,6 +106,8 @@ typedef struct dt_lib_module_t
   void* (*get_params)     (struct dt_lib_module_t *self, int *size);
   int   (*set_params)     (struct dt_lib_module_t *self, const void *params, int size);
   void  (*init_presets)   (struct dt_lib_module_t *self);
+  /** Optional callback for keyboard accelerators */
+  void (*init_key_accels) (struct dt_lib_module_t *self);
 }
 dt_lib_module_t;
 

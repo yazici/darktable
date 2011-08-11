@@ -1,6 +1,6 @@
 /*
     This file is part of darktable,
-    copyright (c) 2009--2010 johannes hanika.
+    copyright (c) 2009--2011 johannes hanika.
 
     darktable is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -33,11 +33,14 @@
 #include "common/points.h"
 #include "common/opencl.h"
 #include "develop/imageop.h"
+#include "develop/blend.h"
 #include "libs/lib.h"
 #include "views/view.h"
 #include "control/control.h"
+#include "control/signal.h"
 #include "control/conf.h"
 #include "gui/gtk.h"
+#include "gui/presets.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -45,6 +48,14 @@
 #include <string.h>
 #include <sys/param.h>
 #include <unistd.h>
+
+#if !defined(__APPLE__) && !defined(__FreeBSD__)
+#include <malloc.h>
+#endif
+#ifdef __APPLE__
+#include <sys/malloc.h>
+#endif
+
 #ifdef _OPENMP
 #  include <omp.h>
 #endif
@@ -94,6 +105,8 @@ the console and post the backtrace log to mailing list with information about yo
     )
 #endif
 
+
+
 static 
 void dt_check_cpu(int argc,char **argv) 
 {
@@ -133,12 +146,70 @@ darktable will now close down.\n\n%s"),message);
   }
 }
 
+/*  TODO: make this case insensitive */
+gboolean dt_supported_image(const gchar *filename)
+{
+  gboolean supported = FALSE;
+  char **extensions = g_strsplit(dt_supported_extensions, ",", 100);
+  char *ext = g_strrstr(filename,".");
+  if(!ext) return FALSE;
+  for(char **i=extensions; *i!=NULL; i++)
+    if(!g_ascii_strncasecmp(ext+1, *i,strlen(*i)))
+    {
+      supported = TRUE;
+      break;
+    }
+  g_strfreev(extensions);
+  return supported;
+}
+
+static void strip_semicolons_from_keymap(const char* path)
+{
+  char pathtmp[1024];
+  FILE *fin = fopen(path, "r");
+  FILE *fout;
+  int i;
+  int c = '\0';
+
+  snprintf(pathtmp, 1024, "%s_tmp", path);
+  fout = fopen(pathtmp, "w");
+
+  // First ignoring the first three lines
+  for(i = 0; i < 3; i++)
+  {
+    c = fgetc(fin);
+    while(c != '\n')
+      c = fgetc(fin);
+  }
+
+  // Then ignore the first two characters of each line, copying the rest out
+  while(c != EOF)
+  {
+    fseek(fin, 2, SEEK_CUR);
+    do
+    {
+      c = fgetc(fin);
+      if(c != EOF)
+        fputc(c, fout);
+    }while(c != '\n' && c != EOF);
+  }
+
+  fclose(fin);
+  fclose(fout);
+  g_file_delete(g_file_new_for_path(path), NULL, NULL);
+  g_file_move(g_file_new_for_path(pathtmp), g_file_new_for_path(path), 0,
+              NULL, NULL, NULL, NULL);
+}
+
 int dt_init(int argc, char *argv[], const int init_gui)
 {
 #ifndef __SSE2__
   fprintf(stderr, "[dt_init] unfortunately we depend on SSE2 instructions at this time.\n");
   fprintf(stderr, "[dt_init] please contribute a backport patch (or buy a newer processor).\n");
   return 1;
+#endif
+#ifdef M_MMAP_THRESHOLD
+  mallopt(M_MMAP_THRESHOLD,128*1024) ; /* use mmap() for large allocations */   
 #endif
   bindtextdomain (GETTEXT_PACKAGE, DARKTABLE_LOCALEDIR);
   bind_textdomain_codeset (GETTEXT_PACKAGE, "UTF-8");
@@ -218,12 +289,23 @@ int dt_init(int argc, char *argv[], const int init_gui)
   (void)setenv("GEGL_PATH", DARKTABLE_DATADIR"/gegl:/usr/lib/gegl-0.0", 1);
   gegl_init(&argc, &argv);
 #endif
+
   // thread-safe init:
   dt_exif_init();
   char datadir[1024];
-  dt_get_user_config_dir (datadir,1024);
+  dt_util_get_user_config_dir (datadir,1024);
   char filename[1024];
   snprintf(filename, 1024, "%s/darktablerc", datadir);
+
+  // intialize the config backend OBS. this needs to be done first...
+  darktable.conf = (dt_conf_t *)malloc(sizeof(dt_conf_t));
+  dt_conf_init(darktable.conf, filename);
+
+  // initialize the database
+  darktable.db = dt_database_init(dbfilenameFromCommand);
+
+  // Initialize the signal system
+  darktable.signals = dt_control_signal_init();
 
   // Initialize the filesystem watcher
   darktable.fswatch=dt_fswatch_new();
@@ -232,9 +314,6 @@ int dt_init(int argc, char *argv[], const int init_gui)
   // Initialize the camera control
   darktable.camctl=dt_camctl_new();
 #endif
-  // has to go first for settings needed by all the others.
-  darktable.conf = (dt_conf_t *)malloc(sizeof(dt_conf_t));
-  dt_conf_init(darktable.conf, filename);
 
   // get max lighttable thumbnail size:
   darktable.thumbnail_size = CLAMPS(dt_conf_get_int("plugins/lighttable/thumbnail_size"), 160, 1300);
@@ -245,35 +324,13 @@ int dt_init(int argc, char *argv[], const int init_gui)
   // Initialize the password storage engine
   darktable.pwstorage=dt_pwstorage_new();
 
-  // check and migrate database into new XDG structure
-  char dbfilename[2048]= {0};
-  gchar *conf_db = dt_conf_get_string("database");
-  if (conf_db && conf_db[0] != '/')
-  {
-    char *homedir = getenv ("HOME");
-    snprintf (dbfilename,2048,"%s/%s", homedir, conf_db);
-    if (g_file_test (dbfilename, G_FILE_TEST_EXISTS))
-    {
-      fprintf(stderr, "[init] moving database into new XDG directory structure\n");
-      // move database into place
-      char destdbname[2048]= {0};
-      snprintf(destdbname,2048,"%s/%s",datadir,"library.db");
-      if(!g_file_test (destdbname,G_FILE_TEST_EXISTS))
-      {
-        rename(dbfilename,destdbname);
-        dt_conf_set_string("database","library.db");
-      }
-    }
-    g_free(conf_db);
-  }
-
   // check and migrate the cachedir
   char cachefilename[2048]= {0};
   char cachedir[2048]= {0};
   gchar *conf_cache = dt_conf_get_string("cachefile");
   if (conf_cache && conf_cache[0] != '/')
   {
-    char *homedir = getenv ("HOME");
+    char *homedir = dt_util_get_home_dir(NULL);
     snprintf (cachefilename,2048,"%s/%s",homedir, conf_cache);
     if (g_file_test (cachefilename,G_FILE_TEST_EXISTS))
     {
@@ -289,52 +346,33 @@ int dt_init(int argc, char *argv[], const int init_gui)
     g_free(conf_cache);
   }
 
-  gchar * dbname = NULL;
-  if ( dbfilenameFromCommand == NULL )
-  {
-    dbname = dt_conf_get_string ("database");
-    if(!dbname)               snprintf(dbfilename, 1024, "%s/library.db", datadir);
-    else if(dbname[0] != '/') snprintf(dbfilename, 1024, "%s/%s", datadir, dbname);
-    else                      snprintf(dbfilename, 1024, "%s", dbname);
-  }
-  else
-  {
-    snprintf(dbfilename, 1024, "%s", dbfilenameFromCommand);
-    dbname = g_file_get_basename (g_file_new_for_path(dbfilenameFromCommand));
-  }
-
-  int load_cached = 1;
-  // if db file does not exist, also don't load the cache.
-  if(!g_file_test(dbfilename, G_FILE_TEST_IS_REGULAR)) load_cached = 0;
-  if(sqlite3_open(dbfilename, &(darktable.db)))
-  {
-    fprintf(stderr, "[init] could not open database ");
-    if(dbname) fprintf(stderr, "`%s'!\n", dbname);
-    else       fprintf(stderr, "\n");
-#ifndef HAVE_GCONF
-    fprintf(stderr, "[init] maybe your %s/darktablerc is corrupt?\n",datadir);
-    dt_get_datadir(dbfilename, 512);
-    fprintf(stderr, "[init] try `cp %s/darktablerc %s/darktablerc'\n", dbfilename,datadir);
-#else
-    fprintf(stderr, "[init] check your /apps/darktable/database gconf entry!\n");
-#endif
-    sqlite3_close(darktable.db);
-    if (dbname != NULL) g_free(dbname);
-    return 1;
-  }
-  if (dbname != NULL) g_free(dbname);
-
+  // FIXME: move there into dt_database_t
   dt_pthread_mutex_init(&(darktable.db_insert), NULL);
   dt_pthread_mutex_init(&(darktable.plugin_threadsafe), NULL);
-
   darktable.control = (dt_control_t *)malloc(sizeof(dt_control_t));
   if(init_gui)
   {
     dt_control_init(darktable.control);
+    
+    /* control is running lets initialize the db pool */
+    dt_database_init_pool(darktable.db);
   }
   else
   {
+#if 0 // TODO: move int dt_database_t 
+    // this is in memory, so schema can't exist yet.
+    if(!strcmp(dbfilename, ":memory:"))
+    {
+      dt_control_create_database_schema();
+      dt_gui_presets_init(); // also init preset db schema.
+    }
+#endif
     darktable.control->running = 0;
+    darktable.control->accels_global = NULL;
+    darktable.control->accels_lighttable = NULL;
+    darktable.control->accels_darkroom = NULL;
+    darktable.control->accels_filmstrip = NULL;
+    darktable.control->accels_capture = NULL;
     dt_pthread_mutex_init(&darktable.control->run_mutex, NULL);
   }
 
@@ -344,6 +382,9 @@ int dt_init(int argc, char *argv[], const int init_gui)
 
   darktable.opencl = (dt_opencl_t *)malloc(sizeof(dt_opencl_t));
   dt_opencl_init(darktable.opencl, argc, argv);
+
+  darktable.blendop = (dt_blendop_t *)malloc(sizeof(dt_blendop_t));
+  dt_develop_blend_init(darktable.blendop);
 
   darktable.points = (dt_points_t *)malloc(sizeof(dt_points_t));
   dt_points_init(darktable.points, dt_get_num_threads());
@@ -355,19 +396,25 @@ int dt_init(int argc, char *argv[], const int init_gui)
   dt_mipmap_cache_init(darktable.mipmap_cache, thumbnails);
 
   darktable.image_cache = (dt_image_cache_t *)malloc(sizeof(dt_image_cache_t));
-  dt_image_cache_init(darktable.image_cache, MIN(10000, MAX(500, thumbnails)), load_cached);
+  
+  dt_image_cache_init(darktable.image_cache, 
+		      MIN(10000, MAX(500, thumbnails)), 
+		      !dt_database_is_new(darktable.db));
 
-  darktable.view_manager = (dt_view_manager_t *)malloc(sizeof(dt_view_manager_t));
-  dt_view_manager_init(darktable.view_manager);
+  // The GUI must be initialized before the views, because the init()
+  // functions of the views depend on darktable.control->accels_* to register
+  // their keyboard accelerators
 
   if(init_gui)
   {
     darktable.gui = (dt_gui_gtk_t *)malloc(sizeof(dt_gui_gtk_t));
     if(dt_gui_gtk_init(darktable.gui, argc, argv)) return 1;
   }
+  else darktable.gui = NULL;
 
+  darktable.view_manager = (dt_view_manager_t *)malloc(sizeof(dt_view_manager_t));
+  dt_view_manager_init(darktable.view_manager);
 
-  
   // load the darkroom mode plugins once:
   dt_iop_load_modules_so();
 
@@ -381,6 +428,26 @@ int dt_init(int argc, char *argv[], const int init_gui)
 
     darktable.imageio = (dt_imageio_t *)malloc(sizeof(dt_imageio_t));
     dt_imageio_init(darktable.imageio);
+  }
+
+  if(init_gui)
+  {
+    // Loading the keybindings
+    char keyfile[1024];
+
+    // First dump the default keymapping
+    snprintf(keyfile, 1024, "%s/keyboardrc_default", datadir);
+    gtk_accel_map_save(keyfile);
+
+    // Removing extraneous semi-colons from the default keymap
+    strip_semicolons_from_keymap(keyfile);
+
+    // Then load any modified keys if available
+    snprintf(keyfile, 1024, "%s/keyboardrc", datadir);
+    if(g_file_test(keyfile, G_FILE_TEST_EXISTS))
+      gtk_accel_map_load(keyfile);
+    else
+      gtk_accel_map_save(keyfile); // Save the default keymap if none is present
   }
 
   int id = 0;
@@ -473,24 +540,34 @@ int dt_init(int argc, char *argv[], const int init_gui)
 void dt_cleanup()
 {
   dt_ctl_switch_mode_to(DT_MODE_NONE);
+  const int init_gui = (darktable.gui != NULL);
 
-  dt_control_write_config(darktable.control);
-  dt_control_shutdown(darktable.control);
+  if(init_gui)
+  {
+    dt_control_write_config(darktable.control);
+    dt_control_shutdown(darktable.control);
 
-  dt_lib_cleanup(darktable.lib);
-  free(darktable.lib);
+    dt_lib_cleanup(darktable.lib);
+    free(darktable.lib);
+  }
   dt_view_manager_cleanup(darktable.view_manager);
   free(darktable.view_manager);
-  dt_imageio_cleanup(darktable.imageio);
-  free(darktable.imageio);
-  dt_gui_gtk_cleanup(darktable.gui);
-  free(darktable.gui);
+  if(init_gui)
+  {
+    dt_imageio_cleanup(darktable.imageio);
+    free(darktable.imageio);
+    dt_gui_gtk_cleanup(darktable.gui);
+    free(darktable.gui);
+  }
   dt_image_cache_cleanup(darktable.image_cache);
   free(darktable.image_cache);
   dt_mipmap_cache_cleanup(darktable.mipmap_cache);
   free(darktable.mipmap_cache);
-  dt_control_cleanup(darktable.control);
-  free(darktable.control);
+  if(init_gui)
+  {
+    dt_control_cleanup(darktable.control);
+    free(darktable.control);
+  }
   dt_conf_cleanup(darktable.conf);
   free(darktable.conf);
   dt_points_cleanup(darktable.points);
@@ -504,7 +581,8 @@ void dt_cleanup()
   dt_pwstorage_destroy(darktable.pwstorage);
   dt_fswatch_destroy(darktable.fswatch);
 
-  sqlite3_close(darktable.db);
+  dt_database_destroy(darktable.db);
+ 
   dt_pthread_mutex_destroy(&(darktable.db_insert));
   dt_pthread_mutex_destroy(&(darktable.plugin_threadsafe));
 
@@ -546,108 +624,6 @@ void *dt_alloc_align(size_t alignment, size_t size)
   void *ptr = NULL;
   if(posix_memalign(&ptr, alignment, size)) return NULL;
   return ptr;
-#endif
-}
-
-void
-dt_get_user_config_dir (char *data, size_t bufsize)
-{
-  g_snprintf (data,bufsize,"%s/.config/darktable",getenv("HOME"));
-  if (g_file_test (data,G_FILE_TEST_EXISTS)==FALSE)
-    g_mkdir_with_parents (data,0700);
-}
-
-void
-dt_get_user_cache_dir (char *data, size_t bufsize)
-{
-  g_snprintf (data,bufsize,"%s/.cache/darktable",getenv("HOME"));
-  if (g_file_test (data,G_FILE_TEST_EXISTS)==FALSE)
-    g_mkdir_with_parents (data,0700);
-}
-
-
-void
-dt_get_user_local_dir (char *data, size_t bufsize)
-{
-  g_snprintf(data,bufsize,"%s/.local",getenv("HOME"));
-  if (g_file_test (data,G_FILE_TEST_EXISTS)==FALSE)
-    g_mkdir_with_parents (data,0700);
-
-}
-
-void dt_get_plugindir(char *datadir, size_t bufsize)
-{
-#if defined(__MACH__) || defined(__APPLE__)
-  gchar *curr = g_get_current_dir();
-  int contains = 0;
-  for(int k=0; darktable.progname[k] != 0; k++) if(darktable.progname[k] == '/')
-    {
-      contains = 1;
-      break;
-    }
-  if(darktable.progname[0] == '/') // absolute path
-    snprintf(datadir, bufsize, "%s", darktable.progname);
-  else if(contains) // relative path
-    snprintf(datadir, bufsize, "%s/%s", curr, darktable.progname);
-  else
-  {
-    // no idea where we have been called. use compiled in path
-    g_free(curr);
-    snprintf(datadir, bufsize, "%s/darktable", DARKTABLE_LIBDIR);
-    return;
-  }
-  size_t len = MIN(strlen(datadir), bufsize);
-  char *t = datadir + len; // strip off bin/darktable
-  for(; t>datadir && *t!='/'; t--);
-  t--;
-  if(*t == '.' && *(t-1) != '.')
-  {
-    for(; t>datadir && *t!='/'; t--);
-    t--;
-  }
-  for(; t>datadir && *t!='/'; t--);
-  g_strlcpy(t, "/lib/darktable", bufsize-(t-datadir));
-  g_free(curr);
-#else
-  snprintf(datadir, bufsize, "%s/darktable", DARKTABLE_LIBDIR);
-#endif
-}
-
-void dt_get_datadir(char *datadir, size_t bufsize)
-{
-#if defined(__MACH__) || defined(__APPLE__)
-  gchar *curr = g_get_current_dir();
-  int contains = 0;
-  for(int k=0; darktable.progname[k] != 0; k++) if(darktable.progname[k] == '/')
-    {
-      contains = 1;
-      break;
-    }
-  if(darktable.progname[0] == '/') // absolute path
-    snprintf(datadir, bufsize, "%s", darktable.progname);
-  else if(contains) // relative path
-    snprintf(datadir, bufsize, "%s/%s", curr, darktable.progname);
-  else
-  {
-    // no idea where we have been called. use compiled in path
-    g_free(curr);
-    snprintf(datadir, bufsize, "%s", DARKTABLE_DATADIR);
-    return;
-  }
-  size_t len = MIN(strlen(datadir), bufsize);
-  char *t = datadir + len; // strip off bin/darktable
-  for(; t>datadir && *t!='/'; t--);
-  t--;
-  if(*t == '.' && *(t-1) != '.')
-  {
-    for(; t>datadir && *t!='/'; t--);
-    t--;
-  }
-  for(; t>datadir && *t!='/'; t--);
-  g_strlcpy(t, "/share/darktable", bufsize-(t-datadir));
-  g_free(curr);
-#else
-  snprintf(datadir, bufsize, "%s", DARKTABLE_DATADIR);
 #endif
 }
 
