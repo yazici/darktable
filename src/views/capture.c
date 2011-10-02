@@ -39,6 +39,7 @@
 #include "common/camera_control.h"
 #include "common/variables.h"
 #include "common/utility.h"
+#include "gui/accelerators.h"
 #include "gui/gtk.h"
 #include "gui/draw.h"
 #include "capture.h"
@@ -62,9 +63,6 @@ DT_MODULE(1)
 /** module data for the capture view */
 typedef struct dt_capture_t
 {
-  /** The only accelerator closure currently used in capture mode */
-  GClosure *filmstrip_toggle;
-
   /** The current image activated in capture view, either latest tethered shoot
   	or manually picked from filmstrip view...
   */
@@ -88,6 +86,9 @@ typedef struct dt_capture_t
 }
 dt_capture_t;
 
+/* signal handler for filmstrip image switching */
+static void _view_capture_filmstrip_activate_callback(gpointer instance,gpointer user_data);
+
 const char *name(dt_view_t *self)
 {
   return _("tethering");
@@ -101,9 +102,15 @@ uint32_t view(dt_view_t *self)
 static void
 film_strip_activated(const int imgid, void *data)
 {
-  dt_view_film_strip_set_active_image(darktable.view_manager,imgid);
-  dt_control_queue_redraw();
-  dt_view_film_strip_prefetch();
+  dt_view_filmstrip_set_active_image(darktable.view_manager,imgid);
+  dt_view_filmstrip_prefetch();
+}
+
+static void _view_capture_filmstrip_activate_callback(gpointer instance,gpointer user_data)
+{
+  int32_t imgid = 0;
+  if ((imgid=dt_view_filmstrip_get_activated_imgid(darktable.view_manager))>0)
+    film_strip_activated(imgid,user_data);
 }
 
 void capture_view_switch_key_accel(void *p)
@@ -122,9 +129,11 @@ void film_strip_key_accel(GtkAccelGroup *accel_group,
                           guint keyval, GdkModifierType modifier,
                           gpointer data)
 {
-  dt_view_film_strip_toggle(darktable.view_manager, film_strip_activated, data);
-  dt_control_queue_redraw();
+  dt_lib_module_t *m = darktable.view_manager->proxy.filmstrip.module; 
+  gboolean vs = dt_lib_is_visible(m);
+  dt_lib_set_visible(m,!vs);
 }
+
 
 void init(dt_view_t *self)
 {
@@ -142,14 +151,12 @@ void init(dt_view_t *self)
   lib->subdirectory = dt_conf_get_string("plugins/capture/storage/subpath");
   lib->filenamepattern = dt_conf_get_string("plugins/capture/storage/namepattern");
 
-  // Setup key accelerators in capture view...
-  gtk_accel_map_add_entry("<Darktable>/capture/toggle film strip",
-                          GDK_f, GDK_CONTROL_MASK);
+  /* connect signal for fimlstrip image activate */
+  dt_control_signal_connect(darktable.signals, 
+			    DT_SIGNAL_VIEWMANAGER_FILMSTRIP_ACTIVATE,
+			    G_CALLBACK(_view_capture_filmstrip_activate_callback),
+			    self);
 
-  dt_accel_group_connect_by_path(
-      darktable.control->accels_capture,
-      "<Darktable>/capture/toggle film strip",
-      NULL);
 }
 
 void cleanup(dt_view_t *self)
@@ -303,7 +310,7 @@ void _expose_tethered_mode(dt_view_t *self, cairo_t *cr, int32_t width, int32_t 
 {
   dt_capture_t *lib=(dt_capture_t*)self->data;
   lib->image_over = DT_VIEW_DESERT;
-  lib->image_id=dt_view_film_strip_get_active_image(darktable.view_manager);
+  lib->image_id=dt_view_filmstrip_get_activated_imgid(darktable.view_manager);
 
   // First of all draw image if availble
   if( lib->image_id >= 0 )
@@ -378,28 +385,12 @@ void enter(dt_view_t *self)
 
   lib->mode = dt_conf_get_int("plugins/capture/mode");
 
-  // Adding the accelerators
-  gtk_window_add_accel_group(GTK_WINDOW(dt_ui_main_window(darktable.gui->ui)),
-                             darktable.control->accels_capture);
-
-  lib->filmstrip_toggle = g_cclosure_new(G_CALLBACK(film_strip_key_accel),
-                                         (gpointer)self, NULL);
-  dt_accel_group_connect_by_path(darktable.control->accels_capture,
-                                 "<Darktable>/capture/toggle film strip",
-                                 lib->filmstrip_toggle);
-
-  // Check if we should enable view of the filmstrip
-  if(dt_conf_get_bool("plugins/filmstrip/on"))
-  {
-    dt_view_film_strip_scroll_to(darktable.view_manager, lib->image_id);
-    dt_view_film_strip_open(darktable.view_manager, film_strip_activated, self);
-    dt_view_film_strip_prefetch();
-  }
-
+  dt_view_filmstrip_scroll_to_image(darktable.view_manager, lib->image_id);
+  
   // initialize a default session...
-  dt_capture_view_set_jobcode(self, dt_conf_get_string("plugins/capture/jobcode"));
-
-
+  char* tmp = dt_conf_get_string("plugins/capture/jobcode");
+  dt_capture_view_set_jobcode(self, tmp);
+  free(tmp);
 }
 
 void dt_lib_remove_child(GtkWidget *widget, gpointer data)
@@ -410,18 +401,14 @@ void dt_lib_remove_child(GtkWidget *widget, gpointer data)
 void leave(dt_view_t *self)
 {
   dt_capture_t *cv = (dt_capture_t *)self->data;
-  if(dt_conf_get_bool("plugins/filmstrip/on"))
-    dt_view_film_strip_close(darktable.view_manager);
 
   if( dt_film_is_empty(cv->film->id) != 0)
     dt_film_remove(cv->film->id );
 
-  // Detaching accelerators
-  gtk_window_remove_accel_group(GTK_WINDOW(dt_ui_main_window(darktable.gui->ui)),
-                                darktable.control->accels_capture);
-  dt_accel_group_disconnect(darktable.control->accels_capture,
-                            cv->filmstrip_toggle);
-
+  /* disconnect from filmstrip image activate */
+  dt_control_signal_disconnect(darktable.signals,
+			       G_CALLBACK(_view_capture_filmstrip_activate_callback),
+			       (gpointer)self);
 }
 
 void reset(dt_view_t *self)
@@ -546,3 +533,16 @@ void scrolled(dt_view_t *view, double x, double y, int up)
   }*/
 }
 
+void init_key_accels(dt_view_t *self)
+{
+  // Setup key accelerators in capture view...
+  dt_accel_register_view(self, NC_("accel", "toggle film strip"),
+                         GDK_f, GDK_CONTROL_MASK);
+}
+
+void connect_key_accels(dt_view_t *self)
+{
+  GClosure *closure = g_cclosure_new(G_CALLBACK(film_strip_key_accel),
+                                     (gpointer)self, NULL);
+  dt_accel_connect_view(self, "toggle film strip", closure);
+}

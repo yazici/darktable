@@ -1,6 +1,7 @@
 /*
     This file is part of darktable,
     copyright (c) 2009--2010 johannes hanika.
+    copyright (c) 2011 henrik andersson.
 
     darktable is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -71,8 +72,10 @@ typedef struct dt_lib_module_t
   /** child widget which is added to the GtkExpander. */
   GtkWidget *widget;
   /** expander containing the widget. */
-  GtkExpander *expander;
+  GtkWidget *expander;
 
+  /** version */
+  int (*version)          ();
   /** get name of the module, to be translated. */
   const char* (*name)     ();
   /** get the views which the module should be loaded in. */
@@ -106,8 +109,13 @@ typedef struct dt_lib_module_t
   void* (*get_params)     (struct dt_lib_module_t *self, int *size);
   int   (*set_params)     (struct dt_lib_module_t *self, const void *params, int size);
   void  (*init_presets)   (struct dt_lib_module_t *self);
-  /** Optional callback for keyboard accelerators */
-  void (*init_key_accels) (struct dt_lib_module_t *self);
+  /** Optional callbacks for keyboard accelerators */
+  void (*init_key_accels)(struct dt_lib_module_t *self);
+  void (*connect_key_accels)(struct dt_lib_module_t *self);
+
+  GSList *accel_closures;
+  GtkWidget *reset_button;
+  GtkWidget *presets_button;
 }
 dt_lib_module_t;
 
@@ -120,11 +128,25 @@ int dt_lib_load_modules();
 void dt_lib_unload_module(dt_lib_module_t *module);
 /** creates a label widget for the expander, with callback to enable/disable this module. */
 GtkWidget *dt_lib_gui_get_expander(dt_lib_module_t *module);
+/** set a expand/collaps plugin expander */
+void dt_lib_gui_set_expanded(dt_lib_module_t *module, gboolean expanded);
 
+/** connects the reset and presets shortcuts to a lib */
+void dt_lib_connect_common_accels(dt_lib_module_t *module);
+
+/** get the visible state of a plugin */
+gboolean dt_lib_is_visible(dt_lib_module_t *module);
+/** set the visible state of a plugin */
+void dt_lib_set_visible(dt_lib_module_t *module, gboolean visible);
+
+/** returns the localized plugin name for a given plugin_name. must not be freed. */
+gchar *dt_lib_get_localized_name(const gchar * plugin_name);
 
 /** preset stuff for lib */
 
 /** add or replace a preset for this operation. */
-void dt_lib_presets_add(const char *name, const char *plugin_name, const void *params, const int32_t params_size);
+void dt_lib_presets_add(const char *name, const char *plugin_name, const int32_t version, const void *params, const int32_t params_size);
 
 #endif
+
+// kate: tab-indents: off; indent-width 2; replace-tabs on; indent-mode cstyle; remove-trailing-space on;

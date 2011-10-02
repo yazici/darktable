@@ -19,17 +19,21 @@
 #include "common/opencl.h"
 #include "dtgtk/slider.h"
 #include "dtgtk/resetlabel.h"
+#include "gui/accelerators.h"
 #include "gui/gtk.h"
 #include "common/darktable.h"
 #include "control/control.h"
 #include "develop/develop.h"
-#include "develop/imageop.h"
+#include "develop/tiling.h"
 #include <memory.h>
 #include <stdlib.h>
 #include <string.h>
 
 // we assume people have -msee support.
 #include <xmmintrin.h>
+
+#define ROUNDUP(a, n)		((a) % (n) == 0 ? (a) : ((a) / (n) + 1) * (n))
+
 
 DT_MODULE(3)
 
@@ -103,12 +107,19 @@ groups ()
 int
 flags ()
 {
-  return 0;
+  return IOP_FLAGS_ALLOW_TILING;
 }
 
-void init_key_accels()
+void init_key_accels(dt_iop_module_so_t *self)
 {
-  dtgtk_slider_init_accel(darktable.control->accels_darkroom,"<Darktable>/darkroom/plugins/demosaic/edge threshold");
+  dt_accel_register_slider_iop(self, FALSE, NC_("accel", "edge threshold"));
+}
+
+void connect_key_accels(dt_iop_module_t *self)
+{
+  dt_accel_connect_slider_iop(self, "edge threshold",
+                              GTK_WIDGET(((dt_iop_demosaic_gui_data_t*)
+                                          self->gui_data)->scale1));
 }
 
 int
@@ -667,14 +678,17 @@ process_cl (struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, cl_mem 
   dt_iop_demosaic_global_data_t *gd = (dt_iop_demosaic_global_data_t *)self->data;
 
   const int devid = piece->pipe->devid;
-  size_t sizes[2] = {roi_out->width, roi_out->height};
+
   cl_mem dev_tmp = NULL;
   cl_mem dev_green_eq = NULL;
   cl_int err = -999;
 
   if(roi_out->scale > .99999f)
   {
-    // 1:1 demosaic
+    const int width = roi_out->width;
+    const int height = roi_out->height;
+    size_t sizes[2] = { ROUNDUP(width, 4), ROUNDUP(height, 4) };
+     // 1:1 demosaic
     dev_green_eq = NULL;
     if(data->green_eq)
     {
@@ -683,7 +697,9 @@ process_cl (struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, cl_mem 
       if (dev_green_eq == NULL) goto error;      
       dt_opencl_set_kernel_arg(devid, gd->kernel_green_eq, 0, sizeof(cl_mem), &dev_in);
       dt_opencl_set_kernel_arg(devid, gd->kernel_green_eq, 1, sizeof(cl_mem), &dev_green_eq);
-      dt_opencl_set_kernel_arg(devid, gd->kernel_green_eq, 2, sizeof(uint32_t), (void*)&data->filters);
+      dt_opencl_set_kernel_arg(devid, gd->kernel_green_eq, 2, sizeof(int), &width);
+      dt_opencl_set_kernel_arg(devid, gd->kernel_green_eq, 3, sizeof(int), &height);
+      dt_opencl_set_kernel_arg(devid, gd->kernel_green_eq, 4, sizeof(uint32_t), (void*)&data->filters);
       err = dt_opencl_enqueue_kernel_2d(devid, gd->kernel_green_eq, sizes);
       if(err != CL_SUCCESS) goto error;
       dev_in = dev_green_eq;
@@ -694,15 +710,19 @@ process_cl (struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, cl_mem 
       const int one = 1;
       dt_opencl_set_kernel_arg(devid, gd->kernel_pre_median, 0, sizeof(cl_mem), &dev_in);
       dt_opencl_set_kernel_arg(devid, gd->kernel_pre_median, 1, sizeof(cl_mem), &dev_out);
-      dt_opencl_set_kernel_arg(devid, gd->kernel_pre_median, 2, sizeof(uint32_t), (void*)&data->filters);
-      dt_opencl_set_kernel_arg(devid, gd->kernel_pre_median, 3, sizeof(float), (void*)&data->median_thrs);
-      dt_opencl_set_kernel_arg(devid, gd->kernel_pre_median, 4, sizeof(uint32_t), (void*)&one);
+      dt_opencl_set_kernel_arg(devid, gd->kernel_pre_median, 2, sizeof(int), &width);
+      dt_opencl_set_kernel_arg(devid, gd->kernel_pre_median, 3, sizeof(int), &height);
+      dt_opencl_set_kernel_arg(devid, gd->kernel_pre_median, 4, sizeof(uint32_t), (void*)&data->filters);
+      dt_opencl_set_kernel_arg(devid, gd->kernel_pre_median, 5, sizeof(float), (void*)&data->median_thrs);
+      dt_opencl_set_kernel_arg(devid, gd->kernel_pre_median, 6, sizeof(uint32_t), (void*)&one);
       err = dt_opencl_enqueue_kernel_2d(devid, gd->kernel_pre_median, sizes);
       if(err != CL_SUCCESS) goto error;
 
       dt_opencl_set_kernel_arg(devid, gd->kernel_ppg_green_median, 0, sizeof(cl_mem), &dev_out);
       dt_opencl_set_kernel_arg(devid, gd->kernel_ppg_green_median, 1, sizeof(cl_mem), &dev_out);
-      dt_opencl_set_kernel_arg(devid, gd->kernel_ppg_green_median, 2, sizeof(uint32_t), (void*)&data->filters);
+      dt_opencl_set_kernel_arg(devid, gd->kernel_ppg_green_median, 2, sizeof(int), &width);
+      dt_opencl_set_kernel_arg(devid, gd->kernel_ppg_green_median, 3, sizeof(int), &height);
+      dt_opencl_set_kernel_arg(devid, gd->kernel_ppg_green_median, 4, sizeof(uint32_t), (void*)&data->filters);
       err = dt_opencl_enqueue_kernel_2d(devid, gd->kernel_ppg_green_median, sizes);
       if(err != CL_SUCCESS) goto error;
     }
@@ -710,22 +730,26 @@ process_cl (struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, cl_mem 
     {
       dt_opencl_set_kernel_arg(devid, gd->kernel_ppg_green, 0, sizeof(cl_mem), &dev_in);
       dt_opencl_set_kernel_arg(devid, gd->kernel_ppg_green, 1, sizeof(cl_mem), &dev_out);
-      dt_opencl_set_kernel_arg(devid, gd->kernel_ppg_green, 2, sizeof(uint32_t), (void*)&data->filters);
+      dt_opencl_set_kernel_arg(devid, gd->kernel_ppg_green, 2, sizeof(int), &width);
+      dt_opencl_set_kernel_arg(devid, gd->kernel_ppg_green, 3, sizeof(int), &height);
+      dt_opencl_set_kernel_arg(devid, gd->kernel_ppg_green, 4, sizeof(uint32_t), (void*)&data->filters);
       err = dt_opencl_enqueue_kernel_2d(devid, gd->kernel_ppg_green, sizes);
       if(err != CL_SUCCESS) goto error;
     }
 
     dt_opencl_set_kernel_arg(devid, gd->kernel_ppg_redblue, 0, sizeof(cl_mem), &dev_out);
     dt_opencl_set_kernel_arg(devid, gd->kernel_ppg_redblue, 1, sizeof(cl_mem), &dev_out);
-    dt_opencl_set_kernel_arg(devid, gd->kernel_ppg_redblue, 2, sizeof(uint32_t), (void*)&data->filters);
+    dt_opencl_set_kernel_arg(devid, gd->kernel_ppg_redblue, 2, sizeof(int), &width);
+    dt_opencl_set_kernel_arg(devid, gd->kernel_ppg_redblue, 3, sizeof(int), &height);
+    dt_opencl_set_kernel_arg(devid, gd->kernel_ppg_redblue, 4, sizeof(uint32_t), (void*)&data->filters);
     err = dt_opencl_enqueue_kernel_2d(devid, gd->kernel_ppg_redblue, sizes);
     if(err != CL_SUCCESS) goto error;
 
     // manage borders
     dt_opencl_set_kernel_arg(devid, gd->kernel_border_interpolate, 0, sizeof(cl_mem), &dev_in);
     dt_opencl_set_kernel_arg(devid, gd->kernel_border_interpolate, 1, sizeof(cl_mem), &dev_out);
-    dt_opencl_set_kernel_arg(devid, gd->kernel_border_interpolate, 2, sizeof(uint32_t), (void*)&roi_out->width);
-    dt_opencl_set_kernel_arg(devid, gd->kernel_border_interpolate, 3, sizeof(uint32_t), (void*)&roi_out->height);
+    dt_opencl_set_kernel_arg(devid, gd->kernel_border_interpolate, 2, sizeof(int), (void*)&width);
+    dt_opencl_set_kernel_arg(devid, gd->kernel_border_interpolate, 3, sizeof(int), (void*)&height);
     dt_opencl_set_kernel_arg(devid, gd->kernel_border_interpolate, 4, sizeof(uint32_t), (void*)&data->filters);
     err = dt_opencl_enqueue_kernel_2d(devid, gd->kernel_border_interpolate, sizes);
     if(err != CL_SUCCESS) goto error;
@@ -736,8 +760,9 @@ process_cl (struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, cl_mem 
     // need to scale to right res
     dev_tmp = dt_opencl_alloc_device(devid, roi_in->width, roi_in->height, 4*sizeof(float));
     if (dev_tmp == NULL) goto error;
-    sizes[0] = roi_in->width;
-    sizes[1] = roi_in->height;
+    const int width = roi_in->width;
+    const int height = roi_in->height;
+    size_t sizes[2] = { ROUNDUP(width, 4), ROUNDUP(height, 4) };
     if(data->green_eq)
     {
       // green equilibration
@@ -745,7 +770,9 @@ process_cl (struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, cl_mem 
       if (dev_green_eq == NULL) goto error;
       dt_opencl_set_kernel_arg(devid, gd->kernel_green_eq, 0, sizeof(cl_mem), &dev_in);
       dt_opencl_set_kernel_arg(devid, gd->kernel_green_eq, 1, sizeof(cl_mem), &dev_green_eq);
-      dt_opencl_set_kernel_arg(devid, gd->kernel_green_eq, 2, sizeof(uint32_t), (void*)&data->filters);
+      dt_opencl_set_kernel_arg(devid, gd->kernel_green_eq, 2, sizeof(int), &width);
+      dt_opencl_set_kernel_arg(devid, gd->kernel_green_eq, 3, sizeof(int), &height);
+      dt_opencl_set_kernel_arg(devid, gd->kernel_green_eq, 4, sizeof(uint32_t), (void*)&data->filters);
       err = dt_opencl_enqueue_kernel_2d(devid, gd->kernel_green_eq, sizes);
       if(err != CL_SUCCESS) goto error;
       dev_in = dev_green_eq;
@@ -755,14 +782,18 @@ process_cl (struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, cl_mem 
     {
       dt_opencl_set_kernel_arg(devid, gd->kernel_pre_median, 0, sizeof(cl_mem), &dev_in);
       dt_opencl_set_kernel_arg(devid, gd->kernel_pre_median, 1, sizeof(cl_mem), &dev_tmp);
-      dt_opencl_set_kernel_arg(devid, gd->kernel_pre_median, 2, sizeof(uint32_t), (void*)&data->filters);
-      dt_opencl_set_kernel_arg(devid, gd->kernel_pre_median, 3, sizeof(float), (void*)&data->median_thrs);
+      dt_opencl_set_kernel_arg(devid, gd->kernel_pre_median, 2, sizeof(int), &width);
+      dt_opencl_set_kernel_arg(devid, gd->kernel_pre_median, 3, sizeof(int), &height);
+      dt_opencl_set_kernel_arg(devid, gd->kernel_pre_median, 4, sizeof(uint32_t), (void*)&data->filters);
+      dt_opencl_set_kernel_arg(devid, gd->kernel_pre_median, 5, sizeof(float), (void*)&data->median_thrs);
       err = dt_opencl_enqueue_kernel_2d(devid, gd->kernel_pre_median, sizes);
       if(err != CL_SUCCESS) goto error;
 
       dt_opencl_set_kernel_arg(devid, gd->kernel_ppg_green_median, 0, sizeof(cl_mem), &dev_tmp);
       dt_opencl_set_kernel_arg(devid, gd->kernel_ppg_green_median, 1, sizeof(cl_mem), &dev_tmp);
-      dt_opencl_set_kernel_arg(devid, gd->kernel_ppg_green_median, 2, sizeof(uint32_t), (void*)&data->filters);
+      dt_opencl_set_kernel_arg(devid, gd->kernel_ppg_green_median, 2, sizeof(int), &width);
+      dt_opencl_set_kernel_arg(devid, gd->kernel_ppg_green_median, 3, sizeof(int), &height);
+      dt_opencl_set_kernel_arg(devid, gd->kernel_ppg_green_median, 4, sizeof(uint32_t), (void*)&data->filters);
       err = dt_opencl_enqueue_kernel_2d(devid, gd->kernel_ppg_green_median, sizes);
       if(err != CL_SUCCESS) goto error;
     }
@@ -770,37 +801,43 @@ process_cl (struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, cl_mem 
     {
       dt_opencl_set_kernel_arg(devid, gd->kernel_ppg_green, 0, sizeof(cl_mem), &dev_in);
       dt_opencl_set_kernel_arg(devid, gd->kernel_ppg_green, 1, sizeof(cl_mem), &dev_tmp);
-      dt_opencl_set_kernel_arg(devid, gd->kernel_ppg_green, 2, sizeof(uint32_t), (void*)&data->filters);
+      dt_opencl_set_kernel_arg(devid, gd->kernel_ppg_green, 2, sizeof(int), &width);
+      dt_opencl_set_kernel_arg(devid, gd->kernel_ppg_green, 3, sizeof(int), &height);
+      dt_opencl_set_kernel_arg(devid, gd->kernel_ppg_green, 4, sizeof(uint32_t), (void*)&data->filters);
       err = dt_opencl_enqueue_kernel_2d(devid, gd->kernel_ppg_green, sizes);
       if(err != CL_SUCCESS) goto error;
     }
 
     dt_opencl_set_kernel_arg(devid, gd->kernel_ppg_redblue, 0, sizeof(cl_mem), &dev_tmp);
     dt_opencl_set_kernel_arg(devid, gd->kernel_ppg_redblue, 1, sizeof(cl_mem), &dev_tmp);
-    dt_opencl_set_kernel_arg(devid, gd->kernel_ppg_redblue, 2, sizeof(uint32_t), (void*)&data->filters);
+    dt_opencl_set_kernel_arg(devid, gd->kernel_ppg_redblue, 2, sizeof(int), &width);
+    dt_opencl_set_kernel_arg(devid, gd->kernel_ppg_redblue, 3, sizeof(int), &height);
+    dt_opencl_set_kernel_arg(devid, gd->kernel_ppg_redblue, 4, sizeof(uint32_t), (void*)&data->filters);
     err = dt_opencl_enqueue_kernel_2d(devid, gd->kernel_ppg_redblue, sizes);
     if(err != CL_SUCCESS) goto error;
 
     // manage borders
     dt_opencl_set_kernel_arg(devid, gd->kernel_border_interpolate, 0, sizeof(cl_mem), &dev_in);
     dt_opencl_set_kernel_arg(devid, gd->kernel_border_interpolate, 1, sizeof(cl_mem), &dev_tmp);
-    dt_opencl_set_kernel_arg(devid, gd->kernel_border_interpolate, 2, sizeof(uint32_t), (void*)&roi_in->width);
-    dt_opencl_set_kernel_arg(devid, gd->kernel_border_interpolate, 3, sizeof(uint32_t), (void*)&roi_in->height);
+    dt_opencl_set_kernel_arg(devid, gd->kernel_border_interpolate, 2, sizeof(int), (void*)&width);
+    dt_opencl_set_kernel_arg(devid, gd->kernel_border_interpolate, 3, sizeof(int), (void*)&height);
     dt_opencl_set_kernel_arg(devid, gd->kernel_border_interpolate, 4, sizeof(uint32_t), (void*)&data->filters);
     err = dt_opencl_enqueue_kernel_2d(devid, gd->kernel_border_interpolate, sizes);
     if(err != CL_SUCCESS) goto error;
 
     // scale temp buffer to output buffer
     int zero = 0;
-    sizes[0] = roi_out->width;
-    sizes[1] = roi_out->height;
+    sizes[0] = ROUNDUP(roi_out->width, 4);
+    sizes[1] = ROUNDUP(roi_out->height, 4);
     dt_opencl_set_kernel_arg(devid, gd->kernel_downsample, 0, sizeof(cl_mem), &dev_tmp);
     dt_opencl_set_kernel_arg(devid, gd->kernel_downsample, 1, sizeof(cl_mem), &dev_out);
-    dt_opencl_set_kernel_arg(devid, gd->kernel_downsample, 2, sizeof(int), (void*)&zero);
-    dt_opencl_set_kernel_arg(devid, gd->kernel_downsample, 3, sizeof(int), (void*)&zero);
-    dt_opencl_set_kernel_arg(devid, gd->kernel_downsample, 4, sizeof(int), (void*)&roi_out->width);
-    dt_opencl_set_kernel_arg(devid, gd->kernel_downsample, 5, sizeof(int), (void*)&roi_out->height);
-    dt_opencl_set_kernel_arg(devid, gd->kernel_downsample, 6, sizeof(float), (void*)&roi_out->scale);
+    dt_opencl_set_kernel_arg(devid, gd->kernel_downsample, 2, sizeof(int), &roi_out->width);
+    dt_opencl_set_kernel_arg(devid, gd->kernel_downsample, 3, sizeof(int), &roi_out->height);
+    dt_opencl_set_kernel_arg(devid, gd->kernel_downsample, 4, sizeof(int), (void*)&zero);
+    dt_opencl_set_kernel_arg(devid, gd->kernel_downsample, 5, sizeof(int), (void*)&zero);
+    dt_opencl_set_kernel_arg(devid, gd->kernel_downsample, 6, sizeof(int), (void*)&roi_out->width);
+    dt_opencl_set_kernel_arg(devid, gd->kernel_downsample, 7, sizeof(int), (void*)&roi_out->height);
+    dt_opencl_set_kernel_arg(devid, gd->kernel_downsample, 8, sizeof(float), (void*)&roi_out->scale);
     err = dt_opencl_enqueue_kernel_2d(devid, gd->kernel_downsample, sizes);
     if(err != CL_SUCCESS) goto error;
   }
@@ -811,30 +848,38 @@ process_cl (struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, cl_mem 
     cl_mem dev_pix = dev_in;
     if(piece->pipe->type == DT_DEV_PIXELPIPE_EXPORT && data->median_thrs > 0.0f)
     {
-      sizes[0] = roi_in->width;
-      sizes[1] = roi_in->height;
       dev_tmp = dt_opencl_alloc_device(devid, roi_in->width, roi_in->height, sizeof(float));
       if (dev_tmp == NULL) goto error;
+      const int width = roi_in->width;
+      const int height = roi_in->height;
+      size_t sizes[2] = { ROUNDUP(width, 4), ROUNDUP(height, 4) };
+
       dt_opencl_set_kernel_arg(devid, gd->kernel_pre_median, 0, sizeof(cl_mem), &dev_in);
       dt_opencl_set_kernel_arg(devid, gd->kernel_pre_median, 1, sizeof(cl_mem), &dev_tmp);
-      dt_opencl_set_kernel_arg(devid, gd->kernel_pre_median, 2, sizeof(uint32_t), (void*)&data->filters);
-      dt_opencl_set_kernel_arg(devid, gd->kernel_pre_median, 3, sizeof(float), (void*)&data->median_thrs);
-      dt_opencl_set_kernel_arg(devid, gd->kernel_pre_median, 4, sizeof(uint32_t), (void*)&zero);
+      dt_opencl_set_kernel_arg(devid, gd->kernel_pre_median, 2, sizeof(int), &width);
+      dt_opencl_set_kernel_arg(devid, gd->kernel_pre_median, 3, sizeof(int), &height);
+      dt_opencl_set_kernel_arg(devid, gd->kernel_pre_median, 4, sizeof(uint32_t), (void*)&data->filters);
+      dt_opencl_set_kernel_arg(devid, gd->kernel_pre_median, 5, sizeof(float), (void*)&data->median_thrs);
+      dt_opencl_set_kernel_arg(devid, gd->kernel_pre_median, 6, sizeof(uint32_t), (void*)&zero);
       err = dt_opencl_enqueue_kernel_2d(devid, gd->kernel_pre_median, sizes);
       if(err != CL_SUCCESS) goto error;
       dev_pix = dev_tmp;
-      sizes[0] = roi_out->width;
-      sizes[1] = roi_out->height;
     }
+
+    const int width = roi_out->width;
+    const int height = roi_out->height;
+    size_t sizes[2] = { ROUNDUP(width, 4), ROUNDUP(height, 4) };
 
     dt_opencl_set_kernel_arg(devid, gd->kernel_zoom_half_size, 0, sizeof(cl_mem), &dev_pix);
     dt_opencl_set_kernel_arg(devid, gd->kernel_zoom_half_size, 1, sizeof(cl_mem), &dev_out);
-    dt_opencl_set_kernel_arg(devid, gd->kernel_zoom_half_size, 2, sizeof(int), (void*)&zero);
-    dt_opencl_set_kernel_arg(devid, gd->kernel_zoom_half_size, 3, sizeof(int), (void*)&zero);
-    dt_opencl_set_kernel_arg(devid, gd->kernel_zoom_half_size, 4, sizeof(int), (void*)&roi_out->width);
-    dt_opencl_set_kernel_arg(devid, gd->kernel_zoom_half_size, 5, sizeof(int), (void*)&roi_out->height);
-    dt_opencl_set_kernel_arg(devid, gd->kernel_zoom_half_size, 6, sizeof(float), (void*)&roi_out->scale);
-    dt_opencl_set_kernel_arg(devid, gd->kernel_zoom_half_size, 7, sizeof(uint32_t), (void*)&data->filters);
+    dt_opencl_set_kernel_arg(devid, gd->kernel_zoom_half_size, 2, sizeof(int), &width);
+    dt_opencl_set_kernel_arg(devid, gd->kernel_zoom_half_size, 3, sizeof(int), &height);
+    dt_opencl_set_kernel_arg(devid, gd->kernel_zoom_half_size, 4, sizeof(int), (void*)&zero);
+    dt_opencl_set_kernel_arg(devid, gd->kernel_zoom_half_size, 5, sizeof(int), (void*)&zero);
+    dt_opencl_set_kernel_arg(devid, gd->kernel_zoom_half_size, 6, sizeof(int), (void*)&width);
+    dt_opencl_set_kernel_arg(devid, gd->kernel_zoom_half_size, 7, sizeof(int), (void*)&height);
+    dt_opencl_set_kernel_arg(devid, gd->kernel_zoom_half_size, 8, sizeof(float), (void*)&roi_out->scale);
+    dt_opencl_set_kernel_arg(devid, gd->kernel_zoom_half_size, 9, sizeof(uint32_t), (void*)&data->filters);
     err = dt_opencl_enqueue_kernel_2d(devid, gd->kernel_zoom_half_size, sizes);
     if(err != CL_SUCCESS) goto error;
   }
@@ -851,11 +896,13 @@ error:
 }
 #endif
 
-void tiling_callback  (struct dt_iop_module_t *self, struct dt_dev_pixelpipe_iop_t *piece, const dt_iop_roi_t *roi_in, const dt_iop_roi_t *roi_out, float *factor, unsigned *overhead, unsigned *overlap)
+void tiling_callback  (struct dt_iop_module_t *self, struct dt_dev_pixelpipe_iop_t *piece, const dt_iop_roi_t *roi_in, const dt_iop_roi_t *roi_out, struct dt_develop_tiling_t *tiling)
 {
-  *factor = 3.25f; // in + out + tmp + green_eq (1/4 full)
-  *overhead = 0;
-  *overlap = 5; // take care of border handling
+  tiling->factor = 3.25f; // in + out + tmp + green_eq (1/4 full)
+  tiling->overhead = 0;
+  tiling->overlap = 5; // take care of border handling
+  tiling->xalign = 2; // Bayer pattern
+  tiling->yalign = 2; // Bayer pattern
   return;
 }
 
@@ -1021,7 +1068,6 @@ void gui_init     (struct dt_iop_module_t *self)
   g->scale1 = DTGTK_SLIDER(dtgtk_slider_new_with_range(DARKTABLE_SLIDER_BAR, 0.0, 1.000, 0.001, p->median_thrs, 3));
   g_object_set(G_OBJECT(g->scale1), "tooltip-text", _("threshold for edge-aware median.\nset to 0.0 to switch off.\nset to 1.0 to ignore edges."), (char *)NULL);
   dtgtk_slider_set_label(g->scale1,_("edge threshold"));
-  dtgtk_slider_set_accel(g->scale1,darktable.control->accels_darkroom,"<Darktable>/darkroom/plugins/demosaic/edge threshold");
   gtk_table_attach(GTK_TABLE(self->widget), GTK_WIDGET(g->scale1), 0, 2, 1, 2, GTK_FILL|GTK_EXPAND, 0, 0, 0);
 
   GtkWidget *widget;

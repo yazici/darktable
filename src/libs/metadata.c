@@ -23,6 +23,7 @@
 #include "control/signal.h"
 #include "control/conf.h"
 #include "libs/lib.h"
+#include "gui/accelerators.h"
 #include "gui/gtk.h"
 #include "dtgtk/button.h"
 
@@ -41,6 +42,8 @@ typedef struct dt_lib_metadata_t
   gboolean           multi_creator;
   gboolean           multi_publisher;
   gboolean           multi_rights;
+  GtkWidget *clear_button;
+  GtkWidget *apply_button;
 }
 dt_lib_metadata_t;
 
@@ -139,28 +142,31 @@ static void update(dt_lib_module_t *user_data, gboolean early_bark_out)
   while(sqlite3_step(stmt) == SQLITE_ROW)
   {
     char *value = g_strdup((char *)sqlite3_column_text(stmt, 1));
-    switch(sqlite3_column_int(stmt, 0))
+    if(sqlite3_column_bytes(stmt,1))
     {
-      case DT_METADATA_XMP_DC_CREATOR:
-        creator_count++;
-        creator = g_list_append(creator, value);
-        break;
-      case DT_METADATA_XMP_DC_PUBLISHER:
-        publisher_count++;
-        publisher = g_list_append(publisher, value);
-        break;
-      case DT_METADATA_XMP_DC_TITLE:
-        title_count++;
-        title = g_list_append(title, value);
-        break;
-      case DT_METADATA_XMP_DC_DESCRIPTION:
-        description_count++;
-        description = g_list_append(description, value);
-        break;
-      case DT_METADATA_XMP_DC_RIGHTS:
-        rights_count++;
-        rights = g_list_append(rights, value);
-        break;
+      switch(sqlite3_column_int(stmt, 0))
+      {
+	case DT_METADATA_XMP_DC_CREATOR:
+	  creator_count++;
+	  creator = g_list_append(creator, value);
+	  break;
+        case DT_METADATA_XMP_DC_PUBLISHER:
+	  publisher_count++;
+	  publisher = g_list_append(publisher, value);
+	  break;
+        case DT_METADATA_XMP_DC_TITLE:
+	  title_count++;
+	  title = g_list_append(title, value);
+	  break;
+        case DT_METADATA_XMP_DC_DESCRIPTION:
+	  description_count++;
+	  description = g_list_append(description, value);
+	  break;
+        case DT_METADATA_XMP_DC_RIGHTS:
+	  rights_count++;
+	  rights = g_list_append(rights, value);
+	  break;
+      }
     }
   }
   sqlite3_finalize(stmt);
@@ -258,10 +264,18 @@ static void _mouse_over_image_callback(gpointer instace,gpointer user_data)
   gtk_widget_queue_draw(GTK_WIDGET(self->widget));
 } 
 
-void init_key_accels()
+void init_key_accels(dt_lib_module_t *self)
 {
-  gtk_button_init_accel(darktable.control->accels_lighttable,"<Darktable>/lighttable/plugins/metadata/clear");
-  gtk_button_init_accel(darktable.control->accels_lighttable,"<Darktable>/lighttable/plugins/metadata/apply");
+  dt_accel_register_lib(self, NC_("accel", "clear"), 0, 0);
+  dt_accel_register_lib(self, NC_("accel", "apply"), 0, 0);
+}
+
+void connect_key_accels(dt_lib_module_t *self)
+{
+  dt_lib_metadata_t *d = (dt_lib_metadata_t*)self->data;
+
+  dt_accel_connect_button_lib(self, "clear", d->clear_button);
+  dt_accel_connect_button_lib(self, "apply", d->apply_button);
 }
 
 void gui_init(dt_lib_module_t *self)
@@ -352,14 +366,14 @@ void gui_init(dt_lib_module_t *self)
   hbox = GTK_BOX(gtk_hbox_new(TRUE, 5));
 
   button = gtk_button_new_with_label(_("clear"));
-  gtk_button_set_accel(GTK_BUTTON(button),darktable.control->accels_lighttable,"<Darktable>/lighttable/plugins/metadata/clear");
+  d->clear_button = button;
   g_object_set(G_OBJECT(button), "tooltip-text", _("remove metadata from selected images"), (char *)NULL);
   gtk_box_pack_start(hbox, button, FALSE, TRUE, 0);
   g_signal_connect(G_OBJECT (button), "clicked",
                    G_CALLBACK (clear_button_clicked), (gpointer)self);
 
   button = gtk_button_new_with_label(_("apply"));
-  gtk_button_set_accel(GTK_BUTTON(button),darktable.control->accels_lighttable,"<Darktable>/lighttable/plugins/metadata/apply");
+  d->apply_button = button;
   g_object_set(G_OBJECT(button), "tooltip-text", _("write metadata for selected images"), (char *)NULL);
   g_signal_connect(G_OBJECT (button), "clicked",
                    G_CALLBACK (apply_button_clicked), (gpointer)self);
@@ -386,7 +400,7 @@ static void add_rights_preset(dt_lib_module_t *self, char *name, char *string)
 
   char *params = calloc(sizeof(char), params_size);
   memcpy(params+2, string, params_size-5);
-  dt_lib_presets_add(name, self->plugin_name, params, params_size);
+  dt_lib_presets_add(name, self->plugin_name, self->version(), params, params_size);
   free(params);
 }
 

@@ -45,6 +45,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <glib.h>
+#include <glib/gstdio.h>
 #include <string.h>
 #include <sys/param.h>
 #include <unistd.h>
@@ -61,7 +62,7 @@
 #endif
 
 darktable_t darktable;
-const char dt_supported_extensions[] = "3fr,arw,bay,bmq,cap,cine,cr2,crw,cs1,dc2,dcr,dng,erf,fff,exr,ia,iiq,jpg,jpeg,k25,kc2,kdc,mdc,mef,mos,mrw,nef,nrw,orf,pef,pfm,pxn,qtk,raf,raw,rdc,rw2,rwl,sr2,srf,sti,tif,tiff,x3f";
+const char dt_supported_extensions[] = "3fr,arw,bay,bmq,cap,cine,cr2,crw,cs1,dc2,dcr,dng,erf,fff,exr,ia,iiq,jpg,jpeg,k25,kc2,kdc,mdc,mef,mos,mrw,nef,nrw,orf,pef,pfm,pxn,qtk,raf,raw,rdc,rw2,rwl,sr2,srf,srw,sti,tif,tiff,x3f";
 
 static int usage(const char *argv0)
 {
@@ -75,6 +76,72 @@ static int usage(const char *argv0)
 
 typedef void (dt_signal_handler_t)(int) ;
 static dt_signal_handler_t *_dt_sigill_old_handler = NULL;
+static dt_signal_handler_t *_dt_sigsegv_old_handler = NULL;
+
+#ifdef __APPLE__
+static int dprintf(int fd,const char *fmt, ...)
+{
+  va_list ap;
+  FILE *f = fdopen(fd,"a");
+  va_start(ap, &fmt);
+  int rc = vfprintf(f, fmt, ap);
+  fclose(f);
+  va_end(ap);
+  return rc;
+}
+#endif
+
+static
+void _dt_sigsegv_handler(int param)
+{
+  FILE *fd;
+  gchar buf[PIPE_BUF];
+  gchar *name_used;
+  int fout;
+  gboolean delete_file = FALSE;
+
+  if((fout = g_file_open_tmp("darktable_bt_XXXXXX.txt", &name_used, NULL)) == -1)
+    fout = STDOUT_FILENO; // just print everything to stdout
+
+  dprintf(fout, "this is %s reporting a segfault:\n\n", PACKAGE_STRING);
+  gchar *command = g_strdup_printf("gdb %s %d -batch -x %s/gdb_commands", darktable.progname, getpid(), DARKTABLE_DATADIR);
+
+  if((fd = popen(command, "r")) != NULL)
+  {
+    gboolean read_something = FALSE;
+    while((fgets(buf, PIPE_BUF, fd)) != NULL)
+    {
+      read_something = TRUE;
+      dprintf(fout, "%s", buf);
+    }
+    pclose(fd);
+    if(fout != STDOUT_FILENO)
+    {
+      if(read_something)
+        g_printerr("backtrace written to %s\n", name_used);
+      else
+      {
+        delete_file = TRUE;
+        g_printerr("an error occured while trying to execute gdb. please check if gdb is installed on your system.\n");
+      }
+    }
+  }
+  else
+  {
+    delete_file = TRUE;
+    g_printerr("an error occured while trying to execute gdb.\n");
+  }
+
+  if(fout != STDOUT_FILENO)
+    close(fout);
+  if(delete_file)
+    g_unlink(name_used);
+  g_free(command);
+  g_free(name_used);
+
+  /* pass it further to the old handler*/
+  _dt_sigsegv_old_handler(param);
+}
 
 static
 void _dt_sigill_handler(int param)
@@ -84,8 +151,8 @@ void _dt_sigill_handler(int param)
 an invalid processor optimized codepath is used for your cpu, please try reproduce the crash running 'gdb darktable' from \
 the console and post the backtrace log to mailing list with information about your CPU and where you got the package from."));
   gtk_dialog_run(GTK_DIALOG(dlg));
-  
-  /* pass it further the old handler*/
+
+  /* pass it further to the old handler*/
   _dt_sigill_old_handler(param);
 }
 
@@ -203,14 +270,20 @@ static void strip_semicolons_from_keymap(const char* path)
 
 int dt_init(int argc, char *argv[], const int init_gui)
 {
+#ifndef __APPLE__
+  _dt_sigsegv_old_handler = signal(SIGSEGV,&_dt_sigsegv_handler);
+#endif
+
 #ifndef __SSE2__
   fprintf(stderr, "[dt_init] unfortunately we depend on SSE2 instructions at this time.\n");
   fprintf(stderr, "[dt_init] please contribute a backport patch (or buy a newer processor).\n");
   return 1;
 #endif
+
 #ifdef M_MMAP_THRESHOLD
   mallopt(M_MMAP_THRESHOLD,128*1024) ; /* use mmap() for large allocations */   
 #endif
+
   bindtextdomain (GETTEXT_PACKAGE, DARKTABLE_LOCALEDIR);
   bind_textdomain_codeset (GETTEXT_PACKAGE, "UTF-8");
   textdomain (GETTEXT_PACKAGE);
@@ -301,6 +374,18 @@ int dt_init(int argc, char *argv[], const int init_gui)
   darktable.conf = (dt_conf_t *)malloc(sizeof(dt_conf_t));
   dt_conf_init(darktable.conf, filename);
 
+  // set the interface language
+  const gchar* lang = dt_conf_get_string("ui_last/gui_language");
+  if(lang != NULL)
+  {
+    gchar* LANG = g_ascii_strup(lang, -1);
+    gchar* lang_LANG = g_strconcat(lang, "_", LANG, /*".UTF-8",*/ NULL); // FIXME: this does only work for about half of our languages ...
+    setlocale(LC_ALL, lang_LANG);
+    gtk_disable_setlocale();
+    g_free(LANG);
+    g_free(lang_LANG);
+  }
+
   // initialize the database
   darktable.db = dt_database_init(dbfilenameFromCommand);
 
@@ -314,6 +399,11 @@ int dt_init(int argc, char *argv[], const int init_gui)
   // Initialize the camera control
   darktable.camctl=dt_camctl_new();
 #endif
+
+  // has to go first for settings needed by all the others.
+  darktable.conf = (dt_conf_t *)malloc(sizeof(dt_conf_t));
+  memset(darktable.conf, 0, sizeof(dt_conf_t));
+  dt_conf_init(darktable.conf, filename);
 
   // get max lighttable thumbnail size:
   darktable.thumbnail_size = CLAMPS(dt_conf_get_int("plugins/lighttable/thumbnail_size"), 160, 1300);
@@ -350,6 +440,7 @@ int dt_init(int argc, char *argv[], const int init_gui)
   dt_pthread_mutex_init(&(darktable.db_insert), NULL);
   dt_pthread_mutex_init(&(darktable.plugin_threadsafe), NULL);
   darktable.control = (dt_control_t *)malloc(sizeof(dt_control_t));
+  memset(darktable.control, 0, sizeof(dt_control_t));
   if(init_gui)
   {
     dt_control_init(darktable.control);
@@ -368,11 +459,7 @@ int dt_init(int argc, char *argv[], const int init_gui)
     }
 #endif
     darktable.control->running = 0;
-    darktable.control->accels_global = NULL;
-    darktable.control->accels_lighttable = NULL;
-    darktable.control->accels_darkroom = NULL;
-    darktable.control->accels_filmstrip = NULL;
-    darktable.control->accels_capture = NULL;
+    darktable.control->accelerators = NULL;
     dt_pthread_mutex_init(&darktable.control->run_mutex, NULL);
   }
 
@@ -381,22 +468,26 @@ int dt_init(int argc, char *argv[], const int init_gui)
   darktable.collection = dt_collection_new(NULL);
 
   darktable.opencl = (dt_opencl_t *)malloc(sizeof(dt_opencl_t));
+  memset(darktable.opencl, 0, sizeof(dt_opencl_t));
   dt_opencl_init(darktable.opencl, argc, argv);
 
   darktable.blendop = (dt_blendop_t *)malloc(sizeof(dt_blendop_t));
+  memset(darktable.blendop, 0, sizeof(dt_blendop_t));
   dt_develop_blend_init(darktable.blendop);
 
   darktable.points = (dt_points_t *)malloc(sizeof(dt_points_t));
+  memset(darktable.points, 0, sizeof(dt_points_t));
   dt_points_init(darktable.points, dt_get_num_threads());
 
   int thumbnails = dt_conf_get_int ("mipmap_cache_thumbnails");
   thumbnails = MIN(1000000, MAX(20, thumbnails));
 
   darktable.mipmap_cache = (dt_mipmap_cache_t *)malloc(sizeof(dt_mipmap_cache_t));
+  memset(darktable.mipmap_cache, 0, sizeof(dt_mipmap_cache_t));
   dt_mipmap_cache_init(darktable.mipmap_cache, thumbnails);
 
   darktable.image_cache = (dt_image_cache_t *)malloc(sizeof(dt_image_cache_t));
-  
+  memset(darktable.image_cache, 0, sizeof(dt_image_cache_t));
   dt_image_cache_init(darktable.image_cache, 
 		      MIN(10000, MAX(500, thumbnails)), 
 		      !dt_database_is_new(darktable.db));
@@ -408,11 +499,13 @@ int dt_init(int argc, char *argv[], const int init_gui)
   if(init_gui)
   {
     darktable.gui = (dt_gui_gtk_t *)malloc(sizeof(dt_gui_gtk_t));
+    memset(darktable.gui,0,sizeof(dt_gui_gtk_t));
     if(dt_gui_gtk_init(darktable.gui, argc, argv)) return 1;
   }
   else darktable.gui = NULL;
 
   darktable.view_manager = (dt_view_manager_t *)malloc(sizeof(dt_view_manager_t));
+  memset(darktable.view_manager, 0, sizeof(dt_view_manager_t));
   dt_view_manager_init(darktable.view_manager);
 
   // load the darkroom mode plugins once:
@@ -421,12 +514,14 @@ int dt_init(int argc, char *argv[], const int init_gui)
   if(init_gui)
   {
     darktable.lib = (dt_lib_t *)malloc(sizeof(dt_lib_t));
+    memset(darktable.lib, 0, sizeof(dt_lib_t));
     dt_lib_init(darktable.lib);
 
     dt_control_load_config(darktable.control);
     g_strlcpy(darktable.control->global_settings.dbname, filename, 512); // overwrite if relocated.
 
     darktable.imageio = (dt_imageio_t *)malloc(sizeof(dt_imageio_t));
+    memset(darktable.imageio, 0, sizeof(dt_imageio_t));
     dt_imageio_init(darktable.imageio);
   }
 

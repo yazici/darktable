@@ -34,6 +34,7 @@
 #include "dtgtk/resetlabel.h"
 #include "dtgtk/togglebutton.h"
 #include "dtgtk/button.h"
+#include "gui/accelerators.h"
 #include "gui/gtk.h"
 #include "gui/draw.h"
 #include "gui/presets.h"
@@ -53,7 +54,8 @@ typedef struct dt_iop_borders_gui_data_t
   GtkDarktableSlider *size;
   GtkComboBoxEntry *aspect;
   GtkDarktableButton *colorpick;
-  float aspect_ratios[8];
+  float aspect_ratios[9];
+  GtkWidget *swap_button;
 }
 dt_iop_borders_gui_data_t;
 
@@ -76,12 +78,25 @@ operation_tags ()
   return IOP_TAG_DISTORT;
 }
 
-void init_key_accels()
+void init_key_accels(dt_iop_module_so_t *self)
 {
-  dtgtk_slider_init_accel(darktable.control->accels_darkroom,"<Darktable>/darkroom/plugins/borders/border size");
-  dtgtk_button_init_accel(darktable.control->accels_darkroom,"<Darktable>/darkroom/plugins/borders/swap the aspect ratio");
-  dtgtk_button_init_accel(darktable.control->accels_darkroom,"<Darktable>/darkroom/plugins/borders/pick gui color from image");
+  dt_accel_register_iop(self, FALSE, NC_("accel", "swap aspect ratio"),
+                        0, 0);
+  dt_accel_register_slider_iop(self, FALSE, NC_("accel", "border size"));
+  dt_accel_register_iop(self, FALSE, NC_("accel", "pick gui color from image"),
+                        0, 0);
 }
+
+void connect_key_accels(dt_iop_module_t *self)
+{
+  dt_iop_borders_gui_data_t *g = (dt_iop_borders_gui_data_t*)self->gui_data;
+  dt_accel_connect_button_iop(self, "swap aspect ratio",
+                              g->swap_button);
+  dt_accel_connect_button_iop(self, "pick gui color from image",
+                              GTK_WIDGET(g->colorpick));
+  dt_accel_connect_slider_iop(self, "border size", GTK_WIDGET(g->size));
+}
+
 // 1st pass: how large would the output be, given this input roi?
 // this is always called with the full buffer before processing.
 void
@@ -90,15 +105,25 @@ modify_roi_out(struct dt_iop_module_t *self, struct dt_dev_pixelpipe_iop_t *piec
   *roi_out = *roi_in;
   dt_iop_borders_data_t *d = (dt_iop_borders_data_t *)piece->data;
 
-  // min width: constant ratio based on size:
-  roi_out->width = (float)roi_in->width / (1.0f - d->size);
-  // corresponding height: determined by aspect ratio:
-  roi_out->height = (float)roi_out->width / d->aspect;
-  // insane settings used?
-  if(roi_out->height < (float)roi_in->height / (1.0f - d->size))
+  const float size = fabsf(d->size);
+  if(d->size < 0.0f)
   {
-    roi_out->height = (float)roi_in->height / (1.0f - d->size);
-    roi_out->width  = (float)roi_out->height * d->aspect;
+    // this means: relative to width and constant for height as well:
+    roi_out->width  = (float)roi_in->width / (1.0f - size);
+    roi_out->height = roi_in->height + roi_out->width - roi_in->width;
+  }
+  else
+  {
+    // min width: constant ratio based on size:
+    roi_out->width = (float)roi_in->width / (1.0f - size);
+    // corresponding height: determined by aspect ratio:
+    roi_out->height = (float)roi_out->width / d->aspect;
+    // insane settings used?
+    if(roi_out->height < (float)roi_in->height / (1.0f - size))
+    {
+      roi_out->height = (float)roi_in->height / (1.0f - size);
+      roi_out->width  = (float)roi_out->height * d->aspect;
+    }
   }
 
   // sanity check.
@@ -158,6 +183,7 @@ void commit_params (struct dt_iop_module_t *self, dt_iop_params_t *p1, dt_dev_pi
   dt_iop_borders_params_t *p = (dt_iop_borders_params_t *)p1;
   dt_iop_borders_data_t *d = (dt_iop_borders_data_t *)piece->data;
   memcpy(d, p, sizeof(dt_iop_borders_params_t));
+  if(d->aspect < 0.0f) d->size = - fabsf(d->size);
 }
 
 void init_pipe (struct dt_iop_module_t *self, dt_dev_pixelpipe_t *pipe, dt_dev_pixelpipe_iop_t *piece)
@@ -171,15 +197,15 @@ void cleanup_pipe (struct dt_iop_module_t *self, dt_dev_pixelpipe_t *pipe, dt_de
   free(piece->data);
 }
 
-void init_presets (dt_iop_module_t *self)
+void init_presets (dt_iop_module_so_t *self)
 {
   dt_iop_borders_params_t p = (dt_iop_borders_params_t)
   {
     {0.0f, 0.0f, 0.0f}, 3.0f/2.0f, 0.1f
   };
-  dt_gui_presets_add_generic(_("15:10 postcard black"), self->op, &p, sizeof(p), 1);
+  dt_gui_presets_add_generic(_("15:10 postcard black"), self->op, self->version(), &p, sizeof(p), 1);
   p.color[0] = p.color[1] = p.color[2] = 1.0f;
-  dt_gui_presets_add_generic(_("15:10 postcard white"), self->op, &p, sizeof(p), 1);
+  dt_gui_presets_add_generic(_("15:10 postcard white"), self->op, self->version(), &p, sizeof(p), 1);
 }
 
 static void
@@ -244,7 +270,7 @@ aspect_changed (GtkComboBox *combo, dt_iop_module_t *self)
       g_free(text);
     }
   }
-  else if (which < 8)
+  else if (which < 9)
   {
     if(self->dev->image->height > self->dev->image->width)
       p->aspect = 1.0/g->aspect_ratios[which];
@@ -307,7 +333,7 @@ void gui_update(struct dt_iop_module_t *self)
   dt_iop_borders_params_t *p = (dt_iop_borders_params_t *)self->params;
   dtgtk_slider_set_value(g->size, p->size*100.0);
   int k = 0;
-  for(;k<8;k++)
+  for(;k<9;k++)
   {
     if(fabsf(p->aspect - g->aspect_ratios[k]) < 0.0001f)
     {
@@ -315,7 +341,7 @@ void gui_update(struct dt_iop_module_t *self)
       break;
     }
   }
-  if(k == 8)
+  if(k == 9)
   {
     char text[128];
     snprintf(text, 128, "%.3f:1", p->aspect);
@@ -362,7 +388,6 @@ void gui_init(struct dt_iop_module_t *self)
   gtk_table_set_col_spacings(GTK_TABLE(self->widget), DT_GUI_IOP_MODULE_CONTROL_SPACING);
 
   g->size = DTGTK_SLIDER(dtgtk_slider_new_with_range(DARKTABLE_SLIDER_BAR, 0.0, 50.0, 1.0, p->size*100.0, 2));
-  dtgtk_slider_set_accel(g->size,darktable.control->accels_darkroom,"<Darktable>/darkroom/plugins/borders/border size");
   dtgtk_slider_set_label(g->size, _("border size"));
   dtgtk_slider_set_unit(g->size, "%");
   g_signal_connect (G_OBJECT (g->size), "value-changed", G_CALLBACK (size_callback), self);
@@ -381,20 +406,20 @@ void gui_init(struct dt_iop_module_t *self)
   gtk_combo_box_append_text(GTK_COMBO_BOX(g->aspect), _("square"));
   gtk_combo_box_append_text(GTK_COMBO_BOX(g->aspect), _("DIN"));
   gtk_combo_box_append_text(GTK_COMBO_BOX(g->aspect), _("16:9"));
+  gtk_combo_box_append_text(GTK_COMBO_BOX(g->aspect), _("constant border"));
 
   g_signal_connect (G_OBJECT (g->aspect), "changed", G_CALLBACK (aspect_changed), self);
   g_object_set(G_OBJECT(g->aspect), "tooltip-text", _("set the aspect ratio (w:h)\npress ctrl-x to swap sides"), (char *)NULL);
 
   gtk_table_attach(GTK_TABLE(self->widget), GTK_WIDGET(g->aspect), 1, 2, 1, 2, GTK_EXPAND|GTK_FILL, 0, 0, 0);
   GtkWidget *button = dtgtk_button_new(dtgtk_cairo_paint_aspectflip, CPF_STYLE_FLAT);
+  g->swap_button = button;
   // TODO: what about this?
   //g_signal_connect (G_OBJECT (button), "clicked", G_CALLBACK (aspect_flip), self);
   g_object_set(G_OBJECT(button), "tooltip-text", _("swap the aspect ratio"), (char *)NULL);
   gtk_table_attach(GTK_TABLE(self->widget), button, 2, 3, 1, 2, GTK_EXPAND, 0, 0, 0);
-  dtgtk_button_set_accel(DTGTK_BUTTON(button),darktable.control->accels_darkroom,"<Darktable>/darkroom/plugins/borders/swap the aspect ratio");
 
   g->colorpick = DTGTK_BUTTON(dtgtk_button_new(dtgtk_cairo_paint_color, CPF_IGNORE_FG_STATE));
-  dtgtk_button_set_accel(g->colorpick,darktable.control->accels_darkroom,"<Darktable>/darkroom/plugins/borders/pick gui color from image");
   gtk_widget_set_size_request(GTK_WIDGET(g->colorpick), 24, 24);
   label = dtgtk_reset_label_new (_("frame color"), self, &p->color, 3*sizeof(float));
   g_signal_connect (G_OBJECT (g->colorpick), "clicked", G_CALLBACK (colorpick_callback), self);
@@ -416,6 +441,7 @@ void gui_init(struct dt_iop_module_t *self)
   g->aspect_ratios[5] = 1.0f;
   g->aspect_ratios[6] = sqrtf(2.0f);
   g->aspect_ratios[7] = 16.0f/9.0f;
+  g->aspect_ratios[8] = -1.0f;
 
   g_signal_connect (G_OBJECT(self->widget), "expose-event", G_CALLBACK(expose), self);
 }

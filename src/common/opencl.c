@@ -115,6 +115,7 @@ void dt_opencl_init(dt_opencl_t *cl, const int argc, char *argv[])
     cl->dev[dev].numevents = 0;
     cl->dev[dev].eventsconsolidated = 0;
     cl->dev[dev].maxevents = 0;
+    cl->dev[dev].lostevents = 0;
     cl->dev[dev].summary=CL_COMPLETE;
     cl->dev[dev].used_global_mem = 0;
     cl_device_id devid = cl->dev[dev].devid = devices[k];
@@ -730,19 +731,32 @@ void* dt_opencl_alloc_device_buffer(const int devid, const int size)
 /** check if image size fit into limits given by OpenCL runtime */
 int dt_opencl_image_fits_device(const int devid, const size_t width, const size_t height, const unsigned bpp, const float factor, const size_t overhead)
 {
+  static float headroom = -1.0f;
+
   if(!darktable.opencl->inited || devid < 0) return FALSE;
 
-  size_t singlebuffer = width * height * bpp;
-  size_t total = factor * singlebuffer + overhead;
+  /* first time run */
+  if(headroom < 0.0f)
+  {
+    headroom = (float)dt_conf_get_int("opencl_memory_headroom")*1024*1024;
+
+    /* don't let the user play games with us */
+    headroom = fmin((float)darktable.opencl->dev[devid].max_global_mem, fmax(headroom, 0.0f));
+    dt_conf_set_int("opencl_memory_headroom", headroom/1024/1024);
+  }
+
+  float singlebuffer = (float)width * height * bpp;
+  float total = factor * singlebuffer + overhead;
 
   if(darktable.opencl->dev[devid].max_image_width < width || darktable.opencl->dev[devid].max_image_height < height) return FALSE;
 
   if(darktable.opencl->dev[devid].max_mem_alloc < singlebuffer) return FALSE;
 
-  if(darktable.opencl->dev[devid].max_global_mem < total + DT_OPENCL_MEMORY_HEADROOM) return FALSE;
+  if(darktable.opencl->dev[devid].max_global_mem < total + headroom) return FALSE;
 
   return TRUE;
 }
+
 
 
 /** check if opencl is inited */
@@ -806,6 +820,7 @@ cl_event *dt_opencl_events_get_slot(const int devid, const char *tag)
   dt_opencl_eventtag_t **eventtags = &(cl->dev[devid].eventtags);
   int *numevents = &(cl->dev[devid].numevents);
   int *maxevents = &(cl->dev[devid].maxevents);
+  int *lostevents = &(cl->dev[devid].lostevents);
 
   // if first time called: allocate initial buffers
   if (*eventlist == NULL)
@@ -828,6 +843,7 @@ cl_event *dt_opencl_events_get_slot(const int devid, const char *tag)
   // check if currently highest event slot was actually consumed. If not use it again
   if (*numevents > 0 && !memcmp((*eventlist)+*numevents-1, zeroevent, sizeof(cl_event)))
   {
+    (*lostevents)++;
     if (tag != NULL)
     {
       strncpy((*eventtags)[*numevents-1].tag, tag, DT_OPENCL_EVENTNAMELENGTH);
@@ -887,6 +903,7 @@ void dt_opencl_events_reset(const int devid)
   int *numevents = &(cl->dev[devid].numevents);
   int *maxevents = &(cl->dev[devid].maxevents);
   int *eventsconsolidated = &(cl->dev[devid].eventsconsolidated);
+  int *lostevents = &(cl->dev[devid].lostevents);
   cl_int *summary = &(cl->dev[devid].summary);
 
   if (*eventlist == NULL || *numevents == 0) return; // nothing to do
@@ -900,6 +917,7 @@ void dt_opencl_events_reset(const int devid)
   memset(*eventtags, 0, *maxevents*sizeof(dt_opencl_eventtag_t));
   *numevents=0;
   *eventsconsolidated=0;
+  *lostevents=0;
   *summary=CL_COMPLETE;
   return;
 }
@@ -915,12 +933,17 @@ void dt_opencl_events_wait_for(const int devid)
   static const cl_event zeroevent[1];   // implicitly initialized to zero
   cl_event **eventlist = &(cl->dev[devid].eventlist);
   int *numevents = &(cl->dev[devid].numevents);
+  int *lostevents = &(cl->dev[devid].lostevents);
   int *eventsconsolidated = &(cl->dev[devid].eventsconsolidated);
 
   if (*eventlist==NULL || *numevents==0) return; // nothing to do
 
   // check if last event slot was acutally used and correct numevents if needed	
-  if (!memcmp((*eventlist)+*numevents-1, zeroevent, sizeof(cl_event))) (*numevents)--;
+  if (!memcmp((*eventlist)+*numevents-1, zeroevent, sizeof(cl_event)))
+  {
+    (*numevents)--;
+    (*lostevents)++;
+  }
 
   if (*numevents == *eventsconsolidated) return; // nothing to do
 
@@ -950,6 +973,7 @@ cl_int dt_opencl_events_flush(const int devid, const int reset)
   dt_opencl_eventtag_t **eventtags = &(cl->dev[devid].eventtags);
   int *numevents = &(cl->dev[devid].numevents);
   int *eventsconsolidated = &(cl->dev[devid].eventsconsolidated);
+  int *lostevents = &(cl->dev[devid].lostevents);
   cl_int *summary = &(cl->dev[devid].summary);
 
   if (*eventlist==NULL || *numevents==0) return CL_COMPLETE; // nothing to do, no news is good news
@@ -981,7 +1005,15 @@ cl_int dt_opencl_events_flush(const int devid, const int reset)
     cl_ulong end;
     cl_int errs = (cl->dlocl->symbols->dt_clGetEventProfilingInfo)((*eventlist)[k], CL_PROFILING_COMMAND_START, sizeof(cl_ulong), &start, NULL);
     cl_int erre = (cl->dlocl->symbols->dt_clGetEventProfilingInfo)((*eventlist)[k], CL_PROFILING_COMMAND_END, sizeof(cl_ulong), &end, NULL);
-    if (errs == CL_SUCCESS && erre == CL_SUCCESS) (*eventtags)[k].timelapsed = end - start;
+    if (errs == CL_SUCCESS && erre == CL_SUCCESS)
+    {
+      (*eventtags)[k].timelapsed = end - start;
+    }
+    else
+    {
+      (*eventtags)[k].timelapsed = 0;
+      (*lostevents)++;
+    }
 
     // finally release event to be re-used by driver
     (cl->dlocl->symbols->dt_clReleaseEvent)((*eventlist)[k]);
@@ -1015,6 +1047,7 @@ void dt_opencl_events_profiling(const int devid, const int aggregated)
   dt_opencl_eventtag_t **eventtags = &(cl->dev[devid].eventtags);
   int *numevents = &(cl->dev[devid].numevents);
   int *eventsconsolidated = &(cl->dev[devid].eventsconsolidated);
+  int *lostevents = &(cl->dev[devid].lostevents);
 
   if (*eventlist == NULL || *numevents == 0 ||
       *eventtags == NULL || *eventsconsolidated == 0) return; // nothing to do
@@ -1079,10 +1112,9 @@ void dt_opencl_events_profiling(const int devid, const int aggregated)
     total += timings[0];
   }
 
-  if (total != 0.0f);
-  {
-    dt_print(DT_DEBUG_OPENCL, "[opencl_profiling] spent %7.4f seconds totally in command queue\n", (double)total);
-  }
+  dt_print(DT_DEBUG_OPENCL, "[opencl_profiling] spent %7.4f seconds totally in command queue (with %d event%s missing)\n",
+        (double)total, *lostevents, *lostevents == 1 ? "" : "s");
+
   return;
 }
 

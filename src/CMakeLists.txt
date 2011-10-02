@@ -48,7 +48,16 @@ FILE(GLOB SOURCE_FILES
   "develop/blend.c"
   "develop/masks.c"
   "develop/tiling.c"
-  "dtgtk/*.c" 
+  "dtgtk/button.c"
+  "dtgtk/icon.c"
+  "dtgtk/label.c"
+  "dtgtk/slider.c"
+  "dtgtk/gradientslider.c"
+  "dtgtk/tristatebutton.c"
+  "dtgtk/togglebutton.c"
+  "dtgtk/paint.c"
+  "dtgtk/resetlabel.c"
+  "gui/accelerators.c"
   "gui/contrast.c"  
   "gui/gtk.c"  
   "gui/preferences.c"  
@@ -58,16 +67,6 @@ FILE(GLOB SOURCE_FILES
   "views/view.c"
   )
 FILE(GLOB HEADER_FILES "*.h" "common/*.h" "external/CL/*.h" "control/*.h" "iop/*.h" "libs/*.h", "views/*.h")
-
-# Files that could conceivable contain accelerator definitions
-FILE(GLOB ACCEL_SOURCES
-  "create_accel_strings.sh"
-  "develop/imageop.c"
-  "gui/gtk.c"
-  "iop/*.c"
-  "libs/*.c"
-  "views/*.c"
-)
 
 set(SOURCES ${SOURCE_FILES} ${HEADER_FILES})
 
@@ -269,30 +268,20 @@ include_directories("${CMAKE_CURRENT_BINARY_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}")
 # Setup generation of preference dialog files..
 #
 add_custom_command(
-   OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/preferences_gen.h
-   COMMAND ${CMAKE_CURRENT_BINARY_DIR}/../create_preferences.sh ${CMAKE_CURRENT_SOURCE_DIR}/../data/darktable.schemas > ${CMAKE_CURRENT_BINARY_DIR}/preferences_gen.h
+  DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/../create_preferences.sh ${CMAKE_CURRENT_SOURCE_DIR}/../tools/create_preferences.sh.in
+  OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/preferences_gen.h
+  COMMAND ${CMAKE_CURRENT_BINARY_DIR}/../create_preferences.sh ${CMAKE_CURRENT_SOURCE_DIR}/../data/darktable.schemas > ${CMAKE_CURRENT_BINARY_DIR}/preferences_gen.h
 )
-SET_SOURCE_FILES_PROPERTIES(${CMAKE_CURRENT_BINARY_DIR}/preferences_gen.h PROPERTIES GENERATED 1)
-
-#
-# Generation of the accels translation strings file
-#
-add_custom_command(
-    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/accelstrings_gen.h
-    COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/../tools/create_accel_strings.sh ${CMAKE_CURRENT_SOURCE_DIR} > ${CMAKE_CURRENT_BINARY_DIR}/accelstrings_gen.h
-    DEPENDS ${ACCEL_SOURCES}
-)
-SET_SOURCE_FILES_PROPERTIES(${CMAKE_CURRENT_BINARY_DIR}/accelstrings_gen.h PROPERTIES GENERATED 1)
 
 #
 # Generate mapping of key strings to internal metadata id
 #
 add_custom_command(
-   OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/metadata_gen.h ${CMAKE_CURRENT_BINARY_DIR}/metadata_gen.c
-   COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/../tools/create_metadata.sh ${CMAKE_CURRENT_SOURCE_DIR}/../tools/metadata.txt ${CMAKE_CURRENT_BINARY_DIR}
+  DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/../tools/create_metadata.sh ${CMAKE_CURRENT_SOURCE_DIR}/../tools/metadata.txt
+  OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/metadata_gen.h ${CMAKE_CURRENT_BINARY_DIR}/metadata_gen.c
+  COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/../tools/create_metadata.sh ${CMAKE_CURRENT_SOURCE_DIR}/../tools/metadata.txt ${CMAKE_CURRENT_BINARY_DIR}
 )
-SET_SOURCE_FILES_PROPERTIES(${CMAKE_CURRENT_BINARY_DIR}/metadata_gen.c PROPERTIES GENERATED 1)
-SET_SOURCE_FILES_PROPERTIES(${CMAKE_CURRENT_BINARY_DIR}/metadata_gen.h PROPERTIES GENERATED 1)
+
 # this is a dummy library whose sole purpose is to serve as a dependency for subdirs, such as imageio/storage/gallery.
 # cmake can't depend on custom targets in other directories than the current one.
 add_library(metadata_dummy ${CMAKE_CURRENT_BINARY_DIR}/metadata_gen.c ${CMAKE_CURRENT_BINARY_DIR}/metadata_gen.h)
@@ -300,7 +289,7 @@ add_library(metadata_dummy ${CMAKE_CURRENT_BINARY_DIR}/metadata_gen.c ${CMAKE_CU
 #
 # build libdarktable
 #
-add_library(lib_darktable STATIC SHARED ${CMAKE_CURRENT_BINARY_DIR}/preferences_gen.h ${CMAKE_CURRENT_BINARY_DIR}/metadata_gen.h ${CMAKE_CURRENT_BINARY_DIR}/metadata_gen.c ${CMAKE_CURRENT_BINARY_DIR}/accelstrings_gen.h ${SOURCES})
+add_library(lib_darktable STATIC SHARED ${CMAKE_CURRENT_BINARY_DIR}/preferences_gen.h ${CMAKE_CURRENT_BINARY_DIR}/metadata_gen.h ${CMAKE_CURRENT_BINARY_DIR}/metadata_gen.c ${SOURCES})
 if(APPLE)
   set_target_properties(lib_darktable PROPERTIES INSTALL_NAME_DIR "@executable_path/../lib/darktable")
 endif(APPLE)
@@ -317,7 +306,13 @@ set_target_properties(lib_darktable PROPERTIES LINKER_LANGUAGE C)
 add_dependencies(lib_darktable libraw_r)
 add_library(libraw_static STATIC IMPORTED)
 set_target_properties(libraw_static PROPERTIES IMPORTED_LOCATION ${CMAKE_CURRENT_BINARY_DIR}/external/LibRaw/liblibraw_r.a)
-target_link_libraries(lib_darktable ${LIBS} libraw_static)
+if(APPLE)
+  set(LIBRAW_STATIC_LIBS libraw_static stdc++)
+else(APPLE)
+  set(LIBRAW_STATIC_LIBS libraw_static)
+endif(APPLE)
+
+target_link_libraries(lib_darktable ${LIBS} ${LIBRAW_STATIC_LIBS})
 
 # same for librawspeed (can switch it off with -DDONT_USE_RAWSPEED, for macs):
 if(NOT DONT_USE_RAWSPEED)
@@ -359,6 +354,9 @@ set_target_properties(darktable PROPERTIES CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
 set_target_properties(darktable PROPERTIES CMAKE_INSTALL_RPATH_USE_LINK_PATH FALSE)
 set_target_properties(darktable PROPERTIES INSTALL_RPATH $ORIGIN/../${LIB_INSTALL}/darktable)
 set_target_properties(darktable PROPERTIES LINKER_LANGUAGE C)
+if(APPLE && USE_OPENCL)
+set_target_properties(darktable PROPERTIES LINK_FLAGS -Wl,-syslibroot,/Developer-old/SDKs/MacOSX10.6.sdk)
+endif(APPLE)
 target_link_libraries(darktable ${LIBS})
 install(TARGETS darktable DESTINATION bin)
 

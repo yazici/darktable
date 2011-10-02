@@ -37,6 +37,8 @@
 #define DT_GUI_CURVE_INFL .3f
 #define DT_IOP_TONECURVE_RES 64
 
+#define ROUNDUP(a, n)		((a) % (n) == 0 ? (a) : ((a) / (n) + 1) * (n))
+
 DT_MODULE(1)
 
 typedef struct dt_iop_basecurve_params_t
@@ -57,6 +59,8 @@ static const char panasonic[] = N_("panasonic like");
 static const char leica[] = N_("leica like");
 static const char kodak_easyshare[] = N_("kodak easyshare like");
 static const char konica_minolta[] = N_("konica minolta like");
+static const char samsung[] = N_("samsung like");
+static const char fujifilm[] = N_("fujifilm like");
 static const char fotogenetic_v41[] = N_("fotogenetic (point & shoot)");
 static const char fotogenetic_v42[] = N_("fotogenetic (EV3)");
 
@@ -92,6 +96,10 @@ static const basecurve_preset_t basecurve_presets[] =
   {kodak_easyshare, "EASTMAN KODAK COMPANY", "", 0, 51200, {{0.000000, 0.044355, 0.133065, 0.209677, 0.572581, 1.000000}, {0.000000, 0.020967, 0.154322, 0.300301, 0.753477, 1.000000}, 0}, 1},
   // pascals minolta curve
   {konica_minolta, "MINOLTA", "", 0, 51200, {{0.000000, 0.020161, 0.112903, 0.500000, 0.899194, 1.000000}, {0.000000, 0.010322, 0.167742, 0.711291, 0.956855, 1.000000}, 0}, 1},
+  // pascals samsung curve (needs testing):
+  {samsung, "SAMSUNG", "", 0, 51200, {{0.000000, 0.040323, 0.133065, 0.447581, 0.842742, 1.000000}, {0.000000, 0.029677, 0.232258, 0.747581, 0.967742, 1.000000}, 0}, 1},
+  // pascals fujifilm curve
+  {fujifilm, "FUJIFILM", "", 0, 51200, {{0.000000, 0.028226, 0.104839, 0.387097, 0.754032, 1.000000}, {0.000000, 0.029677, 0.232258, 0.747581, 0.967742, 1.000000}, 0}, 1},
   // Fotogenetic - Point and shoot v4.1
   {fotogenetic_v41, "", "", 0, 51200, {{0.000000, 0.087879, 0.175758, 0.353535, 0.612658, 1.000000}, {0.000000, 0.125252, 0.250505, 0.501010, 0.749495, 0.876573}, 0}, 0},
   // Fotogenetic - EV3 v4.2
@@ -155,13 +163,13 @@ void init_presets (dt_iop_module_so_t *self)
   for(int k=0; k<basecurve_presets_cnt; k++)
   {
     // add the preset.
-    dt_gui_presets_add_generic(_(basecurve_presets[k].name), self->op, &basecurve_presets[k].params, sizeof(dt_iop_basecurve_params_t), 1);
+    dt_gui_presets_add_generic(_(basecurve_presets[k].name), self->op, self->version(), &basecurve_presets[k].params, sizeof(dt_iop_basecurve_params_t), 1);
     // and restrict it to model, maker, iso, and raw images
-    dt_gui_presets_update_mml(_(basecurve_presets[k].name), self->op, basecurve_presets[k].maker, basecurve_presets[k].model, "");
-    dt_gui_presets_update_iso(_(basecurve_presets[k].name), self->op, basecurve_presets[k].iso_min, basecurve_presets[k].iso_max);
-    dt_gui_presets_update_ldr(_(basecurve_presets[k].name), self->op, 2);
+    dt_gui_presets_update_mml(_(basecurve_presets[k].name), self->op, self->version(), basecurve_presets[k].maker, basecurve_presets[k].model, "");
+    dt_gui_presets_update_iso(_(basecurve_presets[k].name), self->op, self->version(), basecurve_presets[k].iso_min, basecurve_presets[k].iso_max);
+    dt_gui_presets_update_ldr(_(basecurve_presets[k].name), self->op, self->version(), 2);
     // make it auto-apply for matching images:
-    dt_gui_presets_update_autoapply(_(basecurve_presets[k].name), self->op, basecurve_presets[k].autoapply);
+    dt_gui_presets_update_autoapply(_(basecurve_presets[k].name), self->op, self->version(), basecurve_presets[k].autoapply);
   }
   // sql commit
   DT_DEBUG_SQLITE3_EXEC(dt_database_get(darktable.db), "commit", NULL, NULL, NULL);
@@ -178,7 +186,10 @@ process_cl (struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, cl_mem 
   cl_mem dev_coeffs = NULL;
   cl_int err = -999;
   const int devid = piece->pipe->devid;
-  size_t sizes[] = {roi_in->width, roi_in->height, 1};
+  const int width = roi_in->width;
+  const int height = roi_in->height;
+
+  size_t sizes[] = { ROUNDUP(width, 4), ROUNDUP(height, 4), 1};
   dev_m = dt_opencl_copy_host_to_device(devid, d->table, 256, 256, sizeof(float));
   if (dev_m == NULL) goto error;
 
@@ -186,8 +197,10 @@ process_cl (struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, cl_mem 
   if (dev_coeffs == NULL) goto error;
   dt_opencl_set_kernel_arg(devid, gd->kernel_basecurve, 0, sizeof(cl_mem), (void *)&dev_in);
   dt_opencl_set_kernel_arg(devid, gd->kernel_basecurve, 1, sizeof(cl_mem), (void *)&dev_out);
-  dt_opencl_set_kernel_arg(devid, gd->kernel_basecurve, 2, sizeof(cl_mem), (void *)&dev_m);
-  dt_opencl_set_kernel_arg(devid, gd->kernel_basecurve, 3, sizeof(cl_mem), (void *)&dev_coeffs);
+  dt_opencl_set_kernel_arg(devid, gd->kernel_basecurve, 2, sizeof(int), (void *)&width);
+  dt_opencl_set_kernel_arg(devid, gd->kernel_basecurve, 3, sizeof(int), (void *)&height);
+  dt_opencl_set_kernel_arg(devid, gd->kernel_basecurve, 4, sizeof(cl_mem), (void *)&dev_m);
+  dt_opencl_set_kernel_arg(devid, gd->kernel_basecurve, 5, sizeof(cl_mem), (void *)&dev_coeffs);
   err = dt_opencl_enqueue_kernel_2d(devid, gd->kernel_basecurve, sizes);
 
   if(err != CL_SUCCESS) goto error;

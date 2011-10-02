@@ -29,11 +29,14 @@
 #include "common/opencl.h"
 #include "develop/develop.h"
 #include "control/control.h"
+#include "gui/accelerators.h"
 #include "gui/gtk.h"
 #include "dtgtk/resetlabel.h"
 
 #define exposure2white(x)	exp2f(-(x))
 #define white2exposure(x)	-dt_log2f(fmaxf(0.001, x))
+#define ROUNDUP(a, n)		((a) % (n) == 0 ? (a) : ((a) / (n) + 1) * (n))
+
 
 DT_MODULE(2)
 
@@ -54,12 +57,22 @@ flags ()
   return IOP_FLAGS_ALLOW_TILING;
 }
 
-void init_key_accels()
+void init_key_accels(dt_iop_module_so_t *self)
 {
-  dtgtk_slider_init_accel(darktable.control->accels_darkroom,"<Darktable>/darkroom/plugins/exposure/black");
-  dtgtk_slider_init_accel(darktable.control->accels_darkroom,"<Darktable>/darkroom/plugins/exposure/exposure");
-  dtgtk_slider_init_accel(darktable.control->accels_darkroom,"<Darktable>/darkroom/plugins/exposure/auto-exposure");
+  dt_accel_register_slider_iop(self, FALSE, NC_("accel", "black"));
+  dt_accel_register_slider_iop(self, FALSE, NC_("accel", "exposure"));
+  dt_accel_register_slider_iop(self, FALSE, NC_("accel", "auto-exposure"));
 }
+
+void connect_key_accels(dt_iop_module_t *self)
+{
+  dt_iop_exposure_gui_data_t* g = (dt_iop_exposure_gui_data_t*)self->gui_data;
+
+  dt_accel_connect_slider_iop(self, "black", GTK_WIDGET(g->black));
+  dt_accel_connect_slider_iop(self, "exposure", GTK_WIDGET(g->exposure));
+  dt_accel_connect_slider_iop(self, "auto-exposure", GTK_WIDGET(g->autoexpp));
+}
+
 int
 output_bpp(dt_iop_module_t *module, dt_dev_pixelpipe_t *pipe, dt_dev_pixelpipe_iop_t *piece)
 {
@@ -78,11 +91,16 @@ process_cl (struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, cl_mem 
   const float white = exposure2white(d->exposure);
   const float scale = 1.0/(white - black);
   const int devid = piece->pipe->devid;
-  size_t sizes[] = {roi_in->width, roi_in->height, 1};
+  const int width = roi_in->width;
+  const int height = roi_in->height;
+
+  size_t sizes[] = { ROUNDUP(width, 4), ROUNDUP(height, 4), 1};
   dt_opencl_set_kernel_arg(devid, gd->kernel_exposure, 0, sizeof(cl_mem), (void *)&dev_in);
   dt_opencl_set_kernel_arg(devid, gd->kernel_exposure, 1, sizeof(cl_mem), (void *)&dev_out);
-  dt_opencl_set_kernel_arg(devid, gd->kernel_exposure, 2, sizeof(float), (void *)&black);
-  dt_opencl_set_kernel_arg(devid, gd->kernel_exposure, 3, sizeof(float), (void *)&scale);
+  dt_opencl_set_kernel_arg(devid, gd->kernel_exposure, 2, sizeof(int), (void *)&width);
+  dt_opencl_set_kernel_arg(devid, gd->kernel_exposure, 3, sizeof(int), (void *)&height);
+  dt_opencl_set_kernel_arg(devid, gd->kernel_exposure, 4, sizeof(float), (void *)&black);
+  dt_opencl_set_kernel_arg(devid, gd->kernel_exposure, 5, sizeof(float), (void *)&scale);
   err = dt_opencl_enqueue_kernel_2d(devid, gd->kernel_exposure, sizes);
   if(err != CL_SUCCESS) goto error;
   for(int k=0; k<3; k++) piece->pipe->processed_maximum[k] *= scale;
@@ -362,13 +380,11 @@ void gui_init(struct dt_iop_module_t *self)
   g->black = DTGTK_SLIDER(dtgtk_slider_new_with_range( DARKTABLE_SLIDER_BAR, -0.1, 0.1, .001, p->black, 3));
   g_object_set(G_OBJECT(g->black), "tooltip-text", _("adjust the black level"), (char *)NULL);
   dtgtk_slider_set_label(g->black,_("black"));
-  dtgtk_slider_set_accel(g->black,darktable.control->accels_darkroom,"<Darktable>/darkroom/plugins/exposure/black");
 
   g->exposure = DTGTK_SLIDER(dtgtk_slider_new_with_range( DARKTABLE_SLIDER_BAR, -9.0, 9.0, .02, p->exposure, 3));
   g_object_set(G_OBJECT(g->exposure), "tooltip-text", _("adjust the exposure correction"), (char *)NULL);
   dtgtk_slider_set_label(g->exposure,_("exposure"));
   dtgtk_slider_set_unit(g->exposure,"EV");
-  dtgtk_slider_set_accel(g->exposure,darktable.control->accels_darkroom,"<Darktable>/darkroom/plugins/exposure/exposure");
 
   gtk_box_pack_start(GTK_BOX(g->vbox2), GTK_WIDGET(g->black), TRUE, TRUE, 0);
   gtk_box_pack_start(GTK_BOX(g->vbox2), GTK_WIDGET(g->exposure), TRUE, TRUE, 0);
@@ -378,7 +394,6 @@ void gui_init(struct dt_iop_module_t *self)
   g->autoexpp = DTGTK_SLIDER(dtgtk_slider_new_with_range(DARKTABLE_SLIDER_BAR,0.0, 0.2, .001, 0.01,3));
   g_object_set(G_OBJECT(g->autoexpp), "tooltip-text", _("percentage of bright values clipped out"), (char *)NULL);
   gtk_widget_set_sensitive(GTK_WIDGET(g->autoexpp), FALSE);
-  dtgtk_slider_set_accel(g->autoexpp,darktable.control->accels_darkroom,"<Darktable>/darkroom/plugins/exposure/auto-exposure");
 
   GtkHBox *hbox = GTK_HBOX(gtk_hbox_new(FALSE, 0));
   gtk_box_pack_start(GTK_BOX(hbox), GTK_WIDGET(g->autoexp), TRUE, TRUE, 0);

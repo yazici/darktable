@@ -3,7 +3,7 @@
 		copyright (c) 2009--2010 johannes hanika.
 
 		darktable is free software: you can redistribute it and/or modify
-		it under the terms of the GNU General Public License as published by
+                it under the terms of the GNU General Public License as published by
 		the Free Software Foundation, either version 3 of the License, or
 		(at your option) any later version.
 
@@ -28,12 +28,15 @@
 #include "develop/develop.h"
 #include "develop/imageop.h"
 #include "control/control.h"
+#include "gui/accelerators.h"
 #include "gui/gtk.h"
 #include "dtgtk/slider.h"
 #include "dtgtk/resetlabel.h"
 #include "common/opencl.h"
 #include <gtk/gtk.h>
 #include <inttypes.h>
+
+#define ROUNDUP(a, n)		((a) % (n) == 0 ? (a) : ((a) / (n) + 1) * (n))
 
 DT_MODULE(1)
 
@@ -91,11 +94,24 @@ flags ()
   return IOP_FLAGS_ALLOW_TILING;
 }
 
-void init_key_accels()
+void init_key_accels(dt_iop_module_so_t *self)
 {
-  dtgtk_slider_init_accel(darktable.control->accels_darkroom,"<Darktable>/darkroom/plugins/highlights/blend L");
-  dtgtk_slider_init_accel(darktable.control->accels_darkroom,"<Darktable>/darkroom/plugins/highlights/blend C");
-  dtgtk_slider_init_accel(darktable.control->accels_darkroom,"<Darktable>/darkroom/plugins/highlights/blend h");
+  dt_accel_register_slider_iop(self, FALSE, NC_("accel", "blend L"));
+  dt_accel_register_slider_iop(self, FALSE, NC_("accel", "blend C"));
+  dt_accel_register_slider_iop(self, FALSE, NC_("accel", "blend h"));
+//  dtgtk_slider_init_accel(darktable.control->accels_darkroom,"<Darktable>/darkroom/plugins/highlights/blend L");
+//  dtgtk_slider_init_accel(darktable.control->accels_darkroom,"<Darktable>/darkroom/plugins/highlights/blend C");
+//  dtgtk_slider_init_accel(darktable.control->accels_darkroom,"<Darktable>/darkroom/plugins/highlights/blend h");
+}
+
+void connect_key_accels(dt_iop_module_t *self)
+{
+  dt_iop_highlights_gui_data_t *g =
+      (dt_iop_highlights_gui_data_t*)self->gui_data;
+
+  dt_accel_connect_slider_iop(self, "blend L", GTK_WIDGET(g->blendL));
+  dt_accel_connect_slider_iop(self, "blend C", GTK_WIDGET(g->blendC));
+  dt_accel_connect_slider_iop(self, "blend H", GTK_WIDGET(g->blendh));
 }
 
 static const float xyz_rgb[3][3] =    /* XYZ from RGB */
@@ -167,15 +183,20 @@ process_cl (struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, cl_mem 
 
   cl_int err = -999;
   const int devid = piece->pipe->devid;
-  size_t sizes[] = {roi_in->width, roi_in->height, 1};
+  const int width = roi_in->width;
+  const int height = roi_in->height;
+
+  size_t sizes[] = { ROUNDUP(width, 4), ROUNDUP(height, 4), 1};
   const float clip = fminf(piece->pipe->processed_maximum[0], fminf(piece->pipe->processed_maximum[1], piece->pipe->processed_maximum[2]));
   dt_opencl_set_kernel_arg(devid, gd->kernel_highlights, 0, sizeof(cl_mem), (void *)&dev_in);
   dt_opencl_set_kernel_arg(devid, gd->kernel_highlights, 1, sizeof(cl_mem), (void *)&dev_out);
-  dt_opencl_set_kernel_arg(devid, gd->kernel_highlights, 2, sizeof(int), (void *)&d->mode);
-  dt_opencl_set_kernel_arg(devid, gd->kernel_highlights, 3, sizeof(float), (void *)&clip);
-  dt_opencl_set_kernel_arg(devid, gd->kernel_highlights, 4, sizeof(float), (void *)&d->blendL);
-  dt_opencl_set_kernel_arg(devid, gd->kernel_highlights, 5, sizeof(float), (void *)&d->blendC);
-  dt_opencl_set_kernel_arg(devid, gd->kernel_highlights, 6, sizeof(float), (void *)&d->blendh);
+  dt_opencl_set_kernel_arg(devid, gd->kernel_highlights, 2, sizeof(int), (void *)&width);
+  dt_opencl_set_kernel_arg(devid, gd->kernel_highlights, 3, sizeof(int), (void *)&height);
+  dt_opencl_set_kernel_arg(devid, gd->kernel_highlights, 4, sizeof(int), (void *)&d->mode);
+  dt_opencl_set_kernel_arg(devid, gd->kernel_highlights, 5, sizeof(float), (void *)&clip);
+  dt_opencl_set_kernel_arg(devid, gd->kernel_highlights, 6, sizeof(float), (void *)&d->blendL);
+  dt_opencl_set_kernel_arg(devid, gd->kernel_highlights, 7, sizeof(float), (void *)&d->blendC);
+  dt_opencl_set_kernel_arg(devid, gd->kernel_highlights, 8, sizeof(float), (void *)&d->blendh);
   err = dt_opencl_enqueue_kernel_2d(devid, gd->kernel_highlights, sizes);
   if(err != CL_SUCCESS) goto error;
   return TRUE;
@@ -410,9 +431,6 @@ void gui_init(struct dt_iop_module_t *self)
   dtgtk_slider_set_label(g->blendL,_("blend L"));
   dtgtk_slider_set_label(g->blendC,_("blend C"));
   dtgtk_slider_set_label(g->blendh,_("blend h"));
-  dtgtk_slider_set_accel(g->blendL,darktable.control->accels_darkroom,"<Darktable>/darkroom/plugins/highlights/blend L");
-  dtgtk_slider_set_accel(g->blendC,darktable.control->accels_darkroom,"<Darktable>/darkroom/plugins/highlights/blend C");
-  dtgtk_slider_set_accel(g->blendh,darktable.control->accels_darkroom,"<Darktable>/darkroom/plugins/highlights/blend h");
   dtgtk_slider_set_default_value(g->blendL, p->blendL);
   dtgtk_slider_set_default_value(g->blendC, p->blendC);
   dtgtk_slider_set_default_value(g->blendh, p->blendh);

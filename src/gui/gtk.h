@@ -68,15 +68,6 @@ void dt_gui_gtk_cleanup(dt_gui_gtk_t *gui);
 /** block any keyaccelerators when widget have focus, block is released when widget lose focus. */
 void dt_gui_key_accel_block_on_focus (GtkWidget *w);
 
-// A wrapper around GTK's accel group connection function
-void dt_accel_group_connect_by_path(GtkAccelGroup *accel_group,
-                                    const gchar *accel_path,
-                                    GClosure *closure);
-void dt_accel_group_disconnect(GtkAccelGroup *accel_group,
-                               GClosure *closure);
-
-
-
 /*
  * new ui api 
  */
@@ -123,6 +114,10 @@ typedef enum dt_ui_container_t
   DT_UI_CONTAINER_PANEL_CENTER_BOTTOM_CENTER,
   DT_UI_CONTAINER_PANEL_CENTER_BOTTOM_RIGHT,
 
+  /* this panel is placed at bottom of ui 
+     only used by the filmstrip if shown */
+  DT_UI_CONTAINER_PANEL_BOTTOM,
+
   /* Count of containers */
   DT_UI_CONTAINER_SIZE
 } dt_ui_container_t;
@@ -139,6 +134,8 @@ typedef enum dt_ui_panel_t
   DT_UI_PANEL_LEFT,
   /* right panel */
   DT_UI_PANEL_RIGHT,
+  /* bottom panel */
+  DT_UI_PANEL_BOTTOM,
 
   DT_UI_PANEL_SIZE
 } dt_ui_panel_t;
@@ -165,6 +162,10 @@ void dt_ui_container_focus_widget(struct dt_ui_t *ui, const dt_ui_container_t c,
 void dt_ui_container_clear(struct dt_ui_t *ui, const dt_ui_container_t c);
 /** \brief shows/hide a panel */
 void dt_ui_panel_show(struct dt_ui_t *ui,const dt_ui_panel_t, gboolean show);
+/** \brief restore saved state of panel visibility for current view */
+void dt_ui_restore_panels(struct dt_ui_t *ui);
+/** \brief toggle view of panels eg. collaps/expands to previous view state */
+void dt_ui_toggle_panels_visibility(struct dt_ui_t *ui);
 /** \brief get visible state of panel */
 gboolean dt_ui_panel_visible(struct dt_ui_t *ui,const dt_ui_panel_t);
 /** \brief get the center drawable widget */

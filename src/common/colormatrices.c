@@ -34,8 +34,8 @@ static dt_profiled_colormatrix_t dt_profiled_colormatrices[] =
   // Robert Park, ColorChecker Passport, strobe, well lit
   { "PENTAX K-x",                   { 821548, 337357,  42923}, { 247818, 1042969, -218735}, { -4105, -293045, 1085129}, {792206, 821823, 668640}},
 
-  // Denis Cheremisov, SilverFast IT8, direct sunlight, well lit (some glare)
-  { "PENTAX K-5",                   { 962692, 373260,  32028}, { 193665, 1175980, -367905}, { 76889, -312424, 1401123}, {722717, 751862, 630066}},
+  // Denis Cheremisov, CMP Digital Target 4, strobe, well lit
+  { "PENTAX K-5",                   { 795456, 343674,  70389}, { 137650,  907654, -299805}, { 31097, -251328, 1054321}, {663452, 689972, 517853}},
 
   // Robert Park, ColorChecker Passport, strobe, well lit
   { "PENTAX K-7",                   { 738541, 294037,  28061}, { 316025,  984482, -189682}, { 12543, -185852, 1075027}, {812683, 843994, 682587}},
@@ -182,11 +182,17 @@ static dt_profiled_colormatrix_t dt_profiled_colormatrices[] =
   // Robert Park, ColorChecker Passport, strobe, well lit
   { "Panasonic DMC-LX5",            { 845215, 228226,  59219}, { 190109, 1297211, -543121}, { 42511, -433456, 1414032}, {761322, 790985, 642044}},
 
+  // Pascal de Bruijn, CMP Digital Target 3, strobe (PSEF15A), well lit
+  { "SAMSUNG NX100",                { 859955, 369919,  17136}, { 127045,  869888, -258362}, { 69351, -149155, 1121475}, {854538, 897888, 691147}},
+
   // Pieter de Boer, CMP Digital Target 3, camera strobe, well lit
   { "KODAK EASYSHARE Z1015 IS",     { 716446, 157928, -39536}, { 288498, 1234573, -412460}, { 43045, -337677, 1385773}, {774048, 823563, 644012}},
 
+  // Rolf Steinort, Wolf Faust IT8, direct sunlight, well lit
+  { "FUJIFILM FinePix X100",        { 734619, 274628,  -6302}, { 325272, 1076035, -198608}, {-15366, -280670, 1061050}, {637207, 668228, 578690}},
+
   // Oleg Dzhimiev, ColorChecker Classic, office lighting, well lit
-  { "Elphel 353E",                 { 782623, 147903, -272369}, { 110016, 1115250, -729172}, {175949, -157227, 1930222}, {821899, 860794, 671768}}
+  { "Elphel 353E",                  {782623, 147903, -272369}, { 110016, 1115250, -729172}, {175949, -157227, 1930222}, {821899, 860794, 671768}}
 };
 
 static const int dt_profiled_colormatrix_cnt = sizeof(dt_profiled_colormatrices)/sizeof(dt_profiled_colormatrix_t);

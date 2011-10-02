@@ -19,6 +19,7 @@
 const sampler_t sampleri =  CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP_TO_EDGE | CLK_FILTER_NEAREST;
 const sampler_t samplerf =  CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP_TO_EDGE | CLK_FILTER_LINEAR;
 
+#define ICLAMP(a, mn, mx) ((a) < (mn) ? (mn) : ((a) > (mx) ? (mx) : (a)))
 
 float gh(const float f)
 {
@@ -28,10 +29,12 @@ float gh(const float f)
 }
 
 kernel void
-nlmeans (read_only image2d_t in, write_only image2d_t out, const int P, const int K, const float nL, const float nC)
+nlmeans (read_only image2d_t in, write_only image2d_t out, const int width, const int height, const int P, const int K, const float nL, const float nC)
 {
   const int x = get_global_id(0);
   const int y = get_global_id(1);
+  const int maxx = width - 1;
+  const int maxy = height - 1;
   const float4 norm2 = (float4)(nL, nC, nC, 1.0f);
 
 #if 0
@@ -41,6 +44,8 @@ nlmeans (read_only image2d_t in, write_only image2d_t out, const int P, const in
   block[get_local_id(0)  + get_local_id(1) * get_local_size(0)] = (float4)0.0f;
   barrier(CLK_LOCAL_MEM_FENCE);
 
+  if(x >= width || y >= height) return;
+
   // coalesced mem accesses:
   const float4 p1  = read_imagef(in, sampleri, (int2)(x, y));
 
@@ -49,14 +54,14 @@ nlmeans (read_only image2d_t in, write_only image2d_t out, const int P, const in
   {
     for(int ki=-K;ki<=K;ki++)
     {
-      const float4 p2  = read_imagef(in, sampleri, (int2)(x+ki, y+kj));
+      const float4 p2  = read_imagef(in, sampleri, (int2)(ICLAMP(x+ki, 0, maxx), ICLAMP(y+kj, 0, maxy)));
       const float4 tmp = (p1 - p2)*norm2;
       const float dist = tmp.x + tmp.y + tmp.z;
       for(int pj=-P;pj<=P;pj++)
       {
         for(int pi=-P;pi<=P;pi++)
         {
-          float4 p2 = read_imagef(in, sampleri, (int2)(x+pi+ki, y+pj+kj));
+          float4 p2 = read_imagef(in, sampleri, (int2)(ICLAMP(x+pi+ki, 0, maxx), ICLAMP(y+pj+kj, 0, maxy)));
           p2.w = dist;
           const int i = get_local_id(0) + pi, j = get_local_id(1) + pj;
           if(i >= 0 && i < get_local_size(0) && j >= 0 && j < get_local_size(1))
@@ -82,6 +87,8 @@ nlmeans (read_only image2d_t in, write_only image2d_t out, const int P, const in
 
 
 #if 1
+  if(x >= width || y >= height) return;
+
   const float4 acc   = (float4)(0.0f);
   // brute force (superslow baseline)!
   // for each shift vector
@@ -94,13 +101,13 @@ nlmeans (read_only image2d_t in, write_only image2d_t out, const int P, const in
       {
         for(int pi=-P;pi<=P;pi++)
         {
-          float4 p1  = read_imagef(in, sampleri, (int2)(x+pi, y+pj));
-          float4 p2  = read_imagef(in, sampleri, (int2)(x+pi+ki, y+pj+kj));
+          float4 p1  = read_imagef(in, sampleri, (int2)(ICLAMP(x+pi, 0, maxx), ICLAMP(y+pj, 0, maxy)));
+          float4 p2  = read_imagef(in, sampleri, (int2)(ICLAMP(x+pi+ki, 0, maxx), ICLAMP(y+pj+kj, 0, maxy)));
           float4 tmp = (p1 - p2)*norm2;
           dist += tmp.x + tmp.y + tmp.z;
         }
       }
-      float4 pin = read_imagef(in, sampleri, (int2)(x+ki, y+kj));
+      float4 pin = read_imagef(in, sampleri, (int2)(ICLAMP(x+ki, 0, maxx), ICLAMP(y+kj, 0, maxy)));
       dist = gh(dist);
       acc.x += dist * pin.x;
       acc.y += dist * pin.y;

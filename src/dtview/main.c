@@ -266,7 +266,7 @@ int main(int argc, char *arg[])
   // init dt without gui:
   if(dt_init(argc, arg, 0)) exit(1);
   // use system color profile, if we can:
-  const gchar *oldprofile = dt_conf_get_string("plugins/lighttable/export/iccprofile");
+  gchar *oldprofile = dt_conf_get_string("plugins/lighttable/export/iccprofile");
   const gchar *overprofile = "X profile";
   dt_conf_set_string("plugins/lighttable/export/iccprofile", overprofile);
   running = init(argc, arg);
@@ -284,7 +284,10 @@ int main(int argc, char *arg[])
     }
     usleep(3000000);
   }
-  if(oldprofile) dt_conf_set_string("plugins/lighttable/export/iccprofile", oldprofile);
+  if(oldprofile) {
+    dt_conf_set_string("plugins/lighttable/export/iccprofile", oldprofile);
+    g_free(oldprofile);
+  }
   shutdown();
 }
 

@@ -33,6 +33,7 @@
 #include "dtgtk/resetlabel.h"
 #include "dtgtk/slider.h"
 #include "dtgtk/gradientslider.h"
+#include "gui/accelerators.h"
 #include "gui/gtk.h"
 #include "gui/presets.h"
 
@@ -47,15 +48,15 @@ typedef struct dt_iop_relight_params_t
 }
 dt_iop_relight_params_t;
 
-void init_presets (dt_iop_module_t *self)
+void init_presets (dt_iop_module_so_t *self)
 {
   DT_DEBUG_SQLITE3_EXEC(dt_database_get(darktable.db), "begin", NULL, NULL, NULL);
 
-  dt_gui_presets_add_generic(_("fill-light 0.25EV with 4 zones"), self->op, &(dt_iop_relight_params_t)
+  dt_gui_presets_add_generic(_("fill-light 0.25EV with 4 zones"), self->op, self->version(), &(dt_iop_relight_params_t)
   {
     0.25,0.25,4.0
   } , sizeof(dt_iop_relight_params_t), 1);
-  dt_gui_presets_add_generic(_("fill-shadow -0.25EV with 4 zones"), self->op, &(dt_iop_relight_params_t)
+  dt_gui_presets_add_generic(_("fill-shadow -0.25EV with 4 zones"), self->op, self->version(), &(dt_iop_relight_params_t)
   {
     -0.25,0.25,4.0
   } , sizeof(dt_iop_relight_params_t), 1);
@@ -97,10 +98,18 @@ groups ()
   return IOP_GROUP_EFFECT;
 }
 
-void init_key_accels()
+void init_key_accels(dt_iop_module_so_t *self)
 {
-  dtgtk_slider_init_accel(darktable.control->accels_darkroom,"<Darktable>/darkroom/plugins/relight/exposure");
-  dtgtk_slider_init_accel(darktable.control->accels_darkroom,"<Darktable>/darkroom/plugins/relight/width");
+  dt_accel_register_slider_iop(self, FALSE, NC_("accel", "exposure"));
+  dt_accel_register_slider_iop(self, FALSE, NC_("accel", "width"));
+}
+
+void connect_key_accels(dt_iop_module_t *self)
+{
+  dt_iop_relight_gui_data_t *g = (dt_iop_relight_gui_data_t*)self->gui_data;
+
+  dt_accel_connect_slider_iop(self, "exposure", GTK_WIDGET(g->scale1));
+  dt_accel_connect_slider_iop(self, "width", GTK_WIDGET(g->scale2));
 }
 
 #define GAUSS(a,b,c,x) (a*pow(2.718281828,(-pow((x-b),2)/(pow(c,2)))))
@@ -310,8 +319,6 @@ void gui_init(struct dt_iop_module_t *self)
   dtgtk_slider_set_unit(g->scale1, "EV");
   dtgtk_slider_set_force_sign(g->scale1, TRUE);
   dtgtk_slider_set_label(g->scale2, _("width"));
-  dtgtk_slider_set_accel(g->scale1,darktable.control->accels_darkroom,"<Darktable>/darkroom/plugins/relight/exposure");
-  dtgtk_slider_set_accel(g->scale2,darktable.control->accels_darkroom,"<Darktable>/darkroom/plugins/relight/width");
 
   /* lightnessslider */
   GtkBox *hbox=GTK_BOX (gtk_hbox_new (FALSE,2));

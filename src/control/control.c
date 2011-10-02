@@ -170,15 +170,11 @@ int dt_control_load_config(dt_control_t *c)
   int fullscreen = dt_conf_get_bool("ui_last/fullscreen");
   if(fullscreen) gtk_window_fullscreen  (GTK_WINDOW(widget));
   else           gtk_window_unfullscreen(GTK_WINDOW(widget));
-  dt_control_restore_gui_settings(DT_LIBRARY);
   return 0;
 }
 
 int dt_control_write_config(dt_control_t *c)
 {
-  dt_ctl_gui_mode_t gui = dt_conf_get_int("ui_last/view");
-  dt_control_save_gui_settings(gui);
-
   GtkWidget *widget = dt_ui_main_window(darktable.gui->ui);
   gint x, y;
   gtk_window_get_position(GTK_WINDOW(widget), &x, &y);
@@ -470,61 +466,24 @@ create_tables:
 
 void dt_control_key_accelerators_on(struct dt_control_t *s)
 {
-  guint state = darktable.control->key_accelerators_saved;
+  gtk_window_add_accel_group(GTK_WINDOW(dt_ui_main_window(darktable.gui->ui)),
+                             darktable.control->accelerators);
   if(!s->key_accelerators_on)
-  {
     s->key_accelerators_on = 1;
-    GtkWindow *mw = GTK_WINDOW(dt_ui_main_window(darktable.gui->ui));
-    if(state & ACCELS_GLOBAL)
-      gtk_window_add_accel_group(mw, darktable.control->accels_global);
-    if(state & ACCELS_LIGHTTABLE)
-      gtk_window_add_accel_group(mw, darktable.control->accels_lighttable);
-    if(state & ACCELS_DARKROOM)
-      gtk_window_add_accel_group(mw, darktable.control->accels_darkroom);
-    if(state & ACCELS_CAPTURE)
-      gtk_window_add_accel_group(mw, darktable.control->accels_capture);
-    if(state & ACCELS_FILMSTRIP)
-      gtk_window_add_accel_group(mw, darktable.control->accels_filmstrip);
-  }
-}
-
-static void state_from_accels(gpointer data, gpointer state)
-{
-  guint* s = (guint*)state;
-  if(data == (gpointer)darktable.control->accels_global)
-    *s |= ACCELS_GLOBAL;
-  else if(data == (gpointer)darktable.control->accels_lighttable)
-    *s |= ACCELS_LIGHTTABLE;
-  else if(data == (gpointer)darktable.control->accels_darkroom)
-    *s |= ACCELS_DARKROOM;
-  else if(data == (gpointer)darktable.control->accels_capture)
-    *s |= ACCELS_CAPTURE;
-  else if(data == (gpointer)darktable.control->accels_filmstrip)
-    *s |= ACCELS_FILMSTRIP;
-
-  gtk_window_remove_accel_group(
-      GTK_WINDOW(dt_ui_main_window(darktable.gui->ui)),
-      (GtkAccelGroup*)data);
 }
 
 void dt_control_key_accelerators_off(struct dt_control_t *s)
 {
-  GSList *g = gtk_accel_groups_from_object(
-    G_OBJECT(dt_ui_main_window(darktable.gui->ui)));
- 
-  guint state = 0;
-
-  // Setting the apropriate bits for currently active accel groups
-  g_slist_foreach(g, state_from_accels, &state);
-
+  gtk_window_remove_accel_group(
+      GTK_WINDOW(dt_ui_main_window(darktable.gui->ui)),
+      darktable.control->accelerators);
   s->key_accelerators_on = 0;
-  s->key_accelerators_saved = state;
 }
 
 
 int dt_control_is_key_accelerators_on(struct dt_control_t *s)
 {
-  return  s->key_accelerators_on == 1?1:0;
+  return  s->key_accelerators_on;
 }
 
 void dt_control_change_cursor(dt_cursor_t curs)
@@ -1054,7 +1013,6 @@ void dt_ctl_switch_mode_to(dt_ctl_gui_mode_t mode)
   dt_ctl_gui_mode_t oldmode = dt_conf_get_int("ui_last/view");
   if(oldmode == mode) return;
 
-  dt_control_save_gui_settings(oldmode);
   darktable.control->button_down = 0;
   darktable.control->button_down_which = 0;
   darktable.gui->center_tooltip = 0;
@@ -1072,8 +1030,6 @@ void dt_ctl_switch_mode_to(dt_ctl_gui_mode_t mode)
 
   if(error) return;
 
-  dt_control_restore_gui_settings(mode);
-  /* TODO: highlight current view */
   dt_conf_set_int ("ui_last/view", mode);
 }
 
@@ -1282,65 +1238,6 @@ void dt_control_queue_redraw_widget(GtkWidget *widget)
 }
 
 
-void dt_control_restore_gui_settings(dt_ctl_gui_mode_t mode)
-{
-  if(mode==DT_MODE_NONE) return;
-
-  int8_t bit;
-
-  bit = dt_conf_get_int("ui_last/panel_header");
-  dt_ui_panel_show(darktable.gui->ui, DT_UI_PANEL_TOP, (bit&(1<<mode)) ? TRUE : FALSE);
-
-  bit = dt_conf_get_int("ui_last/panel_left");
-  dt_ui_panel_show(darktable.gui->ui, DT_UI_PANEL_LEFT, (bit&(1<<mode)) ? TRUE : FALSE);
-
-  bit = dt_conf_get_int("ui_last/panel_right");
-  dt_ui_panel_show(darktable.gui->ui, DT_UI_PANEL_RIGHT, (bit&(1<<mode)) ? TRUE : FALSE);
-
-  bit = dt_conf_get_int("ui_last/panel_top");
-  dt_ui_panel_show(darktable.gui->ui, DT_UI_PANEL_CENTER_TOP, (bit&(1<<mode)) ? TRUE : FALSE);
-
-  bit = dt_conf_get_int("ui_last/panel_bottom");
-  dt_ui_panel_show(darktable.gui->ui, DT_UI_PANEL_CENTER_BOTTOM, (bit&(1<<mode)) ? TRUE : FALSE);
-
-}
-
-void dt_control_save_gui_settings(dt_ctl_gui_mode_t mode)
-{
-  int8_t bit;
-  /* store header panel visible state */
-  bit = dt_conf_get_int("ui_last/panel_header");
-  if(dt_ui_panel_visible(darktable.gui->ui, DT_UI_PANEL_LEFT)) bit |= 1<<mode;
-  else bit &= ~(1<<mode);
-  dt_conf_set_int("ui_last/panel_header",bit);
-
-  /* store left panel visible state */
-  bit = dt_conf_get_int("ui_last/panel_left");
-  if(dt_ui_panel_visible(darktable.gui->ui, DT_UI_PANEL_LEFT)) bit |= 1<<mode;
-  else bit &= ~(1<<mode);
-  dt_conf_set_int("ui_last/panel_left",bit);
-
-  /* store right panel visible state */
-  bit = dt_conf_get_int("ui_last/panel_right");
-  if(dt_ui_panel_visible(darktable.gui->ui, DT_UI_PANEL_RIGHT)) bit |= 1<<mode;
-  else bit &= ~(1<<mode);
-  dt_conf_set_int("ui_last/panel_right",bit);
-
-  /* store top panel visible state */
-  bit = dt_conf_get_int("ui_last/panel_top");
-  if(dt_ui_panel_visible(darktable.gui->ui, DT_UI_PANEL_CENTER_TOP)) bit |= 1<<mode;
-  else bit &= ~(1<<mode);
-  dt_conf_set_int("ui_last/panel_top",bit);
-
-  /* store bottom panel visible state */
-  bit = dt_conf_get_int("ui_last/panel_bottom");
-  if(dt_ui_panel_visible(darktable.gui->ui, DT_UI_PANEL_CENTER_BOTTOM)) bit |= 1<<mode;
-  else bit &= ~(1<<mode);
-  dt_conf_set_int("ui_last/panel_bottom",bit);
-
-
-}
-
 int dt_control_key_pressed_override(guint key, guint state)
 {
   dt_control_accels_t* accels = &darktable.control->accels;
@@ -1351,15 +1248,31 @@ int dt_control_key_pressed_override(guint key, guint state)
   if(key == accels->global_sideborders.accel_key
      && state == accels->global_sideborders.accel_mods)
   {
-    gboolean visible = dt_ui_panel_visible(darktable.gui->ui, DT_UI_PANEL_LEFT);
-    dt_ui_panel_show(darktable.gui->ui, DT_UI_PANEL_LEFT, !visible);
-    dt_ui_panel_show(darktable.gui->ui, DT_UI_PANEL_RIGHT, !visible);
-    /*
-	  dt_ui_panel_show(DT_UI_PANEL_TOP, !visible);
-	  dt_ui_panel_show(DT_UI_PANEL_BOTTOM, !visible);
-	*/
-
+    /* toggle panel viewstate */
+    dt_ui_toggle_panels_visibility(darktable.gui->ui);
+    
+    /* trigger invalidation of centerview to reprocess pipe */
     dt_dev_invalidate(darktable.develop);
+
+  } else if (key == accels->global_header.accel_key &&
+	     state == accels->global_header.accel_mods)
+  {
+    char key[512];
+    const dt_view_t *cv = dt_view_manager_get_current_view(darktable.view_manager);
+
+    /* do nothing if in collaps panel state 
+       TODO: reconsider adding this check to ui api */
+    g_snprintf(key, 512, "%s/ui/panel_collaps_state",cv->module_name);
+    if (dt_conf_get_int(key))
+      return 0;
+
+    /* toggle the header visibility state */
+    g_snprintf(key, 512, "%s/ui/show_header", cv->module_name);
+    gboolean header = !dt_conf_get_bool(key);
+    dt_conf_set_bool(key, header);
+    
+    /* show/hide the actual header panel */
+    dt_ui_panel_show(darktable.gui->ui, DT_UI_PANEL_TOP, header); 
   }
  
   gtk_widget_queue_draw(dt_ui_center(darktable.gui->ui));

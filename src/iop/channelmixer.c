@@ -22,9 +22,6 @@
 #include <math.h>
 #include <assert.h>
 #include <string.h>
-#ifdef HAVE_GEGL
-#include <gegl.h>
-#endif
 #include "common/colorspaces.h"
 #include "develop/develop.h"
 #include "develop/imageop.h"
@@ -32,6 +29,7 @@
 #include "common/debug.h"
 #include "dtgtk/slider.h"
 #include "dtgtk/label.h"
+#include "gui/accelerators.h"
 #include "gui/gtk.h"
 #include "gui/presets.h"
 #include <gtk/gtk.h>
@@ -120,11 +118,21 @@ groups ()
 {
   return IOP_GROUP_COLOR;
 }
-void init_key_accels()
+void init_key_accels(dt_iop_module_so_t *self)
 {
-  dtgtk_slider_init_accel(darktable.control->accels_darkroom,"<Darktable>/darkroom/plugins/channelmixer/red");
-  dtgtk_slider_init_accel(darktable.control->accels_darkroom,"<Darktable>/darkroom/plugins/channelmixer/green");
-  dtgtk_slider_init_accel(darktable.control->accels_darkroom,"<Darktable>/darkroom/plugins/channelmixer/blue");
+  dt_accel_register_slider_iop(self, FALSE, NC_("accel", "red"));
+  dt_accel_register_slider_iop(self, FALSE, NC_("accel", "green"));
+  dt_accel_register_slider_iop(self, FALSE, NC_("accel", "blue"));
+}
+
+void connect_key_accels(dt_iop_module_t *self)
+{
+  dt_iop_channelmixer_gui_data_t *g =
+      (dt_iop_channelmixer_gui_data_t*)self->gui_data;
+
+  dt_accel_connect_slider_iop(self, "red", GTK_WIDGET(g->scale1));
+  dt_accel_connect_slider_iop(self, "green", GTK_WIDGET(g->scale2));
+  dt_accel_connect_slider_iop(self, "blue", GTK_WIDGET(g->scale3));
 }
 
 void process (struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, void *ivoid, void *ovoid, const dt_iop_roi_t *roi_in, const dt_iop_roi_t *roi_out)
@@ -360,15 +368,12 @@ void gui_init(struct dt_iop_module_t *self)
   g->scale1 = DTGTK_SLIDER(dtgtk_slider_new_with_range(DARKTABLE_SLIDER_VALUE,-2.0, 2.0, 0.005, p->red[CHANNEL_RED] , 3));
   g_object_set (GTK_OBJECT(g->scale1), "tooltip-text", _("amount of red channel in the output channel"), (char *)NULL);
   dtgtk_slider_set_label(g->scale1,_("red"));
-  dtgtk_slider_set_accel(g->scale1,darktable.control->accels_darkroom,"<Darktable>/darkroom/plugins/channelmixer/red");
   g->scale2 = DTGTK_SLIDER(dtgtk_slider_new_with_range(DARKTABLE_SLIDER_VALUE,-2.0, 2.0, 0.005, p->green[CHANNEL_RED] , 3));
   g_object_set (GTK_OBJECT(g->scale2), "tooltip-text", _("amount of green channel in the output channel"), (char *)NULL);
   dtgtk_slider_set_label(g->scale2,_("green"));
-  dtgtk_slider_set_accel(g->scale2,darktable.control->accels_darkroom,"<Darktable>/darkroom/plugins/channelmixer/green");
   g->scale3 = DTGTK_SLIDER(dtgtk_slider_new_with_range(DARKTABLE_SLIDER_VALUE,-2.0, 2.0, 0.005, p->blue[CHANNEL_RED] , 3));
   g_object_set (GTK_OBJECT(g->scale3), "tooltip-text", _("amount of blue channel in the output channel"), (char *)NULL);
   dtgtk_slider_set_label(g->scale3,_("blue"));
-  dtgtk_slider_set_accel(g->scale3,darktable.control->accels_darkroom,"<Darktable>/darkroom/plugins/channelmixer/blue");
 
   gtk_box_pack_start(GTK_BOX(g->vbox), GTK_WIDGET(g->scale1), TRUE, TRUE, 0);
   gtk_box_pack_start(GTK_BOX(g->vbox), GTK_WIDGET(g->scale2), TRUE, TRUE, 0);
@@ -385,59 +390,59 @@ void gui_init(struct dt_iop_module_t *self)
                     G_CALLBACK (output_callback), self);
 }
 
-void init_presets (dt_iop_module_t *self)
+void init_presets (dt_iop_module_so_t *self)
 {
   DT_DEBUG_SQLITE3_EXEC(dt_database_get(darktable.db), "begin", NULL, NULL, NULL);
 
-  dt_gui_presets_add_generic(_("swap R and B"), self->op, &(dt_iop_channelmixer_params_t)
+  dt_gui_presets_add_generic(_("swap R and B"), self->op, self->version(), &(dt_iop_channelmixer_params_t)
   {
     {
       0,0,0,0,0,1,0
     }, {0,0,0,0,1,0,0}, {0,0,0,1,0,0,0}
   } , sizeof(dt_iop_channelmixer_params_t), 1);
-  dt_gui_presets_add_generic(_("swap G and B"), self->op, &(dt_iop_channelmixer_params_t)
+  dt_gui_presets_add_generic(_("swap G and B"), self->op, self->version(), &(dt_iop_channelmixer_params_t)
   {
     {
       0,0,0,1,0,0,0
     }, {0,0,0,0,0,1,0}, {0,0,0,0,1,0,0}
   } , sizeof(dt_iop_channelmixer_params_t), 1);
-  dt_gui_presets_add_generic(_("color contrast boost"), self->op, &(dt_iop_channelmixer_params_t)
+  dt_gui_presets_add_generic(_("color contrast boost"), self->op, self->version(), &(dt_iop_channelmixer_params_t)
   {
     {
       0,0,0.8,1,0,0,0
     }, {0,0,0.1,0,1,0,0}, {0,0,0.1,0,0,1,0}
   } , sizeof(dt_iop_channelmixer_params_t), 1);
-  dt_gui_presets_add_generic(_("color details boost"), self->op, &(dt_iop_channelmixer_params_t)
+  dt_gui_presets_add_generic(_("color details boost"), self->op, self->version(), &(dt_iop_channelmixer_params_t)
   {
     {
       0,0,0.1,1,0,0,0
     }, {0,0,0.8,0,1,0,0}, {0,0,0.1,0,0,1,0}
   } , sizeof(dt_iop_channelmixer_params_t), 1);
-  dt_gui_presets_add_generic(_("color artifacts boost"), self->op, &(dt_iop_channelmixer_params_t)
+  dt_gui_presets_add_generic(_("color artifacts boost"), self->op, self->version(), &(dt_iop_channelmixer_params_t)
   {
     {
       0,0,0.1,1,0,0,0
     }, {0,0,0.1,0,1,0,0}, {0,0,0.800,0,0,1,0}
   } , sizeof(dt_iop_channelmixer_params_t), 1);
-  dt_gui_presets_add_generic(_("b/w"), self->op, &(dt_iop_channelmixer_params_t)
+  dt_gui_presets_add_generic(_("b/w"), self->op, self->version(), &(dt_iop_channelmixer_params_t)
   {
     {
       0,0,0,1,0,0,0.21
     }, {0,0,0,0,1,0,0.72}, {0,0,0,0,0,1,0.07}
   } , sizeof(dt_iop_channelmixer_params_t), 1);
-  dt_gui_presets_add_generic(_("b/w artifacts boost"), self->op, &(dt_iop_channelmixer_params_t)
+  dt_gui_presets_add_generic(_("b/w artifacts boost"), self->op, self->version(), &(dt_iop_channelmixer_params_t)
   {
     {
       0,0,0,1,0,0,-0.275
     }, {0,0,0,0,1,0,-0.275}, {0,0,0,0,0,1,1.275}
   } , sizeof(dt_iop_channelmixer_params_t), 1);
-  dt_gui_presets_add_generic(_("b/w smooth skin"), self->op, &(dt_iop_channelmixer_params_t)
+  dt_gui_presets_add_generic(_("b/w smooth skin"), self->op, self->version(), &(dt_iop_channelmixer_params_t)
   {
     {
       0,0,0,1,0,0,1.0
     }, {0,0,0,0,0,1,0.325}, {0,0,0,0,0,0,-0.4}
   } , sizeof(dt_iop_channelmixer_params_t), 1);
-  dt_gui_presets_add_generic(_("b/w blue artifacts reduce"), self->op, &(dt_iop_channelmixer_params_t)
+  dt_gui_presets_add_generic(_("b/w blue artifacts reduce"), self->op, self->version(), &(dt_iop_channelmixer_params_t)
   {
     {
       0,0,0,0,0,0,0.4

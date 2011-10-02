@@ -28,8 +28,6 @@
 #define DT_OPENCL_EVENTNAMELENGTH 64
 #define DT_OPENCL_MAX_EVENTS 256
 
-#define DT_OPENCL_MEMORY_HEADROOM (256*1024*1024)
-
 #ifdef HAVE_OPENCL
 
 // #pragma GCC diagnostic push
@@ -77,6 +75,7 @@ typedef struct dt_opencl_device_t
   int numevents;
   int eventsconsolidated;
   int maxevents;
+  int lostevents;
   cl_int summary;
 }
 dt_opencl_device_t;

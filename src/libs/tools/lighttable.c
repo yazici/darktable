@@ -16,9 +16,12 @@
     along with darktable.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <gdk/gdkkeysyms.h>
+
 #include "control/control.h"
 #include "control/conf.h"
 #include "libs/lib.h"
+#include "gui/accelerators.h"
 #include "gui/gtk.h"
 
 DT_MODULE(1)
@@ -28,6 +31,9 @@ typedef struct dt_lib_tool_lighttable_t
   GtkWidget *zoom;
 }
 dt_lib_tool_lighttable_t;
+
+/* set zoom proxy function */
+static void _lib_lighttable_set_zoom(dt_lib_module_t *self, gint zoom);
 
 /* lightable layout changed */
 static void _lib_lighttable_layout_changed (GtkComboBox *widget, gpointer user_data);
@@ -104,41 +110,47 @@ void gui_init(dt_lib_module_t *self)
 
   gtk_box_pack_start(GTK_BOX(self->widget), d->zoom, TRUE, TRUE, 0);
 
-}
+  darktable.view_manager->proxy.lighttable.module = self;
+  darktable.view_manager->proxy.lighttable.set_zoom = _lib_lighttable_set_zoom;
 
+}
 
 void init_key_accels(dt_lib_module_t *self)
 {
+  dt_accel_register_lib(self, NC_("accel", "zoom max"),
+                        GDK_1, GDK_MOD1_MASK);
+  dt_accel_register_lib(self, NC_("accel", "zoom in"),
+                        GDK_2, GDK_MOD1_MASK);
+  dt_accel_register_lib(self, NC_("accel", "zoom out"),
+                        GDK_3, GDK_MOD1_MASK);
+  dt_accel_register_lib(self, NC_("accel", "zoom min"),
+                        GDK_4, GDK_MOD1_MASK);
+}
+
+void connect_key_accels(dt_lib_module_t *self)
+{
   /* setup key accelerators */
 
-  dt_accel_group_connect_by_path(darktable.control->accels_lighttable,
-                                 "<Darktable>/lighttable/zoom/max",
-                                 g_cclosure_new(
-						G_CALLBACK(_lib_lighttable_key_accel_zoom_max_callback),
-						self, NULL)
-				 );
-  
-  dt_accel_group_connect_by_path(darktable.control->accels_lighttable,
-                                 "<Darktable>/lighttable/zoom/in",
-				 g_cclosure_new(
-                                                G_CALLBACK(_lib_lighttable_key_accel_zoom_in_callback),
-                                                self, NULL)
-				 );
-  
-  dt_accel_group_connect_by_path(darktable.control->accels_lighttable,
-                                 "<Darktable>/lighttable/zoom/out",
-				 g_cclosure_new(
-                                                G_CALLBACK(_lib_lighttable_key_accel_zoom_out_callback),
-                                                self, NULL)
-                                 );
-  
-  dt_accel_group_connect_by_path(darktable.control->accels_lighttable,
-                                 "<Darktable>/lighttable/zoom/min",
-				 g_cclosure_new(
-                                                G_CALLBACK(_lib_lighttable_key_accel_zoom_min_callback),
-                                                self, NULL)
-                                 );
-
+  dt_accel_connect_lib(
+      self, "zoom max",
+      g_cclosure_new(
+          G_CALLBACK(_lib_lighttable_key_accel_zoom_max_callback),
+          self, NULL));
+  dt_accel_connect_lib(
+      self, "zoom in",
+      g_cclosure_new(
+          G_CALLBACK(_lib_lighttable_key_accel_zoom_in_callback),
+          self, NULL));
+  dt_accel_connect_lib(
+      self, "zoom out",
+      g_cclosure_new(
+          G_CALLBACK(_lib_lighttable_key_accel_zoom_out_callback),
+          self, NULL));
+dt_accel_connect_lib(
+    self, "zoom min",
+    g_cclosure_new(
+        G_CALLBACK(_lib_lighttable_key_accel_zoom_min_callback),
+        self, NULL));
 }
 
 void gui_cleanup(dt_lib_module_t *self)
@@ -162,7 +174,11 @@ static void _lib_lighttable_layout_changed (GtkComboBox *widget, gpointer user_d
 }
 
 #define DT_LIBRARY_MAX_ZOOM 13
-
+static void _lib_lighttable_set_zoom(dt_lib_module_t *self, gint zoom)
+{
+  dt_lib_tool_lighttable_t *d = (dt_lib_tool_lighttable_t *)self->data;
+  gtk_spin_button_set_value(GTK_SPIN_BUTTON(d->zoom), zoom);
+}
 
 static void _lib_lighttable_key_accel_zoom_max_callback(GtkAccelGroup *accel_group, GObject *acceleratable,
 							guint keyval, GdkModifierType modifier, gpointer data)

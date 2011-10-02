@@ -29,9 +29,11 @@ extern "C"
 #endif
 #include "develop/develop.h"
 #include "develop/imageop.h"
+#include "develop/tiling.h"
 #include "control/control.h"
 #include "dtgtk/resetlabel.h"
 #include "dtgtk/slider.h"
+#include "gui/accelerators.h"
 #include "gui/gtk.h"
 }
 #include "iop/Permutohedral.h"
@@ -81,17 +83,26 @@ extern "C"
 
   int flags()
   {
-    return IOP_FLAGS_ALLOW_TILING;
+    return IOP_FLAGS_ALLOW_TILING | IOP_FLAGS_SUPPORTS_BLENDING;
   }
-
-void init_key_accels()
-{
-  dtgtk_slider_init_accel(darktable.control->accels_darkroom,"<Darktable>/darkroom/plugins/bilateral/radius");
-  dtgtk_slider_init_accel(darktable.control->accels_darkroom,"<Darktable>/darkroom/plugins/bilateral/red");
-  dtgtk_slider_init_accel(darktable.control->accels_darkroom,"<Darktable>/darkroom/plugins/bilateral/green");
-  dtgtk_slider_init_accel(darktable.control->accels_darkroom,"<Darktable>/darkroom/plugins/bilateral/blue");
-}
-
+ 
+  void init_key_accels(dt_iop_module_so_t *self)
+  {
+    dt_accel_register_slider_iop(self, FALSE, NC_("accel", "radius"));
+    dt_accel_register_slider_iop(self, FALSE, NC_("accel", "red"));
+    dt_accel_register_slider_iop(self, FALSE, NC_("accel", "green"));
+    dt_accel_register_slider_iop(self, FALSE, NC_("accel", "blue"));
+  }
+  
+  void connect_key_accels(dt_iop_module_t *self)
+  {
+    dt_iop_bilateral_gui_data_t *g = (dt_iop_bilateral_gui_data_t*)self->gui_data;
+    dt_accel_connect_slider_iop(self, "radius", GTK_WIDGET(g->scale1));
+    dt_accel_connect_slider_iop(self, "red", GTK_WIDGET(g->scale3));
+    dt_accel_connect_slider_iop(self, "green", GTK_WIDGET(g->scale4));
+    dt_accel_connect_slider_iop(self, "blue", GTK_WIDGET(g->scale5));
+  }
+  
   void process (struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, void *ivoid, void *ovoid, const dt_iop_roi_t *roi_in, const dt_iop_roi_t *roi_out)
   {
     dt_iop_bilateral_data_t *data = (dt_iop_bilateral_data_t *)piece->data;
@@ -290,16 +301,18 @@ void init_key_accels()
     dtgtk_slider_set_value(g->scale5, p->sigma[4]);
   }
 
-  void tiling_callback  (struct dt_iop_module_t *self, struct dt_dev_pixelpipe_iop_t *piece, const dt_iop_roi_t *roi_in, const dt_iop_roi_t *roi_out, float *factor, unsigned *overhead, unsigned *overlap)
+  void tiling_callback  (struct dt_iop_module_t *self, struct dt_dev_pixelpipe_iop_t *piece, const dt_iop_roi_t *roi_in, const dt_iop_roi_t *roi_out, struct dt_develop_tiling_t *tiling)
   {
     dt_iop_bilateral_data_t *data = (dt_iop_bilateral_data_t *)piece->data;
     float sigma[5];
     sigma[0] = data->sigma[0] * roi_in->scale / piece->iscale;
     sigma[1] = data->sigma[1] * roi_in->scale / piece->iscale;
     const int rad = (int)(3.0*fmaxf(sigma[0],sigma[1])+1.0);
-    *factor = 2 + 5;
-    *overhead = 0;
-    *overlap = rad;
+    tiling->factor = 2 + 50;
+    tiling->overhead = 0;
+    tiling->overlap = rad;
+    tiling->xalign = 1;
+    tiling->yalign = 1;
     return;
   }
 
@@ -353,11 +366,6 @@ void init_key_accels()
     dtgtk_slider_set_label(g->scale3,_("red"));
     dtgtk_slider_set_label(g->scale4,_("green"));
     dtgtk_slider_set_label(g->scale5,_("blue"));
-
-  dtgtk_slider_set_accel(g->scale1,darktable.control->accels_darkroom,"<Darktable>/darkroom/plugins/bilateral/radius");
-  dtgtk_slider_set_accel(g->scale3,darktable.control->accels_darkroom,"<Darktable>/darkroom/plugins/bilateral/red");
-  dtgtk_slider_set_accel(g->scale4,darktable.control->accels_darkroom,"<Darktable>/darkroom/plugins/bilateral/green");
-  dtgtk_slider_set_accel(g->scale5,darktable.control->accels_darkroom,"<Darktable>/darkroom/plugins/bilateral/blue");
 
     gtk_box_pack_start(GTK_BOX(g->vbox), GTK_WIDGET(g->scale1), TRUE, TRUE, 0);
     gtk_box_pack_start(GTK_BOX(g->vbox), GTK_WIDGET(g->scale3), TRUE, TRUE, 0);

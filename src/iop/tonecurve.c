@@ -32,6 +32,8 @@
 #define DT_GUI_CURVE_EDITOR_INSET 5
 #define DT_GUI_CURVE_INFL .3f
 
+#define ROUNDUP(a, n)		((a) % (n) == 0 ? (a) : ((a) / (n) + 1) * (n))
+
 DT_MODULE(1)
 
 const char *name()
@@ -63,7 +65,10 @@ process_cl (struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, cl_mem 
   cl_int err = -999;
 
   const int devid = piece->pipe->devid;
-  size_t sizes[] = {roi_in->width, roi_in->height, 1};
+  const int width = roi_in->width;
+  const int height = roi_in->height;
+
+  size_t sizes[] = { ROUNDUP(width, 4), ROUNDUP(height, 4), 1};
   dev_m = dt_opencl_copy_host_to_device(devid, d->table, 256, 256, sizeof(float));
   if (dev_m == NULL) goto error;
 
@@ -71,8 +76,10 @@ process_cl (struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, cl_mem 
   if (dev_coeffs == NULL) goto error;
   dt_opencl_set_kernel_arg(devid, gd->kernel_tonecurve, 0, sizeof(cl_mem), (void *)&dev_in);
   dt_opencl_set_kernel_arg(devid, gd->kernel_tonecurve, 1, sizeof(cl_mem), (void *)&dev_out);
-  dt_opencl_set_kernel_arg(devid, gd->kernel_tonecurve, 2, sizeof(cl_mem), (void *)&dev_m);
-  dt_opencl_set_kernel_arg(devid, gd->kernel_tonecurve, 3, sizeof(cl_mem), (void *)&dev_coeffs);
+  dt_opencl_set_kernel_arg(devid, gd->kernel_tonecurve, 2, sizeof(int), (void *)&width);
+  dt_opencl_set_kernel_arg(devid, gd->kernel_tonecurve, 3, sizeof(int), (void *)&height);
+  dt_opencl_set_kernel_arg(devid, gd->kernel_tonecurve, 4, sizeof(cl_mem), (void *)&dev_m);
+  dt_opencl_set_kernel_arg(devid, gd->kernel_tonecurve, 5, sizeof(cl_mem), (void *)&dev_coeffs);
   err = dt_opencl_enqueue_kernel_2d(devid, gd->kernel_tonecurve, sizes);
 
   if(err != CL_SUCCESS) goto error;
@@ -99,22 +106,26 @@ void process (struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, void 
   {
     float *in = ((float *)i) + k*ch*roi_out->width;
     float *out = ((float *)o) + k*ch*roi_out->width;
+
+    const float low_approximation = d->table[(int)(0.01f * 0xfffful)];
+
     for (int j=0; j<roi_out->width; j++,in+=ch,out+=ch)
     {
       // in Lab: correct compressed Luminance for saturation:
       const float L_in = in[0]/100.0f;
-      out[0] = (L_in < 1.0f) ? d->table[CLAMP((int)(L_in*0xfffful), 0, 0xffff)] :
-        dt_iop_eval_exp(d->unbounded_coeffs, L_in);
-        
-      if(in[0] > 0.01f)
+      if(in[0] > 1.0f)
       {
-        out[1] = in[1] * out[0]/in[0];
-        out[2] = in[2] * out[0]/in[0];
+        out[0] = (L_in < 1.0f) ? d->table[CLAMP((int)(L_in*0xfffful), 0, 0xffff)] :
+          dt_iop_eval_exp(d->unbounded_coeffs, L_in);
+        
+          out[1] = in[1] * out[0]/in[0];
+          out[2] = in[2] * out[0]/in[0];
       }
       else
       {
-        out[1] = in[1] * out[0]/0.01f;
-        out[2] = in[2] * out[0]/0.01f;
+        out[0] = in[0] * low_approximation;
+        out[1] = in[1] * low_approximation;
+        out[2] = in[2] * low_approximation;
       }
     }
   }
@@ -128,7 +139,17 @@ void init_presets (dt_iop_module_so_t *self)
   float linear[6] = {0.0, 0.08, 0.4, 0.6, 0.92, 1.0};
   for(int k=0; k<6; k++) p.tonecurve_x[k] = linear[k];
   for(int k=0; k<6; k++) p.tonecurve_y[k] = linear[k];
-  dt_gui_presets_add_generic(_("linear"), self->op, &p, sizeof(p), 1);
+  p.tonecurve_y[1] += 0.03;
+  p.tonecurve_y[4] -= 0.03;
+  p.tonecurve_y[2] += 0.03;
+  p.tonecurve_y[3] -= 0.03;
+  for(int k=1; k<5; k++) p.tonecurve_y[k] = powf(p.tonecurve_y[k], 2.2f);
+  for(int k=1; k<5; k++) p.tonecurve_x[k] = powf(p.tonecurve_x[k], 2.2f);
+  dt_gui_presets_add_generic(_("low contrast"), self->op, self->version(), &p, sizeof(p), 1);
+
+  for(int k=0; k<6; k++) p.tonecurve_x[k] = linear[k];
+  for(int k=0; k<6; k++) p.tonecurve_y[k] = linear[k];
+  dt_gui_presets_add_generic(_("linear"), self->op, self->version(), &p, sizeof(p), 1);
 
   for(int k=0; k<6; k++) p.tonecurve_x[k] = linear[k];
   for(int k=0; k<6; k++) p.tonecurve_y[k] = linear[k];
@@ -138,7 +159,7 @@ void init_presets (dt_iop_module_so_t *self)
   p.tonecurve_y[3] += 0.03;
   for(int k=1; k<5; k++) p.tonecurve_y[k] = powf(p.tonecurve_y[k], 2.2f);
   for(int k=1; k<5; k++) p.tonecurve_x[k] = powf(p.tonecurve_x[k], 2.2f);
-  dt_gui_presets_add_generic(_("med contrast"), self->op, &p, sizeof(p), 1);
+  dt_gui_presets_add_generic(_("med contrast"), self->op, self->version(), &p, sizeof(p), 1);
 
   for(int k=0; k<6; k++) p.tonecurve_x[k] = linear[k];
   for(int k=0; k<6; k++) p.tonecurve_y[k] = linear[k];
@@ -148,7 +169,7 @@ void init_presets (dt_iop_module_so_t *self)
   p.tonecurve_y[3] += 0.10;
   for(int k=1; k<5; k++) p.tonecurve_y[k] = powf(p.tonecurve_y[k], 2.2f);
   for(int k=1; k<5; k++) p.tonecurve_x[k] = powf(p.tonecurve_x[k], 2.2f);
-  dt_gui_presets_add_generic(_("high contrast"), self->op, &p, sizeof(p), 1);
+  dt_gui_presets_add_generic(_("high contrast"), self->op, self->version(), &p, sizeof(p), 1);
 }
 
 void commit_params (struct dt_iop_module_t *self, dt_iop_params_t *p1, dt_dev_pixelpipe_t *pipe, dt_dev_pixelpipe_iop_t *piece)
