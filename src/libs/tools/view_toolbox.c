@@ -43,7 +43,7 @@ uint32_t views()
 
 uint32_t container()
 {
-  return DT_UI_CONTAINER_PANEL_CENTER_BOTTOM_RIGHT;
+  return DT_UI_CONTAINER_PANEL_CENTER_BOTTOM_LEFT;
 }
 
 int expandable() 

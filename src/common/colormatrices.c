@@ -18,7 +18,7 @@
 
 /**
  * this is a collection of custom measured color matrices, profiled
- * for darktable (darktable.sf.net), so far all calculated by Pascal de Bruijn.
+ * for darktable (http://www.darktable.org), so far all calculated by Pascal de Bruijn.
  */
 typedef struct dt_profiled_colormatrix_t
 {
@@ -152,8 +152,14 @@ static dt_profiled_colormatrix_t dt_profiled_colormatrices[] =
   // Karl Mikaelsson, Homebrew ColorChecker, strobe, well lit
   { "SONY DSLR-A700",               { 895737, 374771, -10330}, { 251389, 1076294, -176910}, {-33203, -356445, 1182465}, {742783, 773407, 637604}},
 
+  // David Meier, Wolf Faust IT8, direct sunlight, well lit
+  { "SONY SLT-A55V",                { 969696, 407043,  40268}, { 218201, 1182556, -285400}, { 21042, -342819, 1260223}, {762085, 793961, 670151}},
+
   // Mark Haun, Wolf Faust IT8, direct sunlight, well lit
   { "OLYMPUS E-PL1",                { 824387, 288086,  -7355}, { 299500, 1148865, -308929}, { 91858, -198425, 1346603}, {720139, 750717, 619751}},
+
+  // Eugene Kraf, Wolf Faust IT8, direct sunlight, well lit
+  { "OLYMPUS E-PL2",                { 785522, 280624,  28503}, { 322266, 1211975, -305984}, { 82550, -246841, 1278198}, {731506, 752808, 645309}},
 
   // Karl Mikaelsson, Homebrew ColorChecker, strobe, well lit
   { "OLYMPUS E-500",                { 925171, 247681,  26367}, { 257187, 1270187, -455826}, {-87784, -426529, 1383041}, {790421, 812775, 708054}},
