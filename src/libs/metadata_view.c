@@ -100,7 +100,7 @@ const char* name()
 /* show module in left panel in all views */
 uint32_t views()
 {
-  return DT_VIEW_LIGHTTABLE | DT_VIEW_DARKROOM;
+  return DT_VIEW_LIGHTTABLE | DT_VIEW_TETHERING | DT_VIEW_DARKROOM;
 }
 
 uint32_t container()
@@ -118,6 +118,13 @@ static void _metadata_update_value(GtkLabel *label, const char *value)
 {
     gtk_label_set_text(GTK_LABEL(label), value);
     gtk_label_set_ellipsize(GTK_LABEL(label), PANGO_ELLIPSIZE_MIDDLE);
+    g_object_set(G_OBJECT(label), "tooltip-text", value, (char *)NULL);
+}
+
+static void _metadata_update_value_end(GtkLabel *label, const char *value)
+{
+    gtk_label_set_text(GTK_LABEL(label), value);
+    gtk_label_set_ellipsize(GTK_LABEL(label), PANGO_ELLIPSIZE_END);
     g_object_set(G_OBJECT(label), "tooltip-text", value, (char *)NULL);
 }
 
@@ -153,9 +160,9 @@ static void _metadata_view_update_values(dt_lib_module_t *self)
     _metadata_update_value(d->metadata[md_internal_filename], img->filename);
 
     /* EXIF */
-    _metadata_update_value(d->metadata[md_exif_model], img->exif_model);
-    _metadata_update_value(d->metadata[md_exif_lens], img->exif_lens);
-    _metadata_update_value(d->metadata[md_exif_maker], img->exif_maker);
+    _metadata_update_value_end(d->metadata[md_exif_model], img->exif_model);
+    _metadata_update_value_end(d->metadata[md_exif_lens], img->exif_lens);
+    _metadata_update_value_end(d->metadata[md_exif_maker], img->exif_maker);
 
     snprintf(value, vl, "F/%.1f", img->exif_aperture);
     _metadata_update_value(d->metadata[md_exif_aperture], value);

@@ -140,7 +140,7 @@ static void _lib_import_tethered_callback(GtkToggleButton *button,gpointer data)
 
 
 /** update the device list */
-static void _lib_import_ui_devices_update(dt_lib_module_t *self)
+void _lib_import_ui_devices_update(dt_lib_module_t *self)
 {
 
   dt_lib_import_t *d = (dt_lib_import_t*)self->data;
@@ -487,9 +487,8 @@ void gui_init(dt_lib_module_t *self)
 
 void gui_cleanup(dt_lib_module_t *self)
 { 
-  dt_lib_import_t *d = (dt_lib_import_t*)self->data;
-
 #ifdef HAVE_GPHOTO2
+  dt_lib_import_t *d = (dt_lib_import_t*)self->data;
   /* unregister camctl listener */
   dt_camctl_unregister_listener(darktable.camctl, &d->camctl_listener );
 #endif
