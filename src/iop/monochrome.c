@@ -133,7 +133,7 @@ void init(dt_iop_module_t *module)
   module->params = malloc(sizeof(dt_iop_monochrome_params_t));
   module->default_params = malloc(sizeof(dt_iop_monochrome_params_t));
   module->default_enabled = 0;
-  module->priority = 541; // module order created by iop_dependencies.py, do not edit!
+  module->priority = 551; // module order created by iop_dependencies.py, do not edit!
   module->params_size = sizeof(dt_iop_monochrome_params_t);
   module->gui_data = NULL;
   dt_iop_monochrome_params_t tmp = (dt_iop_monochrome_params_t)
@@ -241,6 +241,7 @@ static gboolean dt_iop_monochrome_button_press(GtkWidget *widget, GdkEventButton
     p->a = 128.0f*(mouse_x - width  * 0.5f)/(float)width;
     p->b = 128.0f*(mouse_y - height * 0.5f)/(float)height;
     g->dragging = 1;
+    gtk_widget_queue_draw(self->widget);
     return TRUE;
   }
   return FALSE;

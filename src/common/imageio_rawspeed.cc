@@ -21,8 +21,8 @@
 #endif
 #include "rawspeed/RawSpeed/StdAfx.h"
 #include "rawspeed/RawSpeed/FileReader.h"
-#include "rawspeed/RawSpeed/TiffParser.h"
 #include "rawspeed/RawSpeed/RawDecoder.h"
+#include "rawspeed/RawSpeed/RawParser.h"
 #include "rawspeed/RawSpeed/CameraMetaData.h"
 #include "rawspeed/RawSpeed/ColorFilterArray.h"
 
@@ -109,8 +109,7 @@ dt_imageio_open_rawspeed(
     {
       return DT_IMAGEIO_FILE_CORRUPTED;
     }
-    TiffParser t(m);
-    t.parseData();
+    RawParser t(m);
     d = t.getDecoder();
     if(!d) return DT_IMAGEIO_FILE_CORRUPTED;
     try
@@ -175,9 +174,8 @@ dt_imageio_open_rawspeed(
     if (m) delete m;
     return DT_IMAGEIO_FILE_CORRUPTED;
   }
-  catch (TiffParserException e)
+  catch (RawDecoderException e)
   {
-    // printf("failed decoding tiff `%s'\n", e.what());
     if (d) delete d;
     if (m) delete m;
     return DT_IMAGEIO_FILE_CORRUPTED;

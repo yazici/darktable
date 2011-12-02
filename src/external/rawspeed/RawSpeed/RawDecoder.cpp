@@ -213,11 +213,12 @@ bool RawDecoder::checkCameraSupported(CameraMetaData *meta, string make, string 
   return true;
 }
 
-void RawDecoder::setMetaData(CameraMetaData *meta, string make, string model, string mode) {
+void RawDecoder::setMetaData(CameraMetaData *meta, string make, string model, string mode, int iso_speed) {
   TrimSpaces(make);
   TrimSpaces(model);
   Camera *cam = meta->getCamera(make, model, mode);
   if (!cam) {
+    printf("ISO:%d\n", iso_speed);
     printf("Unable to find camera in database: %s %s %s\nPlease upload file to ftp.rawstudio.org, thanks!\n", make.c_str(), model.c_str(), mode.c_str());
     return;
   }
@@ -240,10 +241,10 @@ void RawDecoder::setMetaData(CameraMetaData *meta, string make, string model, st
   if (cam->cropPos.y & 1)
     mRaw->cfa.shiftDown();
 
-  mRaw->blackLevel = cam->black;
-  mRaw->whitePoint = cam->white;
+  const CameraSensorInfo *sensor = cam->getSensorInfo(iso_speed);
+  mRaw->blackLevel = sensor->mBlackLevel;
+  mRaw->whitePoint = sensor->mWhiteLevel;
   mRaw->blackAreas = cam->blackAreas;
-
 }
 
 
@@ -297,6 +298,20 @@ void RawDecoder::startThreads() {
 
 void RawDecoder::decodeThreaded(RawDecoderThread * t) {
   ThrowRDE("Internal Error: This class does not support threaded decoding");
+}
+
+RawSpeed::RawImage RawDecoder::decodeRaw()
+{
+  try {
+    return decodeRawInternal();
+  } catch (TiffParserException e) {
+    ThrowRDE("%s", e.what());
+  } catch (FileIOException e) {
+    ThrowRDE("%s", e.what());
+  } catch (IOException e) {
+    ThrowRDE("%s", e.what());
+  }
+  return NULL;
 }
 
 } // namespace RawSpeed

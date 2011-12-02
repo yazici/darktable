@@ -7,7 +7,7 @@ set(MODULES tonecurve gamma temperature colorcorrection exposure
 	basecurve highlights velvia vignette splittoning grain bilateral
 	profile_gamma colorcontrast
 	channelmixer graduatednd relight zonesystem demosaic atrous tonemap 
-  cacorrect overexposed bloom soften clahe equalizer highpass hotpixels lowlight spots rawdenoise borders nlmeans levels)
+  cacorrect overexposed bloom soften clahe equalizer highpass hotpixels lowlight spots rawdenoise borders nlmeans levels flip)
 
 
 
@@ -61,6 +61,7 @@ add_library(levels MODULE "levels.c")
 add_library(colorize MODULE "colorize.c")
 add_library(invert MODULE "invert.c")
 add_library(vibrance MODULE "vibrance.c")
+add_library(flip MODULE "flip.c")
 
 if(RSVG2_FOUND)
 	add_library(watermark MODULE "watermark.c")

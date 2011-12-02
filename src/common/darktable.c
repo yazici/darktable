@@ -1,6 +1,7 @@
 /*
     This file is part of darktable,
     copyright (c) 2009--2011 johannes hanika.
+    copyright (c) 2010--2011 henrik andersson.
 
     darktable is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -20,6 +21,7 @@
 #endif
 #include "common/darktable.h"
 #include "common/collection.h"
+#include "common/selection.h"
 #include "common/exif.h"
 #include "common/fswatch.h"
 #include "common/pwstorage/pwstorage.h"
@@ -80,12 +82,12 @@ typedef void (dt_signal_handler_t)(int) ;
 // static dt_signal_handler_t *_dt_sigill_old_handler = NULL;
 static dt_signal_handler_t *_dt_sigsegv_old_handler = NULL;
 
-#ifdef __APPLE__
+#if defined(__APPLE__) || (defined(__FreeBSD_version) && __FreeBSD_version < 800071)
 static int dprintf(int fd,const char *fmt, ...)
 {
   va_list ap;
   FILE *f = fdopen(fd,"a");
-  va_start(ap, &fmt);
+  va_start(ap, fmt);
   int rc = vfprintf(f, fmt, ap);
   fclose(f);
   va_end(ap);
@@ -473,6 +475,9 @@ int dt_init(int argc, char *argv[], const int init_gui)
   // initialize collection query
   darktable.collection_listeners = NULL;
   darktable.collection = dt_collection_new(NULL);
+
+  /* initialize sellection */
+  darktable.selection = dt_selection_new();
 
   darktable.opencl = (dt_opencl_t *)malloc(sizeof(dt_opencl_t));
   memset(darktable.opencl, 0, sizeof(dt_opencl_t));
