@@ -85,8 +85,8 @@ void dt_selection_invert(dt_selection_t *selection)
   if (!selection->collection)
     return;
 
-  fullq = dt_util_dstrcat(fullq, "insert into selected_images ");
-  fullq = dt_util_dstrcat(fullq, dt_collection_get_query(selection->collection));
+  fullq = dt_util_dstrcat(fullq, "%s", "insert into selected_images ");
+  fullq = dt_util_dstrcat(fullq, "%s", dt_collection_get_query(selection->collection));
 
   DT_DEBUG_SQLITE3_EXEC(dt_database_get(darktable.db), 
 			"insert into memory.tmp_selection select imgid from selected_images", 
@@ -104,11 +104,17 @@ void dt_selection_invert(dt_selection_t *selection)
 			NULL, NULL, NULL);
 
   g_free(fullq);
+
+  /* update hint message */
+  dt_collection_hint_message(darktable.collection);
 }
 
 void dt_selection_clear(const dt_selection_t *selection)
 {
   DT_DEBUG_SQLITE3_EXEC(dt_database_get(darktable.db), "delete from selected_images", NULL, NULL, NULL);
+
+  /* update hint message */
+  dt_collection_hint_message(darktable.collection);
 }
 
 void dt_selection_select_single(dt_selection_t *selection, uint32_t imgid)
@@ -119,6 +125,9 @@ void dt_selection_select_single(dt_selection_t *selection, uint32_t imgid)
   query = dt_util_dstrcat(query,"insert into selected_images values(%d)", imgid);
   DT_DEBUG_SQLITE3_EXEC(dt_database_get(darktable.db), query, NULL, NULL, NULL);
   g_free(query);
+
+  /* update hint message */
+  dt_collection_hint_message(darktable.collection);
 }
 
 void dt_selection_toggle(dt_selection_t *selection, uint32_t imgid)
@@ -150,6 +159,9 @@ void dt_selection_toggle(dt_selection_t *selection, uint32_t imgid)
   sqlite3_exec(dt_database_get(darktable.db), query, NULL, NULL, NULL);
 
   g_free(query);
+
+  /* update hint message */
+  dt_collection_hint_message(darktable.collection);
 }
 
 void dt_selection_select_all(dt_selection_t *selection)
@@ -159,8 +171,8 @@ void dt_selection_select_all(dt_selection_t *selection)
   if (!selection->collection)
     return;
 
-  fullq = dt_util_dstrcat(fullq, "insert into selected_images ");
-  fullq = dt_util_dstrcat(fullq, dt_collection_get_query(selection->collection));
+  fullq = dt_util_dstrcat(fullq, "%s", "insert into selected_images ");
+  fullq = dt_util_dstrcat(fullq, "%s", dt_collection_get_query(selection->collection));
 
   DT_DEBUG_SQLITE3_EXEC(dt_database_get(darktable.db), "delete from selected_images", NULL, NULL, NULL);
   DT_DEBUG_SQLITE3_EXEC(dt_database_get(darktable.db), fullq, NULL, NULL, NULL);
@@ -168,6 +180,9 @@ void dt_selection_select_all(dt_selection_t *selection)
   selection->last_single_id = -1;
 
   g_free(fullq);
+
+  /* update hint message */
+  dt_collection_hint_message(darktable.collection);
 }
 
 void dt_selection_select_range(dt_selection_t *selection, uint32_t imgid)
@@ -209,8 +224,8 @@ void dt_selection_select_range(dt_selection_t *selection, uint32_t imgid)
 
   dt_collection_update(selection->collection);
 
-  fullq = dt_util_dstrcat(fullq, "insert into selected_images ");
-  fullq = dt_util_dstrcat(fullq, dt_collection_get_query(selection->collection));
+  fullq = dt_util_dstrcat(fullq, "%s", "insert into selected_images ");
+  fullq = dt_util_dstrcat(fullq, "%s", dt_collection_get_query(selection->collection));
 
   DT_DEBUG_SQLITE3_PREPARE_V2(dt_database_get(darktable.db),
 			      fullq, -1, &stmt, NULL);
@@ -262,8 +277,8 @@ void dt_selection_select_unaltered(dt_selection_t *selection)
   dt_collection_update(selection->collection);
 
 
-  fullq = dt_util_dstrcat(fullq, "insert into selected_images ");
-  fullq = dt_util_dstrcat(fullq, dt_collection_get_query(selection->collection));
+  fullq = dt_util_dstrcat(fullq, "%s", "insert into selected_images ");
+  fullq = dt_util_dstrcat(fullq, "%s", dt_collection_get_query(selection->collection));
 
 
   /* clean current selection and select unaltered images */

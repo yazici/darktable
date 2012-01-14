@@ -319,7 +319,7 @@ int dt_init(int argc, char *argv[], const int init_gui)
       }
       else if(!strcmp(argv[k], "--version"))
       {
-        printf("this is "PACKAGE_STRING"\ncopyright (c) 2009-2011 johannes hanika\n"PACKAGE_BUGREPORT"\n");
+        printf("this is "PACKAGE_STRING"\ncopyright (c) 2009-2012 johannes hanika\n"PACKAGE_BUGREPORT"\n");
         return 1;
       }
       else if(!strcmp(argv[k], "--library"))
@@ -366,7 +366,6 @@ int dt_init(int argc, char *argv[], const int init_gui)
   /* check cput caps */
   // dt_check_cpu(argc,argv);
 
-  
 #ifdef HAVE_GEGL
   (void)setenv("GEGL_PATH", DARKTABLE_DATADIR"/gegl:/usr/lib/gegl-0.0", 1);
   gegl_init(&argc, &argv);
@@ -387,12 +386,8 @@ int dt_init(int argc, char *argv[], const int init_gui)
   const gchar* lang = dt_conf_get_string("ui_last/gui_language");
   if(lang != NULL && lang[0] != '\0')
   {
-    gchar* LANG = g_ascii_strup(lang, -1);
-    gchar* lang_LANG = g_strconcat(lang, "_", LANG, /*".UTF-8",*/ NULL); // FIXME: this does only work for about half of our languages ...
-    setlocale(LC_ALL, lang_LANG);
-    gtk_disable_setlocale();
-    g_free(LANG);
-    g_free(lang_LANG);
+    if(setlocale(LC_ALL, lang) != NULL)
+      gtk_disable_setlocale();
   }
 
   // initialize the database

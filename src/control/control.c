@@ -77,8 +77,6 @@ void dt_ctl_settings_default(dt_control_t *c)
   dt_conf_set_int  ("ui_last/expander_histogram",  -1);
   dt_conf_set_int  ("ui_last/expander_history",    -1);
 
-  dt_conf_set_int  ("ui_last/combo_sort",     DT_LIB_SORT_FILENAME);
-  dt_conf_set_int  ("ui_last/combo_filter",   DT_LIB_FILTER_STAR_1);
   dt_conf_set_int  ("ui_last/initial_rating", DT_LIB_FILTER_STAR_1);
 
   // import settings
@@ -93,6 +91,8 @@ void dt_ctl_settings_default(dt_control_t *c)
   dt_conf_set_int  ("plugins/collection/query_flags",       3);
   dt_conf_set_int  ("plugins/collection/rating",            1);
   dt_conf_set_int  ("plugins/lighttable/collect/num_rules", 0);
+  dt_conf_set_int  ("plugins/collection/sort",              0);
+  dt_conf_set_bool ("plugins/collection/descending",        0);
 
   // reasonable thumbnail res:
   dt_conf_set_int  ("plugins/lighttable/thumbnail_width", 1300);
@@ -507,6 +507,7 @@ void dt_control_shutdown(dt_control_t *s)
   dt_pthread_mutex_unlock(&s->run_mutex);
   dt_pthread_mutex_unlock(&s->cond_mutex);
   pthread_cond_broadcast(&s->cond);
+
   // gdk_threads_leave();
   int k;
   for(k=0; k<s->num_threads; k++)
@@ -1165,59 +1166,51 @@ void _control_queue_redraw_wrapper(dt_signal_t signal)
 {
   static uint32_t counter = 0;
 
-  if(dt_control_running())
+  /* dont continue if control is not running */
+  if (!dt_control_running())
+    return;
+
+  /* if we cant carry out an redraw, lets increment counter and bail out */
+  if (!g_static_mutex_trylock(&_control_redraw_mutex))
   {
-    /* try lock redraw mutex, if fail we are currently redrawing */
-    if(g_static_mutex_trylock(&_control_redraw_mutex))
-    {
-      /* always ensure we are carrying out the redraw in gdk thread */
-      gboolean i_own_lock = dt_control_gdk_lock();
-
-      /* raise redraw signal */
-      dt_control_signal_raise(darktable.signals, signal);
-
-      /*
-       * check if someone requested a redraw while we were doing it,
-       * if so, let's reset counter and carry out an additional redraw... 
-       */
-      G_LOCK (counter);
-      if(counter)
-      {
-	counter = 0;
-	G_UNLOCK(counter);
-	/* carry out an additional redraw due there was ignored ones
-	   make it redraw all to ensure all is redrawn..
-	 */
-	dt_control_signal_raise(darktable.signals, DT_SIGNAL_CONTROL_REDRAW_ALL);
-
-      } else G_UNLOCK(counter);
-      
-      if (i_own_lock) dt_control_gdk_unlock();
-      
-      g_static_mutex_unlock(&_control_redraw_mutex);
-    } 
-    else
-    {
-      G_LOCK (counter);
-      //fprintf(stderr,"Skipping redraw counter %d\n",++counter);
-      counter++;
-      G_UNLOCK (counter);
-    }
+    G_LOCK(counter);
+    counter++;
+    G_UNLOCK(counter);
+    return;
   }
+
+  /* lock the gdk thread and carry out the redraw function */
+  gboolean i_own_lock = dt_control_gdk_lock();
+  dt_control_signal_raise(darktable.signals, signal);
+
+  /* lets check if we got missing redraws from other threads */
+  G_LOCK(counter);
+  if (counter)
+  {
+    /* carry out an redraw due to missed redraws */
+    counter = 0;
+    G_UNLOCK(counter);
+    dt_control_signal_raise(darktable.signals, DT_SIGNAL_CONTROL_REDRAW_ALL);
+  }
+  else
+    G_UNLOCK(counter);
+
+  /* unlock our locks */
+  if (i_own_lock) 
+    dt_control_gdk_unlock();
+      
+  g_static_mutex_unlock(&_control_redraw_mutex);
+
 }
 
 void dt_control_queue_redraw()
 {
-  gboolean i_own_lock = dt_control_gdk_lock();
   _control_queue_redraw_wrapper(DT_SIGNAL_CONTROL_REDRAW_ALL);
-  if (i_own_lock) dt_control_gdk_unlock();
 }
 
 void dt_control_queue_redraw_center() 
-{
-  gboolean i_own_lock = dt_control_gdk_lock();
+{  
   _control_queue_redraw_wrapper(DT_SIGNAL_CONTROL_REDRAW_CENTER);
-  if (i_own_lock) dt_control_gdk_unlock();
 }
 
 void dt_control_queue_redraw_widget(GtkWidget *widget)
