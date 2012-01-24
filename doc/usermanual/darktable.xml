@@ -52,35 +52,33 @@
 			<holder>Olivier Tribout</holder>
 		</copyright>
 	</bookinfo>
-	<title>darktable</title>
+	<title>The darktable User Manual</title>
 	<preface id="overview"><title>Preface to darktable</title>
 		<para><indexterm><primary>darktable</primary></indexterm>
 			<indexterm><primary>Preface</primary></indexterm>
-		The current user manual is a draft issue. It is at an early stage of writing. User manual version and applicable darktable version are listed below:
+		The current user manual is a draft issue. User manual version and applicable darktable version are listed below:
 				<informaltable frame="none"><tgroup cols="3" colsep="0" rowsep="0">
 					<colspec colwidth='3cm'/>
 					<tbody>
 						<row>
 							<entry></entry>
-							<entry>version</entry>
 							<entry>date</entry>
+							<entry>version</entry>
 						</row>
 						<row>
 							<entry>user manual</entry>
+							<entry>2012-01-24</entry>
 							<entry></entry>
-							<entry>02/06/11</entry>
 						</row>
 						<row>
 							<entry>darktable</entry>
-							<entry>darktable 0.8+550~gd1cdadd</entry>
-							<entry>02/06/11</entry>
+							<entry>2012-01-24</entry>
+							<entry>darktable 0.9.3+871~g400f78b</entry>
 						</row>
 					</tbody>
 				</tgroup></informaltable> 
 		</para>
-		<para>Please note that every key accelerators given in this manual is only applicable on english keyboards layout. 
-			The key accelerators are not linked to the actual letter printed on it, but only to its position on the keyboard. 
-			For example, the <emphasis>z</emphasis> allowing a full-screen view on english keyboards, becomes <emphasis>w</emphasis> on french keyboard.
+		<para>Please note that the key accelerators given in this manual are the standard configuration shipped with your fresh installation of darktable. You may alter them in the options dialog.
 		</para>
 	</preface>
 &chapter_overview;
