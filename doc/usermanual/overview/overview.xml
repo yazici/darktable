@@ -7,16 +7,44 @@
 		</keywordset>
 	</chapterinfo>
 	<title>Overview</title>
-	<para>darktable is an application to manage and develop your digital images.</para>
-	<para>It is fully non-destructive and works on a 32 bit floating point format per channel. 
-			Most of the actions on the pixelpipe are done in CIELab.</para>
+	<para>darktable is an open source photography workflow application and RAW developer. A virtual lighttable and darkroom for photographers. It manages your digital negatives in a database, lets you view them through a zoomable lighttable and enables you to develop raw images and enhance them.</para>
 
-	<sect1 status="final"><title>Preferences</title>
-		<para> A button located at the upper panel (displaying a wheel) allows you to define various parameters.
-		</para>
-		<para> The options are quite self-explaining. In case you need more information, just let your mouse hover text and/or entry box to display more information.
-		</para>
+<para>RAW is the unprocessed capture straight from the camera's sensor to the memory card, nothing has been altered. There are multiple alternatives in the open source world for RAW development (ufraw, dcraw, rawtherapee) but darktable tries to fill the gap between the excellent existing free raw converters and image management tools (such as e.g. ufraw, rawstudio, f-spot, digikam, shotwell). It focuses on the workflow to make it easier for the photographer to quickly handle the thousands of images a day of shooting can produce. It's also one of the very few FOSS projects able to do tethered shooting.</para>
 
+<para>The internal architecture of darktable allows users to easily add plugins for all sorts of image processing, from the very simple (crop, exposure, spot removal) to the most advanced (simulation of human night vision).</para>
+
+<para>The user interface is built around efficient caching of image metadata and mipmaps, all stored in a database. The main focus lies on user interaction, both in terms of a smooth interface design as well as processing speed. High quality output is also one of our goals.</para>
+
+<para>All editing is fully non-destructive and only operates on cached image buffers for display. The full image is only converted during export. Raw image loading is done using libraw and rawspeed, high-dynamic range and standard image formats such as jpeg are also supported. The core operates completely on floating point values, so darktable can not only be used for photography but also for scientifically acquired images or output of renderers (high dynamic range).</para>
+
+	<sect1><title>Preferences</title>
+		<para> A button located at the upper panel (a gear wheel) gives you access to the preference dialog. It allows you to change darktable's core parameters, memory usage, and keyboard accelerators. Furthermore it gives you an overview over your stored image operation presets.</para>
+		
+		<para>Most options have tooltips for further explanations, just let your mouse hover text and/or entry box to display more information. To reset to the default value just double click the text label.
+		</para>
+		
+		<sect2><title>GUI options</title>
+		
+			<sect4><title>filename of your custom theme in /share/darktable/</title><para>If you have created a completely new theme for your darktable, place the GTKRC file in /share/darktable/ and put its name here. Note that you can easily adjust the contrast of the standard theme by using the keys F7 and F8. This option needs a restart.</para></sect4>
+			<sect4><title>size of the side panels in pixel</title><para>You can adjust the width of the left and right side panel to match your needs. Please be aware that most of the plugins have been designed with the standard width and may look imbalanced with other values. This option needs a restart.</para></sect4>
+			<sect4><title>don't use embedded preview jpeg, always use half-size raw</title><para>This option instructs darktable not to use the jpegs embedded into a raw file but use a half-size raw instead. Activating this option might slow down darktable.</para></sect4>
+			<sect4><title>ask before removing images</title><para>If you leave this option unchecked darktable will not ask whenever you are about to remove images from the database.</para></sect4>
+			<sect4><title>ask before deleting images</title><para>If you leave this option unchecked darktable will not ask whenever you are about to erase images permanently from your hard disk. Be careful with this option!</para></sect4>
+			<sect4><title>number of folder levels to show in lists</title><para>darktable organizes your images in filmrolls. Every folder on your hard disk is one filmroll when importing them. With this option you can adjust how many folder levels are shown as the name of your filmroll. E.g. "1" will result in a name like "Greece" while "3" gives you "2012/01/Greece".</para></sect4>
+			<sect4><title>initial rating when importing filmrolls</title><para>This defines the number of stars given to every image being imported.</para></sect4>
+			<sect4><title>enable filmstrip in darkroom</title><para>Enable the filmstrip for darkroom and tethering modes. The standard key accelerator for this option is ctrl+f.</para></sect4>
+			<sect4><title>maximum width of lighttable thumbnails</title><para>Adjust this value to your screen resolution if your image in darkroom mode is too small and does not completely fill the drawing area. Changing this value will invalidate your current image cache and force darktable to rebuild it (this may take some time). This option needs a restart.</para></sect4>
+			<sect4><title>maximum height of lighttable thumbnails</title><para>Adjust this value to your screen resolution if your image in darkroom mode is too small and does not completely fill the drawing area. Changing this value will invalidate your current image cache and force darktable to rebuild it (this may take some time). This option needs a restart.</para></sect4>
+			<sect4><title>jpeg quality of on-disk thumbnails</title><para>This option defines the jpeg quality the preview thumbnails stored in the cache that are generated for lighttable and filmstrip. It does not affect the image quality of exported jpegs.</para></sect4>
+			<sect4><title>ask before deleting a tag</title><para>If you leave this option unchecked darktable will not ask whenever you are about to delete a tag from an image or the complete database.</para></sect4>
+		</sect2>
+		
+		<sect2><title>Core options</title>
+		</sect2>
+		<sect2><title>Shortcuts</title>
+		</sect2>
+		<sect2><title>Presets</title>
+		</sect2>
 	</sect1>
 
 	<sect1 status="final"><title>User interface</title>
