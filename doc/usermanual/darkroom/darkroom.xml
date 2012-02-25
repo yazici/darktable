@@ -13,132 +13,345 @@
 </screenshot>
 
 <sect1><title>Overview</title>
-	<para>In darkroom you are in develop mode for the specific image; here you have a lot of tools (named module) to
-		develop you image.
-	</para>
-	<para>On the left side you have the navigation, snapshots and history panels, each of them being described below; 
-	in the right panel you can see the histogram and then a list of available modules to use when working with your image. 
-	At the bottom of the right panel you can enable/disable view of individual modules.
-	</para>
-	<para>Since darktable 0.6.1, modules are grouped into four groups: basic, color, correct, effect.
-	However, you can view all modules by selecting no group.
-	</para>
-	<para>For those interested in how it works, modules are applied on images following a bottom-to-top order.
-	That means, that if you activated the view of all modules (by selecting no groups), the first module to be applied
-	will be "import a RAW" at the bottom of the right panel, whereas the last one will be "splittoning" at the 
-	top of the right panel.
-	That order can not be changed by user, so modules are always applied following the same order.
-	</para>
-
-	<para>You can use <emphasis>middle-click</emphasis>  to zoom 1:1. A double <emphasis>middle-click</emphasis>  takes you to 2:1.
-	</para>
-
-	<para>You can export directly from the darkroom by using <emphasis>ctrl-e</emphasis> shortcut. Parameters are those currently selected in lighttable.</para>
-
+  <para>In darkroom you are in develop mode for the specific image; here you have a lot of tools (named module) to
+  develop you image.
+  </para>
+  <para>On the left side you have the navigation, snapshots and history panels, each of them being described below; 
+  in the right panel you can see the histogram and then a list of available modules to use when working with your image. 
+  At the bottom of the right panel you can enable/disable view of individual modules.
+  </para>
+  <para>Since darktable 0.6.1, modules are grouped into four groups: basic, color, correct, effect.
+  However, you can view all modules by selecting no group.
+  </para>
+  <para>For those interested in how it works, modules are applied on images following a bottom-to-top order.
+  That means, that if you activated the view of all modules (by selecting no groups), the first module to be applied
+  will be "import a RAW" at the bottom of the right panel, whereas the last one will be "splittoning" at the 
+  top of the right panel.
+  That order can not be changed by user, so modules are always applied following the same order.
+  </para>
+  
+  <para>You can use <emphasis>middle-click</emphasis>  to zoom 1:1. A double <emphasis>middle-click</emphasis>  takes you to 2:1.
+  </para>
+  
+  <para>You can export directly from the darkroom by using <emphasis>ctrl-e</emphasis> shortcut. Parameters are those currently selected in lighttable.</para>
 </sect1>
+
 <sect1 status="draft"><title>Filmstrip</title>
-	<para>The filmstrip is used to quickly switch between image to develop in darkroom view, the images viewed are the same
-		as the ones in the lighttable view. 
-	</para>
-	<para>The filmstrip can be switch on and off using <emphasis>ctrl-f</emphasis> shortcut.</para>
-
-
+  <para>The filmstrip is used to quickly switch between image to develop in darkroom view, the images viewed are the same
+  as the ones in the lighttable view. 
+  </para>
+  <para>The filmstrip can be switch on and off using <emphasis>ctrl-f</emphasis> shortcut.</para>
 </sect1>
+
 <sect1><title>Panels</title>
-	<sect2 status="draft"><title>Navigation</title>
-		<informaltable frame="none"><tgroup cols="2" colsep="0" rowsep="0">
-				<colspec colwidth='70%'/>
-				<colspec colwidth='30%'/>
-				<tbody>
-					<row>						
-						<entry>This panels shows the whole image and a rectangle is showing the current zoom view that  you see, you can move this rectangle to 
-								pan around in same zoomlevel.
-						</entry>
-						<entry>
-							<graphic fileref="darkroom/images/panel_navigation.png" scalefit="1" width="80%" align="center" />
-						</entry>
-					</row>
-				</tbody>
-			</tgroup>
-		</informaltable>
-	</sect2>
-	<sect2 status="final"><title>Snapshots</title>
-		<informaltable frame="none"><tgroup cols="2" colsep="0" rowsep="0">
-				<colspec colwidth='70%'/>
-				<colspec colwidth='30%'/>
-				<tbody>
-					<row>						
-						<entry>You can take a snapshot of what is displayed in the center view; 
-							this snapshot can then be selected and is overlayed in the current center view to help you with a side by side comparasion 
-							(left: snapshot, right: active) when you are tuning parameters of a module. 
-							In the active view, history remains usable in order to compare with the snapshot.
-						</entry>
-						<entry>
-							<graphic fileref="darkroom/images/panel_snapshots.png" scalefit="1" width="80%" align="center" />
-						</entry>
-					</row>
-				</tbody>
-			</tgroup>
-		</informaltable>
-	</sect2>
-	<sect2 status="draft"><title>Metadata</title>
-		<para>Shows the metadata for an image, same as in lighttable mode.
-		</para>
-	</sect2>
-	<sect2 status="draft"><title>History</title>
-		<informaltable frame="none"><tgroup cols="2" colsep="0" rowsep="0">
-				<colspec colwidth='70%'/>
-				<colspec colwidth='30%'/>
-				<tbody>
-					<row>						
-						<entry>
-						<para>The historystack lists every change of state (activate/de-activated) for all modules.
-            					Here you can select a point in stack to return to that point of development history.
-            					If you then activate a new module, all modules above the current point will be discarded.
-						</para>
-						<para>
-            					Hitting 'compress historystack' generates the shortest historystack that produces the
-            					current image, i.e. suppressing all de-activated modules.
-						</para>
-						<para>The button to the right lets you create a new styles by poping-up a new window.
-						Use the first line to name your style, the second to add a searchable description.
-						The "advanced presets" allows you chose which modules are to be taken into account for the styles.
-						</para>
-						</entry>
-						<entry>
-							<graphic fileref="darkroom/images/panel_history.png" scalefit="1" width="80%" align="center" />
-						</entry>
-					</row>
-				</tbody>
-			</tgroup>
-		</informaltable>
-	</sect2>
-	<sect2 status="draft"><title>Histogram</title>
-		<informaltable frame="none"><tgroup cols="2" colsep="0" rowsep="0">
-				<colspec colwidth='70%'/>
-				<colspec colwidth='30%'/>
-				<tbody>
-					<row>						
-						<entry>Show a logarithmic histogram of the developed image; you can change exposure by left mouse click in the right side of histogram and drag 
-								right for increase or left to decrease the exposure. The same goes for the black level but you left click in the left part of histogram.
-						</entry>
-						<entry>
-							<graphic fileref="darkroom/images/panel_histogram.png" scalefit="1" width="80%" align="center" />
-						</entry>
-					</row>
-				</tbody>
-			</tgroup>
-		</informaltable>
-	</sect2>
+  <sect2 status="draft"><title>Navigation</title>
+  <informaltable frame="none"><tgroup cols="2" colsep="0" rowsep="0">
+    <colspec colwidth='70%'/>
+    <colspec colwidth='30%'/>
+    <tbody>
+      <row>						
+	<entry>This panels shows the whole image and a rectangle is showing the current zoom view that  you see, you can move this rectangle to 
+	pan around in same zoomlevel.
+	</entry>
+	<entry>
+	  <graphic fileref="darkroom/images/panel_navigation.png" scalefit="1" width="80%" align="center" />
+	</entry>
+      </row>
+    </tbody>
+  </tgroup>
+  </informaltable>
+  </sect2>
+  <sect2 status="final"><title>Snapshots</title>
+  <informaltable frame="none"><tgroup cols="2" colsep="0" rowsep="0">
+    <colspec colwidth='70%'/>
+    <colspec colwidth='30%'/>
+    <tbody>
+      <row>						
+	<entry>You can take a snapshot of what is displayed in the center view; 
+	this snapshot can then be selected and is overlayed in the current center view to help you with a side by side comparasion 
+	(left: snapshot, right: active) when you are tuning parameters of a module. 
+	In the active view, history remains usable in order to compare with the snapshot.
+	</entry>
+	<entry>
+	  <graphic fileref="darkroom/images/panel_snapshots.png" scalefit="1" width="80%" align="center" />
+	</entry>
+      </row>
+    </tbody>
+  </tgroup>
+  </informaltable>
+  </sect2>
+  <sect2 status="draft"><title>Metadata</title>
+  <para>Shows the metadata for an image, same as in lighttable mode.
+  </para>
+  </sect2>
+  <sect2 status="draft"><title>History</title>
+  <informaltable frame="none"><tgroup cols="2" colsep="0" rowsep="0">
+    <colspec colwidth='70%'/>
+    <colspec colwidth='30%'/>
+    <tbody>
+      <row>						
+	<entry>
+	  <para>The historystack lists every change of state (activate/de-activated) for all modules.
+	  Here you can select a point in stack to return to that point of development history.
+	  If you then activate a new module, all modules above the current point will be discarded.
+	  </para>
+	  <para>
+	    Hitting 'compress historystack' generates the shortest historystack that produces the
+	    current image, i.e. suppressing all de-activated modules.
+	  </para>
+	  <para>The button to the right lets you create a new styles by poping-up a new window.
+	  Use the first line to name your style, the second to add a searchable description.
+	  The "advanced presets" allows you chose which modules are to be taken into account for the styles.
+	  </para>
+	</entry>
+	<entry>
+	  <graphic fileref="darkroom/images/panel_history.png" scalefit="1" width="80%" align="center" />
+	</entry>
+      </row>
+    </tbody>
+  </tgroup>
+  </informaltable>
+  </sect2>
+  <sect2 status="draft"><title>Histogram</title>
+  <informaltable frame="none"><tgroup cols="2" colsep="0" rowsep="0">
+    <colspec colwidth='70%'/>
+    <colspec colwidth='30%'/>
+    <tbody>
+      <row>						
+	<entry>Show a logarithmic histogram of the developed image;
+	you can change exposure by left mouse click in the right side
+	of histogram and drag right for increase or left to decrease
+	the exposure. The same goes for the black level but you left
+	click in the left part of histogram.
+	</entry>
+	<entry>
+	  <graphic fileref="darkroom/images/panel_histogram.png" scalefit="1" width="80%" align="center" />
+	</entry>
+      </row>
+    </tbody>
+  </tgroup>
+  </informaltable>
+  </sect2>
+  
+  <sect2 status="final"><title>Image Processing Modules</title>
+    <para>Each correction, enhancement or effect is implemented as modules, and this section includes documentation
+    of each module and its specific parameters.
+    A module consists of an expander bar <inlinegraphic fileref="&img_module_expander;" scalefit="1" width="30%" align="center"/>  
+    where the <inlinegraphic fileref="&icon_module_enable;" scalefit="1" width="2%"  align="center"/> icon  is used to turn then module
+    on or off, then there are a title of the module press this to expand the module to see the parameters user interface.
+    <inlinegraphic fileref="&icon_module_presets;" scalefit="1" width="2%" align="center" /> icon is the preset icon to access the available presets stored for the module or to create new ones. 
+    The <inlinegraphic fileref="&icon_module_reset;" scalefit="1" width="2%" align="center"/>  icon is used to reset the module parameters to their default values.
+    </para>
+    <sect3 status="draft"><title>Interacting with modules</title>
+      <para>For each slider, you can interact in three different ways, depending on the level of control you need.
+      </para>
+      <orderedlist>
+	<listitem>
+	  <para>Arrows</para>
+	  <para> You can use the arrows around the slider to control precisely the increase/decrease of the value.
+	  </para>
+	</listitem>
+	<listitem>
+	  <para>Mouse wheel</para>
+	  <para>Hover a slider with your mouse, then use your mouse wheel to adjust by step the value.
+	  </para>
+	</listitem>
+	<listitem>
+	  <para>Right-click</para>
+	  <para>Your mouse being over a slider, right-click gives you numerical access the slider values.
+	  Note that the numerical value needed to be entered is sometimes different from the one displayed.
+	  For example, the percentage repartition is displayed as X/Y (eg 70/30) but numerical value to be entered
+	  is -1 for 0/100, 0 for 50/50 and 1 for 0/100.
+	  </para>
+	</listitem>		
+	<listitem>
+	  <para>Double-click on parameter label</para>
+	  <para>In some modules, you can double-click on a parameter label to reset its value to default.
+	  </para>
+	</listitem>		   
+      </orderedlist>
+    </sect3>
+    <sect3 status="draft"><title>Blending operators</title>
+      <para>Blending operators are a blend functionality that works on the incoming image information and 
+      the output of the current module. Not all modules support blending because it would not work
+      and break the use of the module.
+      </para>
+      <para>Modules that do support blending, inherit additional controls at the bottom of module userinterface to control
+      parameters of the blending.
+      </para>
+    </sect3>
+    <!--
+	<sect3><title>Operators</title>
+	<para>There are a few operators implemented and more can be added, but for now the common ones are there and
+	you will recognize a few of them from other imaging softwares.
+	</para>
+	<sect4 status="draft"><title>Normal</title>
+	<para>This will probably be the most used blending operator, it does just mix input and output and will be used
+	to control the modules effect amount for an example. Perfect for better controlling raw denoise result.
+	</para>			
+	</sect4>
+	<sect4 status="draft"><title>Lighten</title>
+	<para></para>			
+	</sect4>
+	<sect4 status="draft"><title>Darken</title>
+	<para></para>			
+	</sect4>
+	<sect4 status="draft"><title>Multiply</title>
+	<para></para>			
+	</sect4>
+	<sect4 status="draft"><title>Average</title>
+	<para></para>			
+	</sect4>
+	<sect4 status="draft"><title>Add</title>
+	<para></para>			
+	</sect4>
+	<sect4 status="draft"><title>Substract</title>
+	<para></para>			
+	</sect4>
+	<sect4 status="draft"><title>Difference</title>
+	<para></para>			
+	</sect4>
+	<sect4 status="draft"><title>Screen</title>
+	<para></para>			
+	</sect4>
+	<sect4 status="draft"><title>Overlay</title>
+	<para></para>			
+	</sect4>
+	<sect4 status="draft"><title>Soft light</title>
+	<para></para>			
+	</sect4>
+	<sect4 status="draft"><title>Hard light</title>
+	<para></para>			
+	</sect4>
+	<sect4 status="draft"><title>Vivid light</title>
+	<para></para>			
+	</sect4>
+	<sect4 status="draft"><title>Linear light</title>
+	<para></para>			
+	</sect4>
+	<sect4 status="draft"><title>Pin light</title>
+	<para></para>			
+	</sect4>
+	</sect3> -->
+      
+    <sect3><title>Examples</title>
+      <sect4 status="draft"><title>Texturing an image</title>
+        <para>The watermark module supports svg files with embedded images and thanks to it we can easily texture an 
+	image using the watermark module in conjunction with a blending operator.
+	</para>
+      </sect4>
+      
+      <sect4 status="draft"><title>Gritty details</title>
+        <informaltable frame="none"><tgroup cols="2" colsep="0" rowsep="0">
+	  <colspec colwidth='70%'/>
+	  <colspec colwidth='30%'/>
+	  <tbody>
+	    <row>						
+	      <entry>When blending operators were introduced into
+	      darktable, a new module named highpass was added. It
+	      produces a highpass filter of the image to be
+	      implicitly used with blending. It allows to produce a
+	      gritty detailed image and is a widely used workflow
+	      with other imaging softwares.
+	      </entry>
+	      <entry>
+		<graphic fileref="darkroom/modules/images/blendop_highpass.png" scalefit="1" width="80%" align="center" />
+	      </entry>
+	    </row>
+	  </tbody>
+	</tgroup>
+	</informaltable>
+	
+	<para>
+	  <informaltable frame="none"><tgroup cols="2" colsep="0" rowsep="0">
+	    <colspec colwidth='30%'/>
+	    <colspec colwidth='70%'/>
+	    <tbody>
+	      <row>
+		<entry>
+		  <graphic fileref="darkroom/modules/images/blendop_highpass_ex1_1.png" scalefit="1" width="90%" align="center" />
+		</entry>						
+		<entry>
+		  <para>This is the original image, pretty heavy
+		  processed: first black and white, then some blue
+		  splittoning but as you see it lacks pop in details
+		  and is a bit out of focus...
+		  </para>
+		</entry>
+	      </row>
+	      <row>
+		<entry>
+		  <graphic fileref="darkroom/modules/images/blendop_highpass_ex1_2.png" scalefit="1" width="90%" align="center" />
+		</entry>						
+		<entry>
+		  <para>Here we applied the highpass filter with the values shown in the images above of the module userinterface; 
+		  you can now see that the details are very boosted and we got a really gritty detailed image.
+		  </para>
+		</entry>
+	      </row>
+	    </tbody>
+	  </tgroup>
+	  </informaltable>
+	</para>
+      </sect4>
+      
+    </sect3>
+    <sect3 status="final"><title>Presets</title>
+      <para>
+	Presets are stored configurations for the module parameters
+	both internal and user-defined is available through clicking
+	the <inlinegraphic fileref="&icon_module_presets;"
+	scalefit="1" width="2%" align="center"/> icon and a list of
+	available presets are shown for your choice, the activated
+	preset is in bold text.
+      </para>
+      <para>
+	The preset system does also support automatic preset selection
+	based on image data such as focal length, iso, camera model
+	and much more fields.
+      </para>
+      <sect4><title>Creating a new preset</title>
+        <para>
+	  Configure the specific module of choice as you like then you click the <inlinegraphic fileref="&icon_module_presets;"  scalefit="1" width="2%" align="center"/> icon and select
+	  store new preset menu choice.
+	  Following dialog will be shown to configure the preset:
+	</para>
+	<graphic fileref="darkroom/modules/images/new_preset.png" scalefit="1" width="60%" align="center" />
+	<para>
+	  The first two fields are used for setting a name and a description of the preset.
+	</para>
+	<para>
+	  In the example i have also checked the auto apply option
+	  which brings up the image selection fields where you can
+	  define a filter that is used to decide if the preset should
+	  be applied the image or not.  The example dialog above does
+	  set up following rules, if lens name matches and aperture is
+	  >= 8 and focal length is in range 24 - 35mm the preset will
+	  be automatically applied, it will also only show in the
+	  preset list if the image does match this rule.
+	</para>
+	<para>
+	  The data used is the EXIF information so if you want a
+	  preset to be applied to all images from a specific camera,
+	  then leave all fields at default values, lookup model string
+	  in metadata panel and enter it into the model field.
+	</para>
+	
+      </sect4>
+    </sect3>
+  </sect2>
+  <sect2><title>More Plugins</title>
+    <para>Placeholder for description of the more plugins module.</para>
+  </sect2>
 </sect1>
-		
-
-&darkroom_modules;
-
+  
 <sect1><title>Examples</title>
 &darkroom_example_crossprocessing;
 &darkroom_example_cyantone;
 &darkroom_example_blackandwhite;
 </sect1>
-
 </chapter>
+
+&darkroom_modules;
+
+
