@@ -5,113 +5,134 @@
   <keyword>view</keyword>
 </keywordset>
 </chapterinfo>
-<title>Darkroom</title>
-<para>The darkroom view is where you develop your image...</para>
-<screenshot>
-	<screeninfo>The darkroom view</screeninfo>
-	<graphic fileref="images/darkroom_view.png" scalefit="1" width="80%"></graphic>
-</screenshot>
+<title>Darkroom</title> 
+  <para>In the darkroom view, you apply various processing modules to
+  your raw image to develop it into the final image you imagined when
+  you took the picture.
+  </para>
+  <screenshot>
+    <screeninfo>The darkroom view</screeninfo>
+    <graphic fileref="images/darkroom_view.png"></graphic>
+  </screenshot>
 
-<sect1><title>Overview</title>
-  <para>In darkroom you are in develop mode for the specific image; here you have a lot of tools (named module) to
-  develop you image.
+<sect1><title>Overview</title> 
+  <para>In the darkroom view, you develop a specific image by applying
+  a set of tools (called image processing modules) that modify the
+  appearance of the image in specific ways.
   </para>
-  <para>On the left side you have the navigation, snapshots and history panels, each of them being described below; 
-  in the right panel you can see the histogram and then a list of available modules to use when working with your image. 
-  At the bottom of the right panel you can enable/disable view of individual modules.
+  <para>In the center of the darktable window, you see the current
+  image. In the left panel, you see the navigation, snapshots, color
+  picker, and history panels. In the right panel, you see the
+  histogram and a list of the image processing modules you can use to
+  apply various processing effects to your image. Across the bottom,
+  you see a filmstrip of your current lighttable images, where you can
+  select another image for processing.
   </para>
-  <para>Since darktable 0.6.1, modules are grouped into four groups: basic, color, correct, effect.
-  However, you can view all modules by selecting no group.
+  <para>Darktable organizes the image processing modules into several
+  groups: active, favorites, basic, tone, color, correction, and
+  effect. If you want to see all available modules, click on the
+  current group selection, which turns off that group and displays all
+  modules.
   </para>
-  <para>For those interested in how it works, modules are applied on images following a bottom-to-top order.
-  That means, that if you activated the view of all modules (by selecting no groups), the first module to be applied
-  will be "import a RAW" at the bottom of the right panel, whereas the last one will be "splittoning" at the 
-  top of the right panel.
-  That order can not be changed by user, so modules are always applied following the same order.
+  <para>It doesn't matter in what order you apply changes to your
+  images, because Darktable applies the image processing modules to an
+  image in a pre-established order. The order of the modules in the
+  right panel follows the order darktable will use when applying
+  modifications to your image from the bottom to the top. So if you
+  enabled every processing module, darktable would start by applying
+  the invert module to your image, followed by white balance, and
+  continuing through the list until it reached the watermark
+  module. While you can change any of the parameters of individual
+  processing modules, you cannot change the order that darktable
+  applies the modules to the image. Darktable applies the modules in a
+  specific order required based on various dependencies between
+  modules such as the color processing space the modules use.
   </para>
-  
-  <para>You can use <emphasis>middle-click</emphasis>  to zoom 1:1. A double <emphasis>middle-click</emphasis>  takes you to 2:1.
+  <para>If you click the middle mouse button while pointing to the
+  image, you will rotate through zoom 1:1, zoom 2:1, and zoom to fit
+  modes.
   </para>
-  
-  <para>You can export directly from the darkroom by using <emphasis>ctrl-e</emphasis> shortcut. Parameters are those currently selected in lighttable.</para>
+  <para>You can export images directly from the darkroom view by
+  typing ctrl-e. Darktable will export the image using the parameters
+  currenly set export module from the lighttable view.
+  </para>
 </sect1>
 
-<sect1 status="draft"><title>Filmstrip</title>
-  <para>The filmstrip is used to quickly switch between image to develop in darkroom view, the images viewed are the same
-  as the ones in the lighttable view. 
-  </para>
-  <para>The filmstrip can be switch on and off using <emphasis>ctrl-f</emphasis> shortcut.</para>
-</sect1>
 
-<sect1><title>Panels</title>
-  <sect2 status="draft"><title>Navigation</title>
-  <informaltable frame="none"><tgroup cols="2" colsep="0" rowsep="0">
-    <colspec colwidth='70%'/>
-    <colspec colwidth='30%'/>
-    <tbody>
-      <row>						
-	<entry>This panels shows the whole image and a rectangle is showing the current zoom view that  you see, you can move this rectangle to 
-	pan around in same zoomlevel.
-	</entry>
-	<entry>
-	  <graphic fileref="darkroom/images/panel_navigation.png" scalefit="1" width="80%" align="center" />
-	</entry>
-      </row>
-    </tbody>
-  </tgroup>
-  </informaltable>
+<sect1><title>Left Panel</title>
+  <sect2><title>Navigation</title>
+    <graphic fileref="darkroom/images/panel_navigation.png" />
+    <para>The navigation module displays a thumbnail of the current
+    image. If you have zoomed into the image, the navigation module
+    displays a white rectangle showing you the current visible part of
+    the image. You can use the mouse to drag the rectangle around the
+    thumbnail to adjust the current view.
+    </para>
   </sect2>
-  <sect2 status="final"><title>Snapshots</title>
-  <informaltable frame="none"><tgroup cols="2" colsep="0" rowsep="0">
-    <colspec colwidth='70%'/>
-    <colspec colwidth='30%'/>
-    <tbody>
-      <row>						
-	<entry>You can take a snapshot of what is displayed in the center view; 
-	this snapshot can then be selected and is overlayed in the current center view to help you with a side by side comparasion 
-	(left: snapshot, right: active) when you are tuning parameters of a module. 
-	In the active view, history remains usable in order to compare with the snapshot.
-	</entry>
-	<entry>
-	  <graphic fileref="darkroom/images/panel_snapshots.png" scalefit="1" width="80%" align="center" />
-	</entry>
-      </row>
-    </tbody>
-  </tgroup>
-  </informaltable>
+
+  <sect2><title>Snapshots</title>
+    <graphic fileref="darkroom/images/panel_snapshots.png" />
+    <para>Pressing the <emphasis>take snapshot</emphasis> button,
+    stores a temporary copy of the current image in the main
+    view. Darktable names the snapshot with the title of the most
+    recertly used image processing module from the history stack. When
+    you click on a named snapshot, darktable overlays the snapshot's
+    version of your image over the current image for an easy,
+    side-by-side comparison.
+    </para>
+    <para>With the snapshot view enabled, you see a line separating
+    the snapshot view from the current image. You can drag the line to
+    increase or decrease the amount of the snapshot you see. You can
+    also click on the icon at the center of the line to rotate the
+    displayed snapshot portion ninety degrees. While you have the
+    snapshot image active, you can continue to apply changes to the
+    image or click on versions from the history stack to compare that
+    version with the snapshot.
+    </para>
+    <para>Clicking on the named snapshot again, turns off the snapshot
+    view. Note that darktable doesn't save the snapshots beyond the
+    current development session. If you use the filmstrip to develop
+    another image or return to the lighttable view, darktable discards
+    the current snapshots.
+    </para>
   </sect2>
-  <sect2 status="draft"><title>Metadata</title>
-  <para>Shows the metadata for an image, same as in lighttable mode.
-  </para>
-  </sect2>
+
   <sect2 status="draft"><title>History</title>
-  <informaltable frame="none"><tgroup cols="2" colsep="0" rowsep="0">
-    <colspec colwidth='70%'/>
-    <colspec colwidth='30%'/>
-    <tbody>
-      <row>						
-	<entry>
-	  <para>The historystack lists every change of state (activate/de-activated) for all modules.
-	  Here you can select a point in stack to return to that point of development history.
-	  If you then activate a new module, all modules above the current point will be discarded.
-	  </para>
-	  <para>
-	    Hitting 'compress historystack' generates the shortest historystack that produces the
-	    current image, i.e. suppressing all de-activated modules.
-	  </para>
-	  <para>The button to the right lets you create a new styles by poping-up a new window.
-	  Use the first line to name your style, the second to add a searchable description.
-	  The "advanced presets" allows you chose which modules are to be taken into account for the styles.
-	  </para>
-	</entry>
-	<entry>
-	  <graphic fileref="darkroom/images/panel_history.png" scalefit="1" width="80%" align="center" />
-	</entry>
-      </row>
-    </tbody>
-  </tgroup>
-  </informaltable>
+    <graphic fileref="darkroom/images/panel_history.png" />
+    <para>The historystack lists every change of state
+    (activate/de-activated) for all modules.  Here you can select a
+    point in stack to return to that point of development history.  If
+    you then activate a new module, all modules above the current
+    point will be discarded.
+    </para>
+    <para> Hitting 'compress historystack' generates the shortest
+    historystack that produces the current image, i.e. suppressing all
+    de-activated modules.
+    </para>
+    <para>The button to the right lets you create a new styles by
+    poping-up a new window.  Use the first line to name your style,
+    the second to add a searchable description.  The "advanced
+    presets" allows you chose which modules are to be taken into
+    account for the styles.
+    </para>
   </sect2>
+
+  <sect2 status="draft"><title>Color Picker</title>
+    <graphic fileref="darkroom/images/panel_color_picker.png" />
+    <para>The color picker . . .
+    </para>
+  </sect2>
+
+  <sect2 status="draft"><title>Image Information</title>
+    <graphic fileref="darkroom/images/panel_image_information.png" />
+    <para>Shows the the same image metadata as the image information
+    module in the lighttable view show.
+    </para>
+  </sect2>
+</sect1>
+
+
+<sect1><title>Right Panel</title>  
   <sect2 status="draft"><title>Histogram</title>
   <informaltable frame="none"><tgroup cols="2" colsep="0" rowsep="0">
     <colspec colwidth='70%'/>
@@ -132,7 +153,7 @@
   </tgroup>
   </informaltable>
   </sect2>
-  
+
   <sect2 status="final"><title>Image Processing Modules</title>
     <para>Each correction, enhancement or effect is implemented as modules, and this section includes documentation
     of each module and its specific parameters.
@@ -344,8 +365,15 @@
     <para>Placeholder for description of the more plugins module.</para>
   </sect2>
 </sect1>
+
+<sect1><title>Filmstrip</title>
+  <para>The filmstrip is used to quickly switch between image to develop in darkroom view, the images viewed are the same
+  as the ones in the lighttable view. 
+  </para>
+  <para>The filmstrip can be switch on and off using <emphasis>ctrl-f</emphasis> shortcut.</para>
+</sect1>
   
-<sect1><title>Examples</title>
+<sect1><title>Image Development Examples</title>
 &darkroom_example_crossprocessing;
 &darkroom_example_cyantone;
 &darkroom_example_blackandwhite;
