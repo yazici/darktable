@@ -168,7 +168,7 @@ process_cl (struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, cl_mem 
   unsigned long localmemsize = 0;    // the maximum amount of local memory we can use
   
   // make sure blocksize is not too large
-  size_t blocksize = BLOCKSIZE;
+  int blocksize = BLOCKSIZE;
   if(dt_opencl_get_work_group_limits(devid, maxsizes, &workgroupsize, &localmemsize) == CL_SUCCESS)
   {
     // reduce blocksize step by step until it fits to limits
@@ -443,7 +443,7 @@ void init(dt_iop_module_t *module)
   module->params = malloc(sizeof(dt_iop_highpass_params_t));
   module->default_params = malloc(sizeof(dt_iop_highpass_params_t));
   module->default_enabled = 0;
-  module->priority = 740; // module order created by iop_dependencies.py, do not edit!
+  module->priority = 745; // module order created by iop_dependencies.py, do not edit!
   module->params_size = sizeof(dt_iop_highpass_params_t);
   module->gui_data = NULL;
   dt_iop_highpass_params_t tmp = (dt_iop_highpass_params_t)

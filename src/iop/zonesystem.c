@@ -308,7 +308,7 @@ void init(dt_iop_module_t *module)
   module->params = malloc(sizeof(dt_iop_zonesystem_params_t));
   module->default_params = malloc(sizeof(dt_iop_zonesystem_params_t));
   module->default_enabled = 0;
-  module->priority = 580; // module order created by iop_dependencies.py, do not edit!
+  module->priority = 588; // module order created by iop_dependencies.py, do not edit!
   module->params_size = sizeof(dt_iop_zonesystem_params_t);
   module->gui_data = NULL;
   dt_iop_zonesystem_params_t tmp = (dt_iop_zonesystem_params_t)
@@ -641,7 +641,7 @@ dt_iop_zonesystem_preview_expose (GtkWidget *widget, GdkEventExpose *event, dt_i
   cairo_translate(cr, inset, inset);
 
   dt_pthread_mutex_lock(&g->lock);
-  if( g->preview_buffer )
+  if( g->preview_buffer && self->enabled)
   {
     /* calculate the zonemap */
     float zonemap[MAX_ZONE_SYSTEM_SIZE]= {-1};

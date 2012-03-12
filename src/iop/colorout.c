@@ -61,7 +61,7 @@ flags ()
 }
 
 
-static void key_softproof_callback(GtkAccelGroup *accel_group,
+static gboolean key_softproof_callback(GtkAccelGroup *accel_group,
                                    GObject *acceleratable,
                                    guint keyval, GdkModifierType modifier,
                                    gpointer data)
@@ -82,6 +82,7 @@ static void key_softproof_callback(GtkAccelGroup *accel_group,
 
   dt_dev_add_history_item(darktable.develop, self, TRUE);
   dt_control_queue_redraw_center();
+  return TRUE;
 }
 
 int
@@ -652,7 +653,7 @@ void init(dt_iop_module_t *module)
   module->default_params = malloc(sizeof(dt_iop_colorout_params_t));
   module->params_size = sizeof(dt_iop_colorout_params_t);
   module->gui_data = NULL;
-  module->priority = 800; // module order created by iop_dependencies.py, do not edit!
+  module->priority = 803; // module order created by iop_dependencies.py, do not edit!
   module->hide_enable_button = 1;
   dt_iop_colorout_params_t tmp = (dt_iop_colorout_params_t)
     {"sRGB", "X profile", DT_INTENT_PERCEPTUAL, DT_INTENT_PERCEPTUAL,
