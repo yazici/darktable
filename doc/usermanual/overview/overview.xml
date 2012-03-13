@@ -7,7 +7,7 @@
 		</keywordset>
 	</chapterinfo>
 	<title>Overview</title>
-	<para>darktable is an open source photography workflow application and RAW developer. A virtual lighttable and darkroom for photographers. It manages your digital negatives in a database, lets you view them through a zoomable lighttable and enables you to develop raw images and enhance them.</para>
+	<para><emphasis>darktable</emphasis> is an open source photography workflow application and RAW developer. A virtual lighttable and darkroom for photographers. It manages your digital negatives in a database, lets you view them through a zoomable lighttable and enables you to develop raw images and enhance them.</para>
 
 <para>RAW is the unprocessed capture straight from the camera's sensor to the memory card, nothing has been altered. There are multiple alternatives in the open source world for RAW development (ufraw, dcraw, rawtherapee) but darktable tries to fill the gap between the excellent existing free raw converters and image management tools (such as e.g. ufraw, rawstudio, f-spot, digikam, shotwell). It focuses on the workflow to make it easier for the photographer to quickly handle the thousands of images a day of shooting can produce. It's also one of the very few FOSS projects able to do tethered shooting.</para>
 
@@ -23,7 +23,7 @@
 					<colspec colwidth='5cm'/>
 					<tbody>
 						<row>						
-							<entry>This section describes the layout of the user interface. You can change darktable contrast by using <emphasis>f7</emphasis> and  <emphasis>f8</emphasis>.
+							<entry>This section describes the layout of the user interface. You can change darktable contrast by using <emphasis>F7</emphasis> and  <emphasis>F8</emphasis>.
 							</entry>
 							<entry>
 								<!--<graphic fileref="images/lighttable_thumb.png" scalefit="1" width="80%" align="center" />-->
