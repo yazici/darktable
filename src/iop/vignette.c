@@ -664,7 +664,7 @@ void process (struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, void 
       if( weight > 0 )
       {
         // Then apply falloff vignette
-        float falloff=(data->brightness<=0)?(1.0+(weight*data->brightness)):(weight*data->brightness);
+        float falloff=(data->brightness<0)?(1.0+(weight*data->brightness)):(weight*data->brightness);
         col0=CLIP( ((data->brightness<0)? col0*falloff: col0+falloff) );
         col1=CLIP( ((data->brightness<0)? col1*falloff: col1+falloff) );
         col2=CLIP( ((data->brightness<0)? col2*falloff: col2+falloff) );
@@ -838,7 +838,7 @@ void init(dt_iop_module_t *module)
   module->params = malloc(sizeof(dt_iop_vignette_params_t));
   module->default_params = malloc(sizeof(dt_iop_vignette_params_t));
   module->default_enabled = 0;
-  module->priority = 880; // module order created by iop_dependencies.py, do not edit!
+  module->priority = 882; // module order created by iop_dependencies.py, do not edit!
   module->params_size = sizeof(dt_iop_vignette_params_t);
   module->gui_data = NULL;
   dt_iop_vignette_params_t tmp = (dt_iop_vignette_params_t)

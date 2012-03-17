@@ -237,7 +237,7 @@ void init(dt_iop_module_t *module)
   module->default_enabled = 0;
   module->params_size = sizeof(dt_iop_flip_params_t);
   module->gui_data = NULL;
-  module->priority = 240; // module order created by iop_dependencies.py, do not edit!
+  module->priority = 235; // module order created by iop_dependencies.py, do not edit!
 }
 
 void cleanup(dt_iop_module_t *module)
@@ -278,15 +278,17 @@ rotate_ccw(GtkWidget *widget, dt_iop_module_t *self)
 {
   do_rotate(self, 0);
 }
-static void
+static gboolean
 rotate_cw_key(dt_iop_module_t *self)
 {
   do_rotate(self, 1);
+  return TRUE;
 }
-static void
+static gboolean
 rotate_ccw_key(dt_iop_module_t *self)
 {
   do_rotate(self, 0);
+  return TRUE;
 }
 
 void gui_init(struct dt_iop_module_t *self)
@@ -338,3 +340,4 @@ void connect_key_accels(dt_iop_module_t *self)
   dt_accel_connect_iop(self, "rotate 90 degrees ccw", closure);
 }
 
+// kate: tab-indents: off; indent-width 2; replace-tabs on; indent-mode cstyle; remove-trailing-space on;

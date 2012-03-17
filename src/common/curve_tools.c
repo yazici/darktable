@@ -1,5 +1,3 @@
-#ifndef DT_CURVE_TOOL
-#define DT_CURVE_TOOL
 /*
    This file is part of darktable,
    copyright (c) 2011 Jochen Schroeder
@@ -25,6 +23,7 @@
 #include <stdio.h>
 #include <math.h>
 #include <float.h>
+#include <glib.h>
 #include "curve_tools.h"
 
 #define EPSILON 2*FLT_MIN
@@ -753,8 +752,8 @@ int CurveDataSample(CurveData *curve, CurveSample *sample)
 {
   int i = 0, n;
 
-  float x[20];
-  float y[20];
+  float x[20] = {0};
+  float y[20] = {0};
   float *ypp;
 
   //The box points  are what the anchor points are relative
@@ -825,5 +824,3 @@ int CurveDataSample(CurveData *curve, CurveSample *sample)
   return CT_SUCCESS;
 }
 
-
-#endif

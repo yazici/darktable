@@ -217,7 +217,7 @@ void init(dt_iop_module_t *module)
   module->params = malloc(sizeof(dt_iop_lowlight_params_t));
   module->default_params = malloc(sizeof(dt_iop_lowlight_params_t));
   module->default_enabled = 0; // we're a rather slow and rare op.
-  module->priority = 540; // module order created by iop_dependencies.py, do not edit!
+  module->priority = 549; // module order created by iop_dependencies.py, do not edit!
   module->params_size = sizeof(dt_iop_lowlight_params_t);
   module->gui_data = NULL;
   dt_iop_lowlight_params_t tmp;
@@ -678,7 +678,7 @@ lowlight_leave_notify(GtkWidget *widget, GdkEventCrossing *event, gpointer user_
 {
   dt_iop_module_t *self = (dt_iop_module_t *)user_data;
   dt_iop_lowlight_gui_data_t *c = (dt_iop_lowlight_gui_data_t *)self->gui_data;
-  if(!c->dragging) c->mouse_x = c->mouse_y = -1.0;
+  if(!c->dragging) c->mouse_y = -1.0;
   gtk_widget_queue_draw(widget);
   return TRUE;
 }

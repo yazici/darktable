@@ -156,12 +156,17 @@ void gui_update(struct dt_iop_module_t *self)
   gtk_widget_queue_draw(self->widget);
 }
 
+void reload_defaults(dt_iop_module_t *self)
+{
+  memcpy(self->params, self->default_params, sizeof(dt_iop_levels_params_t));
+}
+
 void init(dt_iop_module_t *module)
 {
   module->params = malloc(sizeof(dt_iop_levels_params_t));
   module->default_params = malloc(sizeof(dt_iop_levels_params_t));
   module->default_enabled = 0;
-  module->priority = 620; // module order created by iop_dependencies.py, do not edit!
+  module->priority = 627; // module order created by iop_dependencies.py, do not edit!
   module->params_size = sizeof(dt_iop_levels_params_t);
   module->gui_data = NULL;
   dt_iop_levels_params_t tmp = (dt_iop_levels_params_t)
@@ -175,10 +180,10 @@ void init(dt_iop_module_t *module)
 
 void init_global(dt_iop_module_so_t *module)
 {
-  const int program = 2; // basic.cl, from programs.conf
+  //const int program = 2; // basic.cl, from programs.conf
   dt_iop_levels_global_data_t *gd = (dt_iop_levels_global_data_t *)malloc(sizeof(dt_iop_levels_global_data_t));
   module->data = gd;
-  gd->kernel_levels = dt_opencl_create_kernel(program, "levels");
+  //gd->kernel_levels = dt_opencl_create_kernel(program, "levels");      do not try to load kernel unless we have one
 }
 
 void cleanup_global(dt_iop_module_so_t *module)
@@ -237,8 +242,6 @@ static gboolean dt_iop_levels_leave_notify(GtkWidget *widget, GdkEventCrossing *
   dt_iop_module_t *self = (dt_iop_module_t *)user_data;
   dt_iop_levels_gui_data_t *c = (dt_iop_levels_gui_data_t *)self->gui_data;
   c->mouse_x = c->mouse_y = -1.0;
-  if(!c->dragging)
-    c->handle_move = -1;
   gtk_widget_queue_draw(widget);
   return TRUE;
 }
@@ -279,7 +282,7 @@ static gboolean dt_iop_levels_expose(GtkWidget *widget, GdkEventExpose *event, g
 
   for(int k = 0; k < 3; k++)
   {
-    if(k == c->handle_move)
+    if(k == c->handle_move && c->mouse_x > 0)
       cairo_set_source_rgb(cr, 1, 1, 1);
     else
       cairo_set_source_rgb(cr, .7, .7, .7);
@@ -314,7 +317,7 @@ static gboolean dt_iop_levels_expose(GtkWidget *widget, GdkEventExpose *event, g
     cairo_rel_line_to(cr, arrw*.5f, -arrw);
     cairo_rel_line_to(cr, arrw*.5f, arrw);
     cairo_close_path(cr);
-    if(c->handle_move == k)
+    if(c->handle_move == k && c->mouse_x > 0)
       cairo_fill(cr);
     else
       cairo_stroke(cr);
@@ -323,17 +326,21 @@ static gboolean dt_iop_levels_expose(GtkWidget *widget, GdkEventExpose *event, g
   cairo_translate(cr, 0, height);
 
   // draw lum histogram in background
-  dt_develop_t *dev = darktable.develop;
-  float *hist, hist_max;
-  hist = dev->histogram_pre_levels;
-  hist_max = dev->histogram_pre_levels_max;
-  if(hist_max > 0)
+  // only if the module is enabled
+  if (self->enabled)
   {
-    cairo_save(cr);
-    cairo_scale(cr, width/63.0, -(height-5)/(float)hist_max);
-    cairo_set_source_rgba(cr, .2, .2, .2, 0.5);
-    dt_draw_histogram_8(cr, hist, 3);
-    cairo_restore(cr);
+    dt_develop_t *dev = darktable.develop;
+    float *hist, hist_max;
+    hist = dev->histogram_pre_levels;
+    hist_max = dev->histogram_pre_levels_max;
+    if(hist_max > 0)
+    {
+      cairo_save(cr);
+      cairo_scale(cr, width/63.0, -(height-5)/(float)hist_max);
+      cairo_set_source_rgba(cr, .2, .2, .2, 0.5);
+      dt_draw_histogram_8(cr, hist, 3);
+      cairo_restore(cr);
+    }
   }
 
   // Cleaning up
