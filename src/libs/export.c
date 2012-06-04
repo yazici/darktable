@@ -23,6 +23,7 @@
 #include "control/jobs.h"
 #include "control/conf.h"
 #include "gui/gtk.h"
+#include "bauhaus/bauhaus.h"
 #include "dtgtk/slider.h"
 #include "dtgtk/label.h"
 #include "libs/lib.h"
@@ -38,7 +39,7 @@ DT_MODULE(1)
 typedef struct dt_lib_export_t
 {
   GtkSpinButton *width, *height;
-  GtkComboBox *storage, *format;
+  GtkWidget *storage, *format;
   int format_lut[128];
   GtkContainer *storage_box, *format_box;
   GtkComboBox *profile, *intent;
@@ -57,7 +58,7 @@ dt_lib_export_profile_t;
 
 /** Updates the combo box and shows only the supported formats of current selected storage module */
 static void _update_formats_combobox(dt_lib_export_t *d);
-static gboolean _combo_box_set_active_text(GtkComboBox *cb, const gchar *text);
+static gboolean _combo_box_set_active_text(GtkWidget *cb, const gchar *text);
 /** Sets the max dimensions based upon what storage and format supports */
 static void _update_dimensions(dt_lib_export_t *d);
 /** get the max output dimension supported by combination of storage and format.. */
@@ -117,7 +118,7 @@ gui_reset (dt_lib_module_t *self)
 
   // Set storage
   int k = dt_conf_get_int ("plugins/lighttable/export/storage");
-  gtk_combo_box_set_active(d->storage, k);
+  dt_bauhaus_combobox_set(d->storage, k);
 
   gtk_combo_box_set_active(d->intent, (int)dt_conf_get_int("plugins/lighttable/export/iccintent") + 1);
   int iccfound = 0;
@@ -174,7 +175,7 @@ set_format_by_name (dt_lib_export_t *d, const char *name)
     }
     gtk_widget_show_all(GTK_WIDGET(d->format_box));
     if(!darktable.gui->reset && _combo_box_set_active_text( d->format, module->name() ) == FALSE )
-      gtk_combo_box_set_active( d->format, 0);
+      dt_bauhaus_combobox_set(d->format, 0);
   }
 
   // Let's also update combination of storage/format dimension restrictions
@@ -184,7 +185,7 @@ set_format_by_name (dt_lib_export_t *d, const char *name)
 static void
 format_changed (GtkComboBox *widget, dt_lib_export_t *d)
 {
-  gchar *name = gtk_combo_box_get_active_text(d->format);
+  const char *name = dt_bauhaus_combobox_get_text(d->format);
   darktable.gui->reset = 1;
   if(name) set_format_by_name (d, name);
   darktable.gui->reset = 0;
@@ -234,7 +235,7 @@ set_storage_by_name (dt_lib_export_t *d, const char *name)
     while( ( it = g_list_next(it) ) );
   if(it)
   {
-    if(!darktable.gui->reset) gtk_combo_box_set_active(d->storage, k);
+    if(!darktable.gui->reset) dt_bauhaus_combobox_set(d->storage, k);
     dt_conf_set_int ("plugins/lighttable/export/storage", k);
     dt_imageio_module_storage_t *module = (dt_imageio_module_storage_t *)it->data;
     GtkWidget *old = gtk_bin_get_child(GTK_BIN(d->storage_box));
@@ -265,7 +266,7 @@ set_storage_by_name (dt_lib_export_t *d, const char *name)
     k = dt_conf_get_int("plugins/lighttable/export/format");
     GList *it = g_list_nth(darktable.imageio->plugins_format, k);
     if( it==NULL || _combo_box_set_active_text( d->format, ((dt_imageio_module_format_t *)it->data)->name() ) == FALSE )
-      gtk_combo_box_set_active( d->format, 0);
+      dt_bauhaus_combobox_set( d->format, 0);
 
     gtk_widget_show_all(GTK_WIDGET(d->storage_box));
   }
@@ -274,7 +275,7 @@ set_storage_by_name (dt_lib_export_t *d, const char *name)
 static void
 storage_changed (GtkComboBox *widget, dt_lib_export_t *d)
 {
-  gchar *name = gtk_combo_box_get_active_text(d->storage);
+  const char *name = dt_bauhaus_combobox_get_text(d->storage);
   darktable.gui->reset = 1;
   if(name) set_storage_by_name (d, name);
   darktable.gui->reset = 0;
@@ -312,40 +313,30 @@ position ()
   return 0;
 }
 
-gboolean _combo_box_set_active_text(GtkComboBox *cb, const gchar *text)
+gboolean _combo_box_set_active_text(GtkWidget *cb, const gchar *text)
 {
   g_assert( text!=NULL );
   g_assert( cb!=NULL );
-  GtkTreeModel *model=gtk_combo_box_get_model(cb);
-  GtkTreeIter iter;
-  if( gtk_tree_model_get_iter_first( model, &iter ) )
+  const GList *labels = dt_bauhaus_combobox_get_labels(cb);
+  int k = 0;
+  while(labels)
   {
-    int k=-1;
-    do
+    const char *val = (const char*)labels->data;
+    if(!strcmp(val, text))
     {
-      k++;
-      GValue value = { 0, };
-      gtk_tree_model_get_value(model,&iter,0,&value);
-      gchar *v=NULL;
-      if( G_VALUE_HOLDS_STRING(&value) && (  v=(gchar *)g_value_get_string(&value) ) != NULL
-        )
-      {
-        if( strcmp( v, text) == 0 )
-        {
-          gtk_combo_box_set_active( cb, k);
-          return TRUE;
-        }
-      }
+      dt_bauhaus_combobox_set(cb, k);
+      return TRUE;
     }
-    while( gtk_tree_model_iter_next( model, &iter ) );
+    k++;
+    labels = g_list_next(labels);
   }
   return FALSE;
 }
 
 void _update_formats_combobox(dt_lib_export_t *d)
 {
-  // Clear format combo box
-  gtk_list_store_clear( GTK_LIST_STORE(gtk_combo_box_get_model(d->format) ) );
+  // clear format combo box
+  dt_bauhaus_combobox_clear(d->format);
 
   // Get current selected storage
   int k = dt_conf_get_int("plugins/lighttable/export/storage");
@@ -357,7 +348,7 @@ void _update_formats_combobox(dt_lib_export_t *d)
   {
     dt_imageio_module_format_t *format = (dt_imageio_module_format_t *)it->data;
     if( storage->supported( storage, format ) )
-      gtk_combo_box_append_text(d->format, format->name());
+      dt_bauhaus_combobox_add(d->format, format->name());
 
     it = g_list_next(it);
   }
@@ -389,44 +380,38 @@ gui_init (dt_lib_module_t *self)
 
   GtkWidget *label;
 
-  label = dtgtk_label_new(_("target storage"), DARKTABLE_LABEL_TAB | DARKTABLE_LABEL_ALIGN_RIGHT);
-  gtk_misc_set_alignment(GTK_MISC(label), 0.0, 0.5);
-  gtk_table_attach(GTK_TABLE(self->widget), label, 0, 2, 0, 1, GTK_FILL|GTK_EXPAND, 0, 0, 0);
-  d->storage = GTK_COMBO_BOX(gtk_combo_box_new_text());
+  d->storage = dt_bauhaus_combobox_new(NULL);
+  dt_bauhaus_widget_set_label(d->storage, _("target storage"));
   GList *it = darktable.imageio->plugins_storage;
   while(it)
   {
     dt_imageio_module_storage_t *module = (dt_imageio_module_storage_t *)it->data;
-    gtk_combo_box_append_text(d->storage, module->name());
+    dt_bauhaus_combobox_add(d->storage, module->name());
     it = g_list_next(it);
   }
-  gtk_table_attach(GTK_TABLE(self->widget), GTK_WIDGET(d->storage), 0, 2, 1, 2, GTK_EXPAND|GTK_FILL, 0, 0, 0);
-  g_signal_connect (G_OBJECT (d->storage), "changed",
-                    G_CALLBACK (storage_changed),
-                    (gpointer)d);
+  gtk_table_attach(GTK_TABLE(self->widget), GTK_WIDGET(d->storage), 0, 2, 0, 1, GTK_EXPAND|GTK_FILL, 0, 0, 0);
+  g_signal_connect (G_OBJECT (d->storage), "value-changed",
+                    G_CALLBACK (storage_changed), (gpointer)d);
 
   d->storage_box = GTK_CONTAINER(gtk_alignment_new(1.0, 1.0, 1.0, 1.0));
   gtk_alignment_set_padding(GTK_ALIGNMENT(d->storage_box), 0, 0, 0, 0);
-  gtk_table_attach(GTK_TABLE(self->widget), GTK_WIDGET(d->storage_box), 0, 2, 2, 3, GTK_EXPAND|GTK_FILL, 0, 0, 0);
+  gtk_table_attach(GTK_TABLE(self->widget), GTK_WIDGET(d->storage_box), 0, 2, 1, 2, GTK_EXPAND|GTK_FILL, 0, 0, 0);
 
-  label = dtgtk_label_new(_("file format"), DARKTABLE_LABEL_TAB | DARKTABLE_LABEL_ALIGN_RIGHT);
-  gtk_misc_set_alignment(GTK_MISC(label), 0.0, 0.5);
   gtk_table_set_row_spacing(GTK_TABLE(self->widget), 2, 20);
-  gtk_table_attach(GTK_TABLE(self->widget), label, 0, 2, 3, 4, GTK_EXPAND|GTK_FILL, 0, 0, 0);
-  d->format = GTK_COMBO_BOX(gtk_combo_box_new_text());
+  d->format = dt_bauhaus_combobox_new(NULL);
+  dt_bauhaus_widget_set_label(d->format, _("file format"));
 
-  gtk_table_attach(GTK_TABLE(self->widget), GTK_WIDGET(d->format), 0, 2, 4, 5, GTK_EXPAND|GTK_FILL, 0, 0, 0);
-  g_signal_connect (G_OBJECT (d->format), "changed",
-                    G_CALLBACK (format_changed),
-                    (gpointer)d);
+  gtk_table_attach(GTK_TABLE(self->widget), GTK_WIDGET(d->format), 0, 2, 2, 3, GTK_EXPAND|GTK_FILL, 0, 0, 0);
+  g_signal_connect (G_OBJECT (d->format), "value-changed",
+                    G_CALLBACK (format_changed), (gpointer)d);
 
   d->format_box = GTK_CONTAINER(gtk_alignment_new(1.0, 1.0, 1.0, 1.0));
   gtk_alignment_set_padding(GTK_ALIGNMENT(d->format_box), 0, 0, 0, 0);
-  gtk_table_attach(GTK_TABLE(self->widget), GTK_WIDGET(d->format_box), 0, 2, 5, 6, GTK_EXPAND|GTK_FILL, 0, 0, 0);
+  gtk_table_attach(GTK_TABLE(self->widget), GTK_WIDGET(d->format_box), 0, 2, 3, 4, GTK_EXPAND|GTK_FILL, 0, 0, 0);
 
   label = dtgtk_label_new(_("global options"), DARKTABLE_LABEL_TAB | DARKTABLE_LABEL_ALIGN_RIGHT);
-  gtk_table_set_row_spacing(GTK_TABLE(self->widget), 5, 20);
-  gtk_table_attach(GTK_TABLE(self->widget), label, 0, 2, 6, 7, GTK_EXPAND|GTK_FILL, 0, 0, 0);
+  gtk_table_set_row_spacing(GTK_TABLE(self->widget), 3, 20);
+  gtk_table_attach(GTK_TABLE(self->widget), label, 0, 2, 4, 5, GTK_EXPAND|GTK_FILL, 0, 0, 0);
   d->width  = GTK_SPIN_BUTTON(gtk_spin_button_new_with_range(0, 10000, 1));
   g_object_set(G_OBJECT(d->width), "tooltip-text", _("maximum output width\nset to 0 for no scaling"), (char *)NULL);
   d->height = GTK_SPIN_BUTTON(gtk_spin_button_new_with_range(0, 10000, 1));
@@ -444,23 +429,23 @@ gui_init (dt_lib_module_t *self)
     */
   label = gtk_label_new(_("max size"));
   gtk_misc_set_alignment(GTK_MISC(label), 0.0, 0.5);
-  gtk_table_attach(GTK_TABLE(self->widget), label, 0, 1, 7, 8, GTK_EXPAND|GTK_FILL, 0, 0, 0);
+  gtk_table_attach(GTK_TABLE(self->widget), label, 0, 1, 5, 6, GTK_EXPAND|GTK_FILL, 0, 0, 0);
   GtkBox *hbox = GTK_BOX(gtk_hbox_new(FALSE, 5));
   gtk_box_pack_start(hbox, GTK_WIDGET(d->width), TRUE, TRUE, 0);
   gtk_box_pack_start(hbox, gtk_label_new(_("x")), FALSE, FALSE, 0);
   gtk_box_pack_start(hbox, GTK_WIDGET(d->height), TRUE, TRUE, 0);
-  gtk_table_attach(GTK_TABLE(self->widget), GTK_WIDGET(hbox), 1, 2, 7, 8, GTK_EXPAND|GTK_FILL, 0, 0, 0);
+  gtk_table_attach(GTK_TABLE(self->widget), GTK_WIDGET(hbox), 1, 2, 5, 6, GTK_EXPAND|GTK_FILL, 0, 0, 0);
 
   label = gtk_label_new(_("intent"));
   gtk_misc_set_alignment(GTK_MISC(label), 0.0, 0.5);
-  gtk_table_attach(GTK_TABLE(self->widget), label, 0, 1, 8, 9, GTK_EXPAND|GTK_FILL, 0, 0, 0);
+  gtk_table_attach(GTK_TABLE(self->widget), label, 0, 1, 6, 7, GTK_EXPAND|GTK_FILL, 0, 0, 0);
   d->intent = GTK_COMBO_BOX(gtk_combo_box_new_text());
   gtk_combo_box_append_text(d->intent, _("image settings"));
   gtk_combo_box_append_text(d->intent, _("perceptual"));
   gtk_combo_box_append_text(d->intent, _("relative colorimetric"));
   gtk_combo_box_append_text(d->intent, C_("rendering intent", "saturation"));
   gtk_combo_box_append_text(d->intent, _("absolute colorimetric"));
-  gtk_table_attach(GTK_TABLE(self->widget), GTK_WIDGET(d->intent), 1, 2, 8, 9, GTK_EXPAND|GTK_FILL, 0, 0, 0);
+  gtk_table_attach(GTK_TABLE(self->widget), GTK_WIDGET(d->intent), 1, 2, 6, 7, GTK_EXPAND|GTK_FILL, 0, 0, 0);
 
   d->profiles = NULL;
 
@@ -528,10 +513,9 @@ gui_init (dt_lib_module_t *self)
   GList *l = d->profiles;
   label = gtk_label_new(_("profile"));
   gtk_misc_set_alignment(GTK_MISC(label), 0.0, 0.5);
-  gtk_table_attach(GTK_TABLE(self->widget), label, 0, 1, 9, 10, GTK_EXPAND|GTK_FILL, 0, 0, 0);
+  gtk_table_attach(GTK_TABLE(self->widget), label, 0, 1, 7, 8, GTK_EXPAND|GTK_FILL, 0, 0, 0);
   d->profile = GTK_COMBO_BOX(gtk_combo_box_new_text());
-  gtk_table_attach(GTK_TABLE(self->widget), GTK_WIDGET(d->profile), 1, 2, 9, 10, GTK_SHRINK|GTK_EXPAND|GTK_FILL, 0, 0, 0);
-  // gtk_table_attach(GTK_TABLE(self->widget), GTK_WIDGET(d->profile), 1, 2, 9, 10, GTK_EXPAND|GTK_FILL, 0, 0, 0);
+  gtk_table_attach(GTK_TABLE(self->widget), GTK_WIDGET(d->profile), 1, 2, 7, 8, GTK_SHRINK|GTK_EXPAND|GTK_FILL, 0, 0, 0);
   gtk_combo_box_append_text(d->profile, _("image settings"));
   while(l)
   {
@@ -571,7 +555,7 @@ gui_init (dt_lib_module_t *self)
   GtkButton *button = GTK_BUTTON(gtk_button_new_with_label(_("export")));
   d->export_button = button;
   g_object_set(G_OBJECT(button), "tooltip-text", _("export with current settings (ctrl-e)"), (char *)NULL);
-  gtk_table_attach(GTK_TABLE(self->widget), GTK_WIDGET(button), 1, 2, 10, 11, GTK_EXPAND|GTK_FILL, 0, 0, 0);
+  gtk_table_attach(GTK_TABLE(self->widget), GTK_WIDGET(button), 1, 2, 8, 9, GTK_EXPAND|GTK_FILL, 0, 0, 0);
 
   g_signal_connect (G_OBJECT (button), "clicked",
                     G_CALLBACK (export_button_clicked),
