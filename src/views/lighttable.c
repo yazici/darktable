@@ -237,8 +237,9 @@ expose_filemanager (dt_view_t *self, cairo_t *cr, int32_t width, int32_t height,
   const float wd = width/(float)iir;
   const float ht = width/(float)iir;
 
-  const int pi = pointerx / (float)wd;
-  const int pj = pointery / (float)ht;
+  int pi = pointerx / (float)wd;
+  int pj = pointery / (float)ht;
+  if(pointerx < 0 || pointery < 0) pi = pj = -1;
   //const int pidx = grid_to_index(pj, pi, iir, offset);
 
   const int img_pointerx = iir == 1 ? pointerx : fmodf(pointerx, wd);
@@ -263,11 +264,11 @@ expose_filemanager (dt_view_t *self, cairo_t *cr, int32_t width, int32_t height,
     cairo_set_source_rgba(cr, .7, .7, .7, 1.0f);
     cairo_select_font_face (cr, "sans-serif", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL);
     cairo_move_to(cr, offx, offy);
-    cairo_show_text(cr, _("this collection is empty."));
+    cairo_show_text(cr, _("there are no images in this collection"));
     cairo_move_to(cr, offx, offy + 2*ls);
-    cairo_show_text(cr, _("if you didn't import any images yet"));
+    cairo_show_text(cr, _("if you have not imported any images yet"));
     cairo_move_to(cr, offx, offy + 3*ls);
-    cairo_show_text(cr, _("do that from the top left expander."));
+    cairo_show_text(cr, _("you can do so in the import module"));
     cairo_move_to(cr, offx - 10.0f, offy + 3*ls - ls*.25f);
     cairo_line_to(cr, 0.0f, 10.0f);
     cairo_set_source_rgba(cr, .7, .7, .7, at);
@@ -281,7 +282,7 @@ expose_filemanager (dt_view_t *self, cairo_t *cr, int32_t width, int32_t height,
     cairo_stroke(cr);
     cairo_move_to(cr, offx, offy + 6*ls);
     cairo_set_source_rgba(cr, .7, .7, .7, 1.0f);
-    cairo_show_text(cr, _("or in the collection plugin in the left panel."));
+    cairo_show_text(cr, _("or add images in the collection module in the left panel"));
     cairo_move_to(cr, offx - 10.0f, offy + 6*ls - ls*0.25f);
     cairo_rel_line_to(cr, - offx + 10.0f, 0.0f);
     cairo_set_source_rgba(cr, .7, .7, .7, at);
@@ -942,15 +943,17 @@ int button_pressed(dt_view_t *self, double x, double y, int which, int type, uin
         DT_CTL_GET_GLOBAL(mouse_over_id, lib_image_mouse_over_id);
         const dt_image_t *cimg = dt_image_cache_read_get(darktable.image_cache, mouse_over_id);
         dt_image_t *image = dt_image_cache_write_get(darktable.image_cache, cimg);
-        if(!image) return 0;
-        if(lib->image_over == DT_VIEW_STAR_1 && ((image->flags & 0x7) == 1)) image->flags &= ~0x7;
-        else if(lib->image_over == DT_VIEW_REJECT && ((image->flags & 0x7) == 6)) image->flags &= ~0x7;
-        else
+        if(image)
         {
-          image->flags &= ~0x7;
-          image->flags |= lib->image_over;
+          if(lib->image_over == DT_VIEW_STAR_1 && ((image->flags & 0x7) == 1)) image->flags &= ~0x7;
+          else if(lib->image_over == DT_VIEW_REJECT && ((image->flags & 0x7) == 6)) image->flags &= ~0x7;
+          else
+          {
+            image->flags &= ~0x7;
+            image->flags |= lib->image_over;
+          }
+          dt_image_cache_write_release(darktable.image_cache, image, DT_IMAGE_CACHE_SAFE);
         }
-        dt_image_cache_write_release(darktable.image_cache, image, DT_IMAGE_CACHE_SAFE);
         dt_image_cache_read_release(darktable.image_cache, image);
         break;
       }
@@ -1021,8 +1024,7 @@ int key_pressed(dt_view_t *self, guint key, guint state)
 
       //dt_dev_invalidate(darktable.develop);
     }
-
-    return 0;
+    return 1;
   }
 
   if(key == accels->lighttable_left.accel_key
@@ -1199,4 +1201,6 @@ void connect_key_accels(dt_view_t *self)
 
 }
 
+// modelines: These editor modelines have been set for all relevant files by tools/update_modelines.sh
+// vim: shiftwidth=2 expandtab tabstop=2 cindent
 // kate: tab-indents: off; indent-width 2; replace-tabs on; indent-mode cstyle; remove-trailing-space on;

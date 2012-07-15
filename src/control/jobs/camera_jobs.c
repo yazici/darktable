@@ -108,6 +108,10 @@ int32_t dt_camera_capture_job_run(dt_job_t *job)
   GList *current_value = g_list_find(values,orginal_value);
   for(int i=0; i<t->count; i++)
   {
+    // Delay if active
+    if(t->delay)
+      g_usleep(t->delay*G_USEC_PER_SEC);
+
     for(int b=0; b<(t->brackets*2)+1; b++)
     {
       // If bracket capture, lets set change shutterspeed
@@ -146,11 +150,6 @@ int32_t dt_camera_capture_job_run(dt_job_t *job)
       current_value = g_list_find(values,orginal_value);
       dt_camctl_camera_set_property(darktable.camctl, NULL, "shutterspeed", current_value->data);
     }
-
-    // Delay if active
-    if(t->delay)
-      g_usleep(t->delay*G_USEC_PER_SEC);
-
   }
 
   dt_control_backgroundjobs_destroy(darktable.control, jid);
@@ -414,4 +413,6 @@ int32_t dt_camera_import_job_run(dt_job_t *job)
   return 0;
 }
 
+// modelines: These editor modelines have been set for all relevant files by tools/update_modelines.sh
+// vim: shiftwidth=2 expandtab tabstop=2 cindent
 // kate: tab-indents: off; indent-width 2; replace-tabs on; indent-mode cstyle; remove-trailing-space on;

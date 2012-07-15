@@ -86,7 +86,7 @@ dt_collection_update (const dt_collection_t *collection)
   if (!(collection->params.query_flags&COLLECTION_QUERY_USE_ONLY_WHERE_EXT))
   {
     int need_operator = 0;
-
+     
     /* add default filters */
     if (collection->params.filter_flags & COLLECTION_FILTER_FILM_ID)
     {
@@ -119,12 +119,15 @@ dt_collection_update (const dt_collection_t *collection)
   /* build select part includes where */
   if (collection->params.sort == DT_COLLECTION_SORT_COLOR && (collection->params.query_flags & COLLECTION_QUERY_USE_SORT))
     selq = dt_util_dstrcat(selq, "select distinct id from (select * from images where %s) as a left outer join color_labels as b on a.id = b.imgid", wq);
+  else if(collection->params.query_flags&COLLECTION_QUERY_USE_ONLY_WHERE_EXT)
+    selq = dt_util_dstrcat(selq, "select distinct images.id from images %s",wq);
   else
     selq = dt_util_dstrcat(selq, "select distinct id from images where %s",wq);
 
 
+
   /* build sort order part */
-  if ((collection->params.query_flags&COLLECTION_QUERY_USE_SORT))
+  if (!(collection->params.query_flags&COLLECTION_QUERY_USE_ONLY_WHERE_EXT)  && (collection->params.query_flags&COLLECTION_QUERY_USE_SORT))
   {
     sq = dt_collection_get_sort_query(collection);
   }
@@ -159,7 +162,6 @@ dt_collection_reset(const dt_collection_t *collection)
   /* apply stored query parameters from previous darktable session */
   params->film_id      = dt_conf_get_int("plugins/collection/film_id");
   params->rating       = dt_conf_get_int("plugins/collection/rating");
-  params->query_flags  = dt_conf_get_int("plugins/collection/query_flags");
   params->filter_flags = dt_conf_get_int("plugins/collection/filter_flags");
   params->sort         = dt_conf_get_int("plugins/collection/sort");
   params->descending   = dt_conf_get_bool("plugins/collection/descending");
@@ -351,13 +353,21 @@ uint32_t dt_collection_get_count(const dt_collection_t *collection)
   uint32_t count=1;
   const gchar *query = dt_collection_get_query(collection);
   gchar *count_query = NULL;
-  count_query = dt_util_dstrcat(count_query, "select count(id) %s", query + 18);
+
+  gchar *fq = g_strstr_len(query, strlen(query), "from");
+  if ((collection->params.query_flags&COLLECTION_QUERY_USE_ONLY_WHERE_EXT))
+    count_query = dt_util_dstrcat(NULL, "select count(images.id) from images %s", collection->where_ext); 
+  else
+    count_query = dt_util_dstrcat(count_query, "select count(id) %s", fq);
+
   DT_DEBUG_SQLITE3_PREPARE_V2(dt_database_get(darktable.db), count_query, -1, &stmt, NULL);
-  if ((collection->params.query_flags&COLLECTION_QUERY_USE_LIMIT)) 
+  if ((collection->params.query_flags&COLLECTION_QUERY_USE_LIMIT) && 
+      !(collection->params.query_flags&COLLECTION_QUERY_USE_ONLY_WHERE_EXT)) 
   {
     DT_DEBUG_SQLITE3_BIND_INT(stmt, 1, 0);
     DT_DEBUG_SQLITE3_BIND_INT(stmt, 2, -1);
   }
+
   if(sqlite3_step(stmt) == SQLITE_ROW)
     count = sqlite3_column_int(stmt, 0);
   sqlite3_finalize(stmt);
@@ -446,7 +456,7 @@ get_query_string(const int property, const gchar *escaped_text, char *query)
       break;
     case 2: // tag
       snprintf(query, 1024, "(id in (select imgid from tagged_images as a join "
-               "tags as b on a.tagid = b.id where name like '%%%s%%'))", escaped_text);
+               "tags as b on a.tagid = b.id where name like '%s'))", escaped_text);
       break;
 
       // TODO: How to handle images without metadata? In the moment they are not shown.
@@ -575,4 +585,6 @@ void dt_collection_hint_message(const dt_collection_t *collection)
   dt_control_hinter_message(darktable.control, message);
 }
 
+// modelines: These editor modelines have been set for all relevant files by tools/update_modelines.sh
+// vim: shiftwidth=2 expandtab tabstop=2 cindent
 // kate: tab-indents: off; indent-width 2; replace-tabs on; indent-mode cstyle; remove-trailing-space on;

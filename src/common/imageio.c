@@ -459,8 +459,12 @@ int dt_imageio_export(
     dt_imageio_module_format_t *format,
     dt_imageio_module_data_t   *format_params)
 {
-  return dt_imageio_export_with_flags(imgid, filename, format, format_params,
-      0, 0, dt_conf_get_bool("plugins/lighttable/export/high_quality_processing"));
+  if (strcmp(format->mime(format_params),"x-copy")==0)
+    /* This is a just a copy, skip process and just export */
+    return format->write_image(format_params, filename, NULL, NULL, 0, imgid);    
+  else
+    return dt_imageio_export_with_flags(imgid, filename, format, format_params,
+					0, 0, dt_conf_get_bool("plugins/lighttable/export/high_quality_processing"), 0);
 }
 
 // internal function: to avoid exif blob reading + 8-bit byteorder flag + high-quality override
@@ -471,7 +475,8 @@ int dt_imageio_export_with_flags(
     dt_imageio_module_data_t   *format_params,
     const int32_t               ignore_exif,
     const int32_t               display_byteorder,
-    const int32_t               high_quality)
+    const int32_t               high_quality,
+    const int32_t               thumbnail_export)
 {
   dt_develop_t dev;
   dt_dev_init(&dev, 0);
@@ -482,10 +487,13 @@ int dt_imageio_export_with_flags(
   const int wd = img->width;
   const int ht = img->height;
 
+  int res = 0;
+
   dt_times_t start;
   dt_get_times(&start);
   dt_dev_pixelpipe_t pipe;
-  if(!dt_dev_pixelpipe_init_export(&pipe, wd, ht))
+  res = thumbnail_export ? dt_dev_pixelpipe_init_thumbnail(&pipe, wd, ht) : dt_dev_pixelpipe_init_export(&pipe, wd, ht);
+  if(!res)
   {
     dt_control_log(_("failed to allocate memory for export, please lower the threads used for export or buy more memory."));
     dt_dev_cleanup(&dev);
@@ -632,7 +640,7 @@ int dt_imageio_export_with_flags(
 
   format_params->width  = processed_width;
   format_params->height = processed_height;
-  int res = 0;
+
   if(!ignore_exif)
   {
     int length;
@@ -681,6 +689,10 @@ dt_imageio_open(
     const char  *filename,          // full path
     dt_mipmap_cache_allocator_t a)  // allocate via dt_mipmap_cache_alloc
 {
+  /* first of all, check if file exists, dont bother to test loading if not exists */
+  if(!g_file_test(filename, G_FILE_TEST_IS_REGULAR))
+    return !DT_IMAGEIO_OK;
+  
   dt_imageio_retval_t ret = DT_IMAGEIO_FILE_CORRUPTED;
   
   /* check if file is ldr using magic's */
@@ -695,11 +707,14 @@ dt_imageio_open(
   if(ret != DT_IMAGEIO_OK && ret != DT_IMAGEIO_CACHE_FULL)
     ret = dt_imageio_open_hdr(img, filename, a);
   if(ret != DT_IMAGEIO_OK && ret != DT_IMAGEIO_CACHE_FULL)      // failsafing, if ldr magic test fails..
-      ret = dt_imageio_open_ldr(img, filename, a);
+    ret = dt_imageio_open_ldr(img, filename, a);
 
   img->flags &= ~DT_IMAGE_THUMBNAIL;
+
   img->dirty = 1;
   return ret;
 }
 
+// modelines: These editor modelines have been set for all relevant files by tools/update_modelines.sh
+// vim: shiftwidth=2 expandtab tabstop=2 cindent
 // kate: tab-indents: off; indent-width 2; replace-tabs on; indent-mode cstyle; remove-trailing-space on;

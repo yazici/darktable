@@ -62,7 +62,7 @@ dt_database_t *dt_database_init(char *alternative)
   gchar dbfilename[1024] = {0};
   gchar datadir[1024] = {0};
 
-  dt_util_get_user_config_dir(datadir, 1024);
+  dt_loc_get_user_config_dir(datadir, 1024);
 
   if ( alternative == NULL )
   {
@@ -94,7 +94,7 @@ dt_database_t *dt_database_init(char *alternative)
     if(dbname) fprintf(stderr, "`%s'!\n", dbname);
     else       fprintf(stderr, "\n");
     fprintf(stderr, "[init] maybe your %s/darktablerc is corrupt?\n",datadir);
-    dt_util_get_datadir(dbfilename, 512);
+    dt_loc_get_datadir(dbfilename, 512);
     fprintf(stderr, "[init] try `cp %s/darktablerc %s/darktablerc'\n", dbfilename,datadir);
     g_free(dbname);
     g_free(db);
@@ -108,6 +108,7 @@ dt_database_t *dt_database_init(char *alternative)
   
   sqlite3_exec(db->handle, "PRAGMA synchronous = OFF", NULL, NULL, NULL);
   sqlite3_exec(db->handle, "PRAGMA journal_mode = MEMORY", NULL, NULL, NULL);
+  sqlite3_exec(db->handle, "PRAGMA page_size = 32768", NULL, NULL, NULL);
 
   g_free(dbname);
   return db;
@@ -135,7 +136,7 @@ static void _database_migrate_to_xdg_structure()
   gchar *conf_db = dt_conf_get_string("database");
   
   gchar datadir[1024] = {0};
-  dt_util_get_datadir(datadir, 1024);
+  dt_loc_get_datadir(datadir, 1024);
   
   if (conf_db && conf_db[0] != '/')
   {
@@ -164,7 +165,7 @@ static void _database_delete_mipmaps_files()
 
   // Directory
   char cachedir[1024], mipmapfilename[1024];
-  dt_util_get_user_cache_dir(cachedir, sizeof(cachedir));
+  dt_loc_get_user_cache_dir(cachedir, sizeof(cachedir));
 
   snprintf(mipmapfilename, 1024, "%s/mipmaps", cachedir);
 
@@ -180,3 +181,6 @@ static void _database_delete_mipmaps_files()
   }
 }
 
+// modelines: These editor modelines have been set for all relevant files by tools/update_modelines.sh
+// vim: shiftwidth=2 expandtab tabstop=2 cindent
+// kate: tab-indents: off; indent-width 2; replace-tabs on; indent-mode cstyle; remove-trailing-space on;

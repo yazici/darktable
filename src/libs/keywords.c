@@ -108,7 +108,7 @@ void gui_init(dt_lib_module_t *self)
   memset(&uncategorized,0,sizeof(GtkTreeIter));
 
   DT_DEBUG_SQLITE3_PREPARE_V2(dt_database_get(darktable.db), 
-			      "select name,icon,description from tags", -1, &stmt, NULL);
+			      "SELECT name,icon,description FROM tags ORDER BY UPPER(name) DESC", -1, &stmt, NULL);
   while (sqlite3_step(stmt) == SQLITE_ROW)
   {
     if(strchr((const char *)sqlite3_column_text(stmt, 0),'|')==0)
@@ -130,41 +130,47 @@ void gui_init(dt_lib_module_t *self)
       int level = 0;
       char *value;
       GtkTreeIter current,iter;
-      char *pch = strtok((char *)sqlite3_column_text(stmt, 0),"|");
-      while (pch != NULL) 
+      char **pch = g_strsplit((char *)sqlite3_column_text(stmt, 0),"|", -1);
+
+      if (pch != NULL)
       {
-	gboolean found=FALSE;
-	int children = gtk_tree_model_iter_n_children(GTK_TREE_MODEL(store),level>0?&current:NULL);
-	/* find child with name, if not found create and continue */
-	for (int k=0;k<children;k++)
-	{
-	  if (gtk_tree_model_iter_nth_child(GTK_TREE_MODEL(store), &iter, level>0?&current:NULL, k))
+        int j = 0;
+        while (pch[j] != NULL) 
+        {
+	  gboolean found=FALSE;
+	  int children = gtk_tree_model_iter_n_children(GTK_TREE_MODEL(store),level>0?&current:NULL);
+	  /* find child with name, if not found create and continue */
+	  for (int k=0;k<children;k++)
 	  {
-	    gtk_tree_model_get (GTK_TREE_MODEL(store), &iter, 0, &value, -1);
-	    
-	    if (strcmp(value, pch)==0)
+	    if (gtk_tree_model_iter_nth_child(GTK_TREE_MODEL(store), &iter, level>0?&current:NULL, k))
 	    {
-	      current = iter;
-	      found = TRUE;
-	      break;
+	      gtk_tree_model_get (GTK_TREE_MODEL(store), &iter, 0, &value, -1);
+	      
+	      if (strcmp(value, pch[j])==0)
+	      {
+		current = iter;
+		found = TRUE;
+		break;
+	      }
 	    }
 	  }
-	}
-
-	/* lets add new keyword and assign current */
-	if (!found)
-	{
-	  gtk_tree_store_insert(store, &iter, level>0?&current:NULL,0);
-	  gtk_tree_store_set(store, &iter, 0, pch, -1);
-	  current = iter;
-	}
-
-	level++;
-	pch = strtok(NULL, "|");
+	  
+	  /* lets add new keyword and assign current */
+	  if (!found)
+	  {
+	    gtk_tree_store_insert(store, &iter, level>0?&current:NULL,0);
+	    gtk_tree_store_set(store, &iter, 0, pch[j], -1);
+	    current = iter;
+	  }
+	  
+	  level++;
+	  j++;
+        }
+	
+        g_strfreev(pch);
+	
       }
-      
     }
-    
   }
 
   /* add the treeview to show hirarchy tags*/
@@ -369,6 +375,10 @@ static void _lib_keywords_drag_data_received_callback(GtkWidget *w,
       _lib_keywords_string_from_path(dtag, 1024, model, dpath);
       _lib_keywords_string_from_path(stag, 1024, model, spath);
 
+      /* reject drop onto ourself */
+      if (strcmp(dtag,stag) == 0)
+	goto reject_drop;
+
        /* updated tags in database */
       dt_tag_reorganize(stag,dtag);
 
@@ -388,6 +398,7 @@ static void _lib_keywords_drag_data_received_callback(GtkWidget *w,
   }   
  
   /* reject drop */
+reject_drop:
   gtk_drag_finish (dctx, FALSE, FALSE, time);
 }
 
@@ -424,3 +435,6 @@ static void _lib_keywords_add_collection_rule(GtkTreeView *view, GtkTreePath *tp
   dt_view_collection_update(darktable.view_manager);
   dt_collection_update_query(darktable.collection);
 }
+// modelines: These editor modelines have been set for all relevant files by tools/update_modelines.sh
+// vim: shiftwidth=2 expandtab tabstop=2 cindent
+// kate: tab-indents: off; indent-width 2; replace-tabs on; indent-mode cstyle; remove-trailing-space on;

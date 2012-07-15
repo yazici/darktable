@@ -35,6 +35,9 @@ typedef struct dt_lib_tool_filter_t
 }
 dt_lib_tool_filter_t;
 
+/* proxy function to reset filter back to 'all' */
+static void _lib_filter_reset_to_show_all(dt_lib_module_t *self);
+
 /* callback for filter combobox change */
 static void _lib_filter_combobox_changed(GtkComboBox *widget, gpointer user_data);
 /* callback for sort combobox change */
@@ -96,14 +99,13 @@ void gui_init(dt_lib_module_t *self)
   d->filter = widget = gtk_combo_box_new_text();
   gtk_box_pack_start(GTK_BOX(self->widget), widget, FALSE, FALSE, 0);
   gtk_combo_box_append_text(GTK_COMBO_BOX(widget), _("all"));
-  gtk_combo_box_append_text(GTK_COMBO_BOX(widget), _("unstarred"));
-  gtk_combo_box_append_text(GTK_COMBO_BOX(widget), _("1 star"));
-  gtk_combo_box_append_text(GTK_COMBO_BOX(widget), _("2 star"));
-  gtk_combo_box_append_text(GTK_COMBO_BOX(widget), _("3 star"));
-  gtk_combo_box_append_text(GTK_COMBO_BOX(widget), _("4 star"));
-  gtk_combo_box_append_text(GTK_COMBO_BOX(widget), _("5 star"));
-  gtk_combo_box_append_text(GTK_COMBO_BOX(widget), _("rejected"));
-  
+  gtk_combo_box_append_text(GTK_COMBO_BOX(widget), _("unstarred only"));
+  gtk_combo_box_append_text(GTK_COMBO_BOX(widget), "★ +");
+  gtk_combo_box_append_text(GTK_COMBO_BOX(widget), "★ ★ +");
+  gtk_combo_box_append_text(GTK_COMBO_BOX(widget), "★ ★ ★ +");
+  gtk_combo_box_append_text(GTK_COMBO_BOX(widget), "★ ★ ★ ★ +");
+  gtk_combo_box_append_text(GTK_COMBO_BOX(widget), "★ ★ ★ ★ ★ ");
+  gtk_combo_box_append_text(GTK_COMBO_BOX(widget), _("rejected only"));
   /* select the last selected value */
   gtk_combo_box_set_active(GTK_COMBO_BOX(widget),
                            dt_collection_get_rating(darktable.collection));
@@ -149,6 +151,10 @@ void gui_init(dt_lib_module_t *self)
   g_signal_connect (G_OBJECT (widget), "toggled",
                     G_CALLBACK (_lib_filter_reverse_button_changed),
                     (gpointer)self);
+
+  /* initialize proxy */
+  darktable.view_manager->proxy.filter.module = self;
+  darktable.view_manager->proxy.filter.reset_filter = _lib_filter_reset_to_show_all;
 
   /* lets update query */
   _lib_filter_update_query(self);
@@ -221,3 +227,15 @@ static void _lib_filter_update_query(dt_lib_module_t *self)
   /* update film strip, jump to currently opened image, if any: */
   dt_view_filmstrip_scroll_to_image(darktable.view_manager, darktable.develop->image_storage.id, FALSE);
 }
+
+static void
+_lib_filter_reset_to_show_all(dt_lib_module_t *self)
+{
+    dt_lib_tool_filter_t *dropdowns = (dt_lib_tool_filter_t *)self->data;
+
+    /* Reset to topmost item, 'all' */
+    gtk_combo_box_set_active(GTK_COMBO_BOX(dropdowns->filter), 0);
+}
+// modelines: These editor modelines have been set for all relevant files by tools/update_modelines.sh
+// vim: shiftwidth=2 expandtab tabstop=2 cindent
+// kate: tab-indents: off; indent-width 2; replace-tabs on; indent-mode cstyle; remove-trailing-space on;

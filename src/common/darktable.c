@@ -1,7 +1,7 @@
 /*
     This file is part of darktable,
-    copyright (c) 2009--2011 johannes hanika.
-    copyright (c) 2010--2011 henrik andersson.
+    copyright (c) 2009--2012 johannes hanika.
+    copyright (c) 2010--2012 henrik andersson.
 
     darktable is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -40,10 +40,12 @@
 #include "libs/lib.h"
 #include "views/view.h"
 #include "control/control.h"
+#include "control/jobs/control_jobs.h"
 #include "control/signal.h"
 #include "control/conf.h"
 #include "gui/gtk.h"
 #include "gui/presets.h"
+#include "bauhaus/bauhaus.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -77,6 +79,12 @@ static int usage(const char *argv0)
 #ifdef HAVE_OPENCL
   printf(" [--disable-opencl]");
 #endif
+  printf(" [--library <library file>]");
+  printf(" [--datadir <data directory>]");
+  printf(" [--moduledir <module directory>]");
+  printf(" [--tmpdir <tmp directory>]");
+  printf(" [--configdir <user config directory>]");
+  printf(" [--cachedir <user config directory>]");
   printf("\n");
   return 1;
 }
@@ -85,8 +93,9 @@ typedef void (dt_signal_handler_t)(int) ;
 // static dt_signal_handler_t *_dt_sigill_old_handler = NULL;
 static dt_signal_handler_t *_dt_sigsegv_old_handler = NULL;
 
-#if defined(__APPLE__) || (defined(__FreeBSD_version) && __FreeBSD_version < 800071) || \
-    defined(__SUNOS__)
+#if (defined(__APPLE__) && defined(APPLE_NEED_DPRINTF)) ||        \
+  (defined(__FreeBSD_version) && (__FreeBSD_version < 800071)) || \
+  defined(__SUNOS__)
 static int dprintf(int fd,const char *fmt, ...)
 {
   va_list ap;
@@ -305,7 +314,12 @@ int dt_init(int argc, char *argv[], const int init_gui)
   darktable.progname = argv[0];
    
   // database
-  gchar *dbfilenameFromCommand = NULL;
+  gchar *dbfilename_from_command = NULL;
+  char *datadirFromCommand = NULL;
+  char *moduledirFromCommand = NULL;
+  char *tmpdirFromCommand = NULL;
+  char *configdirFromCommand = NULL;
+  char *cachedirFromCommand = NULL;
 
   darktable.num_openmp_threads = 1;
 #ifdef _OPENMP
@@ -321,6 +335,10 @@ int dt_init(int argc, char *argv[], const int init_gui)
       {
         return usage(argv[0]);
       }
+      if(!strcmp(argv[k], "-h"))
+      {
+        return usage(argv[0]);
+      }
       else if(!strcmp(argv[k], "--version"))
       {
         printf("this is "PACKAGE_STRING"\ncopyright (c) 2009-2012 johannes hanika\n"PACKAGE_BUGREPORT"\n");
@@ -328,7 +346,27 @@ int dt_init(int argc, char *argv[], const int init_gui)
       }
       else if(!strcmp(argv[k], "--library"))
       {
-        dbfilenameFromCommand = argv[++k];
+        dbfilename_from_command = argv[++k];
+      }
+      else if(!strcmp(argv[k], "--datadir"))
+      {
+        datadirFromCommand = argv[++k];
+      }
+      else if(!strcmp(argv[k], "--moduledir"))
+      {
+        moduledirFromCommand = argv[++k];
+      }
+      else if(!strcmp(argv[k], "--tmpdir"))
+      {
+        tmpdirFromCommand = argv[++k];
+      }
+      else if(!strcmp(argv[k], "--configdir"))
+      {
+        configdirFromCommand = argv[++k];
+      }
+      else if(!strcmp(argv[k], "--cachedir"))
+      {
+        cachedirFromCommand = argv[++k];
       }
       else if(argv[k][1] == 'd' && argc > k+1)
       {
@@ -368,6 +406,14 @@ int dt_init(int argc, char *argv[], const int init_gui)
 #ifdef _OPENMP
   omp_set_num_threads(darktable.num_openmp_threads);
 #endif
+  dt_loc_init_datadir(datadirFromCommand);
+  dt_loc_init_plugindir(moduledirFromCommand);
+  if(dt_loc_init_tmp_dir(tmpdirFromCommand)) {
+    printf(_("ERROR : invalid temporary directory : %s\n"),darktable.tmpdir);
+    return usage(argv[0]);
+  }
+  dt_loc_init_user_config_dir(configdirFromCommand);
+  dt_loc_init_user_cache_dir(cachedirFromCommand);
 
   g_type_init();
 
@@ -378,14 +424,14 @@ int dt_init(int argc, char *argv[], const int init_gui)
   // dt_check_cpu(argc,argv);
 
 #ifdef HAVE_GEGL
-  (void)setenv("GEGL_PATH", DARKTABLE_DATADIR"/gegl:/usr/lib/gegl-0.0", 1);
+  (void)setenv("GEGL_PATH", DARKTABLE_DATADIR "/gegl:/usr/lib/gegl-0.0", 1);
   gegl_init(&argc, &argv);
 #endif
 
   // thread-safe init:
   dt_exif_init();
   char datadir[1024];
-  dt_util_get_user_config_dir (datadir,1024);
+  dt_loc_get_user_config_dir (datadir,1024);
   char filename[1024];
   snprintf(filename, 1024, "%s/darktablerc", datadir);
 
@@ -403,7 +449,7 @@ int dt_init(int argc, char *argv[], const int init_gui)
   }
 
   // initialize the database
-  darktable.db = dt_database_init(dbfilenameFromCommand);
+  darktable.db = dt_database_init(dbfilename_from_command);
 
   // Initialize the signal system
   darktable.signals = dt_control_signal_init();
@@ -439,14 +485,12 @@ int dt_init(int argc, char *argv[], const int init_gui)
   }
   else
   {
-#if 0 // TODO: move int dt_database_t 
     // this is in memory, so schema can't exist yet.
-    if(!strcmp(dbfilename, ":memory:"))
+    if(!strcmp(dbfilename_from_command, ":memory:"))
     {
       dt_control_create_database_schema();
       dt_gui_presets_init(); // also init preset db schema.
     }
-#endif
     darktable.control->running = 0;
     darktable.control->accelerators = NULL;
     dt_pthread_mutex_init(&darktable.control->run_mutex, NULL);
@@ -490,6 +534,7 @@ int dt_init(int argc, char *argv[], const int init_gui)
     darktable.gui = (dt_gui_gtk_t *)malloc(sizeof(dt_gui_gtk_t));
     memset(darktable.gui,0,sizeof(dt_gui_gtk_t));
     if(dt_gui_gtk_init(darktable.gui, argc, argv)) return 1;
+    dt_bauhaus_init();
   }
   else darktable.gui = NULL;
 
@@ -508,11 +553,10 @@ int dt_init(int argc, char *argv[], const int init_gui)
 
     dt_control_load_config(darktable.control);
     g_strlcpy(darktable.control->global_settings.dbname, filename, 512); // overwrite if relocated.
-
-    darktable.imageio = (dt_imageio_t *)malloc(sizeof(dt_imageio_t));
-    memset(darktable.imageio, 0, sizeof(dt_imageio_t));
-    dt_imageio_init(darktable.imageio);
   }
+  darktable.imageio = (dt_imageio_t *)malloc(sizeof(dt_imageio_t));
+  memset(darktable.imageio, 0, sizeof(dt_imageio_t));
+  dt_imageio_init(darktable.imageio);
 
   if(init_gui)
   {
@@ -616,11 +660,15 @@ int dt_init(int argc, char *argv[], const int init_gui)
     dt_ctl_switch_mode_to(DT_LIBRARY);
   }
 
+  /* start the indexer background job */
+  dt_control_start_indexer();
+
   if(darktable.unmuted & DT_DEBUG_MEMORY)
   {
     fprintf(stderr, "[memory] after successful startup\n");
     dt_print_mem_usage();
   }
+
   return 0;
 }
 
@@ -669,6 +717,8 @@ void dt_cleanup()
   dt_fswatch_destroy(darktable.fswatch);
 
   dt_database_destroy(darktable.db);
+
+  dt_bauhaus_cleanup();
  
   dt_pthread_mutex_destroy(&(darktable.db_insert));
   dt_pthread_mutex_destroy(&(darktable.plugin_threadsafe));
@@ -761,4 +811,6 @@ void dt_configure_defaults()
   }
 }
 
+// modelines: These editor modelines have been set for all relevant files by tools/update_modelines.sh
+// vim: shiftwidth=2 expandtab tabstop=2 cindent
 // kate: tab-indents: off; indent-width 2; replace-tabs on; indent-mode cstyle; remove-trailing-space on;

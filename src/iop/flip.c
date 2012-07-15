@@ -32,6 +32,7 @@
 #include "control/conf.h"
 #include "common/debug.h"
 #include "common/imageio.h"
+#include "common/opencl.h"
 #include "dtgtk/label.h"
 #include "dtgtk/resetlabel.h"
 #include "dtgtk/button.h"
@@ -41,7 +42,6 @@
 #include "gui/presets.h"
 
 DT_MODULE(1)
-
 
 typedef struct dt_iop_flip_params_t
 {
@@ -54,6 +54,13 @@ typedef struct dt_iop_flip_data_t
   int32_t orientation;
 }
 dt_iop_flip_data_t;
+
+typedef struct dt_iop_flip_global_data_t
+{
+  int kernel_flip;
+}
+dt_iop_flip_global_data_t;
+
 
 // helper to count corners in for loops:
 static void get_corner(const int32_t *aabb, const int i, int32_t *p)
@@ -85,6 +92,12 @@ operation_tags ()
 {
   return IOP_TAG_DISTORT;
 }
+
+int flags()
+{
+  return IOP_FLAGS_ALLOW_TILING | IOP_FLAGS_TILING_FULL_ROI;
+}
+
 
 static void
 backtransform(const int32_t *x, int32_t *o, const int32_t orientation, int32_t iw, int32_t ih)
@@ -125,6 +138,8 @@ void modify_roi_out(struct dt_iop_module_t *self, struct dt_dev_pixelpipe_iop_t 
     roi_out->width  = roi_in->height;
     roi_out->height = roi_in->width;
   }
+
+  piece->pipe->iflipped = d->orientation & 4;
 }
 
 // 2nd pass: which roi would this operation need as input to fill the given output region?
@@ -153,6 +168,12 @@ void modify_roi_in(struct dt_iop_module_t *self, struct dt_dev_pixelpipe_iop_t *
   // to convert valid points to widths, we need to add one
   roi_in->width  = aabb_in[2]-aabb_in[0]+1;
   roi_in->height = aabb_in[3]-aabb_in[1]+1;
+
+  // sanity check.
+  roi_in->x = CLAMP(roi_in->x, 0, piece->pipe->iwidth);
+  roi_in->y = CLAMP(roi_in->y, 0, piece->pipe->iheight);
+  roi_in->width = CLAMP(roi_in->width, 1, piece->pipe->iwidth - roi_in->x);
+  roi_in->height = CLAMP(roi_in->height, 1, piece->pipe->iheight - roi_in->y);
 }
 
 // 3rd (final) pass: you get this input region (may be different from what was requested above),
@@ -166,6 +187,55 @@ void process (struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, void 
 
   dt_imageio_flip_buffers((char *)ovoid, (const char *)ivoid, bpp,
       roi_in->width, roi_in->height, roi_in->width, roi_in->height, stride, d->orientation);
+}
+
+
+
+#ifdef HAVE_OPENCL
+int
+process_cl (struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, cl_mem dev_in, cl_mem dev_out, const dt_iop_roi_t *roi_in, const dt_iop_roi_t *roi_out)
+{
+  dt_iop_flip_data_t *data = (dt_iop_flip_data_t *)piece->data;
+  dt_iop_flip_global_data_t *gd = (dt_iop_flip_global_data_t *)self->data;
+  cl_int err = -999;
+
+  const int devid = piece->pipe->devid;
+  const int width = roi_in->width;
+  const int height = roi_in->height;
+  const int orientation = data->orientation;
+
+  size_t sizes[] = { ROUNDUPWD(width), ROUNDUPWD(height), 1};
+
+  dt_opencl_set_kernel_arg(devid, gd->kernel_flip, 0, sizeof(cl_mem), (void *)&dev_in);
+  dt_opencl_set_kernel_arg(devid, gd->kernel_flip, 1, sizeof(cl_mem), (void *)&dev_out);
+  dt_opencl_set_kernel_arg(devid, gd->kernel_flip, 2, sizeof(int), (void *)&width);
+  dt_opencl_set_kernel_arg(devid, gd->kernel_flip, 3, sizeof(int), (void *)&height);
+  dt_opencl_set_kernel_arg(devid, gd->kernel_flip, 4, sizeof(int), (void *)&orientation); 
+  err = dt_opencl_enqueue_kernel_2d(devid, gd->kernel_flip, sizes);
+
+  if(err != CL_SUCCESS) goto error;
+  return TRUE;
+
+error:
+  dt_print(DT_DEBUG_OPENCL, "[opencl_flip] couldn't enqueue kernel! %d\n", err);
+  return FALSE;
+}
+#endif
+
+void init_global(dt_iop_module_so_t *module)
+{
+  const int program = 2; // basic.cl, from programs.conf
+  dt_iop_flip_global_data_t *gd = (dt_iop_flip_global_data_t *)malloc(sizeof(dt_iop_flip_global_data_t));
+  module->data = gd;
+  gd->kernel_flip = dt_opencl_create_kernel(program, "flip");
+}
+
+void cleanup_global(dt_iop_module_so_t *module)
+{
+  dt_iop_flip_global_data_t *gd = (dt_iop_flip_global_data_t *)module->data;
+  dt_opencl_free_kernel(gd->kernel_flip);
+  free(module->data);
+  module->data = NULL;
 }
 
 void commit_params (struct dt_iop_module_t *self, dt_iop_params_t *p1, dt_dev_pixelpipe_t *pipe, dt_dev_pixelpipe_iop_t *piece)
@@ -206,6 +276,7 @@ void init_presets (dt_iop_module_so_t *self)
 void reload_defaults(dt_iop_module_t *self)
 {
   dt_iop_flip_params_t tmp = (dt_iop_flip_params_t) { 0 };
+  self->default_enabled = 0;
   if(self->dev->image_storage.legacy_flip.user_flip != 0 &&
      self->dev->image_storage.legacy_flip.user_flip != 0xff)
   {
@@ -279,13 +350,13 @@ rotate_ccw(GtkWidget *widget, dt_iop_module_t *self)
   do_rotate(self, 0);
 }
 static gboolean
-rotate_cw_key(dt_iop_module_t *self)
+rotate_cw_key(GtkAccelGroup *accel_group, GObject *acceleratable, guint keyval, GdkModifierType modifier, dt_iop_module_t *self)
 {
   do_rotate(self, 1);
   return TRUE;
 }
 static gboolean
-rotate_ccw_key(dt_iop_module_t *self)
+rotate_ccw_key(GtkAccelGroup *accel_group, GObject *acceleratable, guint keyval, GdkModifierType modifier, dt_iop_module_t *self)
 {
   do_rotate(self, 0);
   return TRUE;
@@ -297,23 +368,21 @@ void gui_init(struct dt_iop_module_t *self)
   dt_iop_flip_params_t *p = (dt_iop_flip_params_t *)self->params;
 
   self->widget = gtk_hbox_new(TRUE, 5);
-  GtkWidget *hbox2 = gtk_hbox_new(TRUE, 5);
 
   GtkWidget *label = dtgtk_reset_label_new (_("rotate"), self, &p->orientation, sizeof(int32_t));
   gtk_box_pack_start(GTK_BOX(self->widget), label, TRUE, TRUE, 0);
 
-  GtkWidget *button = dtgtk_button_new(dtgtk_cairo_paint_refresh, 0);
+  GtkWidget *button = dtgtk_button_new(dtgtk_cairo_paint_refresh, CPF_STYLE_FLAT|CPF_DO_NOT_USE_BORDER);
   gtk_widget_set_size_request(button, -1, 24);
   g_object_set(G_OBJECT(button), "tooltip-text", _("rotate 90 degrees ccw"), (char *)NULL);
-  gtk_box_pack_start(GTK_BOX(hbox2), button, TRUE, TRUE, 0);
+  gtk_box_pack_start(GTK_BOX(self->widget), button, TRUE, TRUE, 0);
   g_signal_connect(G_OBJECT(button), "clicked", G_CALLBACK(rotate_ccw), (gpointer)self);
 
-  button = dtgtk_button_new(dtgtk_cairo_paint_refresh, 1);
+  button = dtgtk_button_new(dtgtk_cairo_paint_refresh, CPF_STYLE_FLAT|CPF_DO_NOT_USE_BORDER|1);
   gtk_widget_set_size_request(button, -1, 24);
   g_object_set(G_OBJECT(button), "tooltip-text", _("rotate 90 degrees cw"), (char *)NULL);
-  gtk_box_pack_start(GTK_BOX(hbox2), button, TRUE, TRUE, 0);
+  gtk_box_pack_start(GTK_BOX(self->widget), button, TRUE, TRUE, 0);
   g_signal_connect(G_OBJECT(button), "clicked", G_CALLBACK(rotate_cw), (gpointer)self);
-  gtk_box_pack_start(GTK_BOX(self->widget), hbox2, TRUE, TRUE, 0);
 }
 
 void gui_cleanup(struct dt_iop_module_t *self)
@@ -324,9 +393,9 @@ void gui_cleanup(struct dt_iop_module_t *self)
 void init_key_accels(dt_iop_module_so_t *self)
 {
   dt_accel_register_iop(self, TRUE, NC_("accel", "rotate 90 degrees ccw"),
-                        0, 0);
+                        GDK_bracketleft, 0);
   dt_accel_register_iop(self, TRUE, NC_("accel", "rotate 90 degrees cw"),
-                        0, 0);
+                        GDK_bracketright, 0);
 }
 
 void connect_key_accels(dt_iop_module_t *self)
@@ -340,4 +409,6 @@ void connect_key_accels(dt_iop_module_t *self)
   dt_accel_connect_iop(self, "rotate 90 degrees ccw", closure);
 }
 
+// modelines: These editor modelines have been set for all relevant files by tools/update_modelines.sh
+// vim: shiftwidth=2 expandtab tabstop=2 cindent
 // kate: tab-indents: off; indent-width 2; replace-tabs on; indent-mode cstyle; remove-trailing-space on;

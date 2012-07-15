@@ -100,7 +100,7 @@ void gui_init(dt_lib_module_t *self)
 
   self->widget = gtk_hbox_new(TRUE,2);
 
-  dtgtk_cairo_paint_flags_t pf = CPF_NONE;
+  dtgtk_cairo_paint_flags_t pf = CPF_STYLE_FLAT;
 
   /* favorites */
   d->buttons[DT_MODULEGROUP_FAVORITES] = dtgtk_togglebutton_new(dtgtk_cairo_paint_modulegroup_favorites, pf);
@@ -359,3 +359,6 @@ static uint32_t _lib_modulegroups_get (dt_lib_module_t *self)
 }
 
 #undef PADDING
+// modelines: These editor modelines have been set for all relevant files by tools/update_modelines.sh
+// vim: shiftwidth=2 expandtab tabstop=2 cindent
+// kate: tab-indents: off; indent-width 2; replace-tabs on; indent-mode cstyle; remove-trailing-space on;

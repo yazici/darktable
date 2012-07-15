@@ -481,9 +481,8 @@ borders_scrolled (GtkWidget *widget, GdkEventScroll *event, gpointer user_data)
   return TRUE;
 }
 
-void quit()
+void dt_gui_gtk_quit()
 {
-  // thread safe quit, 1st pass:
   GtkWindow *win = GTK_WINDOW(dt_ui_main_window(darktable.gui->ui));
   gtk_window_iconify(win);
 
@@ -497,13 +496,11 @@ void quit()
   widget = darktable.gui->widgets.bottom_border;
   g_signal_handlers_block_by_func (widget, expose_borders, (gpointer)3);
 
-  dt_pthread_mutex_lock(&darktable.control->cond_mutex);
-  dt_pthread_mutex_lock(&darktable.control->run_mutex);
-  darktable.control->running = 0;
-  dt_pthread_mutex_unlock(&darktable.control->run_mutex);
-  dt_pthread_mutex_unlock(&darktable.control->cond_mutex);
+}
 
-  gtk_widget_queue_draw(dt_ui_center(darktable.gui->ui));
+void quit()
+{
+  dt_control_quit();
 }
 
 static gboolean _gui_switch_view_key_accel_callback(GtkAccelGroup *accel_group,
@@ -548,7 +545,7 @@ static gboolean quit_callback(GtkAccelGroup *accel_group,
                           GObject *acceleratable, guint keyval,
                           GdkModifierType modifier)
 {
-  quit();
+  dt_control_quit();
   return TRUE; // for the sake of completeness ...
 }
 
@@ -581,23 +578,25 @@ configure (GtkWidget *da, GdkEventConfigure *event, gpointer user_data)
 static gboolean
 key_pressed_override (GtkWidget *w, GdkEventKey *event, gpointer user_data)
 {
-  // fprintf(stderr,"Key Press state: %d hwkey: %d\n",event->state, event->hardware_keycode);
-
-
-  return dt_control_key_pressed_override(event->keyval,
-                                         event->state & KEY_STATE_MASK);
+  return dt_control_key_pressed_override(
+      event->keyval,
+      event->state & KEY_STATE_MASK);
 }
 
 static gboolean
 key_pressed (GtkWidget *w, GdkEventKey *event, gpointer user_data)
 {
-  return dt_control_key_pressed(event->keyval, event->state & KEY_STATE_MASK);
+  return dt_control_key_pressed(
+      event->keyval,
+      event->state & KEY_STATE_MASK);
 }
 
 static gboolean
 key_released (GtkWidget *w, GdkEventKey *event, gpointer user_data)
 {
-  return dt_control_key_released(event->keyval, event->state & KEY_STATE_MASK);
+  return dt_control_key_released(
+      event->keyval,
+      event->state & KEY_STATE_MASK);
 }
 
 static gboolean
@@ -623,7 +622,7 @@ mouse_moved (GtkWidget *w, GdkEventMotion *event, gpointer user_data)
   dt_control_mouse_moved(event->x, event->y, event->state & 0xf);
   gint x, y;
   gdk_window_get_pointer(event->window, &x, &y, NULL);
-  return TRUE;
+  return FALSE;
 }
 
 static gboolean
@@ -644,14 +643,19 @@ int
 dt_gui_gtk_init(dt_gui_gtk_t *gui, int argc, char *argv[])
 {
   // unset gtk rc from kde:
-  char path[1024], datadir[1024];
-  dt_util_get_datadir(datadir, 1024);
-  gchar *themefile = dt_conf_get_string("themefile");
-  if(themefile && themefile[0] == '/') snprintf(path, 1023, "%s", themefile);
-  else snprintf(path, 1023, "%s/%s", datadir, themefile ? themefile : "darktable.gtkrc");
-  if(!g_file_test(path, G_FILE_TEST_EXISTS))
-    snprintf(path, 1023, "%s/%s", DARKTABLE_DATADIR, themefile ? themefile : "darktable.gtkrc");
-  (void)setenv("GTK2_RC_FILES", path, 1);
+  char gtkrc[PATH_MAX], path[PATH_MAX], datadir[PATH_MAX], configdir[PATH_MAX];
+  dt_loc_get_datadir(datadir, PATH_MAX);
+  dt_loc_get_user_config_dir(configdir, PATH_MAX);
+ 
+  g_snprintf(gtkrc, PATH_MAX, "%s/darktable.gtkrc", configdir);
+  
+  if (!g_file_test(gtkrc, G_FILE_TEST_EXISTS))
+    g_snprintf(gtkrc, PATH_MAX, "%s/darktable.gtkrc", datadir);
+   
+  if (g_file_test(gtkrc, G_FILE_TEST_EXISTS))
+    (void)setenv("GTK2_RC_FILES", gtkrc, 1);  
+  else
+    fprintf(stderr, "[gtk_init] could not found darktable.gtkrc");
 
   /* lets zero mem */
   memset(gui,0,sizeof(dt_gui_gtk_t));
@@ -673,14 +677,8 @@ dt_gui_gtk_init(dt_gui_gtk_t *gui, int argc, char *argv[])
   gui->center_tooltip = 0;
   gui->presets_popup_menu = NULL;
   
-  if(g_file_test(path, G_FILE_TEST_EXISTS)) gtk_rc_parse (path);
-  else
-  {
-    fprintf(stderr, "[gtk_init] could not find `%s' in . or %s!\n", themefile, datadir);
-    g_free(themefile);
-    return 1;
-  }
-  g_free(themefile);
+  if(g_file_test(gtkrc, G_FILE_TEST_EXISTS)) 
+    gtk_rc_parse (gtkrc);
 
   // Initializing the shortcut groups
   darktable.control->accelerators = gtk_accel_group_new();
@@ -712,8 +710,8 @@ dt_gui_gtk_init(dt_gui_gtk_t *gui, int argc, char *argv[])
   //  dt_gui_background_jobs_init();
 
   /* Have the delete event (window close) end the program */
-  dt_util_get_datadir(datadir, 1024);
-  snprintf(path, 1024, "%s/icons", datadir);
+  dt_loc_get_datadir(datadir, PATH_MAX);
+  snprintf(path, PATH_MAX, "%s/icons", datadir);
   gtk_icon_theme_append_search_path (gtk_icon_theme_get_default (), path);
 
   widget = dt_ui_center(darktable.gui->ui);
@@ -895,7 +893,7 @@ void init_widgets()
   gtk_window_set_title(GTK_WINDOW(widget), "Darktable");
 
   g_signal_connect (G_OBJECT (widget), "delete_event",
-                    G_CALLBACK (quit), NULL);
+                    G_CALLBACK (dt_control_quit), NULL);
   g_signal_connect (G_OBJECT (widget), "key-press-event",
                     G_CALLBACK (key_pressed_override), NULL);
   g_signal_connect (G_OBJECT (widget), "key-release-event",
@@ -1171,12 +1169,9 @@ void dt_ui_restore_panels(dt_ui_t *ui)
   uint32_t state = dt_conf_get_int(key);
   if (state)
   {
-    /* restore previous panel view states */
+    /* hide all panels */
     for (int k=0;k<DT_UI_PANEL_SIZE;k++)
-      dt_ui_panel_show(ui, k, (state>>k)&1);
-    
-    /* clear state */
-    dt_conf_set_int(key, 0);
+      dt_ui_panel_show(ui, k, FALSE);
   }
   else
   {
@@ -1425,4 +1420,6 @@ static void _ui_widget_redraw_callback(gpointer instance, GtkWidget *widget)
 
 }
 
+// modelines: These editor modelines have been set for all relevant files by tools/update_modelines.sh
+// vim: shiftwidth=2 expandtab tabstop=2 cindent
 // kate: tab-indents: off; indent-width 2; replace-tabs on; indent-mode cstyle; remove-trailing-space on;
