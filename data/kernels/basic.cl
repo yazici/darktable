@@ -1269,4 +1269,31 @@ lowlight (read_only image2d_t in, write_only image2d_t out, const int width, con
   write_imagef (out, (int2)(x, y), pixel);
 }
 
+/* kernel to copy a spot (for the spot removal plugin). */
+kernel void
+spots (read_only image2d_t in, read_only image2d_t in_b, write_only image2d_t out, const int2 src, const int2 dest, const int rad, 
+      const int2 size_in, const int2 size_out)
+{
+  const int x = get_global_id(0);
+  const int y = get_global_id(1);
 
+  //we have to be in the spot area
+  if(x < dest.x-rad || x> dest.x+rad || y < dest.y-rad || y> dest.y+rad) return;
+
+  //we verify that the source point is not outside the roi_in
+  if (src.x+x-dest.x <0 || src.y+y-dest.y < 0 || src.x+x-dest.x > size_in.x || src.y+y-dest.y > size_in.y) return;
+
+  //we verify that the point is inside roi_out
+  if (x >= size_out.x || y >= size_out.y) return;
+  
+  float4 pixel = read_imagef(in, sampleri, (int2)(src.x+x-dest.x, src.y+y-dest.y));
+  float4 pixel2 = read_imagef(in_b, sampleri, (int2)(x, y));
+  
+  float f = 1.0f - abs(x-dest.x)/(float)rad;
+  float f2 = 1.0f - abs(y-dest.y)/(float)rad;
+  f = f*f*(3.0f - 2.0f*f)*f2*f2*(3.0f - 2.0f*f2);
+  
+  pixel.xyz = pixel.xyz*f + pixel2.xyz*(1.0f-f);
+  
+  write_imagef (out, (int2)(x, y), pixel);
+}

@@ -19,6 +19,7 @@
 #include "config.h"
 #endif
 #include "develop/imageop.h"
+#include "common/opencl.h"
 #include "control/control.h"
 #include "control/conf.h"
 #include "gui/gtk.h"
@@ -73,6 +74,12 @@ typedef struct dt_iop_spots_gui_data_t
   uint64_t pipe_hash;
 }
 dt_iop_spots_gui_data_t;
+
+typedef struct dt_iop_spots_global_data_t
+{
+  int kernel_spots;
+}
+dt_iop_spots_global_data_t;
 
 typedef struct dt_iop_spots_params_t dt_iop_spots_data_t;
 
@@ -368,6 +375,66 @@ void process (struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, void 
   }
 }
 
+#ifdef HAVE_OPENCL
+int
+process_cl (struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, cl_mem dev_in, cl_mem dev_out, const dt_iop_roi_t *roi_in, const dt_iop_roi_t *roi_out)
+{
+  dt_iop_spots_data_t *d = (dt_iop_spots_data_t *)piece->data;
+  dt_iop_spots_global_data_t *gd = (dt_iop_spots_global_data_t *)self->data;
+
+  cl_int err = -999;
+  const int devid = piece->pipe->devid;
+
+  //We calcul full image width and height at scale of ROI
+  const int imw = CLAMP(piece->pipe->iwidth*roi_in->scale, 1, piece->pipe->iwidth);
+  const int imh = CLAMP(piece->pipe->iheight*roi_in->scale, 1, piece->pipe->iheight);
+  
+  //we copy the image as most of it not modified
+  size_t iorigin[] = { roi_out->x-roi_in->x, roi_out->y-roi_in->y, 0};
+  size_t oorigin[] = { 0, 0, 0};
+  size_t region[] = { roi_out->width, roi_out->height, 1};
+
+  // copy original input from dev_in -> dev_out as starting point
+  err = dt_opencl_enqueue_copy_image(devid, dev_in, dev_out, iorigin, oorigin, region);
+  if(err != CL_SUCCESS) goto error;
+      
+  // We iterate throught all spots
+  const int size_in[2] = {roi_in->width, roi_in->height};
+  const int size_out[2] = {roi_out->width, roi_out->height};
+  const int width = roi_out->width;
+  const int height = roi_out->height;
+  size_t sizes[2] = { ROUNDUPWD(width), ROUNDUPHT(height) };
+
+  for(int i=0; i<d->num_spots; i++)
+  {
+    // convert in full image space (at scale of ROI)
+    const int x = d->spot[i].x *imw-roi_out->x, y = d->spot[i].y *imh-roi_out->y;
+    const int xc = d->spot[i].xc*imw-roi_in->x, yc = d->spot[i].yc*imh-roi_in->y;
+    const int rad = d->spot[i].radius * MIN(piece->buf_in.width, piece->buf_in.height)*roi_in->scale;
+    
+    int src[2] = {xc,yc};
+    int dest[2] = {x,y};
+    dt_opencl_set_kernel_arg(devid, gd->kernel_spots, 0, sizeof(cl_mem), (void *)&dev_in);
+    dt_opencl_set_kernel_arg(devid, gd->kernel_spots, 1, sizeof(cl_mem), (void *)&dev_out);
+    dt_opencl_set_kernel_arg(devid, gd->kernel_spots, 2, sizeof(cl_mem), (void *)&dev_out);
+    dt_opencl_set_kernel_arg(devid, gd->kernel_spots, 3, 2*sizeof(int), (void *)&src);
+    dt_opencl_set_kernel_arg(devid, gd->kernel_spots, 4, 2*sizeof(int), (void *)&dest);
+    dt_opencl_set_kernel_arg(devid, gd->kernel_spots, 5, sizeof(int), (void *)&rad);
+    dt_opencl_set_kernel_arg(devid, gd->kernel_spots, 6, 2*sizeof(int), (void *)&size_in);
+    dt_opencl_set_kernel_arg(devid, gd->kernel_spots, 7, 2*sizeof(int), (void *)&size_out);    
+    err = dt_opencl_enqueue_kernel_2d(devid, gd->kernel_spots, sizes);
+  
+    if(err != CL_SUCCESS) goto error;
+  }
+
+  return TRUE;
+
+error:
+  dt_print(DT_DEBUG_OPENCL, "[opencl_spots] couldn't enqueue kernel! %d\n", err);
+  return FALSE;
+}
+#endif
+
 /** init, cleanup, commit to pipeline */
 void init(dt_iop_module_t *module)
 {
@@ -398,6 +465,22 @@ void cleanup(dt_iop_module_t *module)
   free(module->params);
   module->params = NULL;
   free(module->data); // just to be sure
+  module->data = NULL;
+}
+
+void init_global(dt_iop_module_so_t *module)
+{
+  const int program = 2; // basic.cl from programs.conf
+  dt_iop_spots_global_data_t *gd = (dt_iop_spots_global_data_t *)malloc(sizeof(dt_iop_spots_global_data_t));
+  module->data = gd;
+  gd->kernel_spots = dt_opencl_create_kernel(program, "spots");
+}
+
+void cleanup_global(dt_iop_module_so_t *module)
+{
+  dt_iop_spots_global_data_t *gd = (dt_iop_spots_global_data_t *)module->data;
+  dt_opencl_free_kernel(gd->kernel_spots);
+  free(module->data);
   module->data = NULL;
 }
 
