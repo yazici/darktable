@@ -127,9 +127,6 @@ static int dt_circle_events_mouse_scrolled(struct dt_iop_module_t *module, float
       {
         if(up && circle->border > 0.002f) circle->border *= 0.97f;
         else  if(circle->border < 1.0f  ) circle->border *= 1.0f/0.97f;
-        dt_masks_write_form(form,darktable.develop);
-        dt_masks_gui_form_remove(form,gui,index);
-        dt_masks_gui_form_create(form,gui,index);
         if (form->type & DT_MASKS_CLONE)
           dt_conf_set_float("plugins/darkroom/spots/circle_border", circle->border);
         else
@@ -139,9 +136,6 @@ static int dt_circle_events_mouse_scrolled(struct dt_iop_module_t *module, float
       {
         if(up && circle->radius > 0.002f) circle->radius *= 0.97f;
         else  if(circle->radius < 1.0f  ) circle->radius *= 1.0f/0.97f;
-        dt_masks_write_form(form,darktable.develop);
-        dt_masks_gui_form_remove(form,gui,index);
-        dt_masks_gui_form_create(form,gui,index);
         if (form->type & DT_MASKS_CLONE)
           dt_conf_set_float("plugins/darkroom/spots/circle_size", circle->radius);
         else
@@ -151,6 +145,10 @@ static int dt_circle_events_mouse_scrolled(struct dt_iop_module_t *module, float
       {
         return 0;
       }
+
+      dt_masks_write_form(form,darktable.develop);
+      dt_masks_gui_form_remove(form,gui,index);
+      dt_masks_gui_form_create(form,gui,index);
       dt_masks_update_image(darktable.develop);
     }
     return 1;
