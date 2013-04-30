@@ -110,7 +110,20 @@ static int dt_circle_events_mouse_scrolled(struct dt_iop_module_t *module, float
     else
     {
       dt_masks_point_circle_t *circle = (dt_masks_point_circle_t *) (g_list_first(form->points)->data);
-      if (gui->border_selected)
+      if ((state&GDK_SHIFT_MASK) == GDK_SHIFT_MASK)
+      {
+        if(up)
+        {
+          if (circle->strength==1.0) circle->strength=0.0;
+          else circle->strength = CLAMP(circle->strength+0.005f,0,1);
+        }
+        else
+        {
+          if (circle->strength==0.0) circle->strength=1.0;
+          else circle->strength = CLAMP(circle->strength-0.005f,0,1);
+        }
+      }
+      else if (gui->border_selected)
       {
         if(up && circle->border > 0.002f) circle->border *= 0.97f;
         else  if(circle->border < 1.0f  ) circle->border *= 1.0f/0.97f;
@@ -331,9 +344,9 @@ static int dt_circle_events_button_released(struct dt_iop_module_t *module,float
       float wd = darktable.develop->preview_pipe->backbuf_width;
       float ht = darktable.develop->preview_pipe->backbuf_height;
       float pts[2] = {pzx*wd+gui->dx,pzy*ht+gui->dy};
-      
+
       dt_dev_distort_backtransform(darktable.develop,pts,1);
-      
+
       form->source[0] = pts[0]/darktable.develop->preview_pipe->iwidth;
       form->source[1] = pts[1]/darktable.develop->preview_pipe->iheight;
     }
@@ -469,26 +482,37 @@ static void dt_circle_events_post_expose(cairo_t *cr,float zoom_scale,dt_masks_f
   {
     const float radius = fabs(gpt->points[3] - gpt->points[1]);
 
+    if (gui->group_selected == index)
+    {
+      const float angle = 2 * M_PI * gpt->strength - M_PI/2.0;
+      const float px = radius * cos (angle);
+      const float py = radius * sin (angle);
 
-    
+      cairo_set_source_rgba(cr, .9, .1, .1, .8);
+      cairo_arc(cr, gpt->points[0]+px+dx,gpt->points[1]+py+dy, 3/zoom_scale, 0, 3 * M_PI);
+      cairo_fill(cr);
+      cairo_stroke(cr);
+    }
+
+
     // compute the dest inner circle intersection with the line from source center to dest center.
     float cdx = gpt->source[0] + dxs - gpt->points[0] - dx;
     float cdy = gpt->source[1] + dys - gpt->points[1] - dy;
 
     //we don't draw the line if source==point
     if (cdx != 0.0 && cdy != 0.0)
-    { 
+    {
       cairo_set_line_cap(cr,CAIRO_LINE_CAP_ROUND);
       float cangle = atan(cdx / cdy);
-  
+
       if (cdy>0) cangle = (M_PI/2) - cangle;
       else cangle = -(M_PI/2) - cangle;
-  
+
       // (arrowx,arrowy) is the point of intersection, we move it (factor 1.11) a bit farther than the
       // inner circle to avoid superposition.
       float arrowx = gpt->points[0] + 1.11 * radius * cos (cangle) + dx;
       float arrowy = gpt->points[1] + 1.11 * radius * sin (cangle) + dy;
-  
+
       cairo_move_to(cr,gpt->source[0]+dxs,gpt->source[1]+dys); // source center
       cairo_line_to(cr,arrowx,arrowy); // dest border
       // then draw to line for the arrow itself
@@ -498,7 +522,7 @@ static void dt_circle_events_post_expose(cairo_t *cr,float zoom_scale,dt_masks_f
       cairo_line_to(cr,arrowx,arrowy);
       cairo_line_to(cr,arrowx + arrow_scale * cos (cangle-(0.4)),
                     arrowy + arrow_scale * sin (cangle-(0.4)));
-  
+
       cairo_set_dash(cr, dashed, 0, 0);
       if ((gui->group_selected == index) && (gui->form_selected || gui->form_dragging)) cairo_set_line_width(cr, 2.5/zoom_scale);
       else                                     cairo_set_line_width(cr, 1.5/zoom_scale);
@@ -509,7 +533,7 @@ static void dt_circle_events_post_expose(cairo_t *cr,float zoom_scale,dt_masks_f
       cairo_set_source_rgba(cr, .8, .8, .8, .8);
       cairo_stroke(cr);
     }
-    
+
     //we draw the source
     cairo_set_dash(cr, dashed, 0, 0);
     if ((gui->group_selected == index) && (gui->form_selected || gui->form_dragging)) cairo_set_line_width(cr, 2.5/zoom_scale);
@@ -698,7 +722,7 @@ static int dt_circle_get_mask(dt_iop_module_t *module, dt_dev_pixelpipe_iop_t *p
   //we allocate the buffer
   *buffer = malloc(w*h*sizeof(float));
   memset(*buffer,0,w*h*sizeof(float));
-  
+
   //we populate the buffer
   int wi = piece->pipe->iwidth, hi=piece->pipe->iheight;
   float center[2] = {circle->center[0]*wi, circle->center[1]*hi};

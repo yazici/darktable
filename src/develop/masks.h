@@ -70,6 +70,7 @@ typedef struct dt_masks_point_circle_t
   float center[2];
   float radius;
   float border;
+  float strength;
 }
 dt_masks_point_circle_t;
 
@@ -129,6 +130,7 @@ typedef struct dt_masks_form_gui_points_t
   int border_count;
   float *source;
   int source_count;
+  float strength;
   gboolean clockwise;
 }
 dt_masks_form_gui_points_t;
