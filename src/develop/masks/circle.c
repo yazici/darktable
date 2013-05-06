@@ -492,10 +492,9 @@ static void dt_circle_events_post_expose(cairo_t *cr,float zoom_scale,dt_masks_f
       cairo_stroke(cr);
     }
 
-
     // compute the dest inner circle intersection with the line from source center to dest center.
-    float cdx = gpt->source[0] + dxs - gpt->points[0] - dx;
-    float cdy = gpt->source[1] + dys - gpt->points[1] - dy;
+    const float cdx = gpt->source[0] + dxs - gpt->points[0] - dx;
+    const float cdy = gpt->source[1] + dys - gpt->points[1] - dy;
 
     //we don't draw the line if source==point
     if (cdx != 0.0 && cdy != 0.0)
