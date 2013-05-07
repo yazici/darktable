@@ -42,7 +42,8 @@ dt_iop_spots_params_t;
 typedef struct dt_iop_spots_gui_data_t
 {
   GtkLabel *label;
-  GtkWidget *bt_path, *bt_circle;
+  GtkWidget *bt_path, *bt_circle, *bt_mask;
+  int show_mask;
 }
 dt_iop_spots_gui_data_t;
 
@@ -149,6 +150,19 @@ static void _resynch_params(struct dt_iop_module_t *self)
     p->clone_algo[i] = nalgo[i];
     p->clone_id[i] = nid[i];
   }
+}
+
+static void _showmask_toggle(GtkToggleButton *togglebutton, dt_iop_module_t *self)
+{
+  dt_iop_spots_gui_data_t *g = (dt_iop_spots_gui_data_t *)self->gui_data;
+  if(darktable.gui->reset) return;
+
+  g->show_mask = gtk_toggle_button_get_active(togglebutton);
+  if (g->show_mask) gtk_toggle_button_set_active(togglebutton, 1);
+
+  dt_iop_request_focus(self);
+  dt_dev_reprocess_all(self->dev);
+  dt_control_queue_redraw_center();
 }
 
 static void _add_path(GtkWidget *widget, GdkEventButton *e, dt_iop_module_t *self)
@@ -275,6 +289,7 @@ float pts (float *values, int x, int y, int width, int height)
 
 void process (struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, void *i, void *o, const dt_iop_roi_t *roi_in, const dt_iop_roi_t *roi_out)
 {
+  dt_iop_spots_gui_data_t *g = (dt_iop_spots_gui_data_t *)self->gui_data;
   dt_iop_spots_params_t *d = (dt_iop_spots_params_t *)piece->data;
   dt_develop_blend_params_t *bp = self->blend_params;
 
@@ -586,10 +601,19 @@ void process (struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, void 
                   f = fm * fc;
               }
 
-              for(int c=0; c<ch; c++)
-                out[4*(roi_out->width*(yy-roi_out->y) + xx-roi_out->x) + c] =
-                  out[4*(roi_out->width*(yy-roi_out->y) + xx-roi_out->x) + c] * (1.0f-f) +
-                  in[4*(roi_in->width*(yy-dy-roi_in->y) + xx-dx-roi_in->x) + c] * f;
+              if (g && g->show_mask)
+              {
+                const int oidx = 4*(roi_out->width*(yy-roi_out->y) + xx-roi_out->x);
+                out[oidx]   = f + (1.0-f) * out[oidx];
+                out[oidx+1] = f + (1.0-f) * out[oidx+1];
+                out[oidx+2] = (1.0-f) * out[oidx+2];
+                out[oidx+3] = 1.0;
+              }
+              else
+                for(int c=0; c<ch; c++)
+                  out[4*(roi_out->width*(yy-roi_out->y) + xx-roi_out->x) + c] =
+                    out[4*(roi_out->width*(yy-roi_out->y) + xx-roi_out->x) + c] * (1.0f-f) +
+                    in[4*(roi_in->width*(yy-dy-roi_in->y) + xx-dx-roi_in->x) + c] * f;
             }
           }
           if (threshold > .0f)
@@ -695,6 +719,7 @@ void gui_update (dt_iop_module_t *self)
   }
   gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(g->bt_circle), b1);
   gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(g->bt_path), b2);
+  gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(g->bt_mask), g->show_mask);
 }
 
 void gui_init (dt_iop_module_t *self)
@@ -703,12 +728,21 @@ void gui_init (dt_iop_module_t *self)
   self->gui_data = malloc(sizeof(dt_iop_spots_gui_data_t));
   dt_iop_spots_gui_data_t *g = (dt_iop_spots_gui_data_t *)self->gui_data;
 
+  g->show_mask = 0;
+
   self->widget = gtk_vbox_new(FALSE, 5);
   GtkWidget * hbox = gtk_hbox_new(FALSE, 5);
   GtkWidget *label = gtk_label_new(_("number of strokes:"));
   gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, TRUE, 0);
   g->label = GTK_LABEL(gtk_label_new("-1"));
   g_object_set(G_OBJECT(hbox), "tooltip-text", _("click on a shape and drag on canvas.\nuse the mouse wheel to adjust size.\nright click to remove a shape."), (char *)NULL);
+
+  g->bt_mask = dtgtk_togglebutton_new(dtgtk_cairo_paint_showmask, CPF_STYLE_FLAT|CPF_DO_NOT_USE_BORDER);
+  g_signal_connect(G_OBJECT(g->bt_mask), "toggled", G_CALLBACK(_showmask_toggle), self);
+  g_object_set(G_OBJECT(g->bt_mask), "tooltip-text", _("show/hide mask"), (char *)NULL);
+  gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(g->bt_mask), FALSE);
+  gtk_widget_set_size_request(GTK_WIDGET(g->bt_mask),bs,bs);
+  gtk_box_pack_end (GTK_BOX (hbox),g->bt_mask,FALSE,FALSE,0);
 
   g->bt_path = dtgtk_togglebutton_new(dtgtk_cairo_paint_masks_path, CPF_STYLE_FLAT|CPF_DO_NOT_USE_BORDER);
   g_signal_connect(G_OBJECT(g->bt_path), "button-press-event", G_CALLBACK(_add_path), self);
