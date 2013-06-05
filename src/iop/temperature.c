@@ -31,7 +31,9 @@
 #include "common/opencl.h"
 #include "gui/accelerators.h"
 #include "gui/gtk.h"
+#ifdef HAVE_LIBRAW
 #include "libraw/libraw.h"
+#endif
 #include "iop/wb_presets.c"
 #include "bauhaus/bauhaus.h"
 
@@ -430,19 +432,22 @@ void reload_defaults(dt_iop_module_t *module)
   };
 
   // get white balance coefficients, as shot
-  char filename[DT_MAX_PATH_LEN];
-  int ret=0;
   /* check if file is raw / hdr */
   if(dt_image_is_raw(&module->dev->image_storage))
   {
+#ifdef HAVE_LIBRAW
+    char filename[DT_MAX_PATH_LEN];
+    int ret=0;
     dt_image_full_path(module->dev->image_storage.id, filename, DT_MAX_PATH_LEN);
     libraw_data_t *raw = libraw_init(0);
 
     ret = libraw_open_file(raw, filename);
     if(!ret)
     {
+#endif
       module->default_enabled = 1;
 
+#ifdef HAVE_LIBRAW
       for(int k=0; k<3; k++) tmp.coeffs[k] = raw->color.cam_mul[k];
       if(tmp.coeffs[0] <= 0.0)
       {
@@ -450,6 +455,7 @@ void reload_defaults(dt_iop_module_t *module)
       }
       if(tmp.coeffs[0] == 0 || tmp.coeffs[1] == 0 || tmp.coeffs[2] == 0)
       {
+#endif // TODO: read camera wb using exiv2 easy access!
         // could not get useful info, try presets:
         char makermodel[1024];
         char *model = makermodel;
@@ -473,6 +479,7 @@ void reload_defaults(dt_iop_module_t *module)
           tmp.coeffs[1] = 1.0f;
           tmp.coeffs[2] = 1.5f;
         }
+#ifdef HAVE_LIBRAW
       }
       else
       {
@@ -480,13 +487,20 @@ void reload_defaults(dt_iop_module_t *module)
         tmp.coeffs[2] /= tmp.coeffs[1];
         tmp.coeffs[1] = 1.0f;
       }
+#endif
       // remember daylight wb used for temperature/tint conversion,
       // assuming it corresponds to CIE daylight
       if(module->gui_data)
       {
         dt_iop_temperature_gui_data_t *g = (dt_iop_temperature_gui_data_t *)module->gui_data;
+#ifdef HAVE_LIBRAW
         for(int c = 0; c < 3; c++)
           g->daylight_wb[c] = raw->color.pre_mul[c];
+#else
+        g->daylight_wb[0] = 2.0f; // TODO: get from presets, as above!
+        g->daylight_wb[1] = 1.0f;
+        g->daylight_wb[2] = 1.5f;
+#endif
         float temp, tint, mul[3];
         for(int k=0; k<3; k++) mul[k] = g->daylight_wb[k]/tmp.coeffs[k];
         convert_rgb_to_k(mul, &temp, &tint);
@@ -494,8 +508,10 @@ void reload_defaults(dt_iop_module_t *module)
         dt_bauhaus_slider_set_default(g->scale_tint, tint);
       }
 
+#ifdef HAVE_LIBRAW
     }
     libraw_close(raw);
+#endif
   }
 
   memcpy(module->params, &tmp, sizeof(dt_iop_temperature_params_t));

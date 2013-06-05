@@ -25,7 +25,9 @@
 #include "common/imageio.h"
 #include "common/imageio_jpeg.h"
 #include "common/dt_logo_128x128.h"
+#ifdef HAVE_LIBRAW
 #include "libraw/libraw.h"
+#endif
 #include "control/control.h"
 #include "control/conf.h"
 #include "control/jobs/camera_jobs.h"
@@ -582,6 +584,7 @@ static void _lib_import_update_preview(GtkFileChooser *file_chooser, gpointer da
   have_preview = (pixbuf != NULL);
   if(!have_preview)
   {
+#ifdef HAVE_LIBRAW // TODO: else use exiv2 instead
     // raw image thumbnail
     int ret;
     libraw_data_t *raw = libraw_init(0);
@@ -632,6 +635,7 @@ libraw_fail:
       libraw_close(raw);
       have_preview = FALSE;
     }
+#endif
   }
   if(!have_preview)
   {

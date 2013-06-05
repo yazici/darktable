@@ -46,7 +46,9 @@
 #include "develop/imageop.h"
 #include "develop/blend.h"
 #include "iop/colorout.h"
+#ifdef HAVE_LIBRAW
 #include "libraw/libraw.h"
+#endif
 
 #include <inttypes.h>
 #include <stdio.h>
@@ -58,6 +60,7 @@
 #include <strings.h>
 #include <glib/gstdio.h>
 
+#ifdef HAVE_LIBRAW
 // =================================================
 //   begin libraw wrapper functions:
 // =================================================
@@ -71,6 +74,7 @@
     return DT_IMAGEIO_FILE_CORRUPTED;                                   \
   }                                                       \
 }
+#endif
 
 void
 dt_imageio_flip_buffers(char *out, const char *in, const size_t bpp, const int wd, const int ht, const int fwd, const int fht, const int stride, const int orientation)
@@ -248,6 +252,7 @@ return_label:
   return ret;
 }
 
+#ifdef HAVE_LIBRAW
 // open a raw file, libraw path:
 dt_imageio_retval_t
 dt_imageio_open_raw(
@@ -358,6 +363,7 @@ dt_imageio_open_raw(
   }
   return DT_IMAGEIO_OK;
 }
+#endif
 
 /* magic data: exclusion,offset,length, xx, yy, ...
     just add magic bytes to match to this struct
@@ -820,8 +826,10 @@ dt_imageio_open(
     ret = dt_imageio_open_rawspeed(img, filename, a);
 #endif
 
+#ifdef HAVE_LIBRAW
   if(ret != DT_IMAGEIO_OK && ret != DT_IMAGEIO_CACHE_FULL)
     ret = dt_imageio_open_raw(img, filename, a);
+#endif
 
 #ifdef HAVE_GRAPHICSMAGICK
   if(ret != DT_IMAGEIO_OK && ret != DT_IMAGEIO_CACHE_FULL)

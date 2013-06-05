@@ -21,7 +21,9 @@
 #endif
 #include "common/camera_control.h"
 #include "control/control.h"
+#ifdef HAVE_LIBRAW
 #include "libraw/libraw.h"
+#endif
 #include <gphoto2/gphoto2-file.h>
 
 #include <unistd.h>
@@ -873,6 +875,7 @@ int _camctl_recursive_get_previews(const dt_camctl_t *c,dt_camera_preview_flags_
                 dt_print(DT_DEBUG_CAMCTL,"[camera_control] failed to retreive preview of file %s\n",filename);
               }
             }
+#ifdef HAVE_LIBRAW // TODO: use exiv2 instead if not
             else if (!strncmp(c->active_camera->port, "disk:", 5))
             {
               int ret;
@@ -896,6 +899,7 @@ int _camctl_recursive_get_previews(const dt_camctl_t *c,dt_camera_preview_flags_
 libraw_thumb_fail:
               libraw_close(raw);
             }
+#endif
           }
         }
 
