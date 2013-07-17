@@ -53,6 +53,7 @@ static int import_images(lua_State *L)
       free(full_name);
       return luaL_error(L,"error while importing");
     }
+    lua_newtable(L); //tmp : empty table when importing a directory
   }
   else
   {
@@ -76,9 +77,12 @@ static int import_images(lua_State *L)
       free(full_name);
       return luaL_error(L,"error while importing");
     }
+    lua_newtable(L);
+    luaA_push(L,dt_lua_image_t,&result);
+    luaL_ref(L,-2);
   }
   free(full_name);
-  return 0;
+  return 1;
 }
 
 static int database_len(lua_State*L)
