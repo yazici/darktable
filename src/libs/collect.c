@@ -47,7 +47,6 @@ typedef struct dt_lib_collect_rule_t
   GtkWidget *text;
   GtkWidget *button;
   gboolean typing;
-  int nb_match;
 }
 dt_lib_collect_rule_t;
 
@@ -61,9 +60,6 @@ typedef struct dt_lib_collect_t
   gboolean tree_new;
   GtkTreeModel *listmodel;
   GtkScrolledWindow *scrolledwindow;
-
-  GtkBox *box;
-  GtkScrolledWindow *sw2;
 
   struct dt_lib_collect_params_t *params;
 }
@@ -86,8 +82,6 @@ typedef enum dt_lib_collect_cols_t
   DT_LIB_COLLECT_COL_ID,
   DT_LIB_COLLECT_COL_TOOLTIP,
   DT_LIB_COLLECT_COL_PATH,
-  DT_LIB_COLLECT_COL_COUNT,
-  DT_LIB_COLLECT_COL_VISIBLE,
   DT_LIB_COLLECT_COL_STRIKETROUGTH,
   DT_LIB_COLLECT_NUM_COLS
 }
@@ -446,32 +440,6 @@ view_onPopupMenu (GtkWidget *treeview, gpointer userdata)
   return TRUE; /* we handled this */
 }
 
-static int
-_count_images(const char *path)
-{
-  // FIXME: this function is a major performance problem
-  //        if many folders are counted. until it's cached somehow, it's switched off:
-  return 0;
-#if 0
-  sqlite3_stmt *stmt = NULL;
-  gchar query[1024] = {0};
-  int count = 0;
-
-  gchar *escaped_text = NULL;
-  escaped_text = dt_util_str_replace(path, "'", "''");
-
-  snprintf (query, sizeof(query), "select count(id) from images where film_id in (select id from film_rolls where folder like '%s%%')", escaped_text);
-  DT_DEBUG_SQLITE3_PREPARE_V2(dt_database_get(darktable.db), query, -1, &stmt, NULL);
-  if (sqlite3_step(stmt) == SQLITE_ROW)
-    count = sqlite3_column_int(stmt, 0);
-  sqlite3_finalize(stmt);
-
-  g_free(escaped_text);
-
-  return count;
-#endif
-}
-
 static dt_lib_collect_t*
 get_collect (dt_lib_collect_rule_t *r)
 {
@@ -651,12 +619,9 @@ static void folders_view (dt_lib_collect_rule_t *dr)
           if(level == max_level) pth2[strlen(pth2)-1] = '\0';
           else pth2 = dt_util_dstrcat(pth2, "%%");
           
-          int count = _count_images(pth2);
           gtk_tree_store_insert(GTK_TREE_STORE(d->treemodel), &iter, level>0?&current:NULL,0);
           gtk_tree_store_set(GTK_TREE_STORE(d->treemodel), &iter, DT_LIB_COLLECT_COL_TEXT, pch[j],
                             DT_LIB_COLLECT_COL_PATH, pth2,
-                            DT_LIB_COLLECT_COL_COUNT, count,
-                            DT_LIB_COLLECT_COL_VISIBLE, 1,
                             DT_LIB_COLLECT_COL_STRIKETROUGTH, !(g_file_test(pth3, G_FILE_TEST_IS_DIR)), -1);
           current = iter;
         }
@@ -676,7 +641,7 @@ static void folders_view (dt_lib_collect_rule_t *dr)
   gtk_widget_set_no_show_all(GTK_WIDGET(d->scrolledwindow), FALSE);
   gtk_widget_show_all(GTK_WIDGET(d->scrolledwindow));
 
-  // TODO : we have to expand and select a row, if needed
+  // we have to expand and select a row, if needed
   update_selection(dr);
   
   g_object_unref(d->treemodel);
@@ -700,7 +665,6 @@ static void tags_view (dt_lib_collect_rule_t *dr)
   gtk_tree_view_set_model(GTK_TREE_VIEW(view), NULL);
   gtk_tree_store_clear(GTK_TREE_STORE(tagsmodel));
   gtk_widget_hide(GTK_WIDGET(d->scrolledwindow));
-  gtk_widget_hide(GTK_WIDGET(d->sw2));
 
   set_properties (dr);
 
@@ -708,9 +672,7 @@ static void tags_view (dt_lib_collect_rule_t *dr)
   char query[1024];
   const gchar *text = NULL;
   text = gtk_entry_get_text(GTK_ENTRY(dr->text));
-  gchar *escaped_text = NULL;
-  escaped_text = dt_util_str_replace(text, "'", "''");
-  snprintf(query, sizeof(query), "SELECT distinct name, id, name LIKE '%%%s%%' FROM tags ORDER BY UPPER(name) DESC", escaped_text);
+  snprintf(query, sizeof(query), "SELECT distinct name, id FROM tags ORDER BY UPPER(name) DESC");
 
   DT_DEBUG_SQLITE3_PREPARE_V2(dt_database_get(darktable.db), query, -1, &stmt, NULL);
 
@@ -723,14 +685,13 @@ static void tags_view (dt_lib_collect_rule_t *dr)
       {
         gtk_tree_store_insert(GTK_TREE_STORE(tagsmodel), &uncategorized, NULL,0);
         gtk_tree_store_set(GTK_TREE_STORE(tagsmodel), &uncategorized, DT_LIB_COLLECT_COL_TEXT, _(UNCATEGORIZED_TAG),
-                           DT_LIB_COLLECT_COL_PATH, "", DT_LIB_COLLECT_COL_VISIBLE, FALSE, -1);
+                           DT_LIB_COLLECT_COL_PATH, "", -1);
       }
 
       /* adding an uncategorized tag */
       gtk_tree_store_insert(GTK_TREE_STORE(tagsmodel), &temp, &uncategorized,0);
       gtk_tree_store_set(GTK_TREE_STORE(tagsmodel), &temp, DT_LIB_COLLECT_COL_TEXT, sqlite3_column_text(stmt, 0),
-                         DT_LIB_COLLECT_COL_PATH, sqlite3_column_text(stmt, 0),
-                         DT_LIB_COLLECT_COL_VISIBLE, sqlite3_column_int(stmt, 2), -1);
+                         DT_LIB_COLLECT_COL_PATH, sqlite3_column_text(stmt, 0), -1);
     }
     else
     {
@@ -783,12 +744,9 @@ static void tags_view (dt_lib_collect_rule_t *dr)
             if(level == max_level) pth2[strlen(pth2)-1] = '\0';
             else pth2 = dt_util_dstrcat(pth2, "%%");
 
-            int count = _count_images(pth2);
             gtk_tree_store_insert(GTK_TREE_STORE(tagsmodel), &iter, level>0?&current:NULL,0);
             gtk_tree_store_set(GTK_TREE_STORE(tagsmodel), &iter, DT_LIB_COLLECT_COL_TEXT, pch[j],
-                              DT_LIB_COLLECT_COL_PATH, pth2,
-                              DT_LIB_COLLECT_COL_COUNT, count,
-                              DT_LIB_COLLECT_COL_VISIBLE, sqlite3_column_int(stmt, 2), -1);
+                              DT_LIB_COLLECT_COL_PATH, pth2, -1);
             current = iter;
           }
 
@@ -839,7 +797,6 @@ list_view (dt_lib_collect_rule_t *dr)
   gtk_tree_view_set_model(GTK_TREE_VIEW(view), NULL);
   gtk_list_store_clear(GTK_LIST_STORE(listmodel));
   gtk_widget_hide(GTK_WIDGET(d->scrolledwindow));
-  gtk_widget_hide(GTK_WIDGET(d->sw2));
 
   set_properties (dr);
 
@@ -1127,7 +1084,6 @@ _lib_collect_gui_update (dt_lib_module_t *self)
   
   
   gtk_widget_set_no_show_all(GTK_WIDGET(d->scrolledwindow), TRUE);
-  gtk_widget_set_no_show_all(GTK_WIDGET(d->sw2), TRUE);
 
   for(int i=0; i<MAX_RULES; i++)
   {
@@ -1577,24 +1533,12 @@ gui_init (dt_lib_module_t *self)
   g_object_set(renderer, "strikethrough", TRUE, NULL);
   gtk_tree_view_column_add_attribute(col, renderer, "strikethrough-set", DT_LIB_COLLECT_COL_STRIKETROUGTH);
 
-  GtkTreeModel *listmodel = GTK_TREE_MODEL(gtk_list_store_new(DT_LIB_COLLECT_NUM_COLS, G_TYPE_STRING, G_TYPE_UINT, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_UINT, G_TYPE_BOOLEAN, G_TYPE_BOOLEAN));
+  GtkTreeModel *listmodel = GTK_TREE_MODEL(gtk_list_store_new(DT_LIB_COLLECT_NUM_COLS, G_TYPE_STRING, G_TYPE_UINT, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_BOOLEAN));
   d->listmodel = listmodel;
-  GtkTreeModel *treemodel = GTK_TREE_MODEL(gtk_tree_store_new(DT_LIB_COLLECT_NUM_COLS, G_TYPE_STRING, G_TYPE_UINT, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_INT, G_TYPE_BOOLEAN, G_TYPE_BOOLEAN));
+  GtkTreeModel *treemodel = GTK_TREE_MODEL(gtk_tree_store_new(DT_LIB_COLLECT_NUM_COLS, G_TYPE_STRING, G_TYPE_UINT, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_BOOLEAN));
   d->treemodel = treemodel;
   
   gtk_box_pack_start(GTK_BOX(self->widget), GTK_WIDGET(sw), TRUE, TRUE, 0);
-
-
-  GtkWidget *vbox = gtk_vbox_new(FALSE, 5);
-  d->box = GTK_BOX(vbox);
-
-  GtkWidget *sw2 = gtk_scrolled_window_new(NULL, NULL);
-  d->sw2 = GTK_SCROLLED_WINDOW (sw2);
-  gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(sw2), GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
-  gtk_scrolled_window_add_with_viewport(GTK_SCROLLED_WINDOW(sw2), GTK_WIDGET(d->box));
-  gtk_widget_set_size_request(GTK_WIDGET(sw2), -1, DT_PIXEL_APPLY_DPI(300));
-
-  gtk_box_pack_start(GTK_BOX(self->widget), GTK_WIDGET(sw2), TRUE, TRUE, 0);
 
   /* setup proxy */
   darktable.view_manager->proxy.module_collect.module = self;
