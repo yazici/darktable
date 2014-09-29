@@ -523,14 +523,11 @@ get_query_string(const dt_collection_properties_t property, const gchar *escaped
   switch(property)
   {
     case DT_COLLECTION_PROP_FILMROLL: // film roll
-      if (!(escaped_text && *escaped_text))
-        snprintf(query, query_len, "(film_id in (select id from film_rolls where folder like '%s%%'))", escaped_text);
-      else
-        snprintf(query, query_len, "(film_id in (select id from film_rolls where folder like '%s'))", escaped_text);
+      snprintf(query, query_len, "(film_id in (select id from film_rolls where folder like '%s'))", escaped_text);
       break;
 
     case DT_COLLECTION_PROP_FOLDERS: // folders
-      snprintf(query, query_len, "(film_id in (select id from film_rolls where folder like '%s%%'))", escaped_text);
+      snprintf(query, query_len, "(film_id in (select id from film_rolls where folder like '%s'))", escaped_text);
       break;
 
     case DT_COLLECTION_PROP_COLORLABEL: // colorlabel
@@ -568,27 +565,27 @@ get_query_string(const dt_collection_properties_t property, const gchar *escaped
       // TODO: How to handle images without metadata? In the moment they are not shown.
       // TODO: Autogenerate this code?
     case DT_COLLECTION_PROP_TITLE: // title
-      snprintf(query, query_len, "(id in (select id from meta_data where key = %d and value like '%%%s%%'))",
+      snprintf(query, query_len, "(id in (select id from meta_data where key = %d and value like '%s'))",
                DT_METADATA_XMP_DC_TITLE, escaped_text);
       break;
     case DT_COLLECTION_PROP_DESCRIPTION: // description
-      snprintf(query, query_len, "(id in (select id from meta_data where key = %d and value like '%%%s%%'))",
+      snprintf(query, query_len, "(id in (select id from meta_data where key = %d and value like '%s'))",
                DT_METADATA_XMP_DC_DESCRIPTION, escaped_text);
       break;
     case DT_COLLECTION_PROP_CREATOR: // creator
-      snprintf(query, query_len, "(id in (select id from meta_data where key = %d and value like '%%%s%%'))",
+      snprintf(query, query_len, "(id in (select id from meta_data where key = %d and value like '%s'))",
                DT_METADATA_XMP_DC_CREATOR, escaped_text);
       break;
     case DT_COLLECTION_PROP_PUBLISHER: // publisher
-      snprintf(query, query_len, "(id in (select id from meta_data where key = %d and value like '%%%s%%'))",
+      snprintf(query, query_len, "(id in (select id from meta_data where key = %d and value like '%s'))",
                DT_METADATA_XMP_DC_PUBLISHER, escaped_text);
       break;
     case DT_COLLECTION_PROP_RIGHTS: // rights
-      snprintf(query, query_len, "(id in (select id from meta_data where key = %d and value like '%%%s%%'))",
+      snprintf(query, query_len, "(id in (select id from meta_data where key = %d and value like '%s'))",
                DT_METADATA_XMP_DC_RIGHTS, escaped_text);
       break;
     case DT_COLLECTION_PROP_LENS: // lens
-      snprintf(query, query_len, "(lens like '%%%s%%')", escaped_text);
+      snprintf(query, query_len, "(lens like '%s')", escaped_text);
       break;
     case DT_COLLECTION_PROP_ISO: // iso
     {
@@ -600,7 +597,7 @@ get_query_string(const dt_collection_properties_t property, const gchar *escaped
       else if(number)
         snprintf(query, query_len, "(iso = %s)", number);
       else
-        snprintf(query, query_len, "(iso like '%%%s%%')", escaped_text);
+        snprintf(query, query_len, "(iso like '%s')", escaped_text);
 
       g_free(operator);
       g_free(number);
@@ -617,7 +614,7 @@ get_query_string(const dt_collection_properties_t property, const gchar *escaped
       else if(number)
         snprintf(query, query_len, "(aperture = %s)", number);
       else
-        snprintf(query, query_len, "(aperture like '%%%s%%')", escaped_text);
+        snprintf(query, query_len, "(aperture like '%s')", escaped_text);
 
       g_free(operator);
       g_free(number);
@@ -625,11 +622,11 @@ get_query_string(const dt_collection_properties_t property, const gchar *escaped
     break;
 
     case DT_COLLECTION_PROP_FILENAME: // filename
-      snprintf(query, query_len, "(filename like '%%%s%%')", escaped_text);
+      snprintf(query, query_len, "(filename like '%s')", escaped_text);
       break;
 
     default: // day or time
-      snprintf(query, query_len, "(datetime_taken like '%%%s%%')", escaped_text);
+      snprintf(query, query_len, "(datetime_taken like '%s')", escaped_text);
       break;
   }
 }
