@@ -58,6 +58,7 @@ typedef struct dt_lib_collect_t
   GtkTreeModel *treemodel;
   GtkTreeModel *listmodel;
   GtkScrolledWindow *scrolledwindow;
+  gboolean update_query_on_sel_change;
 
   struct dt_lib_collect_params_t *params;
 }
@@ -97,7 +98,7 @@ void init_presets(dt_lib_module_t *self)
 {
 }
 
-static void row_activated (GtkTreeView *view, GtkTreePath *path, GtkTreeViewColumn *col, dt_lib_collect_t *d);
+static void selection_change (GtkTreeSelection *selection, dt_lib_collect_t *d);
 static void update_selection (dt_lib_collect_rule_t *dr, gboolean exact);
 static void entry_changed (GtkEditable *editable, dt_lib_collect_rule_t *d);
 
@@ -711,8 +712,10 @@ update_selection (dt_lib_collect_rule_t *dr, gboolean exact)
   GtkTreeModel *model = gtk_tree_view_get_model(d->view);
   
   // we deselect and collapse everything
+  d->update_query_on_sel_change = FALSE;
   gtk_tree_selection_unselect_all(gtk_tree_view_get_selection(d->view));
   gtk_tree_view_collapse_all(d->view);
+  d->update_query_on_sel_change = TRUE;
   
   // we crawl throught the tree to find what we want
   if (exact) gtk_tree_model_foreach (model, (GtkTreeModelForeachFunc)match_string_exact, dr);
@@ -722,6 +725,8 @@ update_selection (dt_lib_collect_rule_t *dr, gboolean exact)
 static void
 update_view (dt_lib_collect_rule_t *dr)
 {
+  dt_lib_collect_t *d = get_collect(dr);
+  d->update_query_on_sel_change = FALSE;
   int property = gtk_combo_box_get_active(dr->combo);
 
   if (property == DT_COLLECTION_PROP_FOLDERS)
@@ -730,6 +735,7 @@ update_view (dt_lib_collect_rule_t *dr)
     tags_view(dr);
   else
     list_view(dr);
+  d->update_query_on_sel_change = TRUE;
 }
 
 static gboolean
@@ -862,12 +868,13 @@ combo_changed (GtkComboBox *combo, dt_lib_collect_rule_t *d)
 }
 
 static void
-row_activated (GtkTreeView *view, GtkTreePath *path, GtkTreeViewColumn *col, dt_lib_collect_t *d)
+selection_change (GtkTreeSelection *selection, dt_lib_collect_t *d)
 {
+  if (!d->update_query_on_sel_change) return;
+  
   GtkTreeIter iter;
   GtkTreeModel *model = NULL;
 
-  GtkTreeSelection *selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(view));
   if(!gtk_tree_selection_get_selected(selection, &model, &iter)) return;
   gchar *text;
 
@@ -1174,6 +1181,7 @@ gui_init (dt_lib_module_t *self)
   self->widget = gtk_vbox_new(FALSE, 5);
   d->active_rule = 0;
   d->params = (dt_lib_collect_params_t*)malloc(sizeof(dt_lib_collect_params_t));
+  d->update_query_on_sel_change = TRUE;
 
   GtkBox *box;
   GtkWidget *w;
@@ -1218,7 +1226,8 @@ gui_init (dt_lib_module_t *self)
   gtk_tree_view_set_headers_visible(view, FALSE);
   gtk_widget_set_size_request(GTK_WIDGET(view), -1, DT_PIXEL_APPLY_DPI(300));
   gtk_container_add(GTK_CONTAINER(sw), GTK_WIDGET(view));
-  g_signal_connect(G_OBJECT (view), "row-activated", G_CALLBACK (row_activated), d);
+  GtkTreeSelection *selection = gtk_tree_view_get_selection(d->view);
+  g_signal_connect(selection, "changed", G_CALLBACK(selection_change), d);
 
   GtkTreeViewColumn *col = gtk_tree_view_column_new();
   gtk_tree_view_append_column(view, col);
