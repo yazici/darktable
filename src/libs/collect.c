@@ -56,7 +56,6 @@ typedef struct dt_lib_collect_t
 
   GtkTreeView *view;
   GtkTreeModel *treemodel;
-  gboolean tree_new;
   GtkTreeModel *listmodel;
   GtkScrolledWindow *scrolledwindow;
 
@@ -85,16 +84,6 @@ typedef enum dt_lib_collect_cols_t
   DT_LIB_COLLECT_NUM_COLS
 }
 dt_lib_collect_cols_t;
-
-typedef struct _image_t
-{
-  int id;
-  int filmid;
-  gchar *path;
-  gchar *filename;
-  int exists;
-}
-_image_t;
 
 static void _lib_collect_gui_update (dt_lib_module_t *self);
 
@@ -1304,7 +1293,6 @@ gui_init (dt_lib_module_t *self)
   darktable.view_manager->proxy.module_collect.update = _lib_collect_gui_update;
 
   // TODO: This should be done in a more generic place, not gui_init
-  d->tree_new = TRUE;
   _lib_collect_gui_update(self);
 
   dt_control_signal_connect(darktable.signals,
