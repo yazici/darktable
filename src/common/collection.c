@@ -523,7 +523,10 @@ get_query_string(const dt_collection_properties_t property, const gchar *escaped
   switch(property)
   {
     case DT_COLLECTION_PROP_FILMROLL: // film roll
-      snprintf(query, query_len, "(film_id in (select id from film_rolls where folder like '%s'))", escaped_text);
+      if (!(escaped_text && *escaped_text))
+        snprintf(query, query_len, "(film_id in (select id from film_rolls where folder like '%s%%'))", escaped_text);
+      else
+        snprintf(query, query_len, "(film_id in (select id from film_rolls where folder like '%s'))", escaped_text);
       break;
 
     case DT_COLLECTION_PROP_FOLDERS: // folders

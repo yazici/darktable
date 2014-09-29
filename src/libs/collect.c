@@ -683,9 +683,6 @@ list_view (dt_lib_collect_rule_t *dr)
     gchar *val_wild = NULL;
     switch(property)
     {
-      case DT_COLLECTION_PROP_FILMROLL:
-        val_wild = dt_util_dstrcat(val_wild,"%s%%",value);
-        break;
       case DT_COLLECTION_PROP_CAMERA:
       case DT_COLLECTION_PROP_FILENAME:
       case DT_COLLECTION_PROP_TITLE:
