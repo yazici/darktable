@@ -618,7 +618,7 @@ get_query_string(const dt_collection_properties_t property, const gchar *escaped
       break;
 
     case DT_COLLECTION_PROP_CAMERA: // camera
-      snprintf(query, query_len, "(maker || ' ' || model like '%%%s%%')", escaped_text);
+      snprintf(query, query_len, "(maker || ' ' || model like '%s')", escaped_text);
       break;
     case DT_COLLECTION_PROP_TAG: // tag
       snprintf(query, query_len, "(id in (select imgid from tagged_images as a join "

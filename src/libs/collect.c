@@ -695,15 +695,7 @@ list_view (dt_lib_collect_rule_t *dr)
         break;
       case DT_COLLECTION_PROP_DAY:
       case DT_COLLECTION_PROP_TIME:
-      {
-        gchar *operator, *number, *number2;
-        dt_collection_split_operator_datetime(escaped_text, &number, &number2, &operator);
-        if(!operator && !number) val_wild = dt_util_dstrcat(val_wild,"%%%s%%",value);
-        else val_wild = dt_util_dstrcat(val_wild,"%s",value);
-        g_free(operator);
-        g_free(number);
-        g_free(number2);
-      }  
+        val_wild = dt_util_dstrcat(val_wild,"%s%%",value);
         break;
       case DT_COLLECTION_PROP_ISO:
       case DT_COLLECTION_PROP_APERTURE:
@@ -721,7 +713,6 @@ list_view (dt_lib_collect_rule_t *dr)
         val_wild = dt_util_dstrcat(val_wild,"%s",value);
         break;
     }
-    
 
     gtk_list_store_set (GTK_LIST_STORE(listmodel), &iter,
                         DT_LIB_COLLECT_COL_TEXT, folder,
