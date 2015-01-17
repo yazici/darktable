@@ -532,6 +532,16 @@ int dt_imageio_export_with_flags(const uint32_t imgid, const char *filename,
   dt_dev_pixelpipe_t pipe;
   res = thumbnail_export ? dt_dev_pixelpipe_init_thumbnail(&pipe, wd, ht)
                          : dt_dev_pixelpipe_init_export(&pipe, wd, ht, format->levels(format_params));
+
+  // we check if we need ultra-high quality thumbnail for this size
+  if (thumbnail_export)
+  {
+    int uhq_w = dt_conf_get_int("plugins/lighttable/thumbnail_hq_width");
+    int uhq_h = dt_conf_get_int("plugins/lighttable/thumbnail_hq_height");
+    if(uhq_w >= 0 && uhq_h >= 0 && (format_params->max_width >= uhq_w || format_params->max_height >= uhq_h))
+      pipe.type = DT_DEV_PIXELPIPE_FULL;
+  }
+
   if(!res)
   {
     dt_control_log(
