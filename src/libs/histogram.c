@@ -313,7 +313,7 @@ static gboolean _lib_histogram_draw_callback(GtkWidget *widget, cairo_t *crf, gp
   cairo_rectangle(cr, 0, 0, width, height);
   cairo_clip(cr);
 
-  cairo_set_source_rgb(cr, .3, .3, .3);
+  cairo_set_source_rgb(cr, .0, .0, .0);
   cairo_rectangle(cr, 0, 0, width, height);
   cairo_fill(cr);
   if(d->highlight == 1)
@@ -328,14 +328,6 @@ static gboolean _lib_histogram_draw_callback(GtkWidget *widget, cairo_t *crf, gp
     cairo_rectangle(cr, 0.2 * width, 0, width, height);
     cairo_fill(cr);
   }
-
-  // draw grid
-  cairo_set_line_width(cr, .4);
-  cairo_set_source_rgb(cr, .1, .1, .1);
-  if(dev->histogram_type == DT_DEV_HISTOGRAM_WAVEFORM)
-    dt_draw_waveform_lines(cr, 0, 0, width, height);
-  else
-    dt_draw_grid(cr, 4, 0, 0, width, height);
 
   if(hist_max > 0.0f)
   {
@@ -372,17 +364,17 @@ static gboolean _lib_histogram_draw_callback(GtkWidget *widget, cairo_t *crf, gp
       cairo_set_line_width(cr, 1.);
       if(d->red)
       {
-        cairo_set_source_rgba(cr, 1., 0., 0., 0.2);
+        cairo_set_source_rgba(cr, 1., 0., 0., 1.0);
         dt_draw_histogram_8(cr, hist, 0, dev->histogram_type == DT_DEV_HISTOGRAM_LINEAR);
       }
       if(d->green)
       {
-        cairo_set_source_rgba(cr, 0., 1., 0., 0.2);
+        cairo_set_source_rgba(cr, 0., 1., 0., 1.0);
         dt_draw_histogram_8(cr, hist, 1, dev->histogram_type == DT_DEV_HISTOGRAM_LINEAR);
       }
       if(d->blue)
       {
-        cairo_set_source_rgba(cr, 0., 0., 1., 0.2);
+        cairo_set_source_rgba(cr, 0., 0., 1., 1.0);
         dt_draw_histogram_8(cr, hist, 2, dev->histogram_type == DT_DEV_HISTOGRAM_LINEAR);
       }
       cairo_set_operator(cr, CAIRO_OPERATOR_SOURCE);
@@ -391,6 +383,7 @@ static gboolean _lib_histogram_draw_callback(GtkWidget *widget, cairo_t *crf, gp
     cairo_restore(cr);
   }
 
+/*
   cairo_set_source_rgb(cr, .25, .25, .25);
   cairo_select_font_face(cr, "sans-serif", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_BOLD);
   cairo_set_font_size(cr, .1 * height);
@@ -407,6 +400,15 @@ static gboolean _lib_histogram_draw_callback(GtkWidget *widget, cairo_t *crf, gp
   cairo_set_source_rgb(cr, .25, .25, .25);
   cairo_fill(cr);
   cairo_restore(cr);
+*/
+  // draw grid
+  cairo_set_line_width(cr, .4);
+  cairo_set_source_rgb(cr, .5, .5, .5);
+  if(dev->histogram_type == DT_DEV_HISTOGRAM_WAVEFORM)
+    dt_draw_waveform_lines(cr, 0, 0, width, height);
+  else
+    dt_draw_grid(cr, 4, 0, 0, width, height);
+
 
   // buttons to control the display of the histogram: linear/log, r, g, b
   if(d->highlight != 0)
@@ -419,6 +421,7 @@ static gboolean _lib_histogram_draw_callback(GtkWidget *widget, cairo_t *crf, gp
     cairo_set_source_rgba(cr, 0.0, 0.0, 1.0, 0.4);
     _draw_color_toggle(cr, d->blue_x, d->button_y, d->color_w, d->button_h, d->blue);
   }
+
 
   cairo_destroy(cr);
   cairo_set_source_surface(crf, cst, 0, 0);
