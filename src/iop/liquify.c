@@ -2589,106 +2589,103 @@ static dt_liquify_hit_t _draw_paths (const struct dt_iop_module_t *module,
           }
         }
 
-        if (1) // next || data->header.type == DT_LIQUIFY_PATH_MOVE_TO_V1)
+        const dt_liquify_warp_t *warp  = &data->warp;
+
+        if (layer == DT_LIQUIFY_LAYER_RADIUSPOINT_HANDLE)
         {
-          const dt_liquify_warp_t *warp  = &data->warp;
+          draw_circle (cr, point, 2.0 * cabs (warp->radius - point));
+          THICKLINE; FG_COLOR;
+          cairo_stroke_preserve (cr);
+          THINLINE; BG_COLOR;
+          cairo_stroke (cr);
+        }
 
-          if (layer == DT_LIQUIFY_LAYER_RADIUSPOINT_HANDLE)
-          {
-            draw_circle (cr, point, 2.0 * cabs (warp->radius - point));
-            THICKLINE; FG_COLOR;
-            cairo_stroke_preserve (cr);
-            THINLINE; BG_COLOR;
-            cairo_stroke (cr);
-          }
+        if (layer == DT_LIQUIFY_LAYER_RADIUSPOINT)
+        {
+          THINLINE; BG_COLOR;
+          draw_circle (cr, warp->radius, GET_UI_WIDTH (GIZMO_SMALL));
+          FILL_TEST;
+          cairo_fill_preserve (cr);
+          FG_COLOR;
+          cairo_stroke (cr);
+        }
 
-          if (layer == DT_LIQUIFY_LAYER_RADIUSPOINT)
-          {
-            THINLINE; BG_COLOR;
-            draw_circle (cr, warp->radius, GET_UI_WIDTH (GIZMO_SMALL));
-            FILL_TEST;
-            cairo_fill_preserve (cr);
-            FG_COLOR;
-            cairo_stroke (cr);
-          }
+        if (layer == DT_LIQUIFY_LAYER_HARDNESSPOINT1_HANDLE)
+        {
+          draw_circle (cr, point, 2.0 * cabs (warp->radius - point) * warp->control1);
+          THICKLINE; FG_COLOR;
+          cairo_stroke_preserve (cr);
+          THINLINE; BG_COLOR;
+          cairo_stroke (cr);
+        }
 
-          if (layer == DT_LIQUIFY_LAYER_HARDNESSPOINT1_HANDLE)
-          {
-            draw_circle (cr, point, 2.0 * cabs (warp->radius - point) * warp->control1);
-            THICKLINE; FG_COLOR;
-            cairo_stroke_preserve (cr);
-            THINLINE; BG_COLOR;
-            cairo_stroke (cr);
-          }
+        if (layer == DT_LIQUIFY_LAYER_HARDNESSPOINT2_HANDLE)
+        {
+          draw_circle (cr, point, 2.0 * cabs (warp->radius - point) * warp->control2);
+          THICKLINE; FG_COLOR;
+          cairo_stroke_preserve (cr);
+          THINLINE; BG_COLOR;
+          cairo_stroke (cr);
+        }
 
-          if (layer == DT_LIQUIFY_LAYER_HARDNESSPOINT2_HANDLE)
-          {
-            draw_circle (cr, point, 2.0 * cabs (warp->radius - point) * warp->control2);
-            THICKLINE; FG_COLOR;
-            cairo_stroke_preserve (cr);
-            THINLINE; BG_COLOR;
-            cairo_stroke (cr);
-          }
+        if (layer == DT_LIQUIFY_LAYER_HARDNESSPOINT1)
+        {
+          draw_triangle (cr, cmix (point, warp->radius, warp->control1),
+                         carg (warp->radius - point),
+                         GET_UI_WIDTH (GIZMO_SMALL));
+          THINLINE; BG_COLOR;
+          FILL_TEST;
+          cairo_fill_preserve (cr);
+          FG_COLOR;
+          cairo_stroke (cr);
+        }
 
-          if (layer == DT_LIQUIFY_LAYER_HARDNESSPOINT1)
-          {
-            draw_triangle (cr, cmix (point, warp->radius, warp->control1),
-                           carg (warp->radius - point),
-                           GET_UI_WIDTH (GIZMO_SMALL));
-            THINLINE; BG_COLOR;
-            FILL_TEST;
-            cairo_fill_preserve (cr);
-            FG_COLOR;
-            cairo_stroke (cr);
-          }
+        if (layer == DT_LIQUIFY_LAYER_HARDNESSPOINT2)
+        {
+          draw_triangle (cr, cmix (point, warp->radius, warp->control2),
+                         carg (- (warp->radius - point)),
+                         GET_UI_WIDTH (GIZMO_SMALL));
+          THINLINE; BG_COLOR;
+          FILL_TEST;
+          cairo_fill_preserve (cr);
+          FG_COLOR;
+          cairo_stroke (cr);
+        }
 
-          if (layer == DT_LIQUIFY_LAYER_HARDNESSPOINT2)
-          {
-            draw_triangle (cr, cmix (point, warp->radius, warp->control2),
-                           carg (- (warp->radius - point)),
-                           GET_UI_WIDTH (GIZMO_SMALL));
-            THINLINE; BG_COLOR;
-            FILL_TEST;
-            cairo_fill_preserve (cr);
-            FG_COLOR;
-            cairo_stroke (cr);
-          }
+        if (layer == DT_LIQUIFY_LAYER_STRENGTHPOINT_HANDLE)
+        {
+          move_to (cr, point);
+          if (warp->type == DT_LIQUIFY_WARP_TYPE_LINEAR)
+            line_to (cr, cmix (point, warp->strength, 1.0 - 0.5 *
+                               (GET_UI_WIDTH (GIZMO_SMALL) /
+                                cabs (warp->strength - point))));
+          else
+            draw_circle (cr, point, 2.0 * cabs (warp->strength - warp->point));
+          THICKLINE; FG_COLOR;
+          cairo_stroke_preserve (cr);
+          THINLINE; BG_COLOR;
+          cairo_stroke (cr);
+        }
 
-          if (layer == DT_LIQUIFY_LAYER_STRENGTHPOINT_HANDLE)
-          {
-            move_to (cr, point);
-            if (warp->type == DT_LIQUIFY_WARP_TYPE_LINEAR)
-              line_to (cr, cmix (point, warp->strength, 1.0 - 0.5 *
-                                 (GET_UI_WIDTH (GIZMO_SMALL) /
-                                  cabs (warp->strength - point))));
-            else
-              draw_circle (cr, point, 2.0 * cabs (warp->strength - warp->point));
-            THICKLINE; FG_COLOR;
-            cairo_stroke_preserve (cr);
-            THINLINE; BG_COLOR;
-            cairo_stroke (cr);
-          }
-
-          if (layer == DT_LIQUIFY_LAYER_STRENGTHPOINT)
-          {
-            const double rot = get_rot (warp->type);
-            draw_triangle (cr, warp->strength,
-                           carg (warp->strength - warp->point) + rot,
-                           GET_UI_WIDTH (GIZMO_SMALL));
-            THINLINE; BG_COLOR;
-            FILL_TEST;
-            cairo_fill_preserve (cr);
-            FG_COLOR;
-            cairo_stroke (cr);
-          }
+        if (layer == DT_LIQUIFY_LAYER_STRENGTHPOINT)
+        {
+          const double rot = get_rot (warp->type);
+          draw_triangle (cr, warp->strength,
+                         carg (warp->strength - warp->point) + rot,
+                         GET_UI_WIDTH (GIZMO_SMALL));
+          THINLINE; BG_COLOR;
+          FILL_TEST;
+          cairo_fill_preserve (cr);
+          FG_COLOR;
+          cairo_stroke (cr);
         }
       }
     }
 
     if (dt_liquify_layers[layer].opacity < 1.0)
     {
-        cairo_pop_group_to_source (cr);
-        cairo_paint_with_alpha (cr, dt_liquify_layers[layer].opacity);
+      cairo_pop_group_to_source (cr);
+      cairo_paint_with_alpha (cr, dt_liquify_layers[layer].opacity);
     }
   }
 
