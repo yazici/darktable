@@ -3844,7 +3844,7 @@ int button_released (struct dt_iop_module_t *module,
       PRINT ("Add curve to: %f %f\n", x, y);
       g->temp = alloc_curve_to (pt);
       g->temp->warp.radius = pt + GET_UI_WIDTH (DEFAULT_RADIUS);
-      g->temp->warp.radius = pt + GET_UI_WIDTH (DEFAULT_STRENGTH);
+      g->temp->warp.strength = pt + GET_UI_WIDTH (DEFAULT_STRENGTH);
       g->paths = add_node (g->paths, g->temp);
       start_drag (g, DT_LIQUIFY_LAYER_CENTERPOINT, g->temp);
     }
