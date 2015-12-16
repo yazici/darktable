@@ -552,6 +552,29 @@ static GList *unserialize_params (const dt_iop_liquify_params_t *params)
   return NULL;
 }
 
+static const double get_rot(const dt_liquify_warp_type_enum_t warp_type)
+{
+  double rot;
+  switch (warp_type)
+  {
+  case DT_LIQUIFY_WARP_TYPE_RADIAL_SHRINK:
+    rot = M_PI;
+    break;
+#if 0
+  case DT_LIQUIFY_WARP_TYPE_SWIRL_CCW:
+    rot = M_PI / 2.0;
+    break;
+  case DT_LIQUIFY_WARP_TYPE_SWIRL_CW:
+    rot = M_PI * 3.0 / 2.0;
+    break;
+#endif
+  default:
+    rot = 0.0;
+    break;
+  }
+  return rot;
+}
+
 /**@}*/
 
 
@@ -2462,15 +2485,7 @@ static dt_liquify_hit_t _draw_paths (const struct dt_iop_module_t *module,
           for (GList *i = interpolated; i != NULL; i = i->next)
           {
             const dt_liquify_warp_t *pwarp = ((dt_liquify_warp_t *) i->data);
-            double rot = 0.0;
-            switch (pwarp->type)
-            {
-            case DT_LIQUIFY_WARP_TYPE_RADIAL_SHRINK:
-              rot = M_PI;
-              break;
-            default:
-              break;
-            }
+            const double rot = get_rot (pwarp->type);
             draw_circle   (cr, pwarp->point, GET_UI_WIDTH (GIZMO_SMALL));
             draw_triangle (cr, pwarp->strength,
                            carg (pwarp->strength - pwarp->point) + rot,
@@ -2656,23 +2671,7 @@ static dt_liquify_hit_t _draw_paths (const struct dt_iop_module_t *module,
 
           if (layer == DT_LIQUIFY_LAYER_STRENGTHPOINT)
           {
-            double rot = 0.0;
-            switch (warp->type)
-            {
-            case DT_LIQUIFY_WARP_TYPE_RADIAL_SHRINK:
-              rot = M_PI;
-              break;
-#if 0
-            case DT_LIQUIFY_WARP_TYPE_SWIRL_CCW:
-              rot = M_PI / 2.0;
-              break;
-            case DT_LIQUIFY_WARP_TYPE_SWIRL_CW:
-              rot = M_PI * 3.0 / 2.0;
-              break;
-#endif
-            default:
-              break;
-            }
+            const double rot = get_rot (warp->type);
             draw_triangle (cr, warp->strength,
                            carg (warp->strength - warp->point) + rot,
                            GET_UI_WIDTH (GIZMO_SMALL));
