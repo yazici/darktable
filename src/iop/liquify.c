@@ -136,36 +136,36 @@ static const dt_liquify_rgba_t DT_LIQUIFY_COLOR_SELECTED = { 1.0, 1.0, 1.0, 1.0 
 static const dt_liquify_rgba_t DT_LIQUIFY_COLOR_HOVER    = { 1.0, 1.0, 1.0, 0.8 };
 
 typedef struct {
+  dt_liquify_layer_enum_t hover_master;    ///< hover whenever master layer hovers, eg. to
   dt_liquify_rgba_t fg;                    ///< the foreground color for this layer
   dt_liquify_rgba_t bg;                    ///< the background color for this layer
   double opacity;                          ///< the opacity of this layer
-  dt_liquify_layer_enum_t hover_master;    ///< hover whenever master layer hovers, eg. to
-                                           /// highlight the whole radius when only the
-                                           /// radius point is hovered
+                                           ///  highlight the whole radius when only the
+                                           ///  radius point is hovered
   dt_liquify_layer_flag_enum_t flags;      ///< various flags for layer
   const char *hint;                        ///< hint displayed when hovering
 } dt_liquify_layer_t;
 
 dt_liquify_layer_t dt_liquify_layers[] = {
-  /* BACKGROUND            */ { COLOR_NULL,  COLOR_NULL, 0.0,  DT_LIQUIFY_LAYER_BACKGROUND,     0,                                                                                                      },
-  /* RADIUS                */ { COLOR_DEBUG, COLOR_NULL, 0.25, DT_LIQUIFY_LAYER_RADIUS,         DT_LIQUIFY_LAYER_FLAG_ANY_TOOL,                                                                         },
-  /* HARDNESS1             */ { COLOR_DEBUG, COLOR_NULL, 1.0,  DT_LIQUIFY_LAYER_HARDNESS1,      0,                                                                                                      },
-  /* HARDNESS2             */ { COLOR_DEBUG, COLOR_NULL, 1.0,  DT_LIQUIFY_LAYER_HARDNESS2,      0,                                                                                                      },
-  /* WARPS                 */ { COLOR_DEBUG, LGREY,      0.5,  DT_LIQUIFY_LAYER_WARPS,          DT_LIQUIFY_LAYER_FLAG_ANY_TOOL,                                                                         },
-  /* PATH                  */ { GREY,        LGREY,      1.0,  DT_LIQUIFY_LAYER_PATH,           DT_LIQUIFY_LAYER_FLAG_ANY_TOOL | DT_LIQUIFY_LAYER_FLAG_HIT_TEST,                                        },
-  /* CTRLPOINT1_HANDLE     */ { GREY,        LGREY,      1.0,  DT_LIQUIFY_LAYER_CTRLPOINT1,     DT_LIQUIFY_LAYER_FLAG_NODE_TOOL,                                                                        },
-  /* CTRLPOINT2_HANDLE     */ { GREY,        LGREY,      1.0,  DT_LIQUIFY_LAYER_CTRLPOINT2,     DT_LIQUIFY_LAYER_FLAG_NODE_TOOL,                                                                        },
-  /* RADIUSPOINT_HANDLE    */ { GREY,        LGREY,      1.0,  DT_LIQUIFY_LAYER_RADIUSPOINT,    DT_LIQUIFY_LAYER_FLAG_NODE_TOOL,                                                                        },
-  /* HARDNESSPOINT1_HANDLE */ { GREY,        LGREY,      1.0,  DT_LIQUIFY_LAYER_HARDNESSPOINT1, DT_LIQUIFY_LAYER_FLAG_NODE_TOOL | DT_LIQUIFY_LAYER_FLAG_NODE_SELECTED,                                  },
-  /* HARDNESSPOINT2_HANDLE */ { GREY,        LGREY,      1.0,  DT_LIQUIFY_LAYER_HARDNESSPOINT2, DT_LIQUIFY_LAYER_FLAG_NODE_TOOL | DT_LIQUIFY_LAYER_FLAG_NODE_SELECTED,                                  },
-  /* STRENGTHPOINT_HANDLE  */ { GREY,        LGREY,      1.0,  DT_LIQUIFY_LAYER_STRENGTHPOINT,  DT_LIQUIFY_LAYER_FLAG_ANY_TOOL,                                                                         },
-  /* CENTERPOINT           */ { GREY,        LGREY,      1.0,  DT_LIQUIFY_LAYER_CENTERPOINT,    DT_LIQUIFY_LAYER_FLAG_ANY_TOOL | DT_LIQUIFY_LAYER_FLAG_HIT_TEST,                                        },
-  /* CTRLPOINT1            */ { GREY,        LGREY,      1.0,  DT_LIQUIFY_LAYER_CTRLPOINT1,     DT_LIQUIFY_LAYER_FLAG_NODE_TOOL | DT_LIQUIFY_LAYER_FLAG_HIT_TEST,                                       },
-  /* CTRLPOINT2            */ { GREY,        LGREY,      1.0,  DT_LIQUIFY_LAYER_CTRLPOINT2,     DT_LIQUIFY_LAYER_FLAG_NODE_TOOL | DT_LIQUIFY_LAYER_FLAG_HIT_TEST,                                       },
-  /* RADIUSPOINT           */ { GREY,        LGREY,      1.0,  DT_LIQUIFY_LAYER_RADIUSPOINT,    DT_LIQUIFY_LAYER_FLAG_NODE_TOOL | DT_LIQUIFY_LAYER_FLAG_HIT_TEST,                                       },
-  /* HARDNESSPOINT1        */ { GREY,        LGREY,      1.0,  DT_LIQUIFY_LAYER_HARDNESSPOINT1, DT_LIQUIFY_LAYER_FLAG_NODE_TOOL | DT_LIQUIFY_LAYER_FLAG_NODE_SELECTED | DT_LIQUIFY_LAYER_FLAG_HIT_TEST, },
-  /* HARDNESSPOINT2        */ { GREY,        LGREY,      1.0,  DT_LIQUIFY_LAYER_HARDNESSPOINT2, DT_LIQUIFY_LAYER_FLAG_NODE_TOOL | DT_LIQUIFY_LAYER_FLAG_NODE_SELECTED | DT_LIQUIFY_LAYER_FLAG_HIT_TEST, },
-  /* STRENGTHPOINT         */ { GREY,        LGREY,      1.0,  DT_LIQUIFY_LAYER_STRENGTHPOINT,  DT_LIQUIFY_LAYER_FLAG_ANY_TOOL | DT_LIQUIFY_LAYER_FLAG_HIT_TEST,                                        }
+  { DT_LIQUIFY_LAYER_BACKGROUND,     COLOR_NULL,  COLOR_NULL, 0.0,  0,                                                                                                      },
+  { DT_LIQUIFY_LAYER_RADIUS,         COLOR_DEBUG, COLOR_NULL, 0.25, DT_LIQUIFY_LAYER_FLAG_ANY_TOOL,                                                                         },
+  { DT_LIQUIFY_LAYER_HARDNESS1,      COLOR_DEBUG, COLOR_NULL, 1.0,  0,                                                                                                      },
+  { DT_LIQUIFY_LAYER_HARDNESS2,      COLOR_DEBUG, COLOR_NULL, 1.0,  0,                                                                                                      },
+  { DT_LIQUIFY_LAYER_WARPS,          COLOR_DEBUG, LGREY,      0.5,  DT_LIQUIFY_LAYER_FLAG_ANY_TOOL,                                                                         },
+  { DT_LIQUIFY_LAYER_PATH,           GREY,        LGREY,      1.0,  DT_LIQUIFY_LAYER_FLAG_ANY_TOOL  | DT_LIQUIFY_LAYER_FLAG_HIT_TEST,                                       },
+  { DT_LIQUIFY_LAYER_CTRLPOINT1,     GREY,        LGREY,      1.0,  DT_LIQUIFY_LAYER_FLAG_NODE_TOOL,                                                                        },
+  { DT_LIQUIFY_LAYER_CTRLPOINT2,     GREY,        LGREY,      1.0,  DT_LIQUIFY_LAYER_FLAG_NODE_TOOL,                                                                        },
+  { DT_LIQUIFY_LAYER_RADIUSPOINT,    GREY,        LGREY,      1.0,  DT_LIQUIFY_LAYER_FLAG_NODE_TOOL,                                                                        },
+  { DT_LIQUIFY_LAYER_HARDNESSPOINT1, GREY,        LGREY,      1.0,  DT_LIQUIFY_LAYER_FLAG_NODE_TOOL | DT_LIQUIFY_LAYER_FLAG_NODE_SELECTED,                                  },
+  { DT_LIQUIFY_LAYER_HARDNESSPOINT2, GREY,        LGREY,      1.0,  DT_LIQUIFY_LAYER_FLAG_NODE_TOOL | DT_LIQUIFY_LAYER_FLAG_NODE_SELECTED,                                  },
+  { DT_LIQUIFY_LAYER_STRENGTHPOINT,  GREY,        LGREY,      1.0,  DT_LIQUIFY_LAYER_FLAG_ANY_TOOL,                                                                         },
+  { DT_LIQUIFY_LAYER_CENTERPOINT,    GREY,        LGREY,      1.0,  DT_LIQUIFY_LAYER_FLAG_ANY_TOOL  | DT_LIQUIFY_LAYER_FLAG_HIT_TEST,                                       },
+  { DT_LIQUIFY_LAYER_CTRLPOINT1,     GREY,        LGREY,      1.0,  DT_LIQUIFY_LAYER_FLAG_NODE_TOOL | DT_LIQUIFY_LAYER_FLAG_HIT_TEST,                                       },
+  { DT_LIQUIFY_LAYER_CTRLPOINT2,     GREY,        LGREY,      1.0,  DT_LIQUIFY_LAYER_FLAG_NODE_TOOL | DT_LIQUIFY_LAYER_FLAG_HIT_TEST,                                       },
+  { DT_LIQUIFY_LAYER_RADIUSPOINT,    GREY,        LGREY,      1.0,  DT_LIQUIFY_LAYER_FLAG_NODE_TOOL | DT_LIQUIFY_LAYER_FLAG_HIT_TEST,                                       },
+  { DT_LIQUIFY_LAYER_HARDNESSPOINT1, GREY,        LGREY,      1.0,  DT_LIQUIFY_LAYER_FLAG_NODE_TOOL | DT_LIQUIFY_LAYER_FLAG_NODE_SELECTED | DT_LIQUIFY_LAYER_FLAG_HIT_TEST, },
+  { DT_LIQUIFY_LAYER_HARDNESSPOINT2, GREY,        LGREY,      1.0,  DT_LIQUIFY_LAYER_FLAG_NODE_TOOL | DT_LIQUIFY_LAYER_FLAG_NODE_SELECTED | DT_LIQUIFY_LAYER_FLAG_HIT_TEST, },
+  { DT_LIQUIFY_LAYER_STRENGTHPOINT,  GREY,        LGREY,      1.0,  DT_LIQUIFY_LAYER_FLAG_ANY_TOOL  | DT_LIQUIFY_LAYER_FLAG_HIT_TEST,                                       }
 };
 
 typedef enum {
