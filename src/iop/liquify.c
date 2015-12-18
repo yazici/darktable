@@ -3275,7 +3275,10 @@ static GList *delete_node (GList *paths, dt_liquify_path_data_t *node)
   {
     // first node
     const GList *n = link->next; // g_list_remove_link zeroes these
+    // current link becomes next one, copy point and radius/strength of the warp
     *(_get_point (link)) = *(_get_point (link->next));
+    ((dt_liquify_path_data_t *) link->data)->warp.radius = ((dt_liquify_path_data_t *) n->data)->warp.radius;
+    ((dt_liquify_path_data_t *) link->data)->warp.strength = ((dt_liquify_path_data_t *) n->data)->warp.strength;
     list = g_list_remove_link (list, link->next);
     ((dt_liquify_path_data_t *) n->data)->header.type = 99999; // invalidate
     g_list_free_full (n, free);
