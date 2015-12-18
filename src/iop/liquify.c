@@ -84,6 +84,8 @@ const int    LOOKUP_OVERSAMPLE = 10;
 const int    INTERPOLATION_POINTS = 100; // when interpolating bezier
 const double STAMP_RELOCATION = 0.1;     // how many radii to move stamp forward when following a path
 
+#define CONF_RADIUS "plugins/darkroom/liquify/radius"
+
 /**
  * Enum of layers.
  *
@@ -3627,6 +3629,7 @@ int mouse_moved (struct dt_iop_module_t *module,
 
       case DT_LIQUIFY_LAYER_RADIUSPOINT:
         d->warp.radius = pt;
+        dt_conf_set_float(CONF_RADIUS, cabs(d->warp.radius - d->point));
         break;
 
       case DT_LIQUIFY_LAYER_STRENGTHPOINT:
@@ -3707,7 +3710,8 @@ int button_pressed (struct dt_iop_module_t *module,
     // start a new path
     PRINT ("New point: %lf %lf\n", x, y);
     g->temp = alloc_move_to (pt);
-    g->temp->warp.radius   = pt + GET_UI_WIDTH (DEFAULT_RADIUS);
+    g->temp->warp.radius   = pt +
+      (dt_conf_key_exists(CONF_RADIUS) ? dt_conf_get_float(CONF_RADIUS) : GET_UI_WIDTH (DEFAULT_RADIUS));
     g->temp->warp.strength = pt + GET_UI_WIDTH (DEFAULT_STRENGTH);
     g->status |= DT_LIQUIFY_STATUS_NEW;
     g->paths = g_list_append (g->paths, g_list_append (NULL, g->temp));
@@ -3739,7 +3743,8 @@ int button_pressed (struct dt_iop_module_t *module,
         // start a new path
         PRINT ("New path: %lf %lf\n", x, y);
         g->temp = alloc_move_to (pt);
-        g->temp->warp.radius   = pt + GET_UI_WIDTH (DEFAULT_RADIUS);
+        g->temp->warp.radius   = pt +
+          (dt_conf_key_exists(CONF_RADIUS) ? dt_conf_get_float(CONF_RADIUS) : GET_UI_WIDTH (DEFAULT_RADIUS));
         g->temp->warp.strength = pt + GET_UI_WIDTH (DEFAULT_STRENGTH);
         g->paths = g_list_append (g->paths, g_list_append (NULL, g->temp)); // owns node now
       }
@@ -3835,7 +3840,8 @@ int button_released (struct dt_iop_module_t *module,
     {
       PRINT ("Add line to: %f %f\n", x, y);
       g->temp = alloc_line_to (pt);
-      g->temp->warp.radius   = pt + GET_UI_WIDTH (DEFAULT_RADIUS);
+      g->temp->warp.radius   = pt +
+        (dt_conf_key_exists(CONF_RADIUS) ? dt_conf_get_float(CONF_RADIUS) : GET_UI_WIDTH (DEFAULT_RADIUS));
       g->temp->warp.strength = pt + GET_UI_WIDTH (DEFAULT_STRENGTH);
       g->paths = add_node (g->paths, g->temp);
       start_drag (g, DT_LIQUIFY_LAYER_CENTERPOINT, g->temp);
@@ -3850,7 +3856,8 @@ int button_released (struct dt_iop_module_t *module,
       }
       PRINT ("Add curve to: %f %f\n", x, y);
       g->temp = alloc_curve_to (pt);
-      g->temp->warp.radius = pt + GET_UI_WIDTH (DEFAULT_RADIUS);
+      g->temp->warp.radius = pt +
+        (dt_conf_key_exists(CONF_RADIUS) ? dt_conf_get_float(CONF_RADIUS) : GET_UI_WIDTH (DEFAULT_RADIUS));
       g->temp->warp.strength = pt + GET_UI_WIDTH (DEFAULT_STRENGTH);
       g->paths = add_node (g->paths, g->temp);
       start_drag (g, DT_LIQUIFY_LAYER_CENTERPOINT, g->temp);
