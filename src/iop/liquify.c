@@ -52,8 +52,6 @@
 #ifdef _OPENMP
 #include <omp.h>
 #endif
-#include <libintl.h>
-#define _(String) gettext (String)
 
 #ifdef NDEBUG
 #define PRINT(...)
