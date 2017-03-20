@@ -82,6 +82,9 @@ FILE(GLOB SOURCE_FILES
   "develop/blend.c"
   "develop/blend_gui.c"
   "develop/tiling.c"
+  "develop/dwt.c"
+  "develop/heal.c"
+  "develop/LocalLaplacian.c"
   "develop/masks/masks.c"
   "develop/format.c"
   "dtgtk/button.c"
@@ -104,6 +107,17 @@ FILE(GLOB SOURCE_FILES
   "libs/lib.c"
   "views/view.c"
   "views/undo.c"
+  "external/lqr/lqr_carver.c"
+  "external/lqr/lqr_carver_bias.c"
+  "external/lqr/lqr_carver_list.c"
+  "external/lqr/lqr_carver_rigmask.c"
+  "external/lqr/lqr_cursor.c"
+  "external/lqr/lqr_energy.c"
+  "external/lqr/lqr_gradient.c"
+  "external/lqr/lqr_progress.c"
+  "external/lqr/lqr_rwindow.c"
+  "external/lqr/lqr_vmap.c"
+  "external/lqr/lqr_vmap_list.c"
   )
 FILE(GLOB HEADER_FILES "*.h" "common/*.h" "external/CL/*.h" "control/*.h" "iop/*.h" "libs/*.h" "views/*.h")
 

@@ -664,6 +664,78 @@ static void dt_iop_gui_movedown_callback(GtkButton *button, dt_iop_module_t *mod
   dt_control_queue_redraw_center();
 }
 
+/* Begin Retouch */
+typedef struct dt_gui_rename_module_dialog_t
+{
+  dt_iop_module_t *module;
+  GtkEntry *name;
+  gchar *original_name;
+} dt_gui_rename_module_dialog_t;
+
+static void rename_module_response(GtkDialog *dialog, gint response_id, dt_gui_rename_module_dialog_t *g)
+{
+
+  if(response_id == GTK_RESPONSE_ACCEPT)
+  {
+    const gchar *name = gtk_entry_get_text(g->name);
+    if (strcmp(g->original_name, name) != 0)
+    {
+      g_strlcpy(g->module->multi_name, name, sizeof(g->module->multi_name)-1);
+      dt_dev_add_history_item(g->module->dev, g->module, TRUE);
+      dt_iop_gui_update_header(g->module);
+    }
+  }
+
+  gtk_widget_destroy(GTK_WIDGET(dialog));
+  g_free(g->original_name);
+  free(g);
+}
+
+static void rename_module(const char *name_in, dt_iop_module_t *module)
+{
+  gchar *name = NULL;
+  name = g_strdup(name_in);
+
+  GtkWidget *dialog;
+  /* Create the widgets */
+  char title[1024];
+  GtkWidget *window = dt_ui_main_window(darktable.gui->ui);
+  snprintf(title, sizeof(title), _("rename module `%s'"), module->name());
+  dialog = gtk_dialog_new_with_buttons(title, GTK_WINDOW(window), GTK_DIALOG_DESTROY_WITH_PARENT, _("_ok"),
+                                       GTK_RESPONSE_ACCEPT, _("_cancel"), GTK_RESPONSE_REJECT, NULL);
+  GtkContainer *content_area = GTK_CONTAINER(gtk_dialog_get_content_area(GTK_DIALOG(dialog)));
+  GtkBox *box = GTK_BOX(gtk_box_new(GTK_ORIENTATION_VERTICAL, 5));
+  gtk_widget_set_margin_start(GTK_WIDGET(box), DT_PIXEL_APPLY_DPI(10));
+  gtk_widget_set_margin_end(GTK_WIDGET(box), DT_PIXEL_APPLY_DPI(10));
+  gtk_widget_set_margin_top(GTK_WIDGET(box), DT_PIXEL_APPLY_DPI(10));
+  gtk_widget_set_margin_bottom(GTK_WIDGET(box), DT_PIXEL_APPLY_DPI(10));
+  gtk_container_add(content_area, GTK_WIDGET(box));
+
+  dt_gui_rename_module_dialog_t *g = (dt_gui_rename_module_dialog_t *)malloc(sizeof(dt_gui_rename_module_dialog_t));
+  g->original_name = name;
+  g->module = module;
+  
+  GtkWidget *label;
+  snprintf(title, sizeof(title), _("enter the new name for the module `%s'"), module->name());
+  label = gtk_label_new(title);
+  gtk_box_pack_start(box, GTK_WIDGET(label), FALSE, FALSE, 0);
+  
+  g->name = GTK_ENTRY(gtk_entry_new());
+  gtk_entry_set_text(g->name, name);
+  gtk_box_pack_start(box, GTK_WIDGET(g->name), FALSE, FALSE, 0);
+  gtk_widget_set_tooltip_text(GTK_WIDGET(g->name), _("name for the module"));
+
+
+  g_signal_connect(dialog, "response", G_CALLBACK(rename_module_response), g);
+  gtk_widget_show_all(dialog);
+}
+
+static void dt_iop_gui_rename_callback(GtkButton *button, dt_iop_module_t *module)
+{
+  rename_module(module->multi_name, module);
+}
+/* End Retouch */
+
 static void dt_iop_gui_moveup_callback(GtkButton *button, dt_iop_module_t *module)
 {
   // we find the previous module
@@ -906,6 +978,13 @@ static void dt_iop_gui_multiinstance_callback(GtkButton *button, GdkEventButton 
   gtk_widget_set_sensitive(item, module->multi_show_close);
   gtk_menu_shell_append(menu, item);
 
+  /* Begin Retouch */
+  gtk_menu_shell_append(GTK_MENU_SHELL(menu), gtk_separator_menu_item_new());
+  item = gtk_menu_item_new_with_label(_("rename"));
+  g_signal_connect(G_OBJECT(item), "activate", G_CALLBACK(dt_iop_gui_rename_callback), module);
+  gtk_menu_shell_append(menu, item);
+  /* End Retouch */
+  
   gtk_widget_show_all(GTK_WIDGET(menu));
 
   // popup

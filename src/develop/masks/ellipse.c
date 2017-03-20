@@ -200,7 +200,10 @@ static int dt_ellipse_events_mouse_scrolled(struct dt_iop_module_t *module, floa
     else
     {
       dt_masks_point_ellipse_t *ellipse = (dt_masks_point_ellipse_t *)(g_list_first(form->points)->data);
-      if(gui->border_selected || (state & GDK_SHIFT_MASK) == GDK_SHIFT_MASK)
+      /* Begin Retouch */ 
+      // if(gui->border_selected || (state & GDK_SHIFT_MASK) == GDK_SHIFT_MASK)
+      if (((state & GDK_SHIFT_MASK) == GDK_SHIFT_MASK) && (gui->border_selected || gui->edit_mode == DT_MASKS_EDIT_FULL) )
+      /* End Retouch */
       {
         const float reference = (ellipse->flags & DT_MASKS_ELLIPSE_PROPORTIONAL ? 1.0f/fmin(ellipse->radius[0], ellipse->radius[1]) : 1.0f);
         if(up && ellipse->border > 0.001f * reference)

@@ -1141,6 +1141,9 @@ int dt_masks_events_mouse_moved(struct dt_iop_module_t *module, double x, double
 int dt_masks_events_button_released(struct dt_iop_module_t *module, double x, double y, int which,
                                     uint32_t state)
 {
+  /* Begin Retouch */
+  if((state & (GDK_CONTROL_MASK|GDK_SHIFT_MASK)) == (GDK_CONTROL_MASK|GDK_SHIFT_MASK)) return 0;
+  /* End Retouch */
   dt_masks_form_t *form = darktable.develop->form_visible;
   dt_masks_form_gui_t *gui = darktable.develop->form_gui;
   float pzx, pzy;
@@ -1167,6 +1170,9 @@ int dt_masks_events_button_released(struct dt_iop_module_t *module, double x, do
 int dt_masks_events_button_pressed(struct dt_iop_module_t *module, double x, double y, double pressure,
                                    int which, int type, uint32_t state)
 {
+  /* Begin Retouch */
+  if((state & (GDK_CONTROL_MASK|GDK_SHIFT_MASK)) == (GDK_CONTROL_MASK|GDK_SHIFT_MASK)) return 0;
+  /* End Retouch */
   dt_masks_form_t *form = darktable.develop->form_visible;
   dt_masks_form_gui_t *gui = darktable.develop->form_gui;
   float pzx, pzy;
@@ -1192,6 +1198,9 @@ int dt_masks_events_button_pressed(struct dt_iop_module_t *module, double x, dou
 
 int dt_masks_events_mouse_scrolled(struct dt_iop_module_t *module, double x, double y, int up, uint32_t state)
 {
+  /* Begin Retouch */
+  if((state & (GDK_CONTROL_MASK|GDK_SHIFT_MASK)) == (GDK_CONTROL_MASK|GDK_SHIFT_MASK)) return 0;
+  /* End Retouch */
   dt_masks_form_t *form = darktable.develop->form_visible;
   dt_masks_form_gui_t *gui = darktable.develop->form_gui;
   float pzx, pzy;
@@ -1223,7 +1232,10 @@ void dt_masks_events_post_expose(struct dt_iop_module_t *module, cairo_t *cr, in
   if(!gui) return;
   if(!form) return;
   // if it's a spot in creation, nothing to draw
-  if(((form->type & DT_MASKS_CIRCLE) || (form->type & DT_MASKS_ELLIPSE) || (form->type & DT_MASKS_GRADIENT))
+/* Begin Retouch */
+/*  if(((form->type & DT_MASKS_CIRCLE) || (form->type & DT_MASKS_ELLIPSE) || (form->type & DT_MASKS_GRADIENT))*/
+  if((/*(form->type & DT_MASKS_CIRCLE) ||*/ (form->type & DT_MASKS_ELLIPSE) || (form->type & DT_MASKS_GRADIENT))
+/* End Retouch */
      && gui->creation)
     return;
   float wd = dev->preview_pipe->backbuf_width;
@@ -1249,6 +1261,9 @@ void dt_masks_events_post_expose(struct dt_iop_module_t *module, cairo_t *cr, in
   cairo_set_line_cap(cr, CAIRO_LINE_CAP_ROUND);
 
   // we update the form if needed
+/* Begin Retouch */
+if ( !((form->type & DT_MASKS_CIRCLE) && gui->creation) )
+/* End Retouch */
   dt_masks_gui_form_test_create(form, gui);
 
   // draw form
