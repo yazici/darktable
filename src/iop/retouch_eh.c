@@ -25,8 +25,8 @@
 #include "gui/accelerators.h"
 #include <stdlib.h>
 #include "common/gaussian.h"
-#include "develop/heal.h"
-#include "develop/dwt.h"
+#include "common/heal_eh.h"
+#include "common/dwt_eh.h"
 
 //#define _FFT_MULTFR_
 

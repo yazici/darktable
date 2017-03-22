@@ -21,7 +21,7 @@
 #endif
 #include <stdlib.h>
 #include "bauhaus/bauhaus.h"
-#include "develop/LocalLaplacian.h"
+#include "common/LocalLaplacian_eh.h"
 
 
 DT_MODULE_INTROSPECTION(1, dt_iop_loclap_params_t)

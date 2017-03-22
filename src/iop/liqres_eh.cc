@@ -850,8 +850,8 @@ void gui_focus(struct dt_iop_module_t *self, gboolean in)
       // lost focus, hide all shapes and free if some are in creation
       if (darktable.develop->form_gui->creation && darktable.develop->form_gui->creation_module == self)
       {
-        dt_masks_form_t *form = darktable.develop->form_visible;
-        if(form) dt_masks_free_form(form);
+//        dt_masks_form_t *form = darktable.develop->form_visible;
+//        if(form) dt_masks_free_form(form);
         dt_masks_change_form_gui(NULL);
       }
       dt_iop_liqrescale_gui_data_t *g = (dt_iop_liqrescale_gui_data_t *)self->gui_data;
