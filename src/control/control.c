@@ -689,6 +689,13 @@ int dt_control_key_pressed_override(guint key, guint state)
     gtk_widget_queue_draw(dt_ui_center(darktable.gui->ui));
     return 1;
   }
+  /* Begin Retouch */
+  else if(key == accels->darkroom_skip_mouse_events.accel_key && state == accels->darkroom_skip_mouse_events.accel_mods)
+  {
+    darktable.develop->darkroom_skip_mouse_events = TRUE;
+    return 1;
+  }
+  /* End Retouch */
   return 0;
 }
 

@@ -1096,6 +1096,9 @@ void dt_masks_free_form(dt_masks_form_t *form)
 
 int dt_masks_events_mouse_moved(struct dt_iop_module_t *module, double x, double y, double pressure, int which)
 {
+  /* Begin Retouch */
+  if (darktable.develop->darkroom_skip_mouse_events) return 0;
+  /* End Retouch */
   dt_masks_form_t *form = darktable.develop->form_visible;
   dt_masks_form_gui_t *gui = darktable.develop->form_gui;
 
@@ -1135,14 +1138,13 @@ int dt_masks_events_mouse_moved(struct dt_iop_module_t *module, double x, double
     }
     _set_hinter_message(gui, ftype);
   }
-
   return rep;
 }
 int dt_masks_events_button_released(struct dt_iop_module_t *module, double x, double y, int which,
                                     uint32_t state)
 {
   /* Begin Retouch */
-  if((state & (GDK_CONTROL_MASK|GDK_SHIFT_MASK)) == (GDK_CONTROL_MASK|GDK_SHIFT_MASK)) return 0;
+  if (darktable.develop->darkroom_skip_mouse_events) return 0;
   /* End Retouch */
   dt_masks_form_t *form = darktable.develop->form_visible;
   dt_masks_form_gui_t *gui = darktable.develop->form_gui;
@@ -1171,7 +1173,7 @@ int dt_masks_events_button_pressed(struct dt_iop_module_t *module, double x, dou
                                    int which, int type, uint32_t state)
 {
   /* Begin Retouch */
-  if((state & (GDK_CONTROL_MASK|GDK_SHIFT_MASK)) == (GDK_CONTROL_MASK|GDK_SHIFT_MASK)) return 0;
+  if (darktable.develop->darkroom_skip_mouse_events) return 0;
   /* End Retouch */
   dt_masks_form_t *form = darktable.develop->form_visible;
   dt_masks_form_gui_t *gui = darktable.develop->form_gui;
@@ -1199,7 +1201,7 @@ int dt_masks_events_button_pressed(struct dt_iop_module_t *module, double x, dou
 int dt_masks_events_mouse_scrolled(struct dt_iop_module_t *module, double x, double y, int up, uint32_t state)
 {
   /* Begin Retouch */
-  if((state & (GDK_CONTROL_MASK|GDK_SHIFT_MASK)) == (GDK_CONTROL_MASK|GDK_SHIFT_MASK)) return 0;
+  if (darktable.develop->darkroom_skip_mouse_events) return 0;
   /* End Retouch */
   dt_masks_form_t *form = darktable.develop->form_visible;
   dt_masks_form_gui_t *gui = darktable.develop->form_gui;
@@ -1234,7 +1236,7 @@ void dt_masks_events_post_expose(struct dt_iop_module_t *module, cairo_t *cr, in
   // if it's a spot in creation, nothing to draw
 /* Begin Retouch */
 /*  if(((form->type & DT_MASKS_CIRCLE) || (form->type & DT_MASKS_ELLIPSE) || (form->type & DT_MASKS_GRADIENT))*/
-  if((/*(form->type & DT_MASKS_CIRCLE) ||*/ (form->type & DT_MASKS_ELLIPSE) || (form->type & DT_MASKS_GRADIENT))
+  if(((form->type & DT_MASKS_ELLIPSE) || (form->type & DT_MASKS_GRADIENT))
 /* End Retouch */
      && gui->creation)
     return;

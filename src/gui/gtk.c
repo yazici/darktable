@@ -150,7 +150,10 @@ static void key_accel_changed(GtkAccelMap *object, gchar *accel_path, guint acce
   // darkroom
   dt_accel_path_view(path, sizeof(path), "darkroom", "full preview");
   gtk_accel_map_lookup_entry(path, &darktable.control->accels.darkroom_preview);
-
+  /* Begin Retouch */
+  dt_accel_path_view(path, sizeof(path), "darkroom", "skip mouse on masks");
+  gtk_accel_map_lookup_entry(path, &darktable.control->accels.darkroom_skip_mouse_events);
+  /* End Retouch */
 
   // Global
   dt_accel_path_global(path, sizeof(path), "toggle side borders");

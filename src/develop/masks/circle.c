@@ -447,10 +447,9 @@ static int dt_circle_events_mouse_moved(struct dt_iop_module_t *module, float pz
   /* Begin Retouch */
   else if(gui->creation)
   {
-//    {
-      gui->posx = pzx * darktable.develop->preview_pipe->backbuf_width;
-      gui->posy = pzy * darktable.develop->preview_pipe->backbuf_height;
-//    }
+    gui->posx = pzx * darktable.develop->preview_pipe->backbuf_width;
+    gui->posy = pzy * darktable.develop->preview_pipe->backbuf_height;
+    
     dt_control_queue_redraw_center();
     return 1;
   }
