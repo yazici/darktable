@@ -29,54 +29,35 @@
 
 
 // Subtract bottom from top and store in result as a float
-static void dt_dev_heal_sub(const float *const top_buffer, const float *const bottom_buffer, float *result_buffer, const int width,  const int height, const int ch)
+static void dt_heal_sub(const float *const top_buffer, const float *const bottom_buffer, float *result_buffer, const int width, const int height, const int ch)
 {
+  const int i_size = width * height * ch;
   
 #ifdef _FFT_MULTFR_
 #ifdef _OPENMP
 #pragma omp parallel for default(none) shared(result_buffer) schedule(static)
 #endif
 #endif
-  for (int y=0; y < height; y++)
-  {
-    size_t index = (size_t)y * width * ch;
-    float *t = (float *)top_buffer + index;
-    float *b = (float *)bottom_buffer + index;
-    float *r = (float *)result_buffer + index;
-    for (int x=0; x < width * ch; x++)
-    {
-      *r++ = *t++ - *b++;
-    }
-  }
-
+  for (int i = 0; i < i_size; i++) result_buffer[i] = top_buffer[i] - bottom_buffer[i];
 }
 
 // Add first to second and store in result
-static void dt_dev_heal_add(const float *const first_buffer, const float *const second_buffer, float *result_buffer, const int width,  const int height, const int ch)
+static void dt_heal_add(const float *const first_buffer, const float *const second_buffer, float *result_buffer, const int width, const int height, const int ch)
 {
-  
+  const int i_size = width * height * ch;
+
 #ifdef _FFT_MULTFR_
 #ifdef _OPENMP
 #pragma omp parallel for default(none) shared(result_buffer) schedule(static)
 #endif
 #endif
-  for (int y=0; y < height; y++)
-  {
-    size_t index = (size_t)y * width * ch;
-    float *f = (float *)first_buffer + index;
-    float *s = (float *)second_buffer + index;
-    float *r = (float *)result_buffer + index;
-    for (int x=0; x < width * ch; x++)
-    {
-      *r++ = *f++ + *s++;
-    }
-  }
+  for (int i = 0; i < i_size; i++) result_buffer[i] = first_buffer[i] + second_buffer[i];
 }
 
 //#if defined(__SSE__) && defined(__GNUC__) && __GNUC__ >= 4
-#if defined(__SSE__)
+#if defined(__SSE__x)
 static float
-dt_dev_heal_laplace_iteration_sse(float *pixels, const float *const Adiag, const int *const Aidx, const float w, const int nmask)
+dt_heal_laplace_iteration_sse(float *pixels, const float *const Adiag, const int *const Aidx, const float w, const int nmask)
 {
   typedef float v4sf __attribute__((vector_size(16)));
   int i;
@@ -107,16 +88,17 @@ dt_dev_heal_laplace_iteration_sse(float *pixels, const float *const Adiag, const
 #endif
 
 // Perform one iteration of Gauss-Seidel, and return the sum squared residual.
-static float dt_dev_heal_laplace_iteration(float *pixels, const float *const Adiag, const int *const Aidx, const float w, const int nmask, 
-    const int depth, const float preview_scale, const int use_sse)
+static float dt_heal_laplace_iteration(float *pixels, const float *const Adiag, const int *const Aidx, const float w, const int nmask, 
+    const int ch, const float preview_scale, const int use_sse)
 {
-  float err = 0;
-
 //#if defined(__SSE__) && defined(__GNUC__) && __GNUC__ >= 4
-#if defined(__SSE__)
-  if (depth == 4 && use_sse)
-    return dt_dev_heal_laplace_iteration_sse (pixels, Adiag, Aidx, w, nmask);
+#if defined(__SSE__x)
+  if (ch == 4 && use_sse)
+    return dt_heal_laplace_iteration_sse (pixels, Adiag, Aidx, w, nmask);
 #endif
+
+  float err = 0;
+  const int ch1 = (ch==4) ? ch-1: ch;
 
 #ifdef _FFT_MULTFR_
 #ifdef _OPENMP
@@ -132,10 +114,15 @@ static float dt_dev_heal_laplace_iteration(float *pixels, const float *const Adi
     int   j4 = Aidx[i * 5 + 4];
     float a  = Adiag[i];
 
-    for (int k = 0; k < depth; k++)
+    for (int k = 0; k < ch1; k++)
     {
-      float diff = (a * pixels[j0 + k] -
-                    w * (pixels[j1 + k] +
+/*      float diff = (a * pixels[j0 + k] -
+                     w * (pixels[j1 + k] +
+                          pixels[j2 + k] +
+                          pixels[j3 + k] +
+                          pixels[j4 + k]));*/
+      float diff = w * (a * pixels[j0 + k] -
+                        (pixels[j1 + k] +
                          pixels[j2 + k] +
                          pixels[j3 + k] +
                          pixels[j4 + k]));
@@ -149,23 +136,29 @@ static float dt_dev_heal_laplace_iteration(float *pixels, const float *const Adi
 }
 
 // Solve the laplace equation for pixels and store the result in-place.
-static void dt_dev_heal_laplace_loop(float *pixels,
-                                    const int    height,
-                                    const int    depth,
+static void dt_heal_laplace_loop(float *pixels,
                                     const int    width,
+                                    const int    height,
+                                    const int    ch,
                                     const float *const mask, 
+                                    const float softness, 
                                     const float preview_scale, 
                                     const int use_sse)
 {
   /* Tolerate a total deviation-from-smoothness of 0.1 LSBs at 8bit depth. */
-  const int max_iter = 500;
-  const float epsilon = .1f/255.f;
-  int nmask;
-  float *Adiag;
-  int   *Aidx;
+  const int max_iter = 1500;
+  int nmask = 0;
+//  const float epsilon = .1f/255.f;
+//  const int ch1 = (ch==4) ? ch-1: ch;
 
-  Adiag = dt_alloc_align(64, sizeof(float) * width * height);
-  Aidx  = dt_alloc_align(64, sizeof(int) * 5 * width * height);
+  float *Adiag = dt_alloc_align(64, sizeof(float) * width * height);
+  int *Aidx = dt_alloc_align(64, sizeof(int) * 5 * width * height);
+
+  if ((Adiag == NULL) || (Aidx == NULL))
+  {
+    printf("dt_heal_laplace_loop: error allocating memory for healing\n");
+    goto cleanup;
+  }
 
   /* All off-diagonal elements of A are either -1 or 0. We could store it as a
    * general-purpose sparse matrix, but that adds some unnecessary overhead to
@@ -173,14 +166,14 @@ static void dt_dev_heal_laplace_loop(float *pixels,
    * row, all of which have value -1. Any row that in fact wants less than 4
    * coefs can put them in a dummy column to be multiplied by an empty pixel.
    */
-  const int zero = depth * width * height;
-  memset (pixels + zero, 0, depth * sizeof (float));
+  const int zero = ch * width * height;
+  memset (pixels + zero, 0, ch * sizeof (float));
 
   /* Construct the system of equations.
    * Arrange Aidx in checkerboard order, so that a single linear pass over that
    * array results updating all of the red cells and then all of the black cells.
    */
-  nmask = 0;
+
 #ifdef _FFT_MULTFR_
 #ifdef _OPENMP
 #pragma omp parallel for default(none) shared(nmask, Adiag, Aidx) schedule(static)
@@ -195,7 +188,7 @@ static void dt_dev_heal_laplace_loop(float *pixels,
             if ((dj<0 && j==0) || (dj>0 && j==width-1) || (di<0 && i==0) || (di>0 && i==height-1)) \
               Aidx[o + nmask * 5] = zero; \
             else                                               \
-              Aidx[o + nmask * 5] = ((i + di) * width + (j + dj)) * depth;
+              Aidx[o + nmask * 5] = ((i + di) * width + (j + dj)) * ch;
 
             /* Omit Dirichlet conditions for any neighbors off the
              * edge of the canvas.
@@ -213,28 +206,38 @@ static void dt_dev_heal_laplace_loop(float *pixels,
    * round brushes, at least. I don't know whether aspect ratio
    * affects it.)
    */
-  const float w = (2.0 - 1.0 / (0.1575 * sqrt (nmask) + 0.8)) * .25f;
-  const float err_exit = epsilon * epsilon * w * w;
+  float w = ((2.0 - 1.0 / (0.1575 * sqrtf(nmask) * softness + 0.8)) * .25f);
+//  float w = (.43f) / (preview_scale*preview_scale)/* + (softness * 1000.f)*//* * preview_scale * preview_scale*/;
+//  w = MIN(w, .499f);
+//  const float w = .49f;
+//  const float w = (2.0 - 1.0 / (0.1575 * sqrt ((width*height*ch1)*preview_scale)/* *preview_scale*preview_scale*/ + 0.8)) * .25f;
+//  const float err_exit = (epsilon * epsilon * w * w) + (softness * 1000.f);
+//  const float err_exit = MAX( ((softness) / (preview_scale*preview_scale)), 0.0f );
+//  const float err_exit = MAX( ((0.) / (preview_scale*preview_scale)), 0.0f );
+  int iter = 0;
+  float err = 0;
+  const float err_exit = .01f / (float)nmask/* * preview_scale * preview_scale*/;
   
-#ifdef _FFT_MULTFR_
-#ifdef _OPENMP
-#pragma omp parallel for default(none) shared(nmask, Adiag) schedule(static)
-#endif
-#endif
-  for (int i = 0; i < nmask; i++)
-    Adiag[i] *= w;
+  
+//  for (int i = 0; i < nmask; i++)
+//    Adiag[i] *= w;
 
+//  max_iter -= (int)(softness * 10000.f);
   /* Gauss-Seidel with successive over-relaxation */
-  for (int iter = 0; iter < max_iter; iter++)
+  for (iter = 0; iter < max_iter; iter++)
   {
-    float err = dt_dev_heal_laplace_iteration (pixels, Adiag, Aidx, w, nmask, depth, preview_scale, use_sse);
-    if (err < err_exit)
+    err = dt_heal_laplace_iteration(pixels, Adiag, Aidx, w, nmask, ch, preview_scale, use_sse) / (float)nmask;
+    if (err <= err_exit)
       break;
   }
 
-  dt_free_align(Adiag);
-  dt_free_align(Aidx);
+  printf("dt_heal iter=%i, err_exit=%f, w=%f, err=%f\n", iter, err_exit*1000.f, w, err);
+
+cleanup:
+  if (Adiag) dt_free_align(Adiag);
+  if (Aidx) dt_free_align(Aidx);
 }
+
 
 /* Original Algorithm Design:
  *
@@ -242,24 +245,151 @@ static void dt_dev_heal_laplace_loop(float *pixels,
  * http://www.tgeorgiev.net/Photoshop_Healing.pdf
  */
 
-void dt_dev_heal(const float *const src_buffer, float *dest_buffer, const float *const mask_buffer, const int width,  const int height, const int ch, 
-    const float preview_scale, const int use_sse)
+void dt_heal(const float *const src_buffer, float *dest_buffer, const float *const mask_buffer, const int width, const int height, const int ch, 
+    const float softness, const float preview_scale, const int use_sse)
 {
-  float *diff_alloc;
-  float *diff_buffer;
+//  float *diff_alloc;
+//  float *diff_buffer;
 
-  diff_alloc = dt_alloc_align(64, sizeof(float) * (4 + (width * height + 1) * ch));
-  diff_buffer = (float*)(((uintptr_t)diff_alloc + 15) & ~15);
+//  diff_alloc = dt_alloc_align(64, sizeof(float) * (4 + (width * height + 1) * ch));
+//  diff_buffer = (float*)(((uintptr_t)diff_alloc + 15) & ~15);
+  float *diff_buffer = dt_alloc_align(64, width * (height + 1) * ch * sizeof(float));
 
-  /* subtract pattern from image and store the result as a float in diff */
-  dt_dev_heal_sub(dest_buffer, src_buffer, diff_buffer, width, height, ch);
+  /* subtract pattern from image and store the result in diff */
+  dt_heal_sub(dest_buffer, src_buffer, diff_buffer, width, height, ch);
 
-  dt_dev_heal_laplace_loop(diff_buffer, height, ch, width, mask_buffer, preview_scale, use_sse);
+  dt_heal_laplace_loop(diff_buffer, width, height, ch, mask_buffer, softness, preview_scale, use_sse);
 
   /* add solution to original image and store in dest */
-  dt_dev_heal_add(diff_buffer, src_buffer, dest_buffer, width, height, ch);
+  dt_heal_add(diff_buffer, src_buffer, dest_buffer, width, height, ch);
 
-//  dt_free_align(diff_buffer);
-  dt_free_align(diff_alloc);
+  dt_free_align(diff_buffer);
+}
+
+
+// test a new algorithm
+    
+static int get_steps(const float *const mask, const int width, const int height)
+{
+  int steps = 0;
+  for (int i = 0; i < width * height; i++) if (mask[i]) steps++;
+  return (steps);
+}
+
+static float laplacian(const float *const image_src, float *image_dest, const int width, const int height, const int ch)
+{
+  float diff = 0.f;
+  
+  memcpy(image_dest, image_src, width * ch * sizeof(float));
+  memcpy(image_dest + (height-1) * width * ch, image_src + (height-1) * width * ch, width * ch * sizeof(float));
+  
+  for (int y = 1; y < height-1; y++)
+  {
+    for (int c = 0; c < ch-1; c++)
+    {
+      image_dest[(y * width * ch) + c] = image_src[(y * width * ch) + c];
+      image_dest[(y * width * ch) + ((width-1) * ch) + c] = image_src[(y * width * ch) + ((width-1) * ch) + c];
+    }
+    
+    for (int x = 1; x < width-1; x++)
+    {
+      for (int c = 0; c < ch-1; c++)
+      {
+        float k = ( image_src[(y * width * ch) + (x * ch) + c] * 4.f - 
+            image_src[(y * width * ch) + ((x-1) * ch) + c] - 
+            image_src[(y * width * ch) + ((x+1) * ch) + c] - 
+            image_src[((y-1) * width * ch) + (x * ch) + c] -
+            image_src[((y+1) * width * ch) + (x * ch) + c] );
+
+        diff += (image_dest[(y * width * ch) + (x * ch) + c] - k) * (image_dest[(y * width * ch) + (x * ch) + c] - k);
+        
+        image_dest[(y * width * ch) + (x * ch) + c] = k;
+      }
+    }
+  }
+  
+  return diff;
+}
+
+static float laplacian_iter(const float *const image, float *image1, const float *const image2, const int width, const int height, const int ch)
+{
+  float diff = 0.f;
+  
+  memcpy(image1, image2, width * ch * sizeof(float));
+  memcpy(image1 + (height-1) * width * ch, image2 + (height-1) * width * ch, width * ch * sizeof(float));
+  
+  for (int y = 1; y < height-1; y++)
+  {
+    for (int c = 0; c < ch-1; c++)
+    {
+      image1[(y * width * ch) + c] = image2[(y * width * ch) + c];
+      image1[(y * width * ch) + ((width-1) * ch) + c] = image2[(y * width * ch) + ((width-1) * ch) + c];
+    }
+    
+    for (int x = 1; x < width-1; x++)
+    {
+      for (int c = 0; c < ch-1; c++)
+      {
+        float k = ( image[(y * width * ch) + (x * ch) + c] + 
+            image2[(y * width * ch) + ((x-1) * ch) + c] + 
+            image2[(y * width * ch) + ((x+1) * ch) + c] + 
+            image2[((y-1) * width * ch) + (x * ch) + c] + 
+            image2[((y+1) * width * ch) + (x * ch) + c] ) / 4.0f;
+
+        diff += (image1[(y * width * ch) + (x * ch) + c] - k) * (image1[(y * width * ch) + (x * ch) + c] - k);
+        
+        image1[(y * width * ch) + (x * ch) + c] = k;
+      }
+    }
+  }
+  return diff;
+}
+
+void dt_heal1(const float *const src_buffer, float *dest_buffer, const float *const mask_buffer, const int width, const int height, const int ch, 
+    const float softness, const float preview_scale, const int use_sse)
+{
+  float *dest1 = dt_alloc_align(64, width * height * ch * sizeof(float));
+  float *dest2 = dt_alloc_align(64, width * height * ch * sizeof(float));
+  
+  memcpy(dest1, dest_buffer, width * height * ch * sizeof(float));
+  memset(dest_buffer, 0, width * height * ch * sizeof(float));
+  memset(dest2, 0, width * height * ch * sizeof(float));
+  
+  laplacian(src_buffer, dest_buffer, width, height, ch);
+  
+  unsigned int steps = get_steps(mask_buffer, width, height) / preview_scale;
+//  steps *= steps;
+  steps = MIN(steps, 2000);
+  int steps2 = 0;
+  float diff = 0.f;
+//  const float diff_exit = MAX( ((0.001f + softness) / (preview_scale*preview_scale)), 0.00001f );
+  const float diff_exit = MAX( ((softness) / (preview_scale*preview_scale)), 0.0f );
+  
+  printf("dt_heal2 diff_exit=%f\n", diff_exit);
+
+  if (1){
+  for (int i = 0; i < steps; i++)
+  {
+    laplacian_iter(dest_buffer, dest2, dest1, width, height, ch);
+    diff = laplacian_iter(dest_buffer, dest1, dest2, width, height, ch);
+    steps2++;
+    if (diff <= diff_exit) break;
+  }
+  }
+  if(0) {
+  for (int i = 0; i < steps; i++)
+  {
+    laplacian(dest_buffer, dest1, width, height, ch);
+    diff = laplacian(dest1, dest_buffer, width, height, ch);
+    steps2++;
+    if (diff <= diff_exit) break;
+  }
+  }
+  printf("dt_heal2 steps=%i, steps2=%i, diff=%f\n", steps, steps2, diff);
+  
+  memcpy(dest_buffer, dest1, width * height * ch * sizeof(float));
+  
+  if (dest1) dt_free_align(dest1);
+  if (dest2) dt_free_align(dest2);
 }
 

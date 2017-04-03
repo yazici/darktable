@@ -111,7 +111,7 @@ static void dwt_hat_transform(float *temp, const float *const base, const int st
   }
   
 }
-
+/*
 #if defined(__SSE__)
 static void dwt_add_layer_sse(float *img, float *layers, dwt_params_t *const p, const int n_scale)
 {
@@ -132,6 +132,41 @@ static void dwt_add_layer_sse(float *img, float *layers, dwt_params_t *const p, 
     for (int i=0; i<i_size; i++, l+=4, img+=4)
     {
       _mm_store_ps(l, _mm_add_ps(_mm_load_ps(l), _mm_sub_ps(_mm_load_ps(img), lpass_sub)));
+    }
+  }
+
+}
+#endif
+*/
+#if defined(__SSE__)
+static void dwt_add_layer_sse(float *const img, float *layers, dwt_params_t *const p, const int n_scale)
+{
+  const int i_size = p->width*p->height*4;
+  
+  if (n_scale == p->scales+1)
+  {
+#ifdef _FFT_MULTFR_
+#ifdef _OPENMP
+#pragma omp parallel for default(none) shared(layers) schedule(static)
+#endif
+#endif
+    for (int i=0; i<i_size; i+=4)
+    {
+      _mm_store_ps(&(layers[i]), _mm_add_ps(_mm_load_ps(&(layers[i])), _mm_load_ps(&(img[i]))));
+    }
+  }
+  else
+  {
+    const __m128 lpass_sub = _mm_set1_ps(p->blend_factor);
+    
+#ifdef _FFT_MULTFR_
+#ifdef _OPENMP
+#pragma omp parallel for default(none) shared(layers) schedule(static)
+#endif
+#endif
+    for (int i=0; i<i_size; i+=4)
+    {
+      _mm_store_ps(&(layers[i]), _mm_add_ps(_mm_load_ps(&(layers[i])), _mm_sub_ps(_mm_load_ps(&(img[i])), lpass_sub)));
     }
   }
 
@@ -180,7 +215,7 @@ static void dwt_get_image_layer(float *const layer, dwt_params_t *const p)
   
   memcpy(p->image, layer, p->width * p->height * p->ch * sizeof(float));
 }
-
+/*
 #if defined(__SSE__)
 static void dwt_subtract_layer_sse(float *bl, float *bh, dwt_params_t *const p)
 {
@@ -191,9 +226,31 @@ static void dwt_subtract_layer_sse(float *bl, float *bh, dwt_params_t *const p)
 
   for (int i = 0; i < size; i++, bl+=4, bh+=4)
   {
-    /* rounding errors introduced here (division by 16) */
+    // rounding errors introduced here (division by 16)
     _mm_store_ps(bl, _mm_mul_ps(_mm_add_ps(_mm_load_ps(bl), v4_lpass_add), v4_lpass_mult));
     _mm_store_ps(bh, _mm_sub_ps(_mm_load_ps(bh), _mm_sub_ps(_mm_load_ps(bl), v4_lpass_sub)));
+  }
+}
+#endif
+*/
+#if defined(__SSE__)
+static void dwt_subtract_layer_sse(float *bl, float *bh, dwt_params_t *const p)
+{
+  const __m128 v4_lpass_add = _mm_set1_ps(0.f);
+  const __m128 v4_lpass_mult = _mm_set1_ps((1.f / 16.f));
+  const __m128 v4_lpass_sub = _mm_set1_ps(p->blend_factor);
+  const int size = p->width * p->height * 4;
+
+#ifdef _FFT_MULTFR_
+#ifdef _OPENMP
+#pragma omp parallel for default(none) shared(bl, bh) schedule(static)
+#endif
+#endif
+  for (int i = 0; i < size; i+=4)
+  {
+    // rounding errors introduced here (division by 16)
+    _mm_store_ps(&(bl[i]), _mm_mul_ps(_mm_add_ps(_mm_load_ps(&(bl[i])), v4_lpass_add), v4_lpass_mult));
+    _mm_store_ps(&(bh[i]), _mm_sub_ps(_mm_load_ps(&(bh[i])), _mm_sub_ps(_mm_load_ps(&(bl[i])), v4_lpass_sub)));
   }
 }
 #endif
@@ -220,7 +277,7 @@ static void dwt_subtract_layer(float *bl, float *bh, dwt_params_t *const p)
 #endif
     for (int i = 0; i < size; i++) 
     {
-      /* rounding errors introduced here (division by 16) */
+      // rounding errors introduced here (division by 16)
       bl[i] = ( bl[i] + lpass_add ) * lpass_mult;
       bh[i] -= bl[i] - lpass_sub;
     }
