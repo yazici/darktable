@@ -23,6 +23,7 @@
 #include "develop/imageop.h"
 #include "develop/masks.h"
 #include "develop/tiling.h"
+#include <string.h>
 
 #define CLAMP_RANGE(x, y, z) (CLAMP(x, y, z))
 
@@ -2820,6 +2821,303 @@ _blend_row_func *dt_develop_choose_blend_func(const unsigned int blend_mode)
   return blend;
 }
 
+//----------------------------------------------------------------------
+
+typedef struct tile {
+  int left, right, lower, upper;
+} tile;
+
+typedef float rgb_lab_pixel[3];
+
+typedef struct rgb_lab_image {
+  rgb_lab_pixel *data;
+  int width, height, stride;
+} rgb_lab_image;
+
+static inline float * get_rgb_lab_pixel(rgb_lab_image img, size_t i)
+{
+  return ((float *)img.data) + i * img.stride;
+}
+
+typedef float gray_pixel;
+
+typedef struct gray_image {
+  gray_pixel *data;
+  int width, height;
+} gray_image;
+
+// allocate space for 1-component image of size width x height
+static inline gray_image new_gray_image(int width, int height)
+{
+  return (gray_image){ dt_alloc_align(64, sizeof(gray_pixel) * width * height), width, height };
+}
+
+// free space for 1-component image
+static inline void free_gray_image(gray_image *img_p)
+{
+  dt_free_align(img_p->data);
+  img_p->data = NULL;
+}
+
+// copy 1-component image img1 to img2
+static inline void copy_gray_image(gray_image img1, gray_image img2)
+{
+  memcpy(img2.data, img1.data, sizeof(gray_pixel) * img1.width * img1.height);
+}
+
+// minimum of two integers
+static inline int min_i(int a, int b)
+{
+  return a<b ? a : b;
+}
+
+// maximum of two integers
+static inline int max_i(int a, int b)
+{
+  return a>b ? a : b;
+}
+
+// calculate the one-dimensional moving average over a window of size 2*w+1
+// input array x has stride 1, output array y has stride stride_y
+static inline void box_mean_1d(int N, const float *x, float *y, size_t stride_y, int w)
+{
+  float m = 0, n_box = 0;
+  for (int i = 0, i_end = min_i(w+1, N); i < i_end; i++)
+  {
+    m += x[i];
+    n_box++;
+  }
+  for (int i = 0; i < N; i++) {
+    y[i * stride_y] = m / n_box;
+    if (i - w >= 0)
+    {
+      m -= x[i - w];
+      n_box--;
+    }
+    if (i + w + 1 < N)
+    {
+      m += x[i + w + 1];
+      n_box++;
+    }
+  }
+}
+
+// calculate the two-dimensional moving average over a box of size (2*w+1) x (2*w+1)
+// does the calculation in-place if input and ouput images are identical
+// this function is always called from a OpenMP thread, thus no parallelization
+static void box_mean(gray_image img1, gray_image img2, int w)
+{
+  gray_image img2_bak;
+  if (img1.data == img2.data)
+  {
+    img2_bak = new_gray_image(max_i(img2.width, img2.height), 1);
+    for (int i1 = 0; i1 < img2.height; i1++)
+    {
+      memcpy(img2_bak.data, img2.data + (size_t)i1 * img2.width, sizeof(gray_pixel) * img2.width);
+      box_mean_1d(img2.width,
+                  img2_bak.data,
+                  img2.data + (size_t)i1 * img2.width, 1,
+                  w);
+    }
+  }
+  else
+  {
+    for (int i1 = 0; i1 < img1.height; i1++)
+      box_mean_1d(img1.width,
+                  img1.data + (size_t)i1 * img1.width,
+                  img2.data + (size_t)i1 * img2.width, 1,
+                  w);
+    img2_bak = new_gray_image(1, img2.height);
+  }
+  for (int i0 = 0; i0 < img1.width; i0++)
+  {
+    for (int i1 = 0; i1 < img1.height; i1++)
+      img2_bak.data[i1] = img2.data[i0 + (size_t)i1 * img2.width];
+    box_mean_1d(img1.height,
+                img2_bak.data,
+                img2.data + i0, img1.width,
+                w);
+  }
+  free_gray_image(&img2_bak);
+}
+
+// apply guided filter to single-component image img using the 3-components
+// image imgg as a guide
+static void guided_filter_tiling(rgb_lab_image imgg, gray_image img, gray_image img_out, tile target, int w, float eps, float min, float max)
+{
+  const tile source = { max_i(target.left - 2*w, 0),
+			min_i(target.right + 2*w, imgg.width),
+			max_i(target.lower - 2*w, 0),
+			min_i(target.upper + 2*w, imgg.height) };
+  const int width = source.right - source.left;
+  const int height = source.upper - source.lower;
+  size_t size = (size_t)width * (size_t)height;
+  gray_image imgg_mean_r = new_gray_image(width, height);
+  gray_image imgg_mean_g = new_gray_image(width, height);
+  gray_image imgg_mean_b = new_gray_image(width, height);
+  gray_image img_mean = new_gray_image(width, height);
+  for (int j_imgg = source.lower; j_imgg < source.upper; j_imgg++)
+  {
+    int j = j_imgg - source.lower;
+    for (int i_imgg = source.left; i_imgg < source.right; i_imgg++)
+    {
+      int i = i_imgg - source.left;
+      float *pixel = get_rgb_lab_pixel(imgg, i_imgg + (size_t)j_imgg * imgg.width);
+      size_t k = i + (size_t)j * width;
+      imgg_mean_r.data[k] = pixel[0];
+      imgg_mean_g.data[k] = pixel[1];
+      imgg_mean_b.data[k] = pixel[2];
+      img_mean.data[k] = img.data[i_imgg + (size_t)j_imgg * img.width];
+    }
+  }
+  box_mean(imgg_mean_r, imgg_mean_r, w);
+  box_mean(imgg_mean_g, imgg_mean_g, w);
+  box_mean(imgg_mean_b, imgg_mean_b, w);
+  box_mean(img_mean, img_mean, w);
+  gray_image cov_imgg_img_r = new_gray_image(width, height);
+  gray_image cov_imgg_img_g = new_gray_image(width, height);
+  gray_image cov_imgg_img_b = new_gray_image(width, height);
+  gray_image var_imgg_rr, var_imgg_rg, var_imgg_rb,
+    var_imgg_gg, var_imgg_gb,
+    var_imgg_bb;
+  var_imgg_rr = new_gray_image(width, height);
+  var_imgg_gg = new_gray_image(width, height);
+  var_imgg_bb = new_gray_image(width, height);
+  var_imgg_rg = new_gray_image(width, height);
+  var_imgg_rb = new_gray_image(width, height);
+  var_imgg_gb = new_gray_image(width, height);
+  for (int j_imgg = source.lower; j_imgg < source.upper; j_imgg++)
+  {
+    int j = j_imgg - source.lower;
+    for (int i_imgg = source.left; i_imgg < source.right; i_imgg++)
+    {
+      int i = i_imgg - source.left;
+      float *pixel = get_rgb_lab_pixel(imgg, i_imgg + (size_t)j_imgg * imgg.width);
+      size_t k = i + (size_t)j * width;
+      cov_imgg_img_r.data[k] = pixel[0] * img.data[i_imgg + (size_t)j_imgg * imgg.width];
+      cov_imgg_img_g.data[k] = pixel[1] * img.data[i_imgg + (size_t)j_imgg * imgg.width];
+      cov_imgg_img_b.data[k] = pixel[2] * img.data[i_imgg + (size_t)j_imgg * imgg.width];
+      var_imgg_rr.data[k] = pixel[0] * pixel[0];
+      var_imgg_rg.data[k] = pixel[0] * pixel[1];
+      var_imgg_rb.data[k] = pixel[0] * pixel[2];
+      var_imgg_gg.data[k] = pixel[1] * pixel[1];
+      var_imgg_gb.data[k] = pixel[1] * pixel[2];
+      var_imgg_bb.data[k] = pixel[2] * pixel[2];
+    }
+  }
+  box_mean(cov_imgg_img_r, cov_imgg_img_r, w);
+  box_mean(cov_imgg_img_g, cov_imgg_img_g, w);
+  box_mean(cov_imgg_img_b, cov_imgg_img_b, w);
+  box_mean(var_imgg_rr, var_imgg_rr, w);
+  box_mean(var_imgg_rg, var_imgg_rg, w);
+  box_mean(var_imgg_rb, var_imgg_rb, w);
+  box_mean(var_imgg_gg, var_imgg_gg, w);
+  box_mean(var_imgg_gb, var_imgg_gb, w);
+  box_mean(var_imgg_bb, var_imgg_bb, w);
+  for (size_t i = 0; i < size; i++)
+  {
+    cov_imgg_img_r.data[i] -= imgg_mean_r.data[i] * img_mean.data[i];
+    cov_imgg_img_g.data[i] -= imgg_mean_g.data[i] * img_mean.data[i];
+    cov_imgg_img_b.data[i] -= imgg_mean_b.data[i] * img_mean.data[i];
+    var_imgg_rr.data[i] -= imgg_mean_r.data[i] * imgg_mean_r.data[i] - eps;
+    var_imgg_rg.data[i] -= imgg_mean_r.data[i] * imgg_mean_g.data[i];
+    var_imgg_rb.data[i] -= imgg_mean_r.data[i] * imgg_mean_b.data[i];
+    var_imgg_gg.data[i] -= imgg_mean_g.data[i] * imgg_mean_g.data[i] - eps;
+    var_imgg_gb.data[i] -= imgg_mean_g.data[i] * imgg_mean_b.data[i];
+    var_imgg_bb.data[i] -= imgg_mean_b.data[i] * imgg_mean_b.data[i] - eps;
+  }
+  gray_image a_r = new_gray_image(width, height);
+  gray_image a_g = new_gray_image(width, height);
+  gray_image a_b = new_gray_image(width, height);
+  gray_image b = img_mean;
+  for (int i1 = 0; i1 < height; i1++)
+  {
+    size_t i = (size_t)i1 * width;
+    for (int i0 = 0; i0 < width; i0++)
+    {
+      // solve linear system of equations of size 3x3 via Cramer's rule
+      float Sigma[3][3];  // symmetric coefficient matrix
+      Sigma[0][0] = var_imgg_rr.data[i];
+      Sigma[0][1] = var_imgg_rg.data[i];
+      Sigma[0][2] = var_imgg_rb.data[i];
+      Sigma[1][1] = var_imgg_gg.data[i];
+      Sigma[1][2] = var_imgg_gb.data[i];
+      Sigma[2][2] = var_imgg_bb.data[i];
+      rgb_lab_pixel cov_imgg_img;
+      cov_imgg_img[0] = cov_imgg_img_r.data[i];
+      cov_imgg_img[1] = cov_imgg_img_g.data[i];
+      cov_imgg_img[2] = cov_imgg_img_b.data[i];
+      float det0 = Sigma[0][0] * (Sigma[1][1] * Sigma[2][2] - Sigma[1][2] * Sigma[1][2])
+        - Sigma[0][1] * (Sigma[0][1] * Sigma[2][2] - Sigma[0][2] * Sigma[1][2])
+        + Sigma[0][2] * (Sigma[0][1] * Sigma[1][2] - Sigma[0][2] * Sigma[1][1]);
+      if (fabsf(det0) > 4.f*FLT_EPSILON)
+      {
+        float det1 = cov_imgg_img[0] * (Sigma[1][1] * Sigma[2][2] - Sigma[1][2] * Sigma[1][2])
+          - Sigma[0][1] * (cov_imgg_img[1] * Sigma[2][2] - cov_imgg_img[2] * Sigma[1][2])
+          + Sigma[0][2] * (cov_imgg_img[1] * Sigma[1][2] - cov_imgg_img[2] * Sigma[1][1]);
+        float det2 = Sigma[0][0] * (cov_imgg_img[1] * Sigma[2][2] - cov_imgg_img[2] * Sigma[1][2])
+          - cov_imgg_img[0] * (Sigma[0][1] * Sigma[2][2] - Sigma[0][2] * Sigma[1][2])
+          + Sigma[0][2] * (Sigma[0][1] * cov_imgg_img[2] - Sigma[0][2] * cov_imgg_img[1]);
+        float det3 = Sigma[0][0] * (Sigma[1][1] * cov_imgg_img[2] - Sigma[1][2] * cov_imgg_img[1])
+          - Sigma[0][1] * (Sigma[0][1] * cov_imgg_img[2] - Sigma[0][2] * cov_imgg_img[1])
+          + cov_imgg_img[0] * (Sigma[0][1] * Sigma[1][2] - Sigma[0][2] * Sigma[1][1]);
+        a_r.data[i] = det1 / det0;
+        a_g.data[i] = det2 / det0;
+        a_b.data[i] = det3 / det0;
+      }
+      else
+      {
+        // linear system is singular
+        a_r.data[i] = 0;
+        a_g.data[i] = 0;
+        a_b.data[i] = 0;
+      }
+      b.data[i] -= a_r.data[i] * imgg_mean_r.data[i];
+      b.data[i] -= a_g.data[i] * imgg_mean_g.data[i];
+      b.data[i] -= a_b.data[i] * imgg_mean_b.data[i];
+      ++i;
+    }
+  }
+  box_mean(a_r, a_r, w);
+  box_mean(a_g, a_g, w);
+  box_mean(a_b, a_b, w);
+  box_mean(b, b, w);
+  for (int j_imgg = target.lower; j_imgg < target.upper; j_imgg++)
+  {
+    int j = j_imgg - source.lower;
+    for (int i_imgg = target.left; i_imgg < target.right; i_imgg++)
+    {
+      int i = i_imgg - source.left;
+      float *pixel = get_rgb_lab_pixel(imgg, i_imgg + (size_t)j_imgg * imgg.width);
+      size_t k = i + (size_t)j * width;
+      float res = a_r.data[k] * pixel[0] + a_g.data[k] * pixel[1] + a_b.data[k] * pixel[2] + b.data[k];
+      if (res < min)
+        res = min;
+      if (res > max)
+        res = max;
+      img_out.data[i_imgg + (size_t)j_imgg * imgg.width] = res;
+    }
+  }
+  free_gray_image(&a_r);
+  free_gray_image(&a_g);
+  free_gray_image(&a_b);
+  free_gray_image(&var_imgg_rr);
+  free_gray_image(&var_imgg_rg);
+  free_gray_image(&var_imgg_rb);
+  free_gray_image(&var_imgg_gg);
+  free_gray_image(&var_imgg_gb);
+  free_gray_image(&var_imgg_bb);
+  free_gray_image(&cov_imgg_img_r);
+  free_gray_image(&cov_imgg_img_g);
+  free_gray_image(&cov_imgg_img_b);
+  free_gray_image(&img_mean);
+  free_gray_image(&imgg_mean_r);
+  free_gray_image(&imgg_mean_g);
+  free_gray_image(&imgg_mean_b);
+}
+
+//----------------------------------------------------------------------
+
 void dt_develop_blend_process(struct dt_iop_module_t *self, struct dt_dev_pixelpipe_iop_t *piece,
                               const void *const ivoid, void *const ovoid, const struct dt_iop_roi_t *const roi_in,
                               const struct dt_iop_roi_t *const roi_out)
@@ -2837,6 +3135,7 @@ void dt_develop_blend_process(struct dt_iop_module_t *self, struct dt_dev_pixelp
   const int xoffs = roi_out->x - roi_in->x;
   const int yoffs = roi_out->y - roi_in->y;
   const int iwidth = roi_in->width;
+  const int iheight = roi_in->height;
 
   /* check if blend is disabled */
   if(!(mask_mode & DEVELOP_MASK_ENABLED)) return;
@@ -2963,15 +3262,11 @@ void dt_develop_blend_process(struct dt_iop_module_t *self, struct dt_dev_pixelp
     }
 
     const int maskblur = fabsf(d->radius) <= 0.1f ? 0 : 1;
-    const int gaussian = d->radius > 0.0f ? 1 : 0;
-    const float radius = fabsf(d->radius);
-
     if(maskblur)
     {
-      if(gaussian)
+      if(d->mask_blur_mode == DEVELOP_MASK_BLUR_GAUSSIAN)
       {
-        const float sigma = radius * roi_out->scale / piece->iscale;
-
+        const float sigma = d->radius * roi_out->scale / piece->iscale;
         const float mmax[] = { 1.0f };
         const float mmin[] = { 0.0f };
 
@@ -2982,9 +3277,54 @@ void dt_develop_blend_process(struct dt_iop_module_t *self, struct dt_dev_pixelp
           dt_gaussian_free(g);
         }
       }
-      else
+      if(d->mask_blur_mode == DEVELOP_MASK_BLUR_GUIDED_FILTER)
       {
-        // potential further blend algorithm (bilateral grid?)
+        rgb_lab_image img_in = (rgb_lab_image){(rgb_lab_pixel *)ivoid, iwidth, iheight, ch};
+        gray_image img_mask = (gray_image){(gray_pixel *)mask, iwidth, iheight};
+        float * mask_bak = malloc(sizeof(*mask_bak)*iwidth*iheight);
+        memcpy(mask_bak, mask, sizeof(*mask_bak)*iwidth*iheight);
+        gray_image img_mask_bak = (gray_image){(gray_pixel *)mask_bak, iwidth, iheight};
+        const int w = max_i((int)(2 * d->radius * roi_out->scale / piece->iscale + 0.5f), 1);
+        const int tile_width = 512;
+        float eps = 0;
+        switch(cst)
+        {
+        case iop_cs_rgb:
+          eps = 0.125f;
+          break;
+        case iop_cs_Lab:
+          eps = 0.125f * 100;
+          break;
+        case iop_cs_RAW:
+          break;
+        }
+
+#ifdef _OPENMP
+#pragma omp parallel for collapse(2)
+#endif
+        for (int j = 0; j < iheight; j += tile_width)
+        {
+          for (int i = 0; i < iwidth; i += tile_width)
+          {
+            tile target = {i, min_i(i + tile_width, iwidth), j, min_i(j + tile_width, iheight)};
+            guided_filter_tiling(img_in, img_mask_bak, img_mask, target, w, eps, 0.0f, 1.0f);
+          }
+        }
+        free(mask_bak);
+      }
+    }
+
+    const int mask_enhance_contrast = d->contrast <= 0.01f ? 0 : 1;
+    if(mask_enhance_contrast)
+    {
+      const float e = expf( 3.f * d->contrast);
+#ifdef _OPENMP
+#pragma omp parallel for default(none)
+#endif
+      for(size_t k = 0; k < (size_t)roi_out->height * roi_out->width; k++)
+      {
+        const float x = 2 * mask[k] - 1;
+        mask[k] = (x * e / (1.f + (e - 1.f) * fabs(x) ) )/2.f + 0.5f;
       }
     }
 
@@ -3427,7 +3767,7 @@ int dt_develop_blend_legacy_params(dt_iop_module_t *module, const void *const ol
     return 0;
   }
 
-  if(old_version == 1 && new_version == 7)
+  if(old_version == 1 && new_version == 8)
   {
     if(length != sizeof(dt_develop_blend_params1_t)) return 1;
 
@@ -3443,7 +3783,7 @@ int dt_develop_blend_legacy_params(dt_iop_module_t *module, const void *const ol
     return 0;
   }
 
-  if(old_version == 2 && new_version == 7)
+  if(old_version == 2 && new_version == 8)
   {
     if(length != sizeof(dt_develop_blend_params2_t)) return 1;
 
@@ -3467,7 +3807,7 @@ int dt_develop_blend_legacy_params(dt_iop_module_t *module, const void *const ol
     return 0;
   }
 
-  if(old_version == 3 && new_version == 7)
+  if(old_version == 3 && new_version == 8)
   {
     if(length != sizeof(dt_develop_blend_params3_t)) return 1;
 
@@ -3489,7 +3829,7 @@ int dt_develop_blend_legacy_params(dt_iop_module_t *module, const void *const ol
     return 0;
   }
 
-  if(old_version == 4 && new_version == 7)
+  if(old_version == 4 && new_version == 8)
   {
     if(length != sizeof(dt_develop_blend_params4_t)) return 1;
 
@@ -3512,37 +3852,50 @@ int dt_develop_blend_legacy_params(dt_iop_module_t *module, const void *const ol
     return 0;
   }
 
-  if(old_version == 5 && new_version == 7)
+  if(old_version == 5 && new_version == 8)
   {
     if(length != sizeof(dt_develop_blend_params5_t)) return 1;
 
     dt_develop_blend_params5_t *o = (dt_develop_blend_params5_t *)old_params;
     dt_develop_blend_params_t *n = (dt_develop_blend_params_t *)new_params;
+    dt_develop_blend_params_t *d = (dt_develop_blend_params_t *)module->default_blendop_params;
 
     // this is needed as version 5 contained a bug which screwed up history
     // stacks of even older
     // versions. potentially bad history stacks can be identified by an active
     // bit no. 32 in blendif.
-    memcpy(n, o, sizeof(dt_develop_blend_params_t)); // start with a copy of
-                                                     // version 5 parameters
+    *n = *d; // start with a fresh copy of default parameters
+    n->mask_mode = o->mask_mode;
+    n->blend_mode = o->blend_mode;
+    n->opacity = o->opacity;
+    n->mask_combine = o->mask_combine;
+    n->mask_id = o->mask_id;
     n->blendif = (o->blendif & (1u << DEVELOP_BLENDIF_active) ? o->blendif | 31 : o->blendif)
                  & ~(1u << DEVELOP_BLENDIF_active);
+    n->radius = o->radius;
+    memcpy(n->blendif_parameters, o->blendif_parameters, 4 * DEVELOP_BLENDIF_SIZE * sizeof(float));
+
     return 0;
   }
 
-  if(old_version == 6 && new_version == 7)
+  if(old_version == 6 && new_version == 8)
   {
     if(length != sizeof(dt_develop_blend_params6_t)) return 1;
 
     dt_develop_blend_params6_t *o = (dt_develop_blend_params6_t *)old_params;
     dt_develop_blend_params_t *n = (dt_develop_blend_params_t *)new_params;
+    dt_develop_blend_params_t *d = (dt_develop_blend_params_t *)module->default_blendop_params;
 
-    // version 6 is identical to version 7. we only incremented the version
-    // number to make sure that all-zero
-    // history stacks
-    // are dealt with correctly in the first check above
-    memcpy(n, o, sizeof(dt_develop_blend_params_t)); // just make a copy of
-                                                     // version 6 parameters
+    *n = *d; // start with a fresh copy of default parameters
+    n->mask_mode = o->mask_mode;
+    n->blend_mode = o->blend_mode;
+    n->opacity = o->opacity;
+    n->mask_combine = o->mask_combine;
+    n->mask_id = o->mask_id;
+    n->blendif = o->blendif;
+    n->radius = o->radius;
+    memcpy(n->blendif_parameters, o->blendif_parameters, 4 * DEVELOP_BLENDIF_SIZE * sizeof(float));
+
     return 0;
   }
 
