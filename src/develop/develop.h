@@ -231,6 +231,7 @@ typedef struct dt_develop_t
 
   /* Begin Retouch */
   gboolean darkroom_skip_mouse_events; // skip mouse events for masks
+  int mask_form_selected_id;
   /* End Retouch */
 } dt_develop_t;
 

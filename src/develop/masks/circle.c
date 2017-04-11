@@ -481,8 +481,8 @@ static void dt_circle_events_post_expose(cairo_t *cr, float zoom_scale, dt_masks
       float radius1, radius2;
       if(form->type & DT_MASKS_CLONE)
       {
-      radius1 = MIN(0.5f, dt_conf_get_float("plugins/darkroom/spots/circle_size"));
-      radius2 = MIN(0.5f, dt_conf_get_float("plugins/darkroom/spots/circle_border"));
+        radius1 = MIN(0.5f, dt_conf_get_float("plugins/darkroom/spots/circle_size"));
+        radius2 = MIN(0.5f, dt_conf_get_float("plugins/darkroom/spots/circle_border"));
       }
       else
       {
@@ -509,15 +509,32 @@ static void dt_circle_events_post_expose(cairo_t *cr, float zoom_scale, dt_masks
       }
 
       cairo_save(cr);
-//      cairo_set_line_width(cr, 3.0 / zoom_scale);
-      cairo_set_line_width(cr, 1.0 / zoom_scale);
-//      cairo_set_source_rgba(cr, .3, .3, .3, .8);
-      cairo_set_source_rgba(cr, .8, .8, .8, .8);
+      
+      // draw circle
+      cairo_set_dash(cr, dashed, 0, 0);
+      cairo_set_line_width(cr, 3.0 / zoom_scale);
+      cairo_set_source_rgba(cr, .3, .3, .3, .8);
+      
       cairo_arc(cr, xpos, ypos, radius1, 0, 2.0 * M_PI);
+      
+      cairo_stroke_preserve(cr);
+      cairo_set_line_width(cr, 1.0 / zoom_scale);
+      cairo_set_source_rgba(cr, .8, .8, .8, .8);
       cairo_stroke(cr);
+
+      // draw border
       cairo_set_dash(cr, dashed, len, 0);
+      cairo_set_line_width(cr, 1.0 / zoom_scale);
+      cairo_set_source_rgba(cr, .3, .3, .3, .8);
+
       cairo_arc(cr, xpos, ypos, radius2, 0, 2.0 * M_PI);
+      
+      cairo_stroke_preserve(cr);
+      cairo_set_line_width(cr, 1.0 / zoom_scale);
+      cairo_set_source_rgba(cr, .8, .8, .8, .8);
+      cairo_set_dash(cr, dashed, len, 4);
       cairo_stroke(cr);
+
       cairo_restore(cr);
     }
 

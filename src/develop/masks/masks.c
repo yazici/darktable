@@ -1169,6 +1169,40 @@ int dt_masks_events_button_released(struct dt_iop_module_t *module, double x, do
   return 0;
 }
 
+/* Begin Retouch */
+static void dt_masks_select_form(struct dt_iop_module_t *module, dt_masks_form_t *sel)
+{
+  int selection_changed = 0;
+  
+  if (sel)
+  {
+    if (sel->formid != darktable.develop->mask_form_selected_id)
+    {
+      darktable.develop->mask_form_selected_id = sel->formid;
+      selection_changed = 1;
+    }
+  }
+  else
+  {
+    if (darktable.develop->mask_form_selected_id != 0)
+    {
+      darktable.develop->mask_form_selected_id = 0;
+      selection_changed = 1;
+    }
+  }
+  if (selection_changed)
+  {
+    if (!module && darktable.develop->mask_form_selected_id == 0)
+      module = darktable.develop->gui_module;
+    if (module)
+    {
+      if (module->masks_selection_changed)
+        module->masks_selection_changed(module, darktable.develop->mask_form_selected_id);
+    }
+  }
+}
+/* End Retouch */
+
 int dt_masks_events_button_pressed(struct dt_iop_module_t *module, double x, double y, double pressure,
                                    int which, int type, uint32_t state)
 {
@@ -1182,6 +1216,25 @@ int dt_masks_events_button_pressed(struct dt_iop_module_t *module, double x, dou
   pzx += 0.5f;
   pzy += 0.5f;
 
+  /* Begin Retouch */
+  if (gui && which == 1)
+  {
+    dt_masks_form_t *sel = NULL;
+    
+    if ((gui->form_selected || gui->source_selected) && !gui->creation && gui->group_edited >= 0)
+    {
+      // we get the slected form
+      dt_masks_point_group_t *fpt = (dt_masks_point_group_t *)g_list_nth_data(form->points, gui->group_edited);
+      if (fpt)
+      {
+        sel = dt_masks_get_from_id(darktable.develop, fpt->formid);
+      }
+    }
+  
+    dt_masks_select_form(module, sel);
+  }
+  /* End Retouch */
+  
   if(form->type & DT_MASKS_CIRCLE)
     return dt_circle_events_button_pressed(module, pzx, pzy, pressure, which, type, state, form, 0, gui, 0);
   else if(form->type & DT_MASKS_PATH)
@@ -1313,6 +1366,9 @@ void dt_masks_clear_form_gui(dt_develop_t *dev)
   dev->form_gui->group_edited = -1;
   dev->form_gui->group_selected = -1;
   dev->form_gui->edit_mode = DT_MASKS_EDIT_OFF;
+  /* Begin Retouch */
+  dt_masks_select_form(NULL, NULL);
+  /* Begin Retouch */
 }
 
 void dt_masks_change_form_gui(dt_masks_form_t *newform)

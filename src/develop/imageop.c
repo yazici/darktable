@@ -313,6 +313,10 @@ int dt_iop_load_module_so(dt_iop_module_so_t *module, const char *libname, const
     module->modify_roi_out = dt_iop_modify_roi_out;
   if(!g_module_symbol(module->module, "legacy_params", (gpointer) & (module->legacy_params)))
     module->legacy_params = NULL;
+  /* Begin Retouch */
+  if(!g_module_symbol(module->module, "masks_selection_changed", (gpointer) & (module->masks_selection_changed)))
+    module->masks_selection_changed = NULL;
+  /* End Retouch */
 
   // the introspection api
   module->have_introspection = FALSE;
@@ -420,7 +424,10 @@ static int dt_iop_load_module_by_so(dt_iop_module_t *module, dt_iop_module_so_t 
   module->modify_roi_in = so->modify_roi_in;
   module->modify_roi_out = so->modify_roi_out;
   module->legacy_params = so->legacy_params;
-
+  /* Begin Retouch */
+  module->masks_selection_changed = so->masks_selection_changed;
+  /* End Retouch */
+  
   module->connect_key_accels = so->connect_key_accels;
   module->disconnect_key_accels = so->disconnect_key_accels;
 

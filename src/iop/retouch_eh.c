@@ -28,7 +28,7 @@
 #include "common/heal_eh.h"
 #include "common/dwt_eh.h"
 
-#define _FFT_MULTFR_
+//#define _FFT_MULTFR_
 
 // this is the version of the modules parameters,
 // and includes version information about compile-time dt
@@ -59,8 +59,7 @@ typedef enum dt_iop_retouch_algo_type_t
   dt_iop_retouch_clone = 1, 
   dt_iop_retouch_heal = 2,
   dt_iop_retouch_gaussian_blur = 3, 
-  dt_iop_retouch_fill = 4,
-  dt_iop_retouch_heal1 = 5
+  dt_iop_retouch_fill = 4
 } dt_iop_retouch_algo_type_t;
 
 typedef struct dt_iop_retouch_form_data_v3_t
@@ -74,8 +73,6 @@ typedef struct _rt_shapes_user_data_t
   int formid; // from masks, form->formid
   int scale; // 0==original image; 1..RETOUCH_MAX_SCALES==scale; RETOUCH_MAX_SCALES+1==residual
   dt_iop_retouch_algo_type_t algorithm; // clone, heal, blur, fill
-  
-  float heal_smoothness; // smoothness for healing algorithm
   
   float blur_radius; // radius for blur algorithm
   
@@ -176,7 +173,7 @@ typedef struct dt_iop_retouch_params_v3_t
 
 typedef struct dt_iop_retouch_params_t
 {
-  dt_iop_retouch_form_data_t rt_forms[RETOUCH_NO_FORMS]; // 0==original image; 1..RETOUCH_MAX_SCALES==scale; RETOUCH_MAX_SCALES+1==residual
+  dt_iop_retouch_form_data_t rt_forms[RETOUCH_NO_FORMS]; // array of masks index and additional data
   
   dt_iop_retouch_algo_type_t algorithm; // clone, heal, blur, fill
 
@@ -217,10 +214,6 @@ typedef struct dt_iop_retouch_gui_data_t
   GtkWidget *bt_copy_scale; // copy all shapes from one scale to another
   GtkWidget *bt_paste_scale;
 
-  GtkWidget *hbox_heal;
-  GtkWidget *cmb_heal_type;
-  GtkWidget *sl_heal_smoothness;
- 
   GtkWidget *hbox_blur;
   GtkWidget *sl_blur_radius;
  
@@ -232,9 +225,7 @@ typedef struct dt_iop_retouch_gui_data_t
   GtkWidget *cmb_fill_mode;
   GtkWidget *sl_fill_delta;
   
-  GtkWidget *sl_mask_opacity; // blend factor
-
-  int shape_selected_id; // selected shape
+  GtkWidget *sl_mask_opacity; // draw mask opacity
 } dt_iop_retouch_gui_data_t;
 
 typedef struct dt_iop_retouch_params_t dt_iop_retouch_data_t;
@@ -268,8 +259,6 @@ static void rt_set_shape_user_data(dt_iop_retouch_form_data_t *form_data, _rt_sh
     case dt_iop_retouch_clone:
       break;
     case dt_iop_retouch_heal:
-    case dt_iop_retouch_heal1:
-      form_data->float1 = shape_user_data->heal_smoothness;
       break;
     case dt_iop_retouch_gaussian_blur:
       form_data->float1 = shape_user_data->blur_radius;
@@ -298,8 +287,6 @@ static void rt_get_shape_user_data(dt_iop_retouch_form_data_t *form_data, _rt_sh
     case dt_iop_retouch_clone:
       break;
     case dt_iop_retouch_heal:
-    case dt_iop_retouch_heal1:
-      shape_user_data->heal_smoothness = form_data->float1;
       break;
     case dt_iop_retouch_gaussian_blur:
       shape_user_data->blur_radius = form_data->float1;
@@ -346,8 +333,6 @@ int legacy_params(dt_iop_module_t *self, const void *const old_params, const int
           shape_data.fill_color[2] = o->fill_color[scale][2];
           shape_data.fill_delta = 0.0f;
   
-          shape_data.heal_smoothness = 0.0f;
-          
           rt_set_shape_user_data(&(n->rt_forms[form_new]), &shape_data);
   
           form_new++;
@@ -402,8 +387,6 @@ int legacy_params(dt_iop_module_t *self, const void *const old_params, const int
           shape_data.fill_color[2] = o->fill_color[scale][2];
           shape_data.fill_delta = 0.0f;
   
-          shape_data.heal_smoothness = 0.0f;
-          
           rt_set_shape_user_data(&(n->rt_forms[form_new]), &shape_data);
           
           form_new++;
@@ -458,8 +441,6 @@ int legacy_params(dt_iop_module_t *self, const void *const old_params, const int
           shape_data.fill_color[2] = o->fill_color[scale][2];
           shape_data.fill_delta = o->fill_delta[scale];
   
-          shape_data.heal_smoothness = 0.0f;
-          
           rt_set_shape_user_data(&(n->rt_forms[form_new]), &shape_data);
           
           form_new++;
@@ -760,6 +741,11 @@ static dt_iop_retouch_algo_type_t rt_get_algorithm_from_formid(dt_iop_retouch_pa
   return algo;
 }
 
+static int rt_get_selected_shape_id()
+{
+  return darktable.develop->mask_form_selected_id;
+}
+
 static dt_masks_point_group_t * rt_get_mask_point_group(dt_iop_module_t *self, int formid)
 {
   dt_masks_point_group_t *form_point_group = NULL;
@@ -808,18 +794,14 @@ static void rt_show_hide_controls(dt_iop_retouch_gui_data_t *d, dt_iop_retouch_p
   switch (p->algorithm)
   {
   case dt_iop_retouch_heal:
-  case dt_iop_retouch_heal1:
-      gtk_widget_show(GTK_WIDGET(d->hbox_heal));
       gtk_widget_hide(GTK_WIDGET(d->hbox_blur));
       gtk_widget_hide(GTK_WIDGET(d->hbox_color));
       break;
     case dt_iop_retouch_gaussian_blur:
-      gtk_widget_hide(GTK_WIDGET(d->hbox_heal));
       gtk_widget_show(GTK_WIDGET(d->hbox_blur));
       gtk_widget_hide(GTK_WIDGET(d->hbox_color));
       break;
     case dt_iop_retouch_fill:
-      gtk_widget_hide(GTK_WIDGET(d->hbox_heal));
       gtk_widget_hide(GTK_WIDGET(d->hbox_blur));
       gtk_widget_show(GTK_WIDGET(d->hbox_color));
       if (p->fill_mode == dt_iop_rt_fill_color)
@@ -829,7 +811,6 @@ static void rt_show_hide_controls(dt_iop_retouch_gui_data_t *d, dt_iop_retouch_p
       break;
     case dt_iop_retouch_clone:
     default:
-      gtk_widget_hide(GTK_WIDGET(d->hbox_heal));
       gtk_widget_hide(GTK_WIDGET(d->hbox_blur));
       gtk_widget_hide(GTK_WIDGET(d->hbox_color));
       break;
@@ -838,16 +819,16 @@ static void rt_show_hide_controls(dt_iop_retouch_gui_data_t *d, dt_iop_retouch_p
 
 static void rt_display_selected_shapes_lbl(dt_iop_retouch_gui_data_t *g)
 {
-  dt_masks_form_t *form = dt_masks_get_from_id(darktable.develop, g->shape_selected_id);
+  dt_masks_form_t *form = dt_masks_get_from_id(darktable.develop, rt_get_selected_shape_id());
   if (form)
     gtk_label_set_text(g->label_form_selected, form->name);
   else
     gtk_label_set_text(g->label_form_selected, _(" "));
 }
 
-static int rt_get_selected_shape_index(dt_iop_retouch_params_t *p, dt_iop_retouch_gui_data_t *g)
+static int rt_get_selected_shape_index(dt_iop_retouch_params_t *p)
 {
-  return rt_get_index_from_formid(p, g->shape_selected_id);
+  return rt_get_index_from_formid(p, rt_get_selected_shape_id());
 }
 
 static void rt_shape_selection_changed(dt_iop_module_t *self)
@@ -860,7 +841,7 @@ static void rt_shape_selection_changed(dt_iop_module_t *self)
 
   int selection_changed = 0;
   
-  const int index = rt_get_selected_shape_index(p, g);
+  const int index = rt_get_selected_shape_index(p);
   if (index >= 0)
   {
     _rt_shapes_user_data_t shape_user_data = {0};
@@ -869,20 +850,7 @@ static void rt_shape_selection_changed(dt_iop_module_t *self)
     
     dt_bauhaus_slider_set(g->sl_mask_opacity, rt_get_shape_opacity(self, p->rt_forms[index].formid));
     
-    if (shape_user_data.algorithm == dt_iop_retouch_heal || shape_user_data.algorithm == dt_iop_retouch_heal1)
-    {
-//      p->heal_smoothness = shape_user_data.heal_smoothness;
-      
-//      dt_bauhaus_slider_set(g->sl_heal_smoothness, p->heal_smoothness);
-      if (shape_user_data.algorithm == dt_iop_retouch_heal)
-        dt_bauhaus_combobox_set(g->cmb_heal_type, 0);
-      else
-        dt_bauhaus_combobox_set(g->cmb_heal_type, 1);
-      dt_bauhaus_slider_set(g->sl_heal_smoothness, shape_user_data.heal_smoothness);
-      
-      selection_changed = 1;
-    }
-    else if (shape_user_data.algorithm == dt_iop_retouch_gaussian_blur)
+    if (shape_user_data.algorithm == dt_iop_retouch_gaussian_blur)
     {
       p->blur_radius = shape_user_data.blur_radius;
       
@@ -910,7 +878,7 @@ static void rt_shape_selection_changed(dt_iop_module_t *self)
       p->algorithm = shape_user_data.algorithm;
       
       gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(g->bt_clone), (p->algorithm == dt_iop_retouch_clone));
-      gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(g->bt_heal), (p->algorithm == dt_iop_retouch_heal || p->algorithm == dt_iop_retouch_heal1));
+      gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(g->bt_heal), (p->algorithm == dt_iop_retouch_heal));
       gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(g->bt_gaussian_blur), (p->algorithm == dt_iop_retouch_gaussian_blur));
       gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(g->bt_fill), (p->algorithm == dt_iop_retouch_fill));
       
@@ -927,33 +895,6 @@ static void rt_shape_selection_changed(dt_iop_module_t *self)
   
   if (selection_changed)
     dt_dev_add_history_item(darktable.develop, self, TRUE);
-}
-
-static void rt_shape_clear_selection(dt_iop_module_t *self)
-{
-  dt_iop_retouch_gui_data_t *g = (dt_iop_retouch_gui_data_t *)self->gui_data;
-  if (g->shape_selected_id > 0)
-  {
-    g->shape_selected_id = 0;
-    
-    rt_shape_selection_changed(self);
-  }
-}
-
-static int rt_shape_is_selected(dt_iop_retouch_gui_data_t *g, int formid)
-{
-  return (g->shape_selected_id == formid);
-}
-
-static void rt_shape_add_to_selection(dt_iop_module_t *self, int formid)
-{
-  dt_iop_retouch_gui_data_t *g = (dt_iop_retouch_gui_data_t *)self->gui_data;
-  if (!rt_shape_is_selected(g, formid))
-  {
-    g->shape_selected_id = formid;
-    
-    rt_shape_selection_changed(self);
-  }
 }
 
 //---------------------------------------------------------------------------------
@@ -973,7 +914,6 @@ static void rt_masks_form_change_opacity(dt_iop_module_t *self, int formid, floa
     dt_masks_form_t *grp = dt_masks_get_from_id(self->dev, bp->mask_id);
     dt_masks_write_form(grp, darktable.develop);
     
-//    dt_masks_update_image(darktable.develop);
     dt_dev_masks_list_update(darktable.develop);
   }
 }
@@ -1083,10 +1023,8 @@ static void rt_show_forms_for_current_scale(dt_iop_module_t *self)
 static void rt_resynch_params(struct dt_iop_module_t *self)
 {
   dt_iop_retouch_params_t *p = (dt_iop_retouch_params_t *)self->params;
-  dt_iop_retouch_gui_data_t *g = (dt_iop_retouch_gui_data_t *)self->gui_data;
   dt_develop_blend_params_t *bp = self->blend_params;
   
-  int new_added = 0;
   dt_iop_retouch_form_data_t forms_d[RETOUCH_NO_FORMS] = { 0 };
   
   // we go through all forms in blend params
@@ -1121,21 +1059,24 @@ static void rt_resynch_params(struct dt_iop_module_t *self)
           shape_user_data.scale = p->curr_scale;
           shape_user_data.algorithm = p->algorithm;
           
-          if (g)
-            shape_user_data.heal_smoothness = dt_bauhaus_slider_get(g->sl_heal_smoothness);
+          switch (shape_user_data.algorithm)
+          {
+            case dt_iop_retouch_gaussian_blur:
+              shape_user_data.blur_radius = p->blur_radius;
+              break;
+            case dt_iop_retouch_fill:
+              shape_user_data.fill_mode = p->fill_mode;
+              shape_user_data.fill_color[0] = p->fill_color[0];
+              shape_user_data.fill_color[1] = p->fill_color[1];
+              shape_user_data.fill_color[2] = p->fill_color[2];
+              shape_user_data.fill_delta = p->fill_delta;
+              break;
+            default:
+              break;
+          }
           
-          shape_user_data.blur_radius = p->blur_radius;
-          
-          shape_user_data.fill_mode = p->fill_mode;
-          shape_user_data.fill_color[0] = p->fill_color[0];
-          shape_user_data.fill_color[1] = p->fill_color[1];
-          shape_user_data.fill_color[2] = p->fill_color[2];
-          shape_user_data.fill_delta = p->fill_delta;
-                    
           rt_set_shape_user_data(&(forms_d[new_form_index]), &shape_user_data);
 
-          new_added = 1;
-          
           new_form_index++;
         }
       }
@@ -1145,15 +1086,11 @@ static void rt_resynch_params(struct dt_iop_module_t *self)
   }
 
   // we reaffect params
-  int selected_exists = 0;
   for(int i = 0; i < RETOUCH_NO_FORMS; i++)
   {
     p->rt_forms[i] = forms_d[i];
-    
-    if (rt_shape_is_selected(g, p->rt_forms[i].formid)) selected_exists = 1;
   }
   
-  if (!selected_exists || new_added) rt_shape_clear_selection(self);
 }
 
 static gboolean rt_masks_form_is_in_roi(dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece,
@@ -1277,7 +1214,7 @@ static void rt_colorpick_color_set_callback(GtkColorButton *widget, dt_iop_modul
   p->fill_color[1] = c.green-p->blend_factor;
   p->fill_color[2] = c.blue-p->blend_factor;
 
-  const int index = rt_get_selected_shape_index(p, g);
+  const int index = rt_get_selected_shape_index(p);
   if (index >= 0)
   {
     _rt_shapes_user_data_t shape_user_data = {0};
@@ -1320,7 +1257,7 @@ static gboolean rt_draw_callback(GtkWidget *widget, cairo_t *cr, dt_iop_module_t
   p->fill_color[1] = self->picked_output_color[1]-p->blend_factor;
   p->fill_color[2] = self->picked_output_color[2]-p->blend_factor;
 
-  const int index = rt_get_selected_shape_index(p, g);
+  const int index = rt_get_selected_shape_index(p);
   if (index >= 0)
   {
     _rt_shapes_user_data_t shape_user_data = {0};
@@ -1421,7 +1358,6 @@ static void rt_curr_scale_callback(GtkWidget *slider, dt_iop_module_t *self)
   dt_iop_retouch_params_t *p = (dt_iop_retouch_params_t *)self->params;
   p->curr_scale = dt_bauhaus_slider_get(slider);
   
-  rt_shape_clear_selection(self);
   rt_show_forms_for_current_scale(self);
 
   darktable.gui->reset = reset;
@@ -1448,12 +1384,10 @@ static void rt_mask_opacity_callback(GtkWidget *slider, dt_iop_module_t *self)
 {
   if(darktable.gui->reset) return;
 
-  dt_iop_retouch_gui_data_t *g = (dt_iop_retouch_gui_data_t *)self->gui_data;
-
-  if (g->shape_selected_id > 0)
+  if (rt_get_selected_shape_id() > 0)
   {
     float opacity = dt_bauhaus_slider_get(slider);
-    rt_masks_form_change_opacity(self, g->shape_selected_id, opacity);
+    rt_masks_form_change_opacity(self, rt_get_selected_shape_id(), opacity);
   }
 
   dt_dev_add_history_item(darktable.develop, self, TRUE);
@@ -1537,7 +1471,7 @@ static gboolean rt_add_shape_callback(GtkWidget *widget, GdkEventButton *e, dt_i
    
 		// we create the new form
 		dt_masks_form_t *spot = NULL;
-		if (p->algorithm == dt_iop_retouch_clone || p->algorithm == dt_iop_retouch_heal || p->algorithm == dt_iop_retouch_heal1)
+		if (p->algorithm == dt_iop_retouch_clone || p->algorithm == dt_iop_retouch_heal)
 		  spot = dt_masks_create(type | DT_MASKS_CLONE);
 		else
 		  spot = dt_masks_create(type);
@@ -1569,17 +1503,13 @@ static void rt_select_algorithm_callback(GtkToggleButton *togglebutton, dt_iop_m
     p->algorithm = dt_iop_retouch_clone;
   else if (togglebutton == (GtkToggleButton *)g->bt_heal)
   {
-    int heal_type = dt_bauhaus_combobox_get(g->cmb_heal_type);
-    if (heal_type == 0)
-      p->algorithm = dt_iop_retouch_heal;
-    else
-      p->algorithm = dt_iop_retouch_heal1;
+    p->algorithm = dt_iop_retouch_heal;
   }
   else if (togglebutton == (GtkToggleButton *)g->bt_fill)
     p->algorithm = dt_iop_retouch_fill;
 
   gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(g->bt_clone), (p->algorithm == dt_iop_retouch_clone));
-  gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(g->bt_heal), (p->algorithm == dt_iop_retouch_heal || p->algorithm == dt_iop_retouch_heal1));
+  gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(g->bt_heal), (p->algorithm == dt_iop_retouch_heal));
   gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(g->bt_gaussian_blur), (p->algorithm == dt_iop_retouch_gaussian_blur));
   gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(g->bt_fill), (p->algorithm == dt_iop_retouch_fill));
 
@@ -1612,42 +1542,14 @@ static void rt_suppress_callback(GtkToggleButton *togglebutton, dt_iop_module_t 
   dt_dev_reprocess_all(module->dev);
 }
 
-static void rt_heal_smoothness_callback(GtkWidget *slider, dt_iop_module_t *self)
-{
-  if(darktable.gui->reset) return;
-  dt_iop_retouch_params_t *p = (dt_iop_retouch_params_t *)self->params;
-  dt_iop_retouch_gui_data_t *g = (dt_iop_retouch_gui_data_t *)self->gui_data;
-  
-//  p->heal_smoothness = dt_bauhaus_slider_get(slider);
-  
-  const int index = rt_get_selected_shape_index(p, g);
-  if (index >= 0)
-  {
-    _rt_shapes_user_data_t shape_user_data = {0};
-    
-    rt_get_shape_user_data(&(p->rt_forms[index]), &shape_user_data);
-    
-    if (shape_user_data.algorithm == dt_iop_retouch_heal || shape_user_data.algorithm == dt_iop_retouch_heal1)
-    {
-//      shape_user_data.heal_smoothness = p->heal_smoothness;
-      shape_user_data.heal_smoothness = dt_bauhaus_slider_get(slider);
-      
-      rt_set_shape_user_data(&(p->rt_forms[index]), &shape_user_data);
-    }
-  }
-  
-  dt_dev_add_history_item(darktable.develop, self, TRUE);
-}
-
 static void rt_blur_radius_callback(GtkWidget *slider, dt_iop_module_t *self)
 {
   if(darktable.gui->reset) return;
   dt_iop_retouch_params_t *p = (dt_iop_retouch_params_t *)self->params;
-  dt_iop_retouch_gui_data_t *g = (dt_iop_retouch_gui_data_t *)self->gui_data;
   
   p->blur_radius = dt_bauhaus_slider_get(slider);
   
-  const int index = rt_get_selected_shape_index(p, g);
+  const int index = rt_get_selected_shape_index(p);
   if (index >= 0)
   {
     _rt_shapes_user_data_t shape_user_data = {0};
@@ -1665,43 +1567,6 @@ static void rt_blur_radius_callback(GtkWidget *slider, dt_iop_module_t *self)
   dt_dev_add_history_item(darktable.develop, self, TRUE);
 }
 
-static void rt_heal_type_callback(GtkComboBox *combo, dt_iop_module_t *self)
-{
-  if(self->dt->gui->reset) return;
-  
-  int reset = darktable.gui->reset;
-  darktable.gui->reset = 1;
-
-  dt_iop_retouch_params_t *p = (dt_iop_retouch_params_t *)self->params;
-  dt_iop_retouch_gui_data_t *g = (dt_iop_retouch_gui_data_t *)self->gui_data;
-
-  int heal_type = dt_bauhaus_combobox_get((GtkWidget *)combo);
-  
-  const int index = rt_get_selected_shape_index(p, g);
-  if (index >= 0)
-  {
-    _rt_shapes_user_data_t shape_user_data = {0};
-    
-    rt_get_shape_user_data(&(p->rt_forms[index]), &shape_user_data);
-    
-    if (shape_user_data.algorithm == dt_iop_retouch_heal || shape_user_data.algorithm == dt_iop_retouch_heal1)
-    {
-      if (heal_type == 0)
-        shape_user_data.algorithm = dt_iop_retouch_heal;
-      else
-        shape_user_data.algorithm = dt_iop_retouch_heal1;
-      
-      rt_set_shape_user_data(&(p->rt_forms[index]), &shape_user_data);
-    }
-  }
-  
-  rt_show_hide_controls(g, p);
-  
-  darktable.gui->reset = reset;
-  
-  dt_dev_add_history_item(darktable.develop, self, TRUE);
-}
-
 static void rt_fill_mode_callback(GtkComboBox *combo, dt_iop_module_t *self)
 {
   if(self->dt->gui->reset) return;
@@ -1714,7 +1579,7 @@ static void rt_fill_mode_callback(GtkComboBox *combo, dt_iop_module_t *self)
 
   p->fill_mode = dt_bauhaus_combobox_get((GtkWidget *)combo);
   
-  const int index = rt_get_selected_shape_index(p, g);
+  const int index = rt_get_selected_shape_index(p);
   if (index >= 0)
   {
     _rt_shapes_user_data_t shape_user_data = {0};
@@ -1740,11 +1605,10 @@ static void rt_fill_delta_callback(GtkWidget *slider, dt_iop_module_t *self)
 {
   if(darktable.gui->reset) return;
   dt_iop_retouch_params_t *p = (dt_iop_retouch_params_t *)self->params;
-  dt_iop_retouch_gui_data_t *g = (dt_iop_retouch_gui_data_t *)self->gui_data;
 
   p->fill_delta = dt_bauhaus_slider_get(slider);
   
-  const int index = rt_get_selected_shape_index(p, g);
+  const int index = rt_get_selected_shape_index(p);
   if (index >= 0)
   {
     _rt_shapes_user_data_t shape_user_data = {0};
@@ -1766,45 +1630,16 @@ static void rt_fill_delta_callback(GtkWidget *slider, dt_iop_module_t *self)
 // GUI
 //--------------------------------------------------------------------------------------------------
 
-int button_pressed(struct dt_iop_module_t *self, double x, double y, double pressure, int which, int type, uint32_t state)
+void masks_selection_changed(struct dt_iop_module_t *self, const int form_selected_id)
 {
-  if (which != 1) return 0;
-  dt_masks_form_gui_t *gui = darktable.develop->form_gui;
-  if (!gui) return 0;
-  dt_masks_form_t *form = darktable.develop->form_visible;
-  if (!form) return 0;
-  if(!(form->type & DT_MASKS_GROUP)) return 0;
-  
   dt_iop_retouch_gui_data_t *g = (dt_iop_retouch_gui_data_t *)self->gui_data;
-  if (g)
-  {
-    dt_pthread_mutex_lock(&g->lock);
-    
-    dt_masks_form_t *sel = NULL;
-    
-    if ((gui->form_selected || gui->source_selected) && !gui->creation && gui->group_edited >= 0)
-    {
-      // we get the slected form
-      dt_masks_point_group_t *fpt = (dt_masks_point_group_t *)g_list_nth_data(form->points, gui->group_edited);
-      if (fpt)
-      {
-        sel = dt_masks_get_from_id(darktable.develop, fpt->formid);
-      }
-    }
+  if (!g) return;
 
-    if(sel)
-    {
-      rt_shape_add_to_selection(self, sel->formid);
-    }
-    else
-    {
-      rt_shape_clear_selection(self);
-    }
-    
-    dt_pthread_mutex_unlock(&g->lock);
-  }
-
-  return 0;
+  dt_pthread_mutex_lock(&g->lock);
+  
+  rt_shape_selection_changed(self);
+  
+  dt_pthread_mutex_unlock(&g->lock);
 }
 
 void init(dt_iop_module_t *module)
@@ -1930,7 +1765,7 @@ void gui_update(dt_iop_module_t *self)
   // enable/disable algorithm toolbar
   gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(g->bt_clone), p->algorithm == dt_iop_retouch_clone);
   gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(g->bt_gaussian_blur), p->algorithm == dt_iop_retouch_gaussian_blur);
-  gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(g->bt_heal), p->algorithm == dt_iop_retouch_heal || p->algorithm == dt_iop_retouch_heal1);
+  gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(g->bt_heal), p->algorithm == dt_iop_retouch_heal);
   gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(g->bt_fill), p->algorithm == dt_iop_retouch_fill);
   
   // enable/disable shapes toolbar
@@ -1957,8 +1792,6 @@ void gui_update(dt_iop_module_t *self)
   dt_bauhaus_slider_set(g->sl_curr_scale, p->curr_scale);
   dt_bauhaus_slider_set(g->sl_blend_factor, p->blend_factor);
 
-//  dt_bauhaus_slider_set(g->sl_heal_smoothness, p->heal_smoothness);
-//  dt_bauhaus_combobox_set(g->cmb_heal_type, 0);
   dt_bauhaus_slider_set(g->sl_blur_radius, p->blur_radius);
   dt_bauhaus_slider_set(g->sl_fill_delta, p->fill_delta);
   dt_bauhaus_combobox_set(g->cmb_fill_mode, p->fill_mode);
@@ -1997,7 +1830,6 @@ void gui_init(dt_iop_module_t *self)
 
   dt_pthread_mutex_init(&g->lock, NULL);
   g->copied_scale = -1;
-  g->shape_selected_id = 0;
   
   self->widget = gtk_box_new(GTK_ORIENTATION_VERTICAL, 5);
   
@@ -2085,7 +1917,7 @@ void gui_init(dt_iop_module_t *self)
   GtkWidget *label1 = gtk_label_new(_("shape selected:"));
   gtk_box_pack_start(GTK_BOX(hbox_shape_sel), label1, FALSE, TRUE, 0);
   g->label_form_selected = GTK_LABEL(gtk_label_new("-1"));
-  g_object_set(G_OBJECT(hbox_shape_sel), "tooltip-text", _("to select a shape mouse over it,\npress shorcut key:darkroom->bypass mouse on shapes\nand click on it.\nto unselect it click on the image."), (char *)NULL);
+  g_object_set(G_OBJECT(hbox_shape_sel), "tooltip-text", _("click on a shape to select it\nto unselect click on the image."), (char *)NULL);
   gtk_box_pack_start(GTK_BOX(hbox_shape_sel), GTK_WIDGET(g->label_form_selected), FALSE, TRUE, 0);
 
   // suppress or show masks toolbar
@@ -2102,29 +1934,11 @@ void gui_init(dt_iop_module_t *self)
   gtk_box_pack_end(GTK_BOX(hbox_show_hide), g->bt_showmask, FALSE, FALSE, 0);
 
   g->bt_suppress = dtgtk_togglebutton_new(dtgtk_cairo_paint_eye_toggle, CPF_STYLE_FLAT | CPF_DO_NOT_USE_BORDER);
-  g_object_set(G_OBJECT(g->bt_suppress), "tooltip-text", _("temporarily switch off masks"), (char *)NULL);
+  g_object_set(G_OBJECT(g->bt_suppress), "tooltip-text", _("temporarily switch off shapes"), (char *)NULL);
   g_signal_connect(G_OBJECT(g->bt_suppress), "toggled", G_CALLBACK(rt_suppress_callback), self);
   gtk_widget_set_size_request(GTK_WIDGET(g->bt_suppress), bs, bs);
   gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(g->bt_suppress), FALSE);
   gtk_box_pack_end(GTK_BOX(hbox_show_hide), g->bt_suppress, FALSE, FALSE, 0);
-
-  // heal algorithm
-  g->hbox_heal = gtk_box_new(GTK_ORIENTATION_VERTICAL, 5);
-
-  g->cmb_heal_type = dt_bauhaus_combobox_new(self);
-  dt_bauhaus_widget_set_label(g->cmb_heal_type, NULL, _("heal type"));
-  dt_bauhaus_combobox_add(g->cmb_heal_type, _("heal"));
-  dt_bauhaus_combobox_add(g->cmb_heal_type, _("heal test"));
-  g_object_set(g->cmb_heal_type, "tooltip-text", _("select the heal algorithm."), (char *)NULL);
-  g_signal_connect(G_OBJECT(g->cmb_heal_type), "value-changed", G_CALLBACK(rt_heal_type_callback), self);
-
-  g->sl_heal_smoothness = dt_bauhaus_slider_new_with_range(self, -1.0, 2.0, 0.001, 0., 3);
-  dt_bauhaus_widget_set_label(g->sl_heal_smoothness, _("heal smoothness"), _("heal smoothness"));
-  g_object_set(g->sl_heal_smoothness, "tooltip-text", _("heal smoothness."), (char *)NULL);
-  g_signal_connect(G_OBJECT(g->sl_heal_smoothness), "value-changed", G_CALLBACK(rt_heal_smoothness_callback), self);
-
-  gtk_box_pack_start(GTK_BOX(g->hbox_heal), g->cmb_heal_type, TRUE, TRUE, 0);
-  gtk_box_pack_start(GTK_BOX(g->hbox_heal), g->sl_heal_smoothness, TRUE, TRUE, 0);
 
   // blur radius for blur algorithm
   g->hbox_blur = gtk_box_new(GTK_ORIENTATION_VERTICAL, 5);
@@ -2261,15 +2075,11 @@ void gui_init(dt_iop_module_t *self)
   gtk_box_pack_start(GTK_BOX(self->widget), g->sl_mask_opacity, TRUE, TRUE, 0);
   
   gtk_box_pack_start(GTK_BOX(self->widget), hbox_show_hide, TRUE, TRUE, 0);
-  gtk_box_pack_start(GTK_BOX(self->widget), g->hbox_heal, TRUE, TRUE, 0);
   gtk_box_pack_start(GTK_BOX(self->widget), g->hbox_blur, TRUE, TRUE, 0);
   gtk_box_pack_start(GTK_BOX(self->widget), g->hbox_color, TRUE, TRUE, 0);
 
   
   g_signal_connect(G_OBJECT(self->widget), "draw", G_CALLBACK(rt_draw_callback), self);
-
-  gtk_widget_show_all(g->hbox_heal);
-  gtk_widget_set_no_show_all(g->hbox_heal, TRUE);
 
   gtk_widget_show_all(g->hbox_blur);
   gtk_widget_set_no_show_all(g->hbox_blur, TRUE);
@@ -2333,8 +2143,6 @@ void modify_roi_in(struct dt_iop_module_t *self, struct dt_dev_pixelpipe_iop_t *
         if(form)
         {
           // if the form is outside the roi, we just skip it
-//        if(!rt_masks_form_is_in_roi(self, piece, form, roi_in, roi_out))
-          
           // use just roi_in, so in the second pass that are outside roi_out but are needed by other forms
           // we may get more image than we need, but is a price to pay...
           if(!rt_masks_form_is_in_roi(self, piece, form, roi_in, roi_in))
@@ -2361,7 +2169,7 @@ void modify_roi_in(struct dt_iop_module_t *self, struct dt_dev_pixelpipe_iop_t *
           
           // heal needs both source and destination areas
           const dt_iop_retouch_algo_type_t algo = rt_get_algorithm_from_formid(p, grpt->formid);
-          if (algo == dt_iop_retouch_heal || algo == dt_iop_retouch_heal1)
+          if (algo == dt_iop_retouch_heal)
           {
             int dx = 0, dy = 0;
             if(rt_masks_get_delta(self, piece, roi_in, form, &dx, &dy))
@@ -2393,7 +2201,7 @@ void init_key_accels(dt_iop_module_so_t *module)
   dt_accel_register_iop (module, TRUE, NC_("accel", "circle tool"),   0, 0);
   dt_accel_register_iop (module, TRUE, NC_("accel", "elipse tool"),   0, 0);
   dt_accel_register_iop (module, TRUE, NC_("accel", "path tool"),     0, 0);
-  dt_accel_register_iop (module, TRUE, NC_("accel", "brush tool"),     0, 0);
+  dt_accel_register_iop (module, TRUE, NC_("accel", "brush tool"),    0, 0);
 }
 
 static gboolean _add_circle_key_accel(GtkAccelGroup *accel_group, GObject *acceleratable, guint keyval,
@@ -2486,52 +2294,58 @@ static void rt_copy_in_to_out(const float *const in, const struct dt_iop_roi_t *
 // process
 //--------------------------------------------------------------------------------------------------
 
-#if defined(__SSE__x)
-static void retouch_fill_sse(const int fts, const int fhs, const int fls, const int fws, const int dx, const int dy,
-                    dt_iop_roi_t *const roi_in, dt_iop_roi_t *const roi_out,
-                    float *const mask, const int mask_width, const int mask_height, float *const in, float *out, const int ch, 
-                    const int mask_display, const float gopacity,
-                    const float *const fill_color)
-{ 
-  const int y_from = MAX(MAX((fts + 1), roi_out->y), (roi_in->y+dy));
-  const int y_to = MIN(MIN((fts + fhs + 1), (roi_out->y + roi_out->height)), (roi_in->y + roi_in->height+dy));
+static void rt_intersect_rois(dt_iop_roi_t *const roi_mask_scaled, dt_iop_roi_t *const roi_in, dt_iop_roi_t *const roi_out, 
+                                const int dx, const int dy, const int padding, 
+                                int *x_from, int *x_to, int *y_from, int *y_to)
+{
+  *x_from = MAX(MAX((roi_mask_scaled->x + 1 - padding), roi_out->x), (roi_in->x+dx));
+  *x_to = MIN(MIN((roi_mask_scaled->x + roi_mask_scaled->width + 1 + padding), roi_out->x + roi_out->width), (roi_in->x + roi_in->width+dx));
   
-  const int x_fom = MAX(MAX((fls + 1), roi_out->x), (roi_in->x+dx));
-  const int x_to = MIN(MIN((fls + fws + 1), roi_out->x + roi_out->width), (roi_in->x + roi_in->width+dx));
+  *y_from = MAX(MAX((roi_mask_scaled->y + 1 - padding), roi_out->y), (roi_in->y+dy));
+  *y_to = MIN(MIN((roi_mask_scaled->y + roi_mask_scaled->height + 1 + padding), (roi_out->y + roi_out->height)), (roi_in->y + roi_in->height+dy));
+}
+
+#if defined(__SSE__)
+static void retouch_fill_sse(float *const in, dt_iop_roi_t *const roi_in, float *out, dt_iop_roi_t *const roi_out, 
+                              float *const mask, dt_iop_roi_t *const roi_mask, dt_iop_roi_t *const roi_mask_scaled, const int mask_display, 
+                              const float opacity, 
+                              const float *const fill_color)
+{
+  const int ch = 4;
+  
+  int x_from = 0, x_to = 0, y_from = 0, y_to = 0;
+  rt_intersect_rois(roi_mask_scaled, roi_in, roi_out, 0, 0, 0, &x_from, &x_to, &y_from, &y_to);
   
   const float valf4_fill[4] = { fill_color[0], fill_color[1], fill_color[2], 0.f };
   const __m128 val_fill = _mm_load_ps(valf4_fill);
   
 #ifdef _FFT_MULTFR_
 #ifdef _OPENMP
-#pragma omp parallel for default(none) shared(out) schedule(static)
+#pragma omp parallel for default(none) shared(out, x_from, x_to, y_from, y_to) schedule(static)
 #endif
 #endif
   for(int yy = y_from; yy < y_to; yy++)
   {
-    const int mindex = (int)((yy - fts) / roi_in->scale);
-    if (mindex >= mask_height) continue;
+    const int mindex = (int)((yy - roi_mask_scaled->y) / roi_in->scale);
+    if (mindex >= roi_mask->height) continue;
     
-    const int oindex = ch * (roi_out->width * (yy - roi_out->y) - roi_out->x + x_fom);
-    const int iindex = ch * (roi_in->width * (yy - dy - roi_in->y) - dx - roi_in->x + x_fom);
+    const int oindex = ch * (roi_out->width * (yy - roi_out->y) - roi_out->x + x_from);
+    const int iindex = ch * (roi_in->width * (yy - roi_in->y) - roi_in->x + x_from);
     
     float *o = out + oindex;
     float *i = in + iindex;
-    float *m = mask + mindex * mask_width;
+    float *m = mask + mindex * roi_mask->width;
     
-    for(int xx = x_fom; xx < x_to; xx++, o+=ch, i+=ch)
+    for(int xx = x_from; xx < x_to; xx++, o+=ch, i+=ch)
     {
-      const int mx = (int)((xx - fls) / roi_in->scale);
-      if (mx >= mask_width) continue;
+      const int mx = (int)((xx - roi_mask_scaled->x) / roi_in->scale);
+      if (mx >= roi_mask->width) continue;
       
-      const float f = m[mx] * gopacity;
+      const float f = m[mx] * opacity;
 
-      const float val1_f4[4] = { 1.0f - f, 1.0f - f, 1.0f - f, 1.0f };
-      const float valf4[4] = { f, f, f, 0.f };
+      const __m128 val1_f = _mm_set1_ps(1.0f - f);
+      const __m128 valf = _mm_set1_ps(f);
 
-      const __m128 val1_f = _mm_load_ps(val1_f4);
-      const __m128 valf = _mm_load_ps(valf4);
-      
       _mm_store_ps(o, _mm_add_ps(_mm_mul_ps(_mm_load_ps(i), val1_f), _mm_mul_ps(val_fill, valf)));
 
       if (mask_display && f)
@@ -2541,50 +2355,46 @@ static void retouch_fill_sse(const int fts, const int fhs, const int fls, const 
 }
 #endif
 
-static void retouch_fill(int use_sse, const int fts, const int fhs, const int fls, const int fws, const int dx, const int dy,
-                    dt_iop_roi_t *const roi_in, dt_iop_roi_t *const roi_out,
-                    float *const mask, const int mask_width, const int mask_height, float *const in, float *out, const int ch, 
-                    const int mask_display, const float gopacity, 
-                    const float *const fill_color)
+static void retouch_fill(float *const in, dt_iop_roi_t *const roi_in, float *out, dt_iop_roi_t *const roi_out, const int ch, 
+                          float *const mask, dt_iop_roi_t *const roi_mask, dt_iop_roi_t *const roi_mask_scaled, const int mask_display, 
+                          const float opacity, 
+                          const float *const fill_color, int use_sse)
 {
-#if defined(__SSE__x)
+#if defined(__SSE__)
   if (ch == 4 && use_sse)
   {
-    retouch_fill_sse(fts, fhs, fls, fws, dx, dy, roi_in, roi_out, mask, mask_width, mask_height, in, out, ch, mask_display, gopacity, fill_color);
+    retouch_fill_sse(in, roi_in, out, roi_out, mask, roi_mask, roi_mask_scaled, mask_display, opacity, fill_color);
     return;
   }
 #endif
-  const int ch1 = 3;
+  const int ch1 = (ch==4) ? ch-1: ch;
   
-  const int y_from = MAX(MAX((fts + 1), roi_out->y), (roi_in->y+dy));
-  const int y_to = MIN(MIN((fts + fhs + 1), (roi_out->y + roi_out->height)), (roi_in->y + roi_in->height+dy));
-  
-  const int x_fom = MAX(MAX((fls + 1), roi_out->x), (roi_in->x+dx));
-  const int x_to = MIN(MIN((fls + fws + 1), roi_out->x + roi_out->width), (roi_in->x + roi_in->width+dx));
+  int x_from = 0, x_to = 0, y_from = 0, y_to = 0;
+  rt_intersect_rois(roi_mask_scaled, roi_in, roi_out, 0, 0, 0, &x_from, &x_to, &y_from, &y_to);
 
 #ifdef _FFT_MULTFR_
 #ifdef _OPENMP
-#pragma omp parallel for default(none) shared(out) schedule(static)
+#pragma omp parallel for default(none) shared(out, x_from, x_to, y_from, y_to) schedule(static)
 #endif
 #endif
   for(int yy = y_from; yy < y_to; yy++)
   {
-    const int mindex = (int)((yy - fts) / roi_in->scale);
-    if (mindex >= mask_height) continue;
+    const int mindex = (int)((yy - roi_mask_scaled->y) / roi_in->scale);
+    if (mindex >= roi_mask->height) continue;
     
-    const int oindex = ch * (roi_out->width * (yy - roi_out->y) - roi_out->x + x_fom);
-    const int iindex = ch * (roi_in->width * (yy - dy - roi_in->y) - dx - roi_in->x + x_fom);
+    const int oindex = ch * (roi_out->width * (yy - roi_out->y) - roi_out->x + x_from);
+    const int iindex = ch * (roi_in->width * (yy - roi_in->y) - roi_in->x + x_from);
     
     float *o = out + oindex;
     float *i = in + iindex;
-    float *m = mask + mindex * mask_width;
+    float *m = mask + mindex * roi_mask->width;
     
-    for(int xx = x_fom; xx < x_to; xx++, o+=ch, i+=ch)
+    for(int xx = x_from; xx < x_to; xx++, o+=ch, i+=ch)
     {
-      const int mx = (int)((xx - fls) / roi_in->scale);
-      if (mx >= mask_width) continue;
+      const int mx = (int)((xx - roi_mask_scaled->x) / roi_in->scale);
+      if (mx >= roi_mask->width) continue;
       
-      const float f = m[mx] * gopacity;
+      const float f = m[mx] * opacity;
       
       for(int c = 0; c < ch1; c++)
         o[c] = i[c] * (1.0f - f) + fill_color[c] * f;
@@ -2596,48 +2406,43 @@ static void retouch_fill(int use_sse, const int fts, const int fhs, const int fl
   
 }
 
-#if defined(__SSE__x)
-static void retouch_clone_sse(const int fts, const int fhs, const int fls, const int fws, const int dx, const int dy,
-                    dt_iop_roi_t *const roi_in, dt_iop_roi_t *const roi_out,
-                    float *const mask, const int mask_width, const int mask_height, float *const in, float *out, const int ch, 
-                    const int mask_display, const float gopacity)
+#if defined(__SSE__)
+static void retouch_clone_sse(float *const in, dt_iop_roi_t *const roi_in, float *out, dt_iop_roi_t *const roi_out, 
+                              float *const mask, dt_iop_roi_t *const roi_mask, dt_iop_roi_t *const roi_mask_scaled, const int mask_display, 
+                              const int dx, const int dy, const float opacity)
 { 
-  const int y_from = MAX(MAX((fts + 1), roi_out->y), (roi_in->y+dy));
-  const int y_to = MIN(MIN((fts + fhs + 1), (roi_out->y + roi_out->height)), (roi_in->y + roi_in->height+dy));
+  const int ch = 4;
   
-  const int x_fom = MAX(MAX((fls + 1), roi_out->x), (roi_in->x+dx));
-  const int x_to = MIN(MIN((fls + fws + 1), roi_out->x + roi_out->width), (roi_in->x + roi_in->width+dx));
-  
+  int x_from = 0, x_to = 0, y_from = 0, y_to = 0;
+  rt_intersect_rois(roi_mask_scaled, roi_in, roi_out, dx, dy, 0, &x_from, &x_to, &y_from, &y_to);
+
 #ifdef _FFT_MULTFR_
 #ifdef _OPENMP
-#pragma omp parallel for default(none) shared(out) schedule(static)
+#pragma omp parallel for default(none) shared(out, x_from, x_to, y_from, y_to) schedule(static)
 #endif
 #endif
   for(int yy = y_from; yy < y_to; yy++)
   {
-    const int mindex = (int)((yy - fts) / roi_in->scale);
-    if (mindex >= mask_height) continue;
+    const int mindex = (int)((yy - roi_mask_scaled->y) / roi_in->scale);
+    if (mindex >= roi_mask->height) continue;
     
-    const int oindex = ch * (roi_out->width * (yy - roi_out->y) - roi_out->x + x_fom);
-    const int iindex = ch * (roi_in->width * (yy - dy - roi_in->y) - dx - roi_in->x + x_fom);
+    const int oindex = ch * (roi_out->width * (yy - roi_out->y) - roi_out->x + x_from);
+    const int iindex = ch * (roi_in->width * (yy - dy - roi_in->y) - dx - roi_in->x + x_from);
     
     float *o = out + oindex;
     float *i = in + iindex;
-    float *m = mask + mindex * mask_width;
+    float *m = mask + mindex * roi_mask->width;
     
-    for(int xx = x_fom; xx < x_to; xx++, o+=ch, i+=ch)
+    for(int xx = x_from; xx < x_to; xx++, o+=ch, i+=ch)
     {
-      const int mx = (int)((xx - fls) / roi_in->scale);
-      if (mx >= mask_width) continue;
+      const int mx = (int)((xx - roi_mask_scaled->x) / roi_in->scale);
+      if (mx >= roi_mask->width) continue;
       
-      const float f = m[mx] * gopacity;
+      const float f = m[mx] * opacity;
 
-      const float val1_f4[4] = { 1.0f - f, 1.0f - f, 1.0f - f, 1.0f };
-      const float valf4[4] = { f, f, f, 0.f };
+      const __m128 val1_f = _mm_set1_ps(1.0f - f);
+      const __m128 valf = _mm_set1_ps(f);
 
-      const __m128 val1_f = _mm_load_ps(val1_f4);
-      const __m128 valf = _mm_load_ps(valf4);
-      
       _mm_store_ps(o, _mm_add_ps(_mm_mul_ps(_mm_load_ps(o), val1_f), _mm_mul_ps(_mm_load_ps(i), valf)));
 
       if (mask_display && f)
@@ -2648,49 +2453,45 @@ static void retouch_clone_sse(const int fts, const int fhs, const int fls, const
 }
 #endif
 
-static void retouch_clone(int use_sse, const int fts, const int fhs, const int fls, const int fws, const int dx, const int dy,
-                    dt_iop_roi_t *const roi_in, dt_iop_roi_t *const roi_out,
-                    float *const mask, const int mask_width, const int mask_height, float *const in, float *out, const int ch, 
-                    const int mask_display, const float gopacity)
+static void retouch_clone(float *const in, dt_iop_roi_t *const roi_in, float *out, dt_iop_roi_t *const roi_out, const int ch, 
+                          float *const mask, dt_iop_roi_t *const roi_mask, dt_iop_roi_t *const roi_mask_scaled, const int mask_display, 
+                          const int dx, const int dy, const float opacity, int use_sse)
 {
-#if defined(__SSE__x)
+#if defined(__SSE__)
   if (ch == 4 && use_sse)
   {
-    retouch_clone_sse(fts, fhs, fls, fws, dx, dy, roi_in, roi_out, mask, mask_width, mask_height, in, out, ch, mask_display, gopacity);
+    retouch_clone_sse(in, roi_in, out, roi_out, mask, roi_mask, roi_mask_scaled, mask_display, dx, dy, opacity);
     return;
   }
 #endif
-  const int ch1 = 3;
+  const int ch1 = (ch==4) ? ch-1: ch;
   
-  const int y_from = MAX(MAX((fts + 1), roi_out->y), (roi_in->y+dy));
-  const int y_to = MIN(MIN((fts + fhs + 1), (roi_out->y + roi_out->height)), (roi_in->y + roi_in->height+dy));
-  
-  const int x_fom = MAX(MAX((fls + 1), roi_out->x), (roi_in->x+dx));
-  const int x_to = MIN(MIN((fls + fws + 1), roi_out->x + roi_out->width), (roi_in->x + roi_in->width+dx));
+  int x_from = 0, x_to = 0, y_from = 0, y_to = 0;
+  rt_intersect_rois(roi_mask_scaled, roi_in, roi_out, dx, dy, 0, &x_from, &x_to, &y_from, &y_to);
 
 #ifdef _FFT_MULTFR_
 #ifdef _OPENMP
-#pragma omp parallel for default(none) shared(out) schedule(static)
+#pragma omp parallel for default(none) shared(out, x_from, x_to, y_from, y_to) schedule(static)
 #endif
 #endif
   for(int yy = y_from; yy < y_to; yy++)
   {
-    const int mindex = (int)((yy - fts) / roi_in->scale);
-    if (mindex >= mask_height) continue;
+    const int mindex = (int)((yy - roi_mask_scaled->y) / roi_in->scale);
+    if (mindex >= roi_mask->height) continue;
     
-    const int oindex = ch * (roi_out->width * (yy - roi_out->y) - roi_out->x + x_fom);
-    const int iindex = ch * (roi_in->width * (yy - dy - roi_in->y) - dx - roi_in->x + x_fom);
+    const int oindex = ch * (roi_out->width * (yy - roi_out->y) - roi_out->x + x_from);
+    const int iindex = ch * (roi_in->width * (yy - dy - roi_in->y) - dx - roi_in->x + x_from);
     
     float *o = out + oindex;
     float *i = in + iindex;
-    float *m = mask + mindex * mask_width;
+    float *m = mask + mindex * roi_mask->width;
     
-    for(int xx = x_fom; xx < x_to; xx++, o+=ch, i+=ch)
+    for(int xx = x_from; xx < x_to; xx++, o+=ch, i+=ch)
     {
-      const int mx = (int)((xx - fls) / roi_in->scale);
-      if (mx >= mask_width) continue;
+      const int mx = (int)((xx - roi_mask_scaled->x) / roi_in->scale);
+      if (mx >= roi_mask->width) continue;
       
-      const float f = m[mx] * gopacity;
+      const float f = m[mx] * opacity;
       
       for(int c = 0; c < ch1; c++)
         o[c] = o[c] * (1.0f - f) + i[c] * f;
@@ -2702,20 +2503,20 @@ static void retouch_clone(int use_sse, const int fts, const int fhs, const int f
   
 }
 
-#if defined(__SSE__x)
-static void retouch_gaussian_blur_sse(dt_dev_pixelpipe_iop_t *piece, const int fts, const int fhs, const int fls, const int fws, const int dx, const int dy,
-                          dt_iop_roi_t *const roi_in, dt_iop_roi_t *const roi_out, float *const mask, const int mask_width, const int mask_height, 
-                          float *const in, float *out, const int ch, const int mask_display, const float gopacity, const float blur_radius)
+static void retouch_gaussian_blur(float *const in, dt_iop_roi_t *const roi_in, float *out, dt_iop_roi_t *const roi_out, const int ch, 
+                                    float *const mask, dt_iop_roi_t *const roi_mask, dt_iop_roi_t *const roi_mask_scaled, const int mask_display, 
+                                    const float opacity, 
+                                    const float blur_radius, dt_dev_pixelpipe_iop_t *piece, int use_sse)
 {
+  if (fabs(blur_radius) <= 0.1f && !mask_display) return;
+
+  const int ch1 = (ch==4) ? ch-1: ch;
   float *dest = NULL;
   
-  const int y_from = MAX(MAX((fts + 1), roi_out->y), (roi_in->y+dy));
-  const int y_to = MIN(MIN((fts + fhs + 1), (roi_out->y + roi_out->height)), (roi_in->y + roi_in->height+dy));
-  
-  const int x_fom = MAX(MAX((fls + 1), roi_out->x), (roi_in->x+dx));
-  const int x_to = MIN(MIN((fls + fws + 1), roi_out->x + roi_out->width), (roi_in->x + roi_in->width+dx));
+  int x_from = 0, x_to = 0, y_from = 0, y_to = 0;
+  rt_intersect_rois(roi_mask_scaled, roi_in, roi_out, 0, 0, 0, &x_from, &x_to, &y_from, &y_to);
 
-  const int width_tmp = x_to - x_fom;
+  const int width_tmp = x_to - x_from;
   const int height_tmp = y_to - y_from;
   
   if (width_tmp <= 0 || height_tmp <= 0) return;
@@ -2734,463 +2535,131 @@ static void retouch_gaussian_blur_sse(dt_dev_pixelpipe_iop_t *piece, const int f
   // copy source image so we blur just the mask area (at least the smallest rect that covers it)
 #ifdef _FFT_MULTFR_
 #ifdef _OPENMP
-#pragma omp parallel for default(none) shared(dest) schedule(static)
+#pragma omp parallel for default(none) shared(dest, x_from, y_from, y_to) schedule(static)
 #endif
 #endif
   for(int yy = y_from; yy < y_to; yy++)
   {
     const int dindex = ch * ((yy-y_from)*width_tmp);
-    const int iindex = ch * (roi_in->width * (yy - dy - roi_in->y) - dx - roi_in->x + x_fom);
+    const int iindex = ch * (roi_in->width * (yy - roi_in->y) - roi_in->x + x_from);
     float *d = dest + dindex;
     float *i = in + iindex;
 
     memcpy(d, i, width_tmp * ch * sizeof(float));
   }
   
-  // blur it
-  const float sigma = blur_radius * roi_in->scale / piece->iscale;
-
-  float Labmax[] = { INFINITY, INFINITY, INFINITY, INFINITY };
-  float Labmin[] = { -INFINITY, -INFINITY, -INFINITY, -INFINITY };
-
-  dt_gaussian_t *g = dt_gaussian_init(width_tmp, height_tmp, ch, Labmax, Labmin, sigma, DT_IOP_GAUSSIAN_ZERO);
-  if(g)
+  if (fabs(blur_radius) > 0.1f)
   {
-    dt_gaussian_blur_4c(g, dest, dest);
-    dt_gaussian_free(g);
-  }
+    const float sigma = blur_radius * roi_in->scale / piece->iscale;
   
-  // copy blurred (temp) image to destination image
-#ifdef _FFT_MULTFR_
-#ifdef _OPENMP
-#pragma omp parallel for default(none) shared(dest, out) schedule(static)
-#endif
-#endif
-  for(int yy = y_from; yy < y_to; yy++)
-  {
-    const int mindex = (int)((yy - fts) / roi_in->scale);
-    if (mindex >= mask_height) continue;
-    
-    const int dindex = ch * ((yy-y_from)*width_tmp);
-    const int oindex = ch * (roi_out->width * (yy - roi_out->y) - roi_out->x + x_fom);
-    
-    float *d = dest + dindex;
-    float *o = out + oindex;
-    float *m = mask + mindex * mask_width;
-   
-    for(int xx = x_fom; xx < x_to; xx++, d+=ch, o+=ch)
+    float Labmax[] = { INFINITY, INFINITY, INFINITY, INFINITY };
+    float Labmin[] = { -INFINITY, -INFINITY, -INFINITY, -INFINITY };
+  
+    dt_gaussian_t *g = dt_gaussian_init(width_tmp, height_tmp, ch, Labmax, Labmin, sigma, DT_IOP_GAUSSIAN_ZERO);
+    if(g)
     {
-      const int mx = (int)((xx - fls) / roi_in->scale);
-      if (mx >= mask_width) continue;
-      
-      const float f = (m[mx]) * gopacity;
-      
-      const __m128 val1_f = _mm_set1_ps(1.0f - f);
-      const __m128 valf = _mm_set1_ps(f);
-      
-      _mm_store_ps(o, _mm_add_ps(_mm_mul_ps(_mm_load_ps(o), val1_f), _mm_mul_ps(_mm_load_ps(d), valf)));
-
-      if (mask_display && f)
-        o[3] = f;
+      if (ch == 4)
+        dt_gaussian_blur_4c(g, dest, dest);
+      else
+        dt_gaussian_blur(g, dest, dest);
+      dt_gaussian_free(g);
     }
   }
   
-cleanup:
-  if (dest) dt_free_align(dest);
-}
-#endif
-
-static void retouch_gaussian_blur(int use_sse, dt_dev_pixelpipe_iop_t *piece, const int fts, const int fhs, const int fls, const int fws, const int dx, const int dy,
-                          dt_iop_roi_t *const roi_in, dt_iop_roi_t *const roi_out, float *const mask, const int mask_width, const int mask_height, 
-                          float *const in, float *out, const int ch, const int mask_display, const float gopacity, const float blur_radius)
-{
-  if(fabs(blur_radius) <= 0.1f) return;
-      
-#if defined(__SSE__x)
+  // copy blurred (temp) image to destination image
+#if defined(__SSE__)
   if (ch == 4 && use_sse)
   {
-    retouch_gaussian_blur_sse(piece, fts, fhs, fls, fws, dx, dy, roi_in, roi_out, mask, mask_width, mask_height, in, out, ch, mask_display, gopacity, blur_radius);
-    return;
-  }
-#endif
-  
-  const int ch1 = 3;
-  float *dest = NULL;
-  
-  const int y_from = MAX(MAX((fts + 1), roi_out->y), (roi_in->y+dy));
-  const int y_to = MIN(MIN((fts + fhs + 1), (roi_out->y + roi_out->height)), (roi_in->y + roi_in->height+dy));
-  
-  const int x_fom = MAX(MAX((fls + 1), roi_out->x), (roi_in->x+dx));
-  const int x_to = MIN(MIN((fls + fws + 1), roi_out->x + roi_out->width), (roi_in->x + roi_in->width+dx));
-
-  const int width_tmp = x_to - x_fom;
-  const int height_tmp = y_to - y_from;
-  
-  if (width_tmp <= 0 || height_tmp <= 0) return;
-  
-  // alloc temp image to blur
-  dest = dt_alloc_align(64, width_tmp * height_tmp * ch * sizeof(float));
-  
-  if (dest == NULL)
-  {
-    printf("error allocating memory for blurring\n");
-    goto cleanup;
-  }
-  
-  memset(dest, 0, width_tmp * height_tmp * ch * sizeof(float));
-  
-  // copy source image so we blur just the mask area (at least the smallest rect that covers it)
 #ifdef _FFT_MULTFR_
 #ifdef _OPENMP
-#pragma omp parallel for default(none) shared(dest) schedule(static)
+#pragma omp parallel for default(none) shared(dest, out, x_from, x_to, y_from, y_to) schedule(static)
 #endif
 #endif
-  for(int yy = y_from; yy < y_to; yy++)
-  {
-    const int dindex = ch * ((yy-y_from)*width_tmp);
-    const int iindex = ch * (roi_in->width * (yy - dy - roi_in->y) - dx - roi_in->x + x_fom);
-    float *d = dest + dindex;
-    float *i = in + iindex;
-
-    memcpy(d, i, width_tmp * ch * sizeof(float));
-  }
-  
-  const float sigma = blur_radius * roi_in->scale / piece->iscale;
-
-  float Labmax[] = { INFINITY, INFINITY, INFINITY, INFINITY };
-  float Labmin[] = { -INFINITY, -INFINITY, -INFINITY, -INFINITY };
-
-  dt_gaussian_t *g = dt_gaussian_init(width_tmp, height_tmp, ch, Labmax, Labmin, sigma, DT_IOP_GAUSSIAN_ZERO);
-  if(g)
-  {
-    dt_gaussian_blur(g, dest, dest);
-    dt_gaussian_free(g);
-  }
-
-  // copy blurred (temp) image to destination image
-#ifdef _FFT_MULTFR_
-#ifdef _OPENMP
-#pragma omp parallel for default(none) shared(dest, out) schedule(static)
-#endif
-#endif
-  for(int yy = y_from; yy < y_to; yy++)
-  {
-    const int mindex = (int)((yy - fts) / roi_in->scale);
-    if (mindex >= mask_height) continue;
-    
-    const int dindex = ch * ((yy-y_from)*width_tmp);
-    const int oindex = ch * (roi_out->width * (yy - roi_out->y) - roi_out->x + x_fom);
-    
-    float *d = dest + dindex;
-    float *o = out + oindex;
-    float *m = mask + mindex * mask_width;
-   
-    for(int xx = x_fom; xx < x_to; xx++, d+=ch, o+=ch)
+    for(int yy = y_from; yy < y_to; yy++)
     {
-      const int mx = (int)((xx - fls) / roi_in->scale);
-      if (mx >= mask_width) continue;
+      const int mindex = (int)((yy - roi_mask_scaled->y) / roi_in->scale);
+      if (mindex >= roi_mask->height) continue;
       
-      const float f = (m[mx]) * gopacity;
+      const int dindex = ch * ((yy-y_from)*width_tmp);
+      const int oindex = ch * (roi_out->width * (yy - roi_out->y) - roi_out->x + x_from);
       
-      for(int c = 0; c < ch1; c++)
+      float *d = dest + dindex;
+      float *o = out + oindex;
+      float *m = mask + mindex * roi_mask->width;
+     
+      for(int xx = x_from; xx < x_to; xx++, d+=ch, o+=ch)
       {
-        o[c] = o[c] * (1.0f - f) + d[c] * f;
+        const int mx = (int)((xx - roi_mask_scaled->x) / roi_in->scale);
+        if (mx >= roi_mask->width) continue;
+        
+        const float f = (m[mx]) * opacity;
+        
+        const __m128 val1_f = _mm_set1_ps(1.0f - f);
+        const __m128 valf = _mm_set1_ps(f);
+        
+        _mm_store_ps(o, _mm_add_ps(_mm_mul_ps(_mm_load_ps(o), val1_f), _mm_mul_ps(_mm_load_ps(d), valf)));
+  
+        if (mask_display && f)
+          o[3] = f;
       }
-      if (mask_display && f)
-        o[3] = f;
     }
   }
-  
-cleanup:
-  if (dest) dt_free_align(dest);
-}
-
-#if defined(__SSE__x)
-static void retouch_heal_sse(const int fts, const int fhs, const int fls, const int fws, const int dx, const int dy,
-                    dt_iop_roi_t *const roi_in, dt_iop_roi_t *const roi_out,
-                    float *const mask, const int mask_width, const int mask_height, float *const in, float *out, const int ch, 
-                    const int mask_display, const float opacity, const float preview_scale)
-{
-  float *src = NULL;
-  float *dest = NULL;
-  float *mask_heal = NULL;
-  
-  const int y_from = MAX(MAX((fts + 1), roi_out->y), (roi_in->y+dy));
-  const int y_to = MIN(MIN((fts + fhs + 1), (roi_out->y + roi_out->height)), (roi_in->y + roi_in->height+dy));
-  
-  const int x_fom = MAX(MAX((fls + 1), roi_out->x), (roi_in->x+dx));
-  const int x_to = MIN(MIN((fls + fws + 1), roi_out->x + roi_out->width), (roi_in->x + roi_in->width+dx));
-
-  const int width_tmp = x_to - x_fom;
-  const int height_tmp = y_to - y_from;
-
-  if (width_tmp <= 0 || height_tmp <= 0) return;
-  
-  // alloc temp images for source, destination and mask, so all share the same coordinates
-  src = dt_alloc_align(64, width_tmp * height_tmp * ch * sizeof(float));
-  dest = dt_alloc_align(64, width_tmp * height_tmp * ch * sizeof(float));
-  mask_heal = dt_alloc_align(64, width_tmp * height_tmp * sizeof(float));
-  
-  if ((src == NULL) || (dest == NULL) || (mask_heal == NULL))
-  {
-    printf("error allocating memory for healing\n");
-    goto cleanup;
-  }
-
-  memset(src, 0, width_tmp * height_tmp * ch * sizeof(float));
-  memset(dest, 0, width_tmp * height_tmp * ch * sizeof(float));
-  memset(mask_heal, 0, width_tmp * height_tmp * sizeof(float));
-  
-  // copy source and destination to temp images
-#ifdef _FFT_MULTFR_
-#ifdef _OPENMP
-#pragma omp parallel for default(none) shared(out, dest, src) schedule(static)
-#endif
-#endif
-  for(int yy = y_from; yy < y_to; yy++)
-  {
-    const int dindex = ch * ((yy-y_from)*width_tmp);
-    const int oindex = ch * (roi_out->width * (yy - roi_out->y) - roi_out->x + x_fom);
-    const int iindex = ch * (roi_in->width * (yy - dy - roi_in->y) - dx - roi_in->x + x_fom);
-    
-    float *o = out + oindex;
-    float *i = in + iindex;
-    float *d = dest + dindex;
-    float *s = src + dindex;
-    
-    memcpy(d, o, width_tmp * ch * sizeof(float));
-    memcpy(s, i, width_tmp * ch * sizeof(float));
-  }
-
-  // copy mask to temp image
-#ifdef _FFT_MULTFR_
-#ifdef _OPENMP
-#pragma omp parallel for default(none) shared(mask_heal) schedule(static)
-#endif
-#endif
-  for(int yy = y_from; yy < y_to; yy++)
-  {
-    const int mindex = (int)((yy - fts) / roi_in->scale);
-    if (mindex >= mask_height) continue;
-    
-    const int mhindex = ((yy-y_from)*width_tmp);
-
-    float *m = mask + mindex * mask_width;
-    float *mh = mask_heal + mhindex;
-    
-    for(int xx = x_fom; xx < x_to; xx++, mh++)
-    {
-      const int mx = (int)((xx - fls) / roi_in->scale);
-      if (mx >= mask_width) continue;
-      
-      *mh = m[mx];
-      
-    }
-  }
-
-  // heal it
-  dt_heal(src, dest, mask_heal, width_tmp, height_tmp, ch, preview_scale, 1);
-
-  // copy healed (temp) image to destination image
-#ifdef _FFT_MULTFR_
-#ifdef _OPENMP
-#pragma omp parallel for default(none) shared(out, dest, mask_heal) schedule(static)
-#endif
-#endif
-  for(int yy = y_from; yy < y_to; yy++)
-  {
-    const int mindex = (int)((yy - fts) / roi_in->scale);
-    if (mindex >= mask_height) continue;
-    
-    const int dindex = ch * ((yy-y_from)*width_tmp);
-    const int mhindex = ((yy-y_from)*width_tmp);
-    const int oindex = ch * (roi_out->width * (yy - roi_out->y) - roi_out->x + x_fom);
-    
-    float *o = out + oindex;
-    float *d = dest + dindex;
-    float *mh = mask_heal + mhindex;
-    
-    for(int xx = x_fom; xx < x_to; xx++, d+=ch, o+=ch, mh++)
-    {
-      const float f = (*mh) * opacity;
-      
-      const __m128 val1_f = _mm_set1_ps(1.0f - f);
-      const __m128 valf = _mm_set1_ps(f);
-      
-      _mm_store_ps(o, _mm_add_ps(_mm_mul_ps(_mm_load_ps(o), val1_f), _mm_mul_ps(_mm_load_ps(d), valf)));
-
-      if (mask_display && f)
-        o[3] = f;
-    }
-  }
-  
-  cleanup:
-    if (src) dt_free_align(src);
-    if (dest) dt_free_align(dest);
-    if (mask_heal) dt_free_align(mask_heal);
-}
-#endif
-/*
-static void retouch_heal(int use_sse, const int fts, const int fhs, const int fls, const int fws, const int dx, const int dy,
-                    dt_iop_roi_t *const roi_in, dt_iop_roi_t *const roi_out,
-                    float *const mask, const int mask_width, const int mask_height, float *const in, float *out, 
-                    const int ch, const int mask_display, const float opacity, const float softness, const float preview_scale, const int algorithm)
-{
-#if defined(__SSE__x)
-  if (ch == 4 && use_sse)
-  {
-    retouch_heal_sse(fts, fhs, fls, fws, dx, dy, roi_in, roi_out, mask, mask_width, mask_height, in, out, ch, mask_display, opacity, preview_scale);
-  return;
-  }
-#endif
-  const int ch1 = 3;
-  
-  float *src = NULL;
-  float *dest = NULL;
-  float *mask_heal = NULL;
-  
-  const int y_from = MAX(MAX((fts + 1), roi_out->y), (roi_in->y+dy));
-  const int y_to = MIN(MIN((fts + fhs + 1), (roi_out->y + roi_out->height)), (roi_in->y + roi_in->height+dy));
-  
-  const int x_fom = MAX(MAX((fls + 1), roi_out->x), (roi_in->x+dx));
-  const int x_to = MIN(MIN((fls + fws + 1), roi_out->x + roi_out->width), (roi_in->x + roi_in->width+dx));
-
-  const int width_tmp = x_to - x_fom;
-  const int height_tmp = y_to - y_from;
-
-  if (width_tmp <= 0 || height_tmp <= 0) return;
-  
-  // alloc temp images for source, destination and mask, so all share the same coordinates
-  src = dt_alloc_align(64, width_tmp * height_tmp * ch * sizeof(float));
-  dest = dt_alloc_align(64, width_tmp * height_tmp * ch * sizeof(float));
-  mask_heal = dt_alloc_align(64, width_tmp * height_tmp * sizeof(float));
-  
-  if ((src == NULL) || (dest == NULL) || (mask_heal == NULL))
-  {
-    printf("error allocating memory for healing\n");
-    goto cleanup;
-  }
-
-  memset(src, 0, width_tmp * height_tmp * ch * sizeof(float));
-  memset(dest, 0, width_tmp * height_tmp * ch * sizeof(float));
-  memset(mask_heal, 0, width_tmp * height_tmp * sizeof(float));
-  
-  // copy source and destination to temp images
-#ifdef _FFT_MULTFR_
-#ifdef _OPENMP
-#pragma omp parallel for default(none) shared(out, dest, src) schedule(static)
-#endif
-#endif
-  for(int yy = y_from; yy < y_to; yy++)
-  {
-    const int dindex = ch * ((yy-y_from)*width_tmp);
-    const int oindex = ch * (roi_out->width * (yy - roi_out->y) - roi_out->x + x_fom);
-    const int iindex = ch * (roi_in->width * (yy - dy - roi_in->y) - dx - roi_in->x + x_fom);
-    
-    float *o = out + oindex;
-    float *i = in + iindex;
-    float *d = dest + dindex;
-    float *s = src + dindex;
-    
-    memcpy(d, o, width_tmp * ch * sizeof(float));
-    memcpy(s, i, width_tmp * ch * sizeof(float));
-  }
-
-  // copy mask to temp image
-#ifdef _FFT_MULTFR_
-#ifdef _OPENMP
-#pragma omp parallel for default(none) shared(mask_heal) schedule(static)
-#endif
-#endif
-  for(int yy = y_from; yy < y_to; yy++)
-  {
-    const int mindex = (int)((yy - fts) / roi_in->scale);
-    if (mindex >= mask_height) continue;
-    
-    const int mhindex = ((yy-y_from)*width_tmp);
-
-    float *m = mask + mindex * mask_width;
-    float *mh = mask_heal + mhindex;
-    
-    for(int xx = x_fom; xx < x_to; xx++, mh++)
-    {
-      const int mx = (int)((xx - fls) / roi_in->scale);
-      if (mx >= mask_width) continue;
-      
-      *mh = m[mx];
-      
-    }
-  }
-
-  // heal it
-  if (algorithm == dt_iop_retouch_heal)
-    dt_heal(src, dest, mask_heal, width_tmp, height_tmp, ch, softness/1000.f, preview_scale, 0);
   else
-    dt_heal1(src, dest, mask_heal, width_tmp, height_tmp, ch, softness/1000.f, preview_scale, 0);
-
-  // copy healed (temp) image to destination image
+#endif
+  {
 #ifdef _FFT_MULTFR_
 #ifdef _OPENMP
-#pragma omp parallel for default(none) shared(out, dest, mask_heal) schedule(static)
+#pragma omp parallel for default(none) shared(dest, out, x_from, x_to, y_from, y_to) schedule(static)
 #endif
 #endif
-  for(int yy = y_from; yy < y_to; yy++)
-  {
-    const int mindex = (int)((yy - fts) / roi_in->scale);
-    if (mindex >= mask_height) continue;
-    
-    const int dindex = ch * ((yy-y_from)*width_tmp);
-    const int mhindex = ((yy-y_from)*width_tmp);
-    const int oindex = ch * (roi_out->width * (yy - roi_out->y) - roi_out->x + x_fom);
-    
-    float *o = out + oindex;
-    float *d = dest + dindex;
-    float *mh = mask_heal + mhindex;
-    
-    for(int xx = x_fom; xx < x_to; xx++, d+=ch, o+=ch, mh++)
+    for(int yy = y_from; yy < y_to; yy++)
     {
-      const float f = (*mh) * opacity;
+      const int mindex = (int)((yy - roi_mask_scaled->y) / roi_in->scale);
+      if (mindex >= roi_mask->height) continue;
       
-      for(int c = 0; c < ch1; c++)
-        o[c] = o[c] * (1.0f - f) + d[c] * f;
-
-      if (mask_display && f)
-        o[3] = f;
+      const int dindex = ch * ((yy-y_from)*width_tmp);
+      const int oindex = ch * (roi_out->width * (yy - roi_out->y) - roi_out->x + x_from);
+      
+      float *d = dest + dindex;
+      float *o = out + oindex;
+      float *m = mask + mindex * roi_mask->width;
+     
+      for(int xx = x_from; xx < x_to; xx++, d+=ch, o+=ch)
+      {
+        const int mx = (int)((xx - roi_mask_scaled->x) / roi_in->scale);
+        if (mx >= roi_mask->width) continue;
+        
+        const float f = (m[mx]) * opacity;
+        
+        for(int c = 0; c < ch1; c++)
+        {
+          o[c] = o[c] * (1.0f - f) + d[c] * f;
+        }
+        if (mask_display && f)
+          o[3] = f;
+      }
     }
   }
   
 cleanup:
-  if (src) dt_free_align(src);
   if (dest) dt_free_align(dest);
-  if (mask_heal) dt_free_align(mask_heal);
 }
-*/
-static void retouch_heal(int use_sse, const int fts, const int fhs, const int fls, const int fws, const int dx, const int dy,
-                    dt_iop_roi_t *const roi_in, dt_iop_roi_t *const roi_out,
-                    float *const mask, const int mask_width, const int mask_height, float *const in, float *out, 
-                    const int ch, const int mask_display, const float opacity, const float softness, const float preview_scale, const int algorithm)
+
+static void retouch_heal(float *const in, dt_iop_roi_t *const roi_in, float *out, dt_iop_roi_t *const roi_out, const int ch, 
+                          float *const mask, dt_iop_roi_t *const roi_mask, dt_iop_roi_t *const roi_mask_scaled, const int mask_display, 
+                          const int dx, const int dy, const float opacity, int use_sse)
 {
-#if defined(__SSE__x)
-  if (ch == 4 && use_sse)
-  {
-    retouch_heal_sse(fts, fhs, fls, fws, dx, dy, roi_in, roi_out, mask, mask_width, mask_height, in, out, ch, mask_display, opacity, preview_scale);
-  return;
-  }
-#endif
-  const int ch1 = 3;
+  const int ch1 = (ch==4) ? ch-1: ch;
   const int padding = 1; // heal works better with 1 pixel padding
   
   float *src = NULL;
   float *dest = NULL;
   float *mask_heal = NULL;
   
-  const int y_from = MAX(MAX((fts + 1 - padding), roi_out->y), (roi_in->y+dy));
-  const int y_to = MIN(MIN((fts + fhs + 1 + padding), (roi_out->y + roi_out->height)), (roi_in->y + roi_in->height+dy));
-  
-  const int x_fom = MAX(MAX((fls + 1 - padding), roi_out->x), (roi_in->x+dx));
-  const int x_to = MIN(MIN((fls + fws + 1 + padding), roi_out->x + roi_out->width), (roi_in->x + roi_in->width+dx));
+  int x_from = 0, x_to = 0, y_from = 0, y_to = 0;
+  rt_intersect_rois(roi_mask_scaled, roi_in, roi_out, dx, dy, padding, &x_from, &x_to, &y_from, &y_to);
 
-  const int width_tmp = x_to - x_fom;
+  const int width_tmp = x_to - x_from;
   const int height_tmp = y_to - y_from;
 
   if (width_tmp <= 0 || height_tmp <= 0) return;
@@ -3213,14 +2682,14 @@ static void retouch_heal(int use_sse, const int fts, const int fhs, const int fl
   // copy source and destination to temp images
 #ifdef _FFT_MULTFR_
 #ifdef _OPENMP
-#pragma omp parallel for default(none) shared(out, dest, src) schedule(static)
+#pragma omp parallel for default(none) shared(out, dest, src, x_from, y_from, y_to) schedule(static)
 #endif
 #endif
   for(int yy = y_from; yy < y_to; yy++)
   {
     const int dindex = ch * ((yy-y_from)*width_tmp);
-    const int oindex = ch * (roi_out->width * (yy - roi_out->y) - roi_out->x + x_fom);
-    const int iindex = ch * (roi_in->width * (yy - dy - roi_in->y) - dx - roi_in->x + x_fom);
+    const int oindex = ch * (roi_out->width * (yy - roi_out->y) - roi_out->x + x_from);
+    const int iindex = ch * (roi_in->width * (yy - dy - roi_in->y) - dx - roi_in->x + x_from);
     
     float *o = out + oindex;
     float *i = in + iindex;
@@ -3234,23 +2703,23 @@ static void retouch_heal(int use_sse, const int fts, const int fhs, const int fl
   // copy mask to temp image
 #ifdef _FFT_MULTFR_
 #ifdef _OPENMP
-#pragma omp parallel for default(none) shared(mask_heal) schedule(static)
+#pragma omp parallel for default(none) shared(mask_heal, x_from, x_to, y_from, y_to) schedule(static)
 #endif
 #endif
   for(int yy = y_from; yy < y_to; yy++)
   {
-    const int mindex = (int)((yy - fts) / roi_in->scale);
-    if (mindex < 0 || mindex >= mask_height) continue;
+    const int mindex = (int)((yy - roi_mask_scaled->y) / roi_in->scale);
+    if (mindex < 0 || mindex >= roi_mask->height) continue;
     
     const int mhindex = ((yy-y_from)*width_tmp);
 
-    float *m = mask + mindex * mask_width;
+    float *m = mask + mindex * roi_mask->width;
     float *mh = mask_heal + mhindex;
     
-    for(int xx = x_fom; xx < x_to; xx++, mh++)
+    for(int xx = x_from; xx < x_to; xx++, mh++)
     {
-      const int mx = (int)((xx - fls) / roi_in->scale);
-      if (mx < 0 || mx >= mask_width) continue;
+      const int mx = (int)((xx - roi_mask_scaled->x) / roi_in->scale);
+      if (mx < 0 || mx >= roi_mask->width) continue;
       
       *mh = m[mx];
       
@@ -3258,36 +2727,72 @@ static void retouch_heal(int use_sse, const int fts, const int fhs, const int fl
   }
 
   // heal it
-  if (algorithm == dt_iop_retouch_heal)
-    dt_heal(src, dest, mask_heal, width_tmp, height_tmp, ch, softness + 1.f, preview_scale, 0);
-  else
-    dt_heal1(src, dest, mask_heal, width_tmp, height_tmp, ch, softness/1000.f, preview_scale, 0);
+  dt_heal(src, dest, mask_heal, width_tmp, height_tmp, ch, use_sse);
 
   // copy healed (temp) image to destination image
+#if defined(__SSE__)
+  if (ch == 4 && use_sse)
+  {
 #ifdef _FFT_MULTFR_
 #ifdef _OPENMP
-#pragma omp parallel for default(none) shared(out, dest, mask_heal) schedule(static)
+#pragma omp parallel for default(none) shared(out, dest, mask_heal, x_from, x_to, y_from, y_to) schedule(static)
 #endif
 #endif
-  for(int yy = y_from; yy < y_to; yy++)
-  {
-    const int dindex = ch * ((yy-y_from)*width_tmp);
-    const int mhindex = ((yy-y_from)*width_tmp);
-    const int oindex = ch * (roi_out->width * (yy - roi_out->y) - roi_out->x + x_fom);
-    
-    float *o = out + oindex;
-    float *d = dest + dindex;
-    float *mh = mask_heal + mhindex;
-    
-    for(int xx = x_fom; xx < x_to; xx++, d+=ch, o+=ch, mh++)
+    for(int yy = y_from; yy < y_to; yy++)
     {
-      const float f = (*mh) * opacity;
+      const int mindex = (int)((yy - roi_mask_scaled->y) / roi_in->scale);
+      if (mindex >= roi_mask->height) continue;
       
-      for(int c = 0; c < ch1; c++)
-        o[c] = o[c] * (1.0f - f) + d[c] * f;
-
-      if (mask_display && f)
-        o[3] = f;
+      const int dindex = ch * ((yy-y_from)*width_tmp);
+      const int mhindex = ((yy-y_from)*width_tmp);
+      const int oindex = ch * (roi_out->width * (yy - roi_out->y) - roi_out->x + x_from);
+      
+      float *o = out + oindex;
+      float *d = dest + dindex;
+      float *mh = mask_heal + mhindex;
+      
+      for(int xx = x_from; xx < x_to; xx++, d+=ch, o+=ch, mh++)
+      {
+        const float f = (*mh) * opacity;
+        
+        const __m128 val1_f = _mm_set1_ps(1.0f - f);
+        const __m128 valf = _mm_set1_ps(f);
+        
+        _mm_store_ps(o, _mm_add_ps(_mm_mul_ps(_mm_load_ps(o), val1_f), _mm_mul_ps(_mm_load_ps(d), valf)));
+  
+        if (mask_display && f)
+          o[3] = f;
+      }
+    }
+  }
+  else
+#endif
+  {
+#ifdef _FFT_MULTFR_
+#ifdef _OPENMP
+#pragma omp parallel for default(none) shared(out, dest, mask_heal, x_from, x_to, y_from, y_to) schedule(static)
+#endif
+#endif
+    for(int yy = y_from; yy < y_to; yy++)
+    {
+      const int dindex = ch * ((yy-y_from)*width_tmp);
+      const int mhindex = ((yy-y_from)*width_tmp);
+      const int oindex = ch * (roi_out->width * (yy - roi_out->y) - roi_out->x + x_from);
+      
+      float *o = out + oindex;
+      float *d = dest + dindex;
+      float *mh = mask_heal + mhindex;
+      
+      for(int xx = x_from; xx < x_to; xx++, d+=ch, o+=ch, mh++)
+      {
+        const float f = (*mh) * opacity;
+        
+        for(int c = 0; c < ch1; c++)
+          o[c] = o[c] * (1.0f - f) + d[c] * f;
+  
+        if (mask_display && f)
+          o[3] = f;
+      }
     }
   }
   
@@ -3388,9 +2893,9 @@ static void rt_process_forms(float *layer, dwt_params_t *const wt_p, const int s
 
       // get the mask
       float *mask = NULL;
-      int posx = 0, posy = 0, mask_width = 0, mask_height = 0;
+      dt_iop_roi_t roi_mask = {0};
       
-      dt_masks_get_mask(self, piece, form, &mask, &mask_width, &mask_height, &posx, &posy);
+      dt_masks_get_mask(self, piece, form, &mask, &roi_mask.width, &roi_mask.height, &roi_mask.x, &roi_mask.y);
       if(mask == NULL)
       {
         printf("rt_process_forms error retrieving mask\n");
@@ -3398,8 +2903,12 @@ static void rt_process_forms(float *layer, dwt_params_t *const wt_p, const int s
         continue;
       }
       
-      int fts = posy * roi_in->scale, fhs = mask_height * roi_in->scale, 
-          fls = posx * roi_in->scale, fws = mask_width * roi_in->scale;
+      dt_iop_roi_t roi_mask_scaled = {0};
+      roi_mask_scaled.x = roi_mask.x * roi_in->scale;
+      roi_mask_scaled.y = roi_mask.y * roi_in->scale;
+      roi_mask_scaled.width = roi_mask.width * roi_in->scale;
+      roi_mask_scaled.height = roi_mask.height * roi_in->scale;
+      
       int dx = 0, dy = 0;
       
       // search the delta with the source
@@ -3416,25 +2925,26 @@ static void rt_process_forms(float *layer, dwt_params_t *const wt_p, const int s
       }
       
       if ((dx != 0 || dy != 0 || algo == dt_iop_retouch_gaussian_blur || algo == dt_iop_retouch_fill) && 
-          ((fws > 2) && (fhs > 2)))
+          ((roi_mask_scaled.width > 2) && (roi_mask_scaled.height > 2)))
       {
         double start = dt_get_wtime();
         
         if (algo == dt_iop_retouch_clone)
         {
-          retouch_clone(wt_p->use_sse, fts, fhs, fls, fws, dx, dy, roi_in, roi_out, mask, mask_width, mask_height, in, out, wt_p->ch, mask_display, grpt->opacity);
+          retouch_clone(in, roi_in, out, roi_out, wt_p->ch, mask, &roi_mask, &roi_mask_scaled, mask_display, dx, dy,
+                          grpt->opacity, wt_p->use_sse);
           if(darktable.unmuted & DT_DEBUG_PERF) printf("rt_process_forms retouch_clone took %0.04f sec\n", dt_get_wtime() - start);
         }
-        else if (algo == dt_iop_retouch_heal || algo == dt_iop_retouch_heal1)
+        else if (algo == dt_iop_retouch_heal)
         {
-          retouch_heal(wt_p->use_sse, fts, fhs, fls, fws, dx, dy, roi_in, roi_out, mask, mask_width, mask_height, in, out, wt_p->ch, mask_display, grpt->opacity, 
-              shape_user_data.heal_smoothness, wt_p->preview_scale, algo);
+          retouch_heal(in, roi_in, out, roi_out, wt_p->ch, mask, &roi_mask, &roi_mask_scaled, mask_display, dx, dy,
+                          grpt->opacity, wt_p->use_sse);
           if(darktable.unmuted & DT_DEBUG_PERF) printf("rt_process_forms retouch_heal took %0.04f sec\n", dt_get_wtime() - start);
         }
         else if (algo == dt_iop_retouch_gaussian_blur)
         {
-          retouch_gaussian_blur(wt_p->use_sse, piece, fts, fhs, fls, fws, dx, dy, roi_in, roi_out, mask, mask_width, mask_height, in, out, wt_p->ch, mask_display, grpt->opacity,
-              shape_user_data.blur_radius);
+          retouch_gaussian_blur(in, roi_in, out, roi_out, wt_p->ch, mask, &roi_mask, &roi_mask_scaled, mask_display, 
+                          grpt->opacity, shape_user_data.blur_radius, piece, wt_p->use_sse);
           if(darktable.unmuted & DT_DEBUG_PERF) printf("rt_process_forms retouch_gaussian_blur took %0.04f sec\n", dt_get_wtime() - start);
         }
         else if (algo == dt_iop_retouch_fill)
@@ -3461,8 +2971,8 @@ static void rt_process_forms(float *layer, dwt_params_t *const wt_p, const int s
             fill_color[2] += p->blend_factor;
           }
           
-          retouch_fill(wt_p->use_sse, fts, fhs, fls, fws, dx, dy, roi_in, roi_out, mask, mask_width, mask_height, in, out, wt_p->ch, mask_display, grpt->opacity, 
-                              fill_color);
+          retouch_fill(in, roi_in, out, roi_out, wt_p->ch, mask, &roi_mask, &roi_mask_scaled, mask_display, 
+                          grpt->opacity, fill_color, wt_p->use_sse);
           if(darktable.unmuted & DT_DEBUG_PERF) printf("rt_process_forms retouch_fill took %0.04f sec\n", dt_get_wtime() - start);
         }
         else
@@ -3515,8 +3025,6 @@ static void rt_process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *pie
   dwt_p.ch = ch;
   dwt_p.width = roi_rt->width;
   dwt_p.height = roi_rt->height;
-  dwt_p.width_unscale = piece->buf_in.width;
-  dwt_p.height_unscale = piece->buf_in.height;
   dwt_p.scales = p->num_scales;
   dwt_p.return_layer = (preview_type == dt_iop_rt_preview_final_image) ? 0: p->curr_scale;
   dwt_p.blend_factor = p->blend_factor;
@@ -3574,7 +3082,7 @@ void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const 
   rt_process(self, piece, ivoid, ovoid, roi_in, roi_out, 0);
 }
 
-#if defined(__SSE__x)
+#if defined(__SSE__)
 void process_sse2(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const void *const ivoid,
                   void *const ovoid, const dt_iop_roi_t *const roi_in, const dt_iop_roi_t *const roi_out)
 {

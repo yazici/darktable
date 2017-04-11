@@ -9,7 +9,7 @@
  * 
  * */
 
-#define _FFT_MULTFR_
+//#define _FFT_MULTFR_
 
 static int _get_max_scale(const int width, const int height, const float preview_scale)
 {
@@ -28,7 +28,7 @@ static int _get_max_scale(const int width, const int height, const float preview
 
 int dwt_get_max_scale(dwt_params_t *p)
 {
-  return _get_max_scale(p->width_unscale, p->height_unscale, p->preview_scale);
+  return _get_max_scale(p->width/p->preview_scale, p->height/p->preview_scale, p->preview_scale);
 }
 
 #define INDEX_WT_IMAGE(index, num_channels, channel) (((index)*(num_channels))+(channel))
@@ -111,33 +111,7 @@ static void dwt_hat_transform(float *temp, const float *const base, const int st
   }
   
 }
-/*
-#if defined(__SSE__)
-static void dwt_add_layer_sse(float *img, float *layers, dwt_params_t *const p, const int n_scale)
-{
-  const int i_size = p->width*p->height;
-  float *l = layers;
-  
-  if (n_scale == p->scales+1)
-  {
-    for (int i=0; i<i_size; i++, l+=4, img+=4)
-    {
-      _mm_store_ps(l, _mm_add_ps(_mm_load_ps(l), _mm_load_ps(img)));
-    }
-  }
-  else
-  {
-    const __m128 lpass_sub = _mm_set1_ps(p->blend_factor);
-    
-    for (int i=0; i<i_size; i++, l+=4, img+=4)
-    {
-      _mm_store_ps(l, _mm_add_ps(_mm_load_ps(l), _mm_sub_ps(_mm_load_ps(img), lpass_sub)));
-    }
-  }
 
-}
-#endif
-*/
 #if defined(__SSE__)
 static void dwt_add_layer_sse(float *const img, float *layers, dwt_params_t *const p, const int n_scale)
 {
@@ -215,24 +189,7 @@ static void dwt_get_image_layer(float *const layer, dwt_params_t *const p)
   
   memcpy(p->image, layer, p->width * p->height * p->ch * sizeof(float));
 }
-/*
-#if defined(__SSE__)
-static void dwt_subtract_layer_sse(float *bl, float *bh, dwt_params_t *const p)
-{
-  const __m128 v4_lpass_add = _mm_set1_ps(0.f);
-  const __m128 v4_lpass_mult = _mm_set1_ps((1.f / 16.f));
-  const __m128 v4_lpass_sub = _mm_set1_ps(p->blend_factor);
-  const int size = p->width * p->height;
 
-  for (int i = 0; i < size; i++, bl+=4, bh+=4)
-  {
-    // rounding errors introduced here (division by 16)
-    _mm_store_ps(bl, _mm_mul_ps(_mm_add_ps(_mm_load_ps(bl), v4_lpass_add), v4_lpass_mult));
-    _mm_store_ps(bh, _mm_sub_ps(_mm_load_ps(bh), _mm_sub_ps(_mm_load_ps(bl), v4_lpass_sub)));
-  }
-}
-#endif
-*/
 #if defined(__SSE__)
 static void dwt_subtract_layer_sse(float *bl, float *bh, dwt_params_t *const p)
 {
@@ -324,7 +281,7 @@ static void dwt_wavelet_decompose(float *img, dwt_params_t *const p, _dwt_layer_
     goto cleanup;
   }
   
-  /* iterate over wavelet scales */
+  // iterate over wavelet scales
   lpass = 1;
   hpass = 0;
   for (unsigned int lev = 0; lev < p->scales && bcontinue; lev++) 
@@ -394,7 +351,7 @@ static void dwt_wavelet_decompose(float *img, dwt_params_t *const p, _dwt_layer_
   }
 
 cleanup:
-  if (layers)  dt_free_align(layers);
+  if (layers) dt_free_align(layers);
   if (temp) dt_free_align(temp);
   if (buffer[1]) dt_free_align(buffer[1]);
 

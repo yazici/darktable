@@ -9,8 +9,6 @@ typedef struct dwt_params_t
   int ch;
   int width;
   int height;
-  int width_unscale;
-  int height_unscale;
   int scales;
   int return_layer;
   float blend_factor;
