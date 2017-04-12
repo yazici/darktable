@@ -606,6 +606,11 @@ int dt_imageio_export_with_flags(const uint32_t imgid, const char *filename,
     {
       GList *next = g_list_next(history);
       dt_dev_history_item_t *hist = (dt_dev_history_item_t *)(history->data);
+      /* Begin Retouch */
+      if (hist->module && hist->module->free_params)
+        hist->module->free_params(hist->params);
+      else
+      /* End Retouch */
       free(hist->params);
       free(hist->blend_params);
       free(history->data);
@@ -648,6 +653,17 @@ int dt_imageio_export_with_flags(const uint32_t imgid, const char *filename,
           h->multi_priority = 1;
           g_strlcpy(h->multi_name, "<style>", sizeof(h->multi_name));
 
+          /* Begin Retouch */
+          // At this point we have encoded params in h->params, so we have to replace them with the decoded ones
+          if (m->decode_params)
+          {
+            void *encoded_params = h->params;
+            h->params = malloc(m->params_size);
+            m->decode_params(m, encoded_params, s->params_size, s->module_version, h->params, labs(m->version()));
+            free(encoded_params);
+          }
+          else
+          /* End Retouch */
           if(m->legacy_params && (s->module_version != m->version()))
           {
             void *new_params = malloc(m->params_size);

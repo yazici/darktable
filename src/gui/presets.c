@@ -163,6 +163,27 @@ static gchar *get_active_preset_name(dt_iop_module_t *module)
     void *blendop_params = (void *)sqlite3_column_blob(stmt, 2);
     int32_t bl_params_size = sqlite3_column_bytes(stmt, 2);
     int enabled = sqlite3_column_int(stmt, 3);
+    /* Begin Retouch */
+    if (module->encode_params && module->get_params_size_variable)
+    {
+      int32_t encoded_size = module->get_params_size_variable(module, module->params);
+      void *encoded_params = malloc(encoded_size);
+      
+      module->encode_params(module, module->params, encoded_params);
+      
+      if(!memcmp(encoded_params, op_params, MIN(op_params_size, encoded_size))
+         && !memcmp(module->blend_params, blendop_params,
+                    MIN(bl_params_size, sizeof(dt_develop_blend_params_t))) && module->enabled == enabled)
+      {
+        name = g_strdup((char *)sqlite3_column_text(stmt, 0));
+        free(encoded_params);
+        break;
+      }
+      
+      free(encoded_params);
+    }
+    else
+    /* End Retouch */
     if(!memcmp(module->params, op_params, MIN(op_params_size, module->params_size))
        && !memcmp(module->blend_params, blendop_params,
                   MIN(bl_params_size, sizeof(dt_develop_blend_params_t))) && module->enabled == enabled)
@@ -312,6 +333,20 @@ static void edit_preset_response(GtkDialog *dialog, gint response_id, dt_gui_pre
     DT_DEBUG_SQLITE3_BIND_TEXT(stmt, 2, gtk_entry_get_text(g->description), -1, SQLITE_TRANSIENT);
     DT_DEBUG_SQLITE3_BIND_TEXT(stmt, 3, g->module->op, -1, SQLITE_TRANSIENT);
     DT_DEBUG_SQLITE3_BIND_INT(stmt, 4, g->module->version());
+    /* Begin Retouch */
+    if (g->module->encode_params && g->module->get_params_size_variable)
+    {
+      int32_t encoded_size = g->module->get_params_size_variable(g->module, g->module->params);
+      void *encoded_params = malloc(encoded_size);
+      
+      g->module->encode_params(g->module, g->module->params, encoded_params);
+      
+      DT_DEBUG_SQLITE3_BIND_BLOB(stmt, 5, encoded_params, encoded_size, SQLITE_TRANSIENT);
+      
+      free(encoded_params);
+    }
+    else
+    /* End Retouch */
     DT_DEBUG_SQLITE3_BIND_BLOB(stmt, 5, g->module->params, g->module->params_size, SQLITE_TRANSIENT);
     DT_DEBUG_SQLITE3_BIND_INT(stmt, 6, g->module->enabled);
     DT_DEBUG_SQLITE3_BIND_BLOB(stmt, 7, g->module->blend_params, sizeof(dt_develop_blend_params_t),
@@ -614,6 +649,20 @@ static void menuitem_update_preset(GtkMenuItem *menuitem, dt_iop_module_t *modul
 
   DT_DEBUG_SQLITE3_BIND_TEXT(stmt, 1, module->op, -1, SQLITE_TRANSIENT);
   DT_DEBUG_SQLITE3_BIND_INT(stmt, 2, module->version());
+  /* Begin Retouch */
+  if (module->encode_params && module->get_params_size_variable)
+  {
+    int32_t encoded_size = module->get_params_size_variable(module, module->params);
+    void *encoded_params = malloc(encoded_size);
+    
+    module->encode_params(module, module->params, encoded_params);
+    
+    DT_DEBUG_SQLITE3_BIND_BLOB(stmt, 3, encoded_params, encoded_size, SQLITE_TRANSIENT);
+    
+    free(encoded_params);
+  }
+  else
+  /* End Retouch */
   DT_DEBUG_SQLITE3_BIND_BLOB(stmt, 3, module->params, module->params_size, SQLITE_TRANSIENT);
   DT_DEBUG_SQLITE3_BIND_INT(stmt, 4, module->enabled);
   DT_DEBUG_SQLITE3_BIND_BLOB(stmt, 5, module->blend_params, sizeof(dt_develop_blend_params_t),
@@ -666,6 +715,16 @@ static void menuitem_pick_preset(GtkMenuItem *menuitem, dt_iop_module_t *module)
     int bl_length = sqlite3_column_bytes(stmt, 2);
     int blendop_version = sqlite3_column_int(stmt, 3);
     int writeprotect = sqlite3_column_int(stmt, 4);
+    /* Begin Retouch */
+    if (module->decode_params)
+    {
+      memset(module->params, 0, module->params_size);
+      
+      module->decode_params(module, op_params, op_length, labs(module->version()),
+          module->params, labs(module->version()));
+    }
+    else
+    /* End Retouch */
     if(op_params && (op_length == module->params_size))
     {
       memcpy(module->params, op_params, op_length);
@@ -830,11 +889,40 @@ static void dt_gui_presets_popup_menu_show_internal(dt_dev_operation_t op, int32
 
     if(darktable.gui->last_preset && strcmp(darktable.gui->last_preset, name) == 0) found = 1;
 
-    if(module && !memcmp(module->default_params, op_params, MIN(op_params_size, module->params_size))
+    /* Begin Retouch */
+    void *encoded_params = NULL;
+    int32_t encoded_size = 0;
+    int encoded_equal = 0;
+    if (module->encode_params && module->get_params_size_variable)
+    {
+      encoded_size = module->get_params_size_variable(module, module->params);
+      encoded_params = malloc(encoded_size);
+      
+      module->encode_params(module, module->default_params, encoded_params);
+      
+      encoded_equal = (memcmp(encoded_params, op_params, MIN(op_params_size, encoded_size)) == 0);
+    }
+    else
+    /* End Retouch */
+    /* Begin Retouch */
+//    if(module && !memcmp(module->default_params, op_params, MIN(op_params_size, module->params_size))
+      if(module && ( !memcmp(module->default_params, op_params, MIN(op_params_size, module->params_size)) || encoded_equal )
+    /* End Retouch */
        && !memcmp(module->default_blendop_params, blendop_params,
                   MIN(bl_params_size, sizeof(dt_develop_blend_params_t))))
       isdefault = 1;
-    if(module && !memcmp(params, op_params, MIN(op_params_size, params_size))
+    /* Begin Retouch */
+    if (encoded_params)
+    {
+      memset(encoded_params, 0, encoded_size);
+      module->encode_params(module, params, encoded_params);
+      encoded_equal = (memcmp(encoded_params, op_params, MIN(op_params_size, encoded_size)) == 0);
+    }
+    /* End Retouch */
+    /* Begin Retouch */
+//    if(module && !memcmp(params, op_params, MIN(op_params_size, params_size))
+    if(module && ( !memcmp(params, op_params, MIN(op_params_size, params_size)) || encoded_equal )
+    /* End Retouch */
        && !memcmp(bl_params, blendop_params, MIN(bl_params_size, sizeof(dt_develop_blend_params_t)))
        && module->enabled == enabled)
     {
@@ -865,6 +953,14 @@ static void dt_gui_presets_popup_menu_show_internal(dt_dev_operation_t op, int32
         mi = gtk_menu_item_new_with_label((const char *)name);
     }
 
+    /* Begin Retouch */
+    if (encoded_params)
+    {
+      free(encoded_params);
+      encoded_params = NULL;
+    }
+    /* End Retouch */
+    
     if(isdisabled)
     {
       gtk_widget_set_sensitive(mi, 0);

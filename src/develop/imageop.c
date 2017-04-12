@@ -313,6 +313,33 @@ int dt_iop_load_module_so(dt_iop_module_so_t *module, const char *libname, const
     module->modify_roi_out = dt_iop_modify_roi_out;
   if(!g_module_symbol(module->module, "legacy_params", (gpointer) & (module->legacy_params)))
     module->legacy_params = NULL;
+  /* Begin Retouch */
+  if(!g_module_symbol(module->module, "masks_selection_changed", (gpointer) & (module->masks_selection_changed)))
+    module->masks_selection_changed = NULL;
+  
+  if(!g_module_symbol(module->module, "decode_params", (gpointer) & (module->decode_params)))
+    module->decode_params = NULL;
+  if(!g_module_symbol(module->module, "encode_params", (gpointer) & (module->encode_params)))
+    module->encode_params = NULL;
+  if(!g_module_symbol(module->module, "copy_params", (gpointer) & (module->copy_params)))
+    module->copy_params = NULL;
+  if(!g_module_symbol(module->module, "free_params", (gpointer) & (module->free_params)))
+    module->free_params = NULL;
+  if(!g_module_symbol(module->module, "params_equal", (gpointer) & (module->params_equal)))
+    module->params_equal = NULL;
+  if(!g_module_symbol(module->module, "get_params_size_variable", (gpointer) & (module->get_params_size_variable)))
+    module->get_params_size_variable = NULL;
+  
+  if (!module->decode_params || !module->encode_params || !module->copy_params || !module->free_params || !module->params_equal || !module->get_params_size_variable)
+  {
+    module->decode_params = NULL;
+    module->encode_params = NULL;
+    module->copy_params = NULL;
+    module->free_params = NULL;
+    module->params_equal = NULL;
+    module->get_params_size_variable = NULL;
+  }
+  /* End Retouch */
 
   // the introspection api
   module->have_introspection = FALSE;
@@ -420,6 +447,15 @@ static int dt_iop_load_module_by_so(dt_iop_module_t *module, dt_iop_module_so_t 
   module->modify_roi_in = so->modify_roi_in;
   module->modify_roi_out = so->modify_roi_out;
   module->legacy_params = so->legacy_params;
+  /* Begin Retouch */
+  module->masks_selection_changed = so->masks_selection_changed;
+  module->decode_params = so->decode_params;
+  module->encode_params = so->encode_params;
+  module->copy_params = so->copy_params;
+  module->free_params = so->free_params;
+  module->params_equal = so->params_equal;
+  module->get_params_size_variable = so->get_params_size_variable;
+  /* End Retouch */
 
   module->connect_key_accels = so->connect_key_accels;
   module->disconnect_key_accels = so->disconnect_key_accels;
@@ -856,6 +892,11 @@ static void dt_iop_gui_duplicate(dt_iop_module_t *base, gboolean copy_params)
     dt_iop_reload_defaults(module); // some modules like profiled denoise update the gui in reload_defaults
     if(copy_params)
     {
+      /* Begin Retouch */
+      if (module->copy_params)
+        module->copy_params(module->params, base->params, module->params_size);
+      else
+      /* End Retouch */
       memcpy(module->params, base->params, module->params_size);
       if(module->flags() & IOP_FLAGS_SUPPORTS_BLENDING)
       {
@@ -1196,7 +1237,10 @@ static void init_presets(dt_iop_module_so_t *module_so)
       sqlite3_finalize(stmt2);
     }
 
-    if(module_version > old_params_version && module_so->legacy_params != NULL)
+    /* Begin Retouch */
+//    if(module_version > old_params_version && module_so->legacy_params != NULL)
+    if(module_version > old_params_version && (module_so->legacy_params != NULL || module_so->decode_params != NULL))
+    /* End Retouch */
     {
       fprintf(stderr, "[imageop_init_presets] updating '%s' preset '%s' from version %d to version %d\n",
               module_so->op, name, old_params_version, module_version);
@@ -1225,6 +1269,28 @@ static void init_presets(dt_iop_module_so_t *module_so)
       void *new_params = calloc(1, new_params_size);
 
       // convert the old params to new
+      /* Begin Retouch */
+      if (module->decode_params)
+      {
+        if ( module->decode_params(module, old_params, old_params_size, old_params_version,
+                                        new_params, module_version) )
+        {
+          free(new_params);
+          dt_iop_cleanup_module(module);
+          free(module);
+          continue;
+        }
+        
+        // now encode the new params to save on db
+        int32_t encoded_size = module->get_params_size_variable(module, new_params);
+        void *encoded_params = calloc(1, encoded_size);
+        module->encode_params(module, new_params, encoded_params);
+        free(new_params);
+        new_params = encoded_params;
+        new_params_size = encoded_size;
+      }
+      else
+      /* End Retouch */
       if(module->legacy_params(module, old_params, old_params_version, new_params, module_version))
       {
         free(new_params);
@@ -1475,16 +1541,33 @@ void dt_iop_commit_params(dt_iop_module_t *module, dt_iop_params_t *params,
   {
     /* construct module params data for hash calc */
     int length = module->params_size;
+    /* Begin Retouch */
+    int length_variable = (module->get_params_size_variable) ? module->get_params_size_variable(module, module->params): 0;
+    if (module->get_params_size_variable) length = length_variable;
+    /* End Retouch */
     if(module->flags() & IOP_FLAGS_SUPPORTS_BLENDING) length += sizeof(dt_develop_blend_params_t);
     dt_masks_form_t *grp = dt_masks_get_from_id(darktable.develop, blendop_params->mask_id);
     length += dt_masks_group_get_hash_buffer_length(grp);
 
     char *str = malloc(length);
+    /* Begin Retouch */
+    if (module->encode_params)
+      module->encode_params(module, module->params, str);
+    else
+    /* End Retouch */
     memcpy(str, module->params, module->params_size);
     int pos = module->params_size;
+    /* Begin Retouch */
+    if (module->get_params_size_variable) pos = length_variable;
+    /* End Retouch */
     /* if module supports blend op add blend params into account */
     if(module->flags() & IOP_FLAGS_SUPPORTS_BLENDING)
     {
+      /* Begin Retouch */
+      if (module->get_params_size_variable)
+        memcpy(str + length_variable, blendop_params, sizeof(dt_develop_blend_params_t));
+      else
+      /* End Retouch */
       memcpy(str + module->params_size, blendop_params, sizeof(dt_develop_blend_params_t));
       pos += sizeof(dt_develop_blend_params_t);
     }
@@ -1584,6 +1667,11 @@ static void dt_iop_gui_reset_callback(GtkButton *button, dt_iop_module_t *module
     dt_dev_masks_list_change(module->dev);
   }
   /* reset to default params */
+  /* Begin Retouch */
+  if (module->copy_params)
+    module->copy_params(module->params, module->default_params, module->params_size);
+  else
+  /* End Retouch */
   memcpy(module->params, module->default_params, module->params_size);
   memcpy(module->blend_params, module->default_blendop_params, sizeof(dt_develop_blend_params_t));
 

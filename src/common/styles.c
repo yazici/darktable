@@ -704,7 +704,9 @@ GList *dt_styles_get_item_list(const char *name, gboolean params, int imgid)
 
         item->params = malloc(op_len);
         memcpy(item->params, op_blob, op_len);
-
+        /* Begin Retouch */
+        item->params_size = op_len;
+        /* End Retouch */
         item->blendop_params = malloc(bop_len);
         memcpy(item->blendop_params, bop_blob, bop_len);
       }
@@ -725,6 +727,9 @@ GList *dt_styles_get_item_list(const char *name, gboolean params, int imgid)
                      (sqlite3_column_int(stmt, 3) != 0) ? _("on") : _("off"));
 
         item->params = NULL;
+        /* Begin Retouch */
+        item->params_size = 0;
+        /* End Retouch */
         item->blendop_params = NULL;
         if(imgid != -1 && sqlite3_column_type(stmt, 4) != SQLITE_NULL)
           item->selimg_num = sqlite3_column_int(stmt, 4);

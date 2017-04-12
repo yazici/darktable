@@ -547,6 +547,20 @@ int dt_dev_write_history_item(const dt_image_t *image, dt_dev_history_item_t *h,
                               "?10 WHERE imgid = ?5 AND num = ?6",
                               -1, &stmt, NULL);
   DT_DEBUG_SQLITE3_BIND_TEXT(stmt, 1, h->module->op, -1, SQLITE_TRANSIENT);
+  /* Begin Retouch */
+  if (h->module->encode_params && h->module->get_params_size_variable)
+  {
+    int32_t encoded_size = h->module->get_params_size_variable(h->module, h->params);
+    void *encoded_params = malloc(encoded_size);
+    
+    h->module->encode_params(h->module, h->params, encoded_params);
+    
+    DT_DEBUG_SQLITE3_BIND_BLOB(stmt, 2, encoded_params, encoded_size, SQLITE_TRANSIENT);
+    
+    free(encoded_params);
+  }
+  else
+  /* End Retouch */
   DT_DEBUG_SQLITE3_BIND_BLOB(stmt, 2, h->params, h->module->params_size, SQLITE_TRANSIENT);
   DT_DEBUG_SQLITE3_BIND_INT(stmt, 3, h->module->version());
   DT_DEBUG_SQLITE3_BIND_INT(stmt, 4, h->enabled);
@@ -587,7 +601,13 @@ void dt_dev_add_history_item(dt_develop_t *dev, dt_iop_module_t *module, gboolea
        || ((dev->focus_hash != hist->focus_hash)                 // or if focused out and in
        && (// but only add item if there is a difference at all for the same module
          (module->params_size != hist->module->params_size) ||
+/* Begin Retouch */
+         (module->params_size == hist->module->params_size && memcmp(hist->params, module->params, module->params_size)) || 
+         (module->params_equal && module->params_size == hist->module->params_size && !module->params_equal(hist->params, module->params)) )))
+/*
          (module->params_size == hist->module->params_size && memcmp(hist->params, module->params, module->params_size)))))
+*/
+/* End Retouch */
     {
       // new operation, push new item
       // printf("adding new history item %d - %s\n", dev->history_end, module->op);
@@ -614,6 +634,14 @@ void dt_dev_add_history_item(dt_develop_t *dev, dt_iop_module_t *module, gboolea
       snprintf(hist->multi_name, sizeof(hist->multi_name), "%s", module->multi_name);
       /* allocate and set hist blend_params */
       hist->blend_params = malloc(sizeof(dt_develop_blend_params_t));
+      /* Begin Retouch */
+      if (module->copy_params)
+      {
+        memset(hist->params, 0, module->params_size);
+        module->copy_params(hist->params, module->params, module->params_size);
+      }
+      else
+      /* End Retouch */
       memcpy(hist->params, module->params, module->params_size);
       memcpy(hist->blend_params, module->blend_params, sizeof(dt_develop_blend_params_t));
 
@@ -626,6 +654,13 @@ void dt_dev_add_history_item(dt_develop_t *dev, dt_iop_module_t *module, gboolea
       // same operation, change params
       // printf("changing same history item %d - %s\n", dev->history_end-1, module->op);
       hist = (dt_dev_history_item_t *)history->data;
+      /* Begin Retouch */
+      if (module->copy_params)
+      {
+        module->copy_params(hist->params, module->params, module->params_size);
+      }
+      else
+      /* End Retouch */
       memcpy(hist->params, module->params, module->params_size);
 
       if(module->flags() & IOP_FLAGS_SUPPORTS_BLENDING)
@@ -682,6 +717,11 @@ void dt_dev_add_history_item(dt_develop_t *dev, dt_iop_module_t *module, gboolea
 void dt_dev_free_history_item(gpointer data)
 {
   dt_dev_history_item_t *item = (dt_dev_history_item_t *)data;
+  /* Begin Retouch */
+  if (item->module && item->module->free_params)
+    item->module->free_params(item->params);
+  else
+  /* End Retouch */
   free(item->params);
   free(item->blend_params);
   free(item);
@@ -787,6 +827,11 @@ void dt_dev_pop_history_items(dt_develop_t *dev, int32_t cnt)
   while(modules)
   {
     dt_iop_module_t *module = (dt_iop_module_t *)(modules->data);
+    /* Begin Retouch */
+    if (module->copy_params)
+      module->copy_params(module->params, module->default_params, module->params_size);
+    else
+    /* End Retouch */
     memcpy(module->params, module->default_params, module->params_size);
     memcpy(module->blend_params, module->default_blendop_params, sizeof(dt_develop_blend_params_t));
     module->enabled = module->default_enabled;
@@ -797,6 +842,11 @@ void dt_dev_pop_history_items(dt_develop_t *dev, int32_t cnt)
   for(int i = 0; i < cnt && history; i++)
   {
     dt_dev_history_item_t *hist = (dt_dev_history_item_t *)(history->data);
+    /* Begin Retouch */
+    if (hist->module->copy_params)
+      hist->module->copy_params(hist->module->params, hist->params, hist->module->params_size);
+    else
+    /* End Retouch */
     memcpy(hist->module->params, hist->params, hist->module->params_size);
     memcpy(hist->module->blend_params, hist->blend_params, sizeof(dt_develop_blend_params_t));
 
@@ -1130,6 +1180,50 @@ void dt_dev_read_history(dt_develop_t *dev)
       memcpy(hist->blend_params, hist->module->default_blendop_params, sizeof(dt_develop_blend_params_t));
     }
 
+    /* Begin Retouch */
+    if (hist->module->decode_params)
+    {
+      memset(hist->params, 0, hist->module->params_size);
+      
+      if ( hist->module->decode_params(hist->module, sqlite3_column_blob(stmt, 4), sqlite3_column_bytes(stmt, 4), labs(modversion),
+                                        hist->params, labs(hist->module->version())) )
+      {
+        fprintf(stderr, "[dev_read_history] module `%s' version mismatch: history is %d, dt %d.\n",
+                hist->module->op, modversion, hist->module->version());
+        const char *fname = dev->image_storage.filename + strlen(dev->image_storage.filename);
+        while(fname > dev->image_storage.filename && *fname != '/') fname--;
+        if(fname > dev->image_storage.filename) fname++;
+        dt_control_log(_("%s: module `%s' version mismatch: %d != %d"), fname, hist->module->op,
+                       hist->module->version(), modversion);
+        dt_dev_free_history_item(hist);
+        continue;
+      }
+      else
+      {
+        if(!strcmp(hist->module->op, "spots") && modversion == 1)
+        {
+          // quick and dirty hack to handle spot removal legacy_params
+          memcpy(hist->blend_params, hist->module->blend_params, sizeof(dt_develop_blend_params_t));
+          memcpy(hist->module->blend_params, hist->module->default_blendop_params,
+                 sizeof(dt_develop_blend_params_t));
+        }
+      }
+
+      /*
+       * Fix for flip iop: previously it was not always needed, but it might be
+       * in history stack as "orientation (off)", but now we always want it
+       * by default, so if it is disabled, enable it, and replace params with
+       * default_params. if user want to, he can disable it.
+       */
+      if(!strcmp(hist->module->op, "flip") && hist->enabled == 0 && labs(modversion) == 1)
+      {
+        memcpy(hist->params, hist->module->default_params, hist->module->params_size);
+        hist->enabled = 1;
+      }
+    }
+    else
+    {
+    /* End Retouch */
     if(hist->module->version() != modversion || hist->module->params_size != sqlite3_column_bytes(stmt, 4)
        || strcmp((char *)sqlite3_column_text(stmt, 3), hist->module->op))
     {
@@ -1174,7 +1268,10 @@ void dt_dev_read_history(dt_develop_t *dev)
     {
       memcpy(hist->params, sqlite3_column_blob(stmt, 4), hist->module->params_size);
     }
-
+    /* Begin Retouch */
+    }
+    /* Begin Retouch */
+    
     // make sure that always-on modules are always on. duh.
     if(hist->module->default_enabled == 1 && hist->module->hide_enable_button == 1)
     {

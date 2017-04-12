@@ -206,6 +206,16 @@ typedef struct dt_iop_module_so_t
                          struct dt_iop_roi_t *roi_out, const struct dt_iop_roi_t *roi_in);
   int (*legacy_params)(struct dt_iop_module_t *self, const void *const old_params, const int old_version,
                        void *new_params, const int new_version);
+  /* Begin Retouch */
+  void (*masks_selection_changed)(struct dt_iop_module_t *self, const int form_selected_id);
+  int (*decode_params)(struct dt_iop_module_t *self, const void *encoded_params, const int32_t encoded_size, const int encoded_version,
+      void *decoded_params, const int decoded_version);
+  void (*encode_params)(struct dt_iop_module_t *self, void *const decoded_params, void *encoded_params);
+  void (*copy_params)(void *dest_params, void *const source_params, int32_t params_size);
+  void (*free_params)(void *params);
+  int (*params_equal)(void *params1, void *params2);
+  int (*get_params_size_variable)(struct dt_iop_module_t *self, void *const params);
+  /* End Retouch */
 
   void (*process)(struct dt_iop_module_t *self, struct dt_dev_pixelpipe_iop_t *piece, const void *const i,
                   void *const o, const struct dt_iop_roi_t *const roi_in,
@@ -398,6 +408,16 @@ typedef struct dt_iop_module_t
                          struct dt_iop_roi_t *roi_out, const struct dt_iop_roi_t *roi_in);
   int (*legacy_params)(struct dt_iop_module_t *self, const void *const old_params, const int old_version,
                        void *new_params, const int new_version);
+  /* Begin Retouch */
+  void (*masks_selection_changed)(struct dt_iop_module_t *self, const int form_selected_id);
+  int (*decode_params)(struct dt_iop_module_t *self, const void *encoded_params, const int32_t encoded_size, const int encoded_version,
+      void *decoded_params, const int decoded_version);
+  void (*encode_params)(struct dt_iop_module_t *self, void *const decoded_params, void *encoded_params);
+  void (*copy_params)(void *dest_params, void *const source_params, int32_t params_size);
+  void (*free_params)(void *params);
+  int (*params_equal)(void *params1, void *params2);
+  int (*get_params_size_variable)(struct dt_iop_module_t *self, void *const params);
+  /* End Retouch */
 
   /** this is the temp homebrew callback to operations.
     * x,y, and scale are just given for orientation in the framebuffer. i and o are

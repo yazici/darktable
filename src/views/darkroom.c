@@ -552,6 +552,11 @@ static void dt_dev_change_image(dt_develop_t *dev, const uint32_t imgid)
   while(dev->history)
   {
     // clear history of old image
+    /* Begin Retouch */
+    if (((dt_dev_history_item_t *)dev->history->data)->module && ((dt_dev_history_item_t *)dev->history->data)->module->free_params)
+      ((dt_dev_history_item_t *)dev->history->data)->module->free_params(((dt_dev_history_item_t *)dev->history->data)->params);
+    else
+    /* End Retouch */
     free(((dt_dev_history_item_t *)dev->history->data)->params);
     free(((dt_dev_history_item_t *)dev->history->data)->blend_params);
     free((dt_dev_history_item_t *)dev->history->data);
@@ -1966,6 +1971,11 @@ void leave(dt_view_t *self)
     dt_dev_history_item_t *hist = (dt_dev_history_item_t *)(dev->history->data);
     // printf("removing history item %d - %s, data %f %f\n", hist->module->instance, hist->module->op, *(float
     // *)hist->params, *((float *)hist->params+1));
+    /* Begin Retouch */
+    if (hist->module && hist->module->free_params)
+      hist->module->free_params(hist->params);
+    else
+    /* End Retouch */
     free(hist->params);
     hist->params = NULL;
     free(hist->blend_params);

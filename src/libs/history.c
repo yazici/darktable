@@ -194,6 +194,14 @@ static GList *_duplicate_history(GList *hist)
     new->params = malloc(old->module->params_size);
     new->blend_params = malloc(sizeof(dt_develop_blend_params_t));
 
+    /* Begin Retouch */
+    if (old->module->copy_params)
+    {
+      memset(new->params, 0, old->module->params_size);
+      old->module->copy_params(new->params, old->params, old->module->params_size);
+    }
+    else
+    /* End Retouch */
     memcpy(new->params, old->params, old->module->params_size);
     memcpy(new->blend_params, old->blend_params, sizeof(dt_develop_blend_params_t));
 
