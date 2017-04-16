@@ -25,18 +25,14 @@
  * Jean-Yves Couleaud cjyves@free.fr
  */
 
-//#define _FFT_MULTFR_
-
 
 // Subtract bottom from top and store in result as a float
 static void dt_heal_sub(const float *const top_buffer, const float *const bottom_buffer, float *result_buffer, const int width, const int height, const int ch)
 {
   const int i_size = width * height * ch;
   
-#ifdef _FFT_MULTFR_
 #ifdef _OPENMP
 #pragma omp parallel for default(none) shared(result_buffer) schedule(static)
-#endif
 #endif
   for (int i = 0; i < i_size; i++) result_buffer[i] = top_buffer[i] - bottom_buffer[i];
 }
@@ -46,10 +42,8 @@ static void dt_heal_add(const float *const first_buffer, const float *const seco
 {
   const int i_size = width * height * ch;
 
-#ifdef _FFT_MULTFR_
 #ifdef _OPENMP
 #pragma omp parallel for default(none) shared(result_buffer) schedule(static)
-#endif
 #endif
   for (int i = 0; i < i_size; i++) result_buffer[i] = first_buffer[i] + second_buffer[i];
 }
@@ -59,11 +53,6 @@ static float dt_heal_laplace_iteration_sse(float *pixels, const float *const Adi
 {
   union { __m128 v; float f[4]; } valb_err = {0};
 
-#ifdef _FFT_MULTFR_
-#ifdef _OPENMP
-#pragma omp parallel for default(none) shared(pixels, valb_err) schedule(static)
-#endif
-#endif
   for (int i = 0; i < nmask; i++)
   {
     const int ii = i * 5;
@@ -76,12 +65,12 @@ static float dt_heal_laplace_iteration_sse(float *pixels, const float *const Adi
     __m128 valb_a = _mm_set1_ps(Adiag[i]);
     __m128 valb_w= { w, w, w, w };
 
-    __m128 valb_j3 = _mm_load_ps(&(pixels[j3])); // W
     __m128 valb_j0 = _mm_load_ps(&(pixels[j0])); // center
     __m128 valb_j1 = _mm_load_ps(&(pixels[j1])); // E
     __m128 valb_j2 = _mm_load_ps(&(pixels[j2])); // S
+    __m128 valb_j3 = _mm_load_ps(&(pixels[j3])); // W
     __m128 valb_j4 = _mm_load_ps(&(pixels[j4])); // N
-    
+
 /*  float diff = w * (a * pixels[j0 + k] -
                         (pixels[j1 + k] +
                          pixels[j2 + k] +
@@ -115,11 +104,6 @@ static float dt_heal_laplace_iteration(float *pixels, const float *const Adiag, 
   float err = 0;
   const int ch1 = (ch==4) ? ch-1: ch;
 
-#ifdef _FFT_MULTFR_
-#ifdef _OPENMP
-#pragma omp parallel for default(none) shared(pixels, err) schedule(static)
-#endif
-#endif
   for (int i = 0; i < nmask; i++)
   {
     int   j0 = Aidx[i * 5 + 0];
@@ -173,34 +157,35 @@ static void dt_heal_laplace_loop(float *pixels, const int width, const int heigh
    * Arrange Aidx in checkerboard order, so that a single linear pass over that
    * array results updating all of the red cells and then all of the black cells.
    */
-#ifdef _FFT_MULTFR_
-#ifdef _OPENMP
-#pragma omp parallel for default(none) shared(nmask, Adiag, Aidx) schedule(static)
-#endif
-#endif
   for (int parity = 0; parity < 2; parity++)
+  {
     for (int i = 0; i < height; i++)
+    {
       for (int j = (i&1)^parity; j < width; j+=2)
+      {
         if (mask[j + i * width])
-          {
+				{
 #define A_NEIGHBOR(o,di,dj) \
-            if ((dj<0 && j==0) || (dj>0 && j==width-1) || (di<0 && i==0) || (di>0 && i==height-1)) \
-              Aidx[o + nmask * 5] = zero; \
-            else                                               \
-              Aidx[o + nmask * 5] = ((i + di) * width + (j + dj)) * ch;
-
-            /* Omit Dirichlet conditions for any neighbors off the
-             * edge of the canvas.
-             */
-            Adiag[nmask] = 4 - (i==0) - (j==0) - (i==height-1) - (j==width-1);
-            A_NEIGHBOR (0,  0,  0);
-            A_NEIGHBOR (1,  0,  1);
-            A_NEIGHBOR (2,  1,  0);
-            A_NEIGHBOR (3,  0, -1);
-            A_NEIGHBOR (4, -1,  0);
-            nmask++;
-          }
-
+					if ((dj<0 && j==0) || (dj>0 && j==width-1) || (di<0 && i==0) || (di>0 && i==height-1)) \
+						Aidx[o + nmask * 5] = zero; \
+					else                                               \
+						Aidx[o + nmask * 5] = ((i + di) * width + (j + dj)) * ch;
+			
+					/* Omit Dirichlet conditions for any neighbors off the
+					 * edge of the canvas.
+					 */
+					Adiag[nmask] = 4 - (i==0) - (j==0) - (i==height-1) - (j==width-1);
+					A_NEIGHBOR (0,  0,  0);
+					A_NEIGHBOR (1,  0,  1);
+					A_NEIGHBOR (2,  1,  0);
+					A_NEIGHBOR (3,  0, -1);
+					A_NEIGHBOR (4, -1,  0);
+					nmask++;
+				}
+      }
+    }
+  }
+  
   /* Empirically optimal over-relaxation factor. (Benchmarked on
    * round brushes, at least. I don't know whether aspect ratio
    * affects it.)

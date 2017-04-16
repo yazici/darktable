@@ -28,7 +28,6 @@
 #include "common/heal_eh.h"
 #include "common/dwt_eh.h"
 
-//#define _FFT_MULTFR_
 
 // this is the version of the modules parameters,
 // and includes version information about compile-time dt
@@ -2272,10 +2271,8 @@ static void rt_copy_in_to_out(const float *const in, const struct dt_iop_roi_t *
   const int yoffs = roi_out->y - roi_in->y;
   const int y_to = MIN(roi_out->height, roi_in->height);
 
-#ifdef _FFT_MULTFR_
 #ifdef _OPENMP
 #pragma omp parallel for default(none) schedule(static)
-#endif
 #endif
   for (int y=0; y < y_to; y++)
   {
@@ -2319,10 +2316,8 @@ static void retouch_fill_sse(float *const in, dt_iop_roi_t *const roi_in, float 
   const float valf4_fill[4] = { fill_color[0], fill_color[1], fill_color[2], 0.f };
   const __m128 val_fill = _mm_load_ps(valf4_fill);
   
-#ifdef _FFT_MULTFR_
 #ifdef _OPENMP
 #pragma omp parallel for default(none) shared(out, x_from, x_to, y_from, y_to) schedule(static)
-#endif
 #endif
   for(int yy = y_from; yy < y_to; yy++)
   {
@@ -2372,10 +2367,8 @@ static void retouch_fill(float *const in, dt_iop_roi_t *const roi_in, float *out
   int x_from = 0, x_to = 0, y_from = 0, y_to = 0;
   rt_intersect_rois(roi_mask_scaled, roi_in, roi_out, 0, 0, 0, &x_from, &x_to, &y_from, &y_to);
 
-#ifdef _FFT_MULTFR_
 #ifdef _OPENMP
 #pragma omp parallel for default(none) shared(out, x_from, x_to, y_from, y_to) schedule(static)
-#endif
 #endif
   for(int yy = y_from; yy < y_to; yy++)
   {
@@ -2416,10 +2409,8 @@ static void retouch_clone_sse(float *const in, dt_iop_roi_t *const roi_in, float
   int x_from = 0, x_to = 0, y_from = 0, y_to = 0;
   rt_intersect_rois(roi_mask_scaled, roi_in, roi_out, dx, dy, 0, &x_from, &x_to, &y_from, &y_to);
 
-#ifdef _FFT_MULTFR_
 #ifdef _OPENMP
 #pragma omp parallel for default(none) shared(out, x_from, x_to, y_from, y_to) schedule(static)
-#endif
 #endif
   for(int yy = y_from; yy < y_to; yy++)
   {
@@ -2469,10 +2460,8 @@ static void retouch_clone(float *const in, dt_iop_roi_t *const roi_in, float *ou
   int x_from = 0, x_to = 0, y_from = 0, y_to = 0;
   rt_intersect_rois(roi_mask_scaled, roi_in, roi_out, dx, dy, 0, &x_from, &x_to, &y_from, &y_to);
 
-#ifdef _FFT_MULTFR_
 #ifdef _OPENMP
 #pragma omp parallel for default(none) shared(out, x_from, x_to, y_from, y_to) schedule(static)
-#endif
 #endif
   for(int yy = y_from; yy < y_to; yy++)
   {
@@ -2533,10 +2522,8 @@ static void retouch_gaussian_blur(float *const in, dt_iop_roi_t *const roi_in, f
   memset(dest, 0, width_tmp * height_tmp * ch * sizeof(float));
   
   // copy source image so we blur just the mask area (at least the smallest rect that covers it)
-#ifdef _FFT_MULTFR_
 #ifdef _OPENMP
 #pragma omp parallel for default(none) shared(dest, x_from, y_from, y_to) schedule(static)
-#endif
 #endif
   for(int yy = y_from; yy < y_to; yy++)
   {
@@ -2570,10 +2557,8 @@ static void retouch_gaussian_blur(float *const in, dt_iop_roi_t *const roi_in, f
 #if defined(__SSE__)
   if (ch == 4 && use_sse)
   {
-#ifdef _FFT_MULTFR_
 #ifdef _OPENMP
 #pragma omp parallel for default(none) shared(dest, out, x_from, x_to, y_from, y_to) schedule(static)
-#endif
 #endif
     for(int yy = y_from; yy < y_to; yy++)
     {
@@ -2607,10 +2592,8 @@ static void retouch_gaussian_blur(float *const in, dt_iop_roi_t *const roi_in, f
   else
 #endif
   {
-#ifdef _FFT_MULTFR_
 #ifdef _OPENMP
 #pragma omp parallel for default(none) shared(dest, out, x_from, x_to, y_from, y_to) schedule(static)
-#endif
 #endif
     for(int yy = y_from; yy < y_to; yy++)
     {
@@ -2680,10 +2663,8 @@ static void retouch_heal(float *const in, dt_iop_roi_t *const roi_in, float *out
   memset(mask_heal, 0, width_tmp * height_tmp * sizeof(float));
   
   // copy source and destination to temp images
-#ifdef _FFT_MULTFR_
 #ifdef _OPENMP
 #pragma omp parallel for default(none) shared(out, dest, src, x_from, y_from, y_to) schedule(static)
-#endif
 #endif
   for(int yy = y_from; yy < y_to; yy++)
   {
@@ -2701,10 +2682,8 @@ static void retouch_heal(float *const in, dt_iop_roi_t *const roi_in, float *out
   }
 
   // copy mask to temp image
-#ifdef _FFT_MULTFR_
 #ifdef _OPENMP
 #pragma omp parallel for default(none) shared(mask_heal, x_from, x_to, y_from, y_to) schedule(static)
-#endif
 #endif
   for(int yy = y_from; yy < y_to; yy++)
   {
@@ -2733,10 +2712,8 @@ static void retouch_heal(float *const in, dt_iop_roi_t *const roi_in, float *out
 #if defined(__SSE__)
   if (ch == 4 && use_sse)
   {
-#ifdef _FFT_MULTFR_
 #ifdef _OPENMP
 #pragma omp parallel for default(none) shared(out, dest, mask_heal, x_from, x_to, y_from, y_to) schedule(static)
-#endif
 #endif
     for(int yy = y_from; yy < y_to; yy++)
     {
@@ -2768,10 +2745,8 @@ static void retouch_heal(float *const in, dt_iop_roi_t *const roi_in, float *out
   else
 #endif
   {
-#ifdef _FFT_MULTFR_
 #ifdef _OPENMP
 #pragma omp parallel for default(none) shared(out, dest, mask_heal, x_from, x_to, y_from, y_to) schedule(static)
-#endif
 #endif
     for(int yy = y_from; yy < y_to; yy++)
     {

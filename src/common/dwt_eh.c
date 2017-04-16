@@ -9,7 +9,6 @@
  * 
  * */
 
-//#define _FFT_MULTFR_
 
 static int _get_max_scale(const int width, const int height, const float preview_scale)
 {
@@ -119,10 +118,8 @@ static void dwt_add_layer_sse(float *const img, float *layers, dwt_params_t *con
   
   if (n_scale == p->scales+1)
   {
-#ifdef _FFT_MULTFR_
 #ifdef _OPENMP
 #pragma omp parallel for default(none) shared(layers) schedule(static)
-#endif
 #endif
     for (int i=0; i<i_size; i+=4)
     {
@@ -133,10 +130,8 @@ static void dwt_add_layer_sse(float *const img, float *layers, dwt_params_t *con
   {
     const __m128 lpass_sub = _mm_set1_ps(p->blend_factor);
     
-#ifdef _FFT_MULTFR_
 #ifdef _OPENMP
 #pragma omp parallel for default(none) shared(layers) schedule(static)
-#endif
 #endif
     for (int i=0; i<i_size; i+=4)
     {
@@ -162,20 +157,16 @@ static void dwt_add_layer(float *const img, float *layers, dwt_params_t *const p
   
   if (n_scale == p->scales+1)
   {
-#ifdef _FFT_MULTFR_
 #ifdef _OPENMP
 #pragma omp parallel for default(none) shared(layers) schedule(static)
-#endif
 #endif
     for (int i=0; i<i_size; i++)
       layers[i] += img[i];
   }
   else
   {
-#ifdef _FFT_MULTFR_
 #ifdef _OPENMP
 #pragma omp parallel for default(none) shared(layers) schedule(static)
-#endif
 #endif
     for (int i=0; i<i_size; i++)
       layers[i] += img[i] - lpass_sub;
@@ -198,10 +189,8 @@ static void dwt_subtract_layer_sse(float *bl, float *bh, dwt_params_t *const p)
   const __m128 v4_lpass_sub = _mm_set1_ps(p->blend_factor);
   const int size = p->width * p->height * 4;
 
-#ifdef _FFT_MULTFR_
 #ifdef _OPENMP
 #pragma omp parallel for default(none) shared(bl, bh) schedule(static)
-#endif
 #endif
   for (int i = 0; i < size; i+=4)
   {
@@ -227,10 +216,8 @@ static void dwt_subtract_layer(float *bl, float *bh, dwt_params_t *const p)
   const float lpass_sub = p->blend_factor;
   const int size = p->width * p->height * p->ch;
 
-#ifdef _FFT_MULTFR_
 #ifdef _OPENMP
 #pragma omp parallel for default(none) shared(bl, bh) schedule(static)
-#endif
 #endif
     for (int i = 0; i < size; i++) 
     {
@@ -288,22 +275,12 @@ static void dwt_wavelet_decompose(float *img, dwt_params_t *const p, _dwt_layer_
   {
     lpass = (1 - (lev & 1));
 
-#ifdef _FFT_MULTFR_
-#ifdef _OPENMP
-#pragma omp parallel for default(none) shared(buffer, temp, lev, lpass, hpass) schedule(static)
-#endif
-#endif
     for (int row = 0; row < p->height; row++) 
     {
       dwt_hat_transform(temp, buffer[hpass] + (row * p->width * p->ch), 1, p->width, 1 << lev, p);
       memcpy(&(buffer[lpass][row * p->width * p->ch]), temp, p->width * p->ch * sizeof(float));
     }
     
-#ifdef _FFT_MULTFR_
-#ifdef _OPENMP
-#pragma omp parallel for default(none) shared(buffer, temp, lev, lpass, hpass) schedule(static)
-#endif
-#endif
     for (int col = 0; col < p->width; col++) 
     {
       dwt_hat_transform(temp, buffer[lpass] + col*p->ch, p->width, p->height, 1 << lev, p);
