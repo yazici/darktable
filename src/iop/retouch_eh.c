@@ -2784,8 +2784,8 @@ static void rt_process_forms(float *layer, dwt_params_t *const wt_p, const int s
   dt_iop_module_t *self = usr_d->self;
   dt_dev_pixelpipe_iop_t *piece = usr_d->piece;
   
-  // if preview a single scale, just process that scale
-  if (wt_p->return_layer > 0 && scale != wt_p->return_layer) return;
+  // if preview a single scale, just process that scale and original image
+  if (wt_p->return_layer > 0 && scale != wt_p->return_layer && scale != 0) return;
   // do not process the reconstructed image
   if (scale > wt_p->scales+1) return;
 

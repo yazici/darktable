@@ -49,27 +49,31 @@ static void dt_heal_add(const float *const first_buffer, const float *const seco
 }
 
 #if defined(__SSE__)
-static float dt_heal_laplace_iteration_sse(float *pixels, const float *const Adiag, const int *const Aidx, const float w, const int nmask)
+static float dt_heal_laplace_iteration_sse(float *pixels, const float *const Adiag, const int *const Aidx, const float w, 
+		const int nmask_from, const int nmask_to)
 {
-  union { __m128 v; float f[4]; } valb_err = {0};
+	float err = 0.f;
 
-  for (int i = 0; i < nmask; i++)
+#ifdef _OPENMP
+#pragma omp parallel for default(none) shared(pixels) schedule(static) reduction(+ : err)
+#endif
+  for (int i = nmask_from; i < nmask_to; i++)
   {
-    const int ii = i * 5;
-    const int j0 = Aidx[ii + 0];
-    const int j1 = Aidx[ii + 1];
-    const int j2 = Aidx[ii + 2];
-    const int j3 = Aidx[ii + 3];
-    const int j4 = Aidx[ii + 4];
+    int ii = i * 5;
+    int j0 = Aidx[ii + 0];
+    int j1 = Aidx[ii + 1];
+    int j2 = Aidx[ii + 2];
+    int j3 = Aidx[ii + 3];
+    int j4 = Aidx[ii + 4];
     
     __m128 valb_a = _mm_set1_ps(Adiag[i]);
     __m128 valb_w= { w, w, w, w };
 
-    __m128 valb_j0 = _mm_load_ps(&(pixels[j0])); // center
-    __m128 valb_j1 = _mm_load_ps(&(pixels[j1])); // E
-    __m128 valb_j2 = _mm_load_ps(&(pixels[j2])); // S
-    __m128 valb_j3 = _mm_load_ps(&(pixels[j3])); // W
-    __m128 valb_j4 = _mm_load_ps(&(pixels[j4])); // N
+    __m128 valb_j0 = _mm_load_ps(pixels+j0); // center
+    __m128 valb_j1 = _mm_load_ps(pixels+j1); // E
+    __m128 valb_j2 = _mm_load_ps(pixels+j2); // S
+    __m128 valb_j3 = _mm_load_ps(pixels+j3); // W
+    __m128 valb_j4 = _mm_load_ps(pixels+j4); // N
 
 /*  float diff = w * (a * pixels[j0 + k] -
                         (pixels[j1 + k] +
@@ -83,35 +87,41 @@ static float dt_heal_laplace_iteration_sse(float *pixels, const float *const Adi
                                               _mm_add_ps(valb_j3, valb_j4)))));
 
 /*  pixels[j0 + k] -= diff;*/
-    _mm_store_ps(&(pixels[j0]), _mm_sub_ps(valb_j0, valb_diff));
+    _mm_store_ps(pixels+j0, _mm_sub_ps(valb_j0, valb_diff));
 /*  err += diff * diff;*/
-    valb_err.v = _mm_add_ps(valb_err.v, _mm_mul_ps(valb_diff, valb_diff));
+    union { __m128 v; float f[4]; } valb_err;
+    valb_err.v = _mm_mul_ps(valb_diff, valb_diff);
+    err += valb_err.f[0] + valb_err.f[1] + valb_err.f[2];
   }
 
-  return valb_err.f[0] + valb_err.f[1] + valb_err.f[2];
+  return err;
 }
 #endif
 
 // Perform one iteration of Gauss-Seidel, and return the sum squared residual.
-static float dt_heal_laplace_iteration(float *pixels, const float *const Adiag, const int *const Aidx, const float w, const int nmask, 
+static float dt_heal_laplace_iteration(float *pixels, const float *const Adiag, const int *const Aidx, const float w, 
+																				const int nmask_from, const int nmask_to, 
                                         const int ch, const int use_sse)
 {
 #if defined(__SSE__)
   if (ch == 4 && use_sse)
-    return dt_heal_laplace_iteration_sse(pixels, Adiag, Aidx, w, nmask);
+    return dt_heal_laplace_iteration_sse(pixels, Adiag, Aidx, w, nmask_from, nmask_to);
 #endif
 
-  float err = 0;
+  float err = 0.f;
   const int ch1 = (ch==4) ? ch-1: ch;
 
-  for (int i = 0; i < nmask; i++)
+#ifdef _OPENMP
+#pragma omp parallel for default(none) shared(pixels) schedule(static) reduction(+ : err)
+#endif
+  for (int i = nmask_from; i < nmask_to; i++)
   {
-    int   j0 = Aidx[i * 5 + 0];
-    int   j1 = Aidx[i * 5 + 1];
-    int   j2 = Aidx[i * 5 + 2];
-    int   j3 = Aidx[i * 5 + 3];
-    int   j4 = Aidx[i * 5 + 4];
-    float a  = Adiag[i];
+    int j0 = Aidx[i * 5 + 0];
+    int j1 = Aidx[i * 5 + 1];
+    int j2 = Aidx[i * 5 + 2];
+    int j3 = Aidx[i * 5 + 3];
+    int j4 = Aidx[i * 5 + 4];
+    float a = Adiag[i];
 
     for (int k = 0; k < ch1; k++)
     {
@@ -134,6 +144,7 @@ static void dt_heal_laplace_loop(float *pixels, const int width, const int heigh
 {
   const int max_iter = 1000;
   int nmask = 0;
+  int nmask2 = 0;
 
   float *Adiag = dt_alloc_align(64, sizeof(float) * width * height);
   int *Aidx = dt_alloc_align(64, sizeof(int) * 5 * width * height);
@@ -159,6 +170,8 @@ static void dt_heal_laplace_loop(float *pixels, const int width, const int heigh
    */
   for (int parity = 0; parity < 2; parity++)
   {
+  	if (parity == 1) nmask2 = nmask;
+  	
     for (int i = 0; i < height; i++)
     {
       for (int j = (i&1)^parity; j < width; j+=2)
@@ -194,13 +207,15 @@ static void dt_heal_laplace_loop(float *pixels, const int width, const int heigh
   const float err_exit = .001f;
   
   /* Gauss-Seidel with successive over-relaxation */
-  for (int iter = 0; iter < max_iter; iter++)
-  {
-    float err = dt_heal_laplace_iteration(pixels, Adiag, Aidx, w, nmask, ch, use_sse);
-    if (err <= err_exit)
-      break;
-  }
-
+	for (int iter = 0; iter < max_iter; iter++)
+	{
+		// process red/black cells separate
+		float err = dt_heal_laplace_iteration(pixels, Adiag, Aidx, w, 0, nmask2, ch, use_sse);
+		err += dt_heal_laplace_iteration(pixels, Adiag, Aidx, w, nmask2, nmask, ch, use_sse);
+		if (err <= err_exit)
+			break;
+	}
+  
 cleanup:
   if (Adiag) dt_free_align(Adiag);
   if (Aidx) dt_free_align(Aidx);
