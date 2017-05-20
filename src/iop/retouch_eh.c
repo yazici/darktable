@@ -2302,6 +2302,110 @@ static void rt_intersect_rois(dt_iop_roi_t *const roi_mask_scaled, dt_iop_roi_t 
   *y_to = MIN(MIN((roi_mask_scaled->y + roi_mask_scaled->height + 1 + padding), (roi_out->y + roi_out->height)), (roi_in->y + roi_in->height+dy));
 }
 
+static void rt_copy_image_to_temp(float *dest, float *const in, dt_iop_roi_t *const roi_in, const int ch, 
+		const int x_from, const int y_from, const int x_to, const int y_to, 
+		const int width_dest, const int height_dest,
+		const int dx, const int dy)
+{
+	
+#ifdef _OPENMP
+#pragma omp parallel for default(none) shared(dest) schedule(static)
+#endif
+  for(int yy = y_from; yy < y_to; yy++)
+  {
+    const int dindex = ch * ((yy-y_from)*width_dest);
+    const int iindex = ch * (roi_in->width * (yy - roi_in->y - dy) - dx - roi_in->x + x_from);
+    float *d = dest + dindex;
+    float *i = in + iindex;
+
+    memcpy(d, i, width_dest * ch * sizeof(float));
+  }
+  	
+}
+
+static void rt_copy_image_masked(float *const dest, float *out, dt_iop_roi_t *const roi_out, const int ch, 
+		float *const mask, dt_iop_roi_t *const roi_mask_scaled, dt_iop_roi_t *const roi_mask, 
+		const int x_from, const int y_from, const int x_to, const int y_to, 
+		const int width_tmp, const int height_tmp, const float roi_in_scale, 
+		const int dx, const int dy, 
+		const float opacity, const int mask_display, 
+		const int use_sse)
+{
+	
+#if defined(__SSE__)
+  if (ch == 4 && use_sse)
+  {
+#ifdef _OPENMP
+#pragma omp parallel for default(none) shared(out) schedule(static)
+#endif
+    for(int yy = y_from; yy < y_to; yy++)
+    {
+      const int mindex = (int)((yy - roi_mask_scaled->y) / roi_in_scale);
+      if (mindex >= roi_mask->height) continue;
+      
+      const int dindex = ch * ((yy-y_from)*width_tmp);
+      const int oindex = ch * (roi_out->width * (yy - dy - roi_out->y) - dx - roi_out->x + x_from);
+
+      float *d = dest + dindex;
+      float *o = out + oindex;
+      float *m = mask + mindex * roi_mask->width;
+     
+      for(int xx = x_from; xx < x_to; xx++, d+=ch, o+=ch)
+      {
+        const int mx = (int)((xx - roi_mask_scaled->x) / roi_in_scale);
+        if (mx >= roi_mask->width) continue;
+        
+        const float f = (m[mx]) * opacity;
+        
+        const __m128 val1_f = _mm_set1_ps(1.0f - f);
+        const __m128 valf = _mm_set1_ps(f);
+        
+        _mm_store_ps(o, _mm_add_ps(_mm_mul_ps(_mm_load_ps(o), val1_f), _mm_mul_ps(_mm_load_ps(d), valf)));
+  
+        if (mask_display && f)
+          o[3] = f;
+      }
+    }
+  }
+  else
+#endif
+  {
+  	const int ch1 = (ch==4) ? ch-1: ch;
+  	
+#ifdef _OPENMP
+#pragma omp parallel for default(none) shared(out) schedule(static)
+#endif
+    for(int yy = y_from; yy < y_to; yy++)
+    {
+      const int mindex = (int)((yy - roi_mask_scaled->y) / roi_in_scale);
+      if (mindex >= roi_mask->height) continue;
+      
+      const int dindex = ch * ((yy-y_from)*width_tmp);
+      const int oindex = ch * (roi_out->width * (yy - dy - roi_out->y) - dx - roi_out->x + x_from);
+      
+      float *d = dest + dindex;
+      float *o = out + oindex;
+      float *m = mask + mindex * roi_mask->width;
+     
+      for(int xx = x_from; xx < x_to; xx++, d+=ch, o+=ch)
+      {
+        const int mx = (int)((xx - roi_mask_scaled->x) / roi_in_scale);
+        if (mx >= roi_mask->width) continue;
+        
+        const float f = (m[mx]) * opacity;
+        
+        for(int c = 0; c < ch1; c++)
+        {
+          o[c] = o[c] * (1.0f - f) + d[c] * f;
+        }
+        if (mask_display && f)
+          o[3] = f;
+      }
+    }
+  }
+
+}
+
 #if defined(__SSE__)
 static void retouch_fill_sse(float *const in, dt_iop_roi_t *const roi_in, float *out, dt_iop_roi_t *const roi_out, 
                               float *const mask, dt_iop_roi_t *const roi_mask, dt_iop_roi_t *const roi_mask_scaled, const int mask_display, 
@@ -2398,7 +2502,7 @@ static void retouch_fill(float *const in, dt_iop_roi_t *const roi_in, float *out
   }
   
 }
-
+#if 0
 #if defined(__SSE__)
 static void retouch_clone_sse(float *const in, dt_iop_roi_t *const roi_in, float *out, dt_iop_roi_t *const roi_out, 
                               float *const mask, dt_iop_roi_t *const roi_mask, dt_iop_roi_t *const roi_mask_scaled, const int mask_display, 
@@ -2491,6 +2595,43 @@ static void retouch_clone(float *const in, dt_iop_roi_t *const roi_in, float *ou
   }
   
 }
+#endif
+
+static void retouch_clone(float *const in, dt_iop_roi_t *const roi_in, float *out, dt_iop_roi_t *const roi_out, const int ch, 
+                          float *const mask, dt_iop_roi_t *const roi_mask, dt_iop_roi_t *const roi_mask_scaled, const int mask_display, 
+                          const int dx, const int dy, const float opacity, int use_sse)
+{
+  int x_from = 0, x_to = 0, y_from = 0, y_to = 0;
+  rt_intersect_rois(roi_mask_scaled, roi_in, roi_out, dx, dy, 0, &x_from, &x_to, &y_from, &y_to);
+
+  const int width_tmp = x_to - x_from;
+  const int height_tmp = y_to - y_from;
+  
+  if (width_tmp <= 0 || height_tmp <= 0) return;
+  
+  // alloc temp image to avoid issues when areas self-intersects
+  float *dest = dt_alloc_align(64, width_tmp * height_tmp * ch * sizeof(float));
+  
+  if (dest == NULL)
+  {
+    printf("error allocating memory for cloning\n");
+    goto cleanup;
+  }
+  
+  memset(dest, 0, width_tmp * height_tmp * ch * sizeof(float));
+  
+  // copy source image to tmp
+  rt_copy_image_to_temp(dest, in, roi_in, ch, x_from, y_from, x_to, y_to, width_tmp, height_tmp, dx, dy);
+  
+  // clone it
+  rt_copy_image_masked(dest, out, roi_out, ch, mask, roi_mask_scaled, roi_mask, 
+  		x_from, y_from, x_to, y_to, width_tmp, height_tmp, roi_in->scale, 
+			0, 0, 
+  		opacity, mask_display, use_sse);
+
+cleanup:
+	if (dest) dt_free_align(dest);
+}
 
 static void retouch_gaussian_blur(float *const in, dt_iop_roi_t *const roi_in, float *out, dt_iop_roi_t *const roi_out, const int ch, 
                                     float *const mask, dt_iop_roi_t *const roi_mask, dt_iop_roi_t *const roi_mask_scaled, const int mask_display, 
@@ -2499,7 +2640,6 @@ static void retouch_gaussian_blur(float *const in, dt_iop_roi_t *const roi_in, f
 {
   if (fabs(blur_radius) <= 0.1f && !mask_display) return;
 
-  const int ch1 = (ch==4) ? ch-1: ch;
   float *dest = NULL;
   
   int x_from = 0, x_to = 0, y_from = 0, y_to = 0;
@@ -2519,22 +2659,9 @@ static void retouch_gaussian_blur(float *const in, dt_iop_roi_t *const roi_in, f
     goto cleanup;
   }
   
-  memset(dest, 0, width_tmp * height_tmp * ch * sizeof(float));
-  
   // copy source image so we blur just the mask area (at least the smallest rect that covers it)
-#ifdef _OPENMP
-#pragma omp parallel for default(none) shared(dest, x_from, y_from, y_to) schedule(static)
-#endif
-  for(int yy = y_from; yy < y_to; yy++)
-  {
-    const int dindex = ch * ((yy-y_from)*width_tmp);
-    const int iindex = ch * (roi_in->width * (yy - roi_in->y) - roi_in->x + x_from);
-    float *d = dest + dindex;
-    float *i = in + iindex;
+  rt_copy_image_to_temp(dest, in, roi_in, ch, x_from, y_from, x_to, y_to, width_tmp, height_tmp, 0, 0);
 
-    memcpy(d, i, width_tmp * ch * sizeof(float));
-  }
-  
   if (fabs(blur_radius) > 0.1f)
   {
     const float sigma = blur_radius * roi_in->scale / piece->iscale;
@@ -2554,76 +2681,11 @@ static void retouch_gaussian_blur(float *const in, dt_iop_roi_t *const roi_in, f
   }
   
   // copy blurred (temp) image to destination image
-#if defined(__SSE__)
-  if (ch == 4 && use_sse)
-  {
-#ifdef _OPENMP
-#pragma omp parallel for default(none) shared(dest, out, x_from, x_to, y_from, y_to) schedule(static)
-#endif
-    for(int yy = y_from; yy < y_to; yy++)
-    {
-      const int mindex = (int)((yy - roi_mask_scaled->y) / roi_in->scale);
-      if (mindex >= roi_mask->height) continue;
-      
-      const int dindex = ch * ((yy-y_from)*width_tmp);
-      const int oindex = ch * (roi_out->width * (yy - roi_out->y) - roi_out->x + x_from);
-      
-      float *d = dest + dindex;
-      float *o = out + oindex;
-      float *m = mask + mindex * roi_mask->width;
-     
-      for(int xx = x_from; xx < x_to; xx++, d+=ch, o+=ch)
-      {
-        const int mx = (int)((xx - roi_mask_scaled->x) / roi_in->scale);
-        if (mx >= roi_mask->width) continue;
-        
-        const float f = (m[mx]) * opacity;
-        
-        const __m128 val1_f = _mm_set1_ps(1.0f - f);
-        const __m128 valf = _mm_set1_ps(f);
-        
-        _mm_store_ps(o, _mm_add_ps(_mm_mul_ps(_mm_load_ps(o), val1_f), _mm_mul_ps(_mm_load_ps(d), valf)));
-  
-        if (mask_display && f)
-          o[3] = f;
-      }
-    }
-  }
-  else
-#endif
-  {
-#ifdef _OPENMP
-#pragma omp parallel for default(none) shared(dest, out, x_from, x_to, y_from, y_to) schedule(static)
-#endif
-    for(int yy = y_from; yy < y_to; yy++)
-    {
-      const int mindex = (int)((yy - roi_mask_scaled->y) / roi_in->scale);
-      if (mindex >= roi_mask->height) continue;
-      
-      const int dindex = ch * ((yy-y_from)*width_tmp);
-      const int oindex = ch * (roi_out->width * (yy - roi_out->y) - roi_out->x + x_from);
-      
-      float *d = dest + dindex;
-      float *o = out + oindex;
-      float *m = mask + mindex * roi_mask->width;
-     
-      for(int xx = x_from; xx < x_to; xx++, d+=ch, o+=ch)
-      {
-        const int mx = (int)((xx - roi_mask_scaled->x) / roi_in->scale);
-        if (mx >= roi_mask->width) continue;
-        
-        const float f = (m[mx]) * opacity;
-        
-        for(int c = 0; c < ch1; c++)
-        {
-          o[c] = o[c] * (1.0f - f) + d[c] * f;
-        }
-        if (mask_display && f)
-          o[3] = f;
-      }
-    }
-  }
-  
+  rt_copy_image_masked(dest, out, roi_out, ch, mask, roi_mask_scaled, roi_mask, 
+  		x_from, y_from, x_to, y_to, width_tmp, height_tmp, roi_in->scale, 
+			0, 0, 
+  		opacity, mask_display, use_sse);
+
 cleanup:
   if (dest) dt_free_align(dest);
 }
@@ -2717,9 +2779,6 @@ static void retouch_heal(float *const in, dt_iop_roi_t *const roi_in, float *out
 #endif
     for(int yy = y_from; yy < y_to; yy++)
     {
-      const int mindex = (int)((yy - roi_mask_scaled->y) / roi_in->scale);
-      if (mindex >= roi_mask->height) continue;
-      
       const int dindex = ch * ((yy-y_from)*width_tmp);
       const int mhindex = ((yy-y_from)*width_tmp);
       const int oindex = ch * (roi_out->width * (yy - roi_out->y) - roi_out->x + x_from);
@@ -3044,6 +3103,7 @@ static void rt_process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *pie
     const float *const i = ivoid;
     for(size_t j = 0; j < roi_rt->width*roi_rt->height*ch; j += ch) in_retouch[j + 3] = i[j + 3];
   }
+  
   // return final image
   rt_copy_in_to_out(in_retouch, roi_rt, ovoid, roi_out, ch);
   

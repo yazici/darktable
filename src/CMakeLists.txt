@@ -287,7 +287,7 @@ if(USE_WEBP)
   else(USE_WEBP)
 endif(USE_WEBP)
 
-foreach(lib ${OUR_LIBS} LensFun GIO GThread GModule PangoCairo Rsvg2 LibXml2 Sqlite3 CURL PNG JPEG TIFF LCMS2 JsonGlib)
+foreach(lib ${OUR_LIBS} LensFun GIO GThread GModule PangoCairo Rsvg2 LibXml2 Sqlite3 CURL PNG JPEG TIFF LCMS2 JsonGlib gmic)
   find_package(${lib} REQUIRED)
   include_directories(SYSTEM ${${lib}_INCLUDE_DIRS})
   list(APPEND LIBS ${${lib}_LIBRARIES})
@@ -373,6 +373,15 @@ if(USE_GRAPHICSMAGICK)
   endif(GraphicsMagick_FOUND)
 endif(USE_GRAPHICSMAGICK)
 
+if(USE_GMIC)
+  find_package(gmic)
+  if(GMIC_FOUND)
+    add_definitions(-DHAVE_GMIC)
+    include_directories(SYSTEM ${GMIC_INCLUDE_DIRS})
+    list(APPEND LIBS ${GMIC_LIBRARIES})
+  endif(GMIC_FOUND)
+endif(USE_GMIC)
+
 #
 # Add HAVE_xxx defines used by darktable
 #
@@ -392,6 +401,9 @@ if(USE_OPENCL)
   add_definitions("-DHAVE_OPENCL")
 endif(USE_OPENCL)
 
+if(GMIC_FOUND)
+  add_definitions("-DHAVE_GMIC")
+endif(GMIC_FOUND)
 
 if(GPHOTO2_FOUND)
   set(SOURCES ${SOURCES} "common/camera_control.c" "control/jobs/camera_jobs.c" "gui/camera_import_dialog.c" )

@@ -212,6 +212,7 @@ static void dt_heal_laplace_loop(float *pixels, const int width, const int heigh
 		// process red/black cells separate
 		float err = dt_heal_laplace_iteration(pixels, Adiag, Aidx, w, 0, nmask2, ch, use_sse);
 		err += dt_heal_laplace_iteration(pixels, Adiag, Aidx, w, nmask2, nmask, ch, use_sse);
+		
 		if (err <= err_exit)
 			break;
 	}

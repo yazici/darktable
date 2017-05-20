@@ -35,7 +35,8 @@ int dwt_get_max_scale(dwt_params_t *p)
 
 /* code copied from UFRaw (which originates from dcraw) */
 #if defined(__SSE__)
-static void dwt_hat_transform_sse(float *temp, const float *const base, const int st, const int size, int sc, const dwt_params_t *const p)
+static void dwt_hat_transform_sse(float *temp, const float *const base, const int st, const int size, int sc, 
+		const dwt_params_t *const p)
 {
   int i;
   const __m128 hat_mult = _mm_set1_ps(2.f);
@@ -53,25 +54,26 @@ static void dwt_hat_transform_sse(float *temp, const float *const base, const in
   }
   for (; i + sc < size; i++, temp +=4)
   {
-      valb_1 = _mm_load_ps(&base[INDEX_WT_IMAGE_SSE(st * i, p->ch)]);
-      valb_2 = _mm_load_ps(&base[INDEX_WT_IMAGE_SSE(st * (i - sc), p->ch)]);
-      valb_3 = _mm_load_ps(&base[INDEX_WT_IMAGE_SSE(st * (i + sc), p->ch)]);
-      
-      _mm_store_ps(temp, _mm_add_ps(_mm_add_ps(_mm_mul_ps(hat_mult, valb_1), valb_2), valb_3));
+		valb_1 = _mm_load_ps(&base[INDEX_WT_IMAGE_SSE(st * i, p->ch)]);
+		valb_2 = _mm_load_ps(&base[INDEX_WT_IMAGE_SSE(st * (i - sc), p->ch)]);
+		valb_3 = _mm_load_ps(&base[INDEX_WT_IMAGE_SSE(st * (i + sc), p->ch)]);
+		
+		_mm_store_ps(temp, _mm_add_ps(_mm_add_ps(_mm_mul_ps(hat_mult, valb_1), valb_2), valb_3));
   }
   for (; i < size; i++, temp +=4)
   {
-      valb_1 = _mm_load_ps(&base[INDEX_WT_IMAGE_SSE(st * i, p->ch)]);
-      valb_2 = _mm_load_ps(&base[INDEX_WT_IMAGE_SSE(st * (i - sc), p->ch)]);
-      valb_3 = _mm_load_ps(&base[INDEX_WT_IMAGE_SSE(st * (2 * size - 2 - (i + sc)), p->ch)]);
-      
-      _mm_store_ps(temp, _mm_add_ps(_mm_add_ps(_mm_mul_ps(hat_mult, valb_1), valb_2), valb_3));
+		valb_1 = _mm_load_ps(&base[INDEX_WT_IMAGE_SSE(st * i, p->ch)]);
+		valb_2 = _mm_load_ps(&base[INDEX_WT_IMAGE_SSE(st * (i - sc), p->ch)]);
+		valb_3 = _mm_load_ps(&base[INDEX_WT_IMAGE_SSE(st * (2 * size - 2 - (i + sc)), p->ch)]);
+		
+		_mm_store_ps(temp, _mm_add_ps(_mm_add_ps(_mm_mul_ps(hat_mult, valb_1), valb_2), valb_3));
   }
   
 }
 #endif
 
-static void dwt_hat_transform(float *temp, const float *const base, const int st, const int size, int sc, dwt_params_t *const p)
+static void dwt_hat_transform(float *temp, const float *const base, const int st, const int size, int sc, 
+		dwt_params_t *const p)
 {
 #if defined(__SSE__)
   if (p->ch == 4 && p->use_sse)
@@ -90,22 +92,27 @@ static void dwt_hat_transform(float *temp, const float *const base, const int st
   {
     for (c = 0; c < p->ch; c++, temp++)
     {
-      *temp = hat_mult * base[INDEX_WT_IMAGE(st * i, p->ch, c)] + base[INDEX_WT_IMAGE(st * (sc - i), p->ch, c)] + base[INDEX_WT_IMAGE(st * (i + sc), p->ch, c)];
+      *temp = hat_mult * base[INDEX_WT_IMAGE(st * i, p->ch, c)] + 
+      									base[INDEX_WT_IMAGE(st * (sc - i), p->ch, c)] + 
+												base[INDEX_WT_IMAGE(st * (i + sc), p->ch, c)];
     }
   }
   for (; i + sc < size; i++)
   {
     for (c = 0; c < p->ch; c++, temp++)
     {
-      *temp = hat_mult * base[INDEX_WT_IMAGE(st * i, p->ch, c)] + base[INDEX_WT_IMAGE(st * (i - sc), p->ch, c)] + base[INDEX_WT_IMAGE(st * (i + sc), p->ch, c)];
+      *temp = hat_mult * base[INDEX_WT_IMAGE(st * i, p->ch, c)] + 
+      									base[INDEX_WT_IMAGE(st * (i - sc), p->ch, c)] + 
+												base[INDEX_WT_IMAGE(st * (i + sc), p->ch, c)];
     }
   }
   for (; i < size; i++)
   {
     for (c = 0; c < p->ch; c++, temp++)
     {
-      *temp = hat_mult * base[INDEX_WT_IMAGE(st * i, p->ch, c)] + base[INDEX_WT_IMAGE(st * (i - sc), p->ch, c)]
-                                                             + base[INDEX_WT_IMAGE(st * (2 * size - 2 - (i + sc)), p->ch, c)];
+      *temp = hat_mult * base[INDEX_WT_IMAGE(st * i, p->ch, c)] + 
+      									base[INDEX_WT_IMAGE(st * (i - sc), p->ch, c)] + 
+												base[INDEX_WT_IMAGE(st * (2 * size - 2 - (i + sc)), p->ch, c)];
     }
   }
   
@@ -184,7 +191,7 @@ static void dwt_get_image_layer(float *const layer, dwt_params_t *const p)
 #if defined(__SSE__)
 static void dwt_subtract_layer_sse(float *bl, float *bh, dwt_params_t *const p)
 {
-  const __m128 v4_lpass_add = _mm_set1_ps(0.f);
+//  const __m128 v4_lpass_add = _mm_set1_ps(0.f);
   const __m128 v4_lpass_mult = _mm_set1_ps((1.f / 16.f));
   const __m128 v4_lpass_sub = _mm_set1_ps(p->blend_factor);
   const int size = p->width * p->height * 4;
@@ -195,7 +202,8 @@ static void dwt_subtract_layer_sse(float *bl, float *bh, dwt_params_t *const p)
   for (int i = 0; i < size; i+=4)
   {
     // rounding errors introduced here (division by 16)
-    _mm_store_ps(&(bl[i]), _mm_mul_ps(_mm_add_ps(_mm_load_ps(&(bl[i])), v4_lpass_add), v4_lpass_mult));
+//    _mm_store_ps(&(bl[i]), _mm_mul_ps(_mm_add_ps(_mm_load_ps(&(bl[i])), v4_lpass_add), v4_lpass_mult));
+    _mm_store_ps(&(bl[i]), _mm_mul_ps(_mm_load_ps(&(bl[i])), v4_lpass_mult));
     _mm_store_ps(&(bh[i]), _mm_sub_ps(_mm_load_ps(&(bh[i])), _mm_sub_ps(_mm_load_ps(&(bl[i])), v4_lpass_sub)));
   }
 }
@@ -211,7 +219,7 @@ static void dwt_subtract_layer(float *bl, float *bh, dwt_params_t *const p)
   }
 #endif
     
-  const float lpass_add = 0.f;
+//  const float lpass_add = 0.f;
   const float lpass_mult = (1.f / 16.f);
   const float lpass_sub = p->blend_factor;
   const int size = p->width * p->height * p->ch;
@@ -222,7 +230,7 @@ static void dwt_subtract_layer(float *bl, float *bh, dwt_params_t *const p)
     for (int i = 0; i < size; i++) 
     {
       // rounding errors introduced here (division by 16)
-      bl[i] = ( bl[i] + lpass_add ) * lpass_mult;
+      bl[i] = ( bl[i] /*+ lpass_add*/ ) * lpass_mult;
       bh[i] -= bl[i] - lpass_sub;
     }
 }
