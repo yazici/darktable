@@ -156,6 +156,7 @@ def add_edges(gr):
   gr.add_edge(('colorout', 'atrous'))
   gr.add_edge(('colorout', 'bilat'))
   gr.add_edge(('colorout', 'loclap_lab_eh'))
+  gr.add_edge(('colorout', 'loclaplab_eh'))
   gr.add_edge(('colorout', 'colorzones'))
   gr.add_edge(('colorout', 'lowlight'))
   gr.add_edge(('colorout', 'monochrome'))
@@ -182,6 +183,7 @@ def add_edges(gr):
   gr.add_edge(('atrous', 'colorin'))
   gr.add_edge(('bilat', 'colorin'))
   gr.add_edge(('loclap_lab_eh', 'colorin'))
+  gr.add_edge(('loclaplab_eh', 'colorin'))
   gr.add_edge(('colorzones', 'colorin'))
   gr.add_edge(('lowlight', 'colorin'))
   gr.add_edge(('monochrome', 'colorin'))
@@ -210,6 +212,7 @@ def add_edges(gr):
   gr.add_edge(('atrous', 'colorreconstruction'))
   gr.add_edge(('bilat', 'colorreconstruction'))
   gr.add_edge(('loclap_lab_eh', 'colorreconstruction'))
+  gr.add_edge(('loclaplab_eh', 'colorreconstruction'))
   gr.add_edge(('colorzones', 'colorreconstruction'))
   gr.add_edge(('lowlight', 'colorreconstruction'))
   gr.add_edge(('monochrome', 'colorreconstruction'))
@@ -277,6 +280,7 @@ def add_edges(gr):
   # want to enhance detail/local contrast/sharpen denoised images:
   gr.add_edge(('bilat', 'nlmeans'))
   gr.add_edge(('loclap_lab_eh', 'nlmeans'))
+  gr.add_edge(('loclaplab_eh', 'nlmeans'))
   gr.add_edge(('atrous', 'nlmeans'))
   gr.add_edge(('sharpen', 'nlmeans'))
   gr.add_edge(('lowpass', 'nlmeans'))
@@ -354,7 +358,7 @@ def add_edges(gr):
   gr.add_edge(('finalscale', 'clahe'))
   gr.add_edge(('finalscale', 'channelmixer'))
   gr.add_edge(('finalscale', 'liqres_eh'))
-  gr.add_edge(('finalscale', 'dt_gmic_eh'))
+#  gr.add_edge(('finalscale', 'dt_gmic_eh'))
 
   # but can display overexposure after scaling
   # NOTE: finalscale is only done in export pipe,
@@ -369,16 +373,17 @@ def add_edges(gr):
   gr.add_edge(('borders', 'liqres_eh'))
 
   # do want to dt_gmic_eh very late
-  gr.add_edge(('dt_gmic_eh', 'colorout'))
-  gr.add_edge(('dt_gmic_eh', 'vignette'))
-  gr.add_edge(('dt_gmic_eh', 'splittoning'))
-  gr.add_edge(('dt_gmic_eh', 'velvia'))
-  gr.add_edge(('dt_gmic_eh', 'soften'))
-  gr.add_edge(('dt_gmic_eh', 'clahe'))
-  gr.add_edge(('dt_gmic_eh', 'channelmixer'))
+  # gr.add_edge(('dt_gmic_eh', 'colorout'))
+  # gr.add_edge(('dt_gmic_eh', 'vignette'))
+  # gr.add_edge(('dt_gmic_eh', 'splittoning'))
+  # gr.add_edge(('dt_gmic_eh', 'velvia'))
+  # gr.add_edge(('dt_gmic_eh', 'soften'))
+  # gr.add_edge(('dt_gmic_eh', 'clahe'))
+  # gr.add_edge(('dt_gmic_eh', 'channelmixer'))
 
-  # dt_gmic_eh goes before liqres_eh
+  # dt_gmic_eh goes before liqres_eh but in rgb
   gr.add_edge(('liqres_eh', 'dt_gmic_eh'))
+  gr.add_edge(('dt_gmic_eh', 'colorout'))
 
   # but watermark can be drawn on top of borders
   gr.add_edge(('watermark', 'borders'))
@@ -420,10 +425,30 @@ def add_edges(gr):
   gr.add_edge(('zonesystem', 'globaltonemap'))
   gr.add_edge(('bilat', 'globaltonemap'))
   gr.add_edge(('loclap_lab_eh', 'globaltonemap'))
+  gr.add_edge(('loclaplab_eh', 'globaltonemap'))
 
-  # dt_gmic_exp_eh before tonemap but in rgb:
-  gr.add_edge(('dt_gmic_exp_eh', 'demosaic'))
-  gr.add_edge(('tonemap', 'dt_gmic_exp_eh'))
+  # dt_gmic_exp_eh before exposure but in rgb:
+#  gr.add_edge(('dt_gmic_exp_eh', 'demosaic'))
+  gr.add_edge(('dt_gmic_exp_eh', 'tonemap'))
+  gr.add_edge(('dt_gmic_exp_eh', 'denoiseprofile'))
+  gr.add_edge(('exposure', 'dt_gmic_exp_eh'))
+
+# loclaprgb_eh before denoiseprofile but in rgb:
+  gr.add_edge(('denoiseprofile', 'loclaprgb_eh'))
+  gr.add_edge(('colorin', 'loclaprgb_eh'))
+  gr.add_edge(('loclaprgb_eh', 'demosaic'))
+
+#  gr.add_edge(('dt_gmic_eh', 'tonemap'))
+#  gr.add_edge(('dt_gmic_eh', 'denoiseprofile'))
+#  gr.add_edge(('exposure', 'dt_gmic_eh'))
+
+#  gr.add_edge(('dt_gmic_lab_eh', 'tonemap'))
+#  gr.add_edge(('dt_gmic_lab_eh', 'denoiseprofile'))
+#  gr.add_edge(('exposure', 'dt_gmic_lab_eh'))
+
+  # dt_gmic_lab_eh before colorreconstruction but in lab:
+  gr.add_edge(('dt_gmic_lab_eh', 'colorin'))
+  gr.add_edge(('colorreconstruction', 'dt_gmic_lab_eh'))
 
   # want to fine-tune stuff after injection of color transfer:
   gr.add_edge(('atrous', 'colormapping'))
@@ -506,6 +531,7 @@ def add_edges(gr):
   gr.add_edge(('atrous', 'colorchecker'))
   gr.add_edge(('bilat', 'colorchecker'))
   gr.add_edge(('loclap_lab_eh', 'colorchecker'))
+  gr.add_edge(('loclaplab_eh', 'colorchecker'))
   gr.add_edge(('colorzones', 'colorchecker'))
   gr.add_edge(('lowlight', 'colorchecker'))
   gr.add_edge(('monochrome', 'colorchecker'))
@@ -539,10 +565,13 @@ gr.add_nodes([
 'bilateral',
 'bilat',
 'loclap_lab_eh',
+'loclaplab_eh',
+'loclaprgb_eh',
 'bloom',
 'borders',
 'dt_gmic_eh',
 'dt_gmic_exp_eh',
+'dt_gmic_lab_eh',
 'liqres_eh',
 'cacorrect',
 'channelmixer',

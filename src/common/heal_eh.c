@@ -142,7 +142,6 @@ static float dt_heal_laplace_iteration(float *pixels, const float *const Adiag, 
 // Solve the laplace equation for pixels and store the result in-place.
 static void dt_heal_laplace_loop(float *pixels, const int width, const int height, const int ch, const float *const mask, const int use_sse)
 {
-  const int max_iter = 1000;
   int nmask = 0;
   int nmask2 = 0;
 
@@ -204,7 +203,11 @@ static void dt_heal_laplace_loop(float *pixels, const int width, const int heigh
    * affects it.)
    */
   float w = ((2.0f - 1.0f / (0.1575f * sqrtf(nmask) + 0.8f)) * .25f);
-  const float err_exit = .001f;
+  
+  const int max_iter = 1000;
+  const float epsilon = (0.1/255);
+  const float err_exit = epsilon * epsilon * w * w;
+//  const float err_exit = .001f;
   
   /* Gauss-Seidel with successive over-relaxation */
 	for (int iter = 0; iter < max_iter; iter++)
@@ -213,7 +216,7 @@ static void dt_heal_laplace_loop(float *pixels, const int width, const int heigh
 		float err = dt_heal_laplace_iteration(pixels, Adiag, Aidx, w, 0, nmask2, ch, use_sse);
 		err += dt_heal_laplace_iteration(pixels, Adiag, Aidx, w, nmask2, nmask, ch, use_sse);
 		
-		if (err <= err_exit)
+		if (err < err_exit)
 			break;
 	}
   

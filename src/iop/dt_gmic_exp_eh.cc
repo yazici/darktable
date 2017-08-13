@@ -33,25 +33,25 @@ extern "C" {
 DT_MODULE_INTROSPECTION(1, dt_iop_dt_gmic_exp_params_t)
 
 
-typedef enum dt_iop_dt_gmic_exp_control_type_t
+typedef enum dt_iop_gmic_control_type_t
 {
-	dt_iop_dt_gmic_exp_control_sl = 0,
-	dt_iop_dt_gmic_exp_control_cmb = 1,
-	dt_iop_dt_gmic_exp_control_lbl = 2,
-	dt_iop_dt_gmic_exp_control_btn = 3,
-	dt_iop_dt_gmic_exp_control_colorbtn = 4,
-	dt_iop_dt_gmic_exp_control_sep = 5,
-	dt_iop_dt_gmic_exp_control_txt = 6,
-	dt_iop_dt_gmic_exp_control_link = 7,
-	dt_iop_dt_gmic_exp_control_box = 8,
-	dt_iop_dt_gmic_exp_control_chk = 9,
-} dt_iop_dt_gmic_exp_control_type_t;
+	dt_iop_gmic_control_sl = 0,
+	dt_iop_gmic_control_cmb = 1,
+	dt_iop_gmic_control_lbl = 2,
+	dt_iop_gmic_control_btn = 3,
+	dt_iop_gmic_control_colorbtn = 4,
+	dt_iop_gmic_control_sep = 5,
+	dt_iop_gmic_control_txt = 6,
+	dt_iop_gmic_control_link = 7,
+	dt_iop_gmic_control_box = 8,
+	dt_iop_gmic_control_chk = 9,
+} dt_iop_gmic_control_type_t;
 
 typedef enum dt_iop_dt_gmic_exp_pixelpipepos_t
 {
-	dt_iop_dt_gmic_exp_rgb = 0,
-	dt_iop_dt_gmic_exp_lab = 1,
-	dt_iop_dt_gmic_exp_linear_rgb = 2,
+	dt_iop_gmic_pipepos_rgb = 0,
+	dt_iop_gmic_pipepos_lab = 1,
+	dt_iop_gmic_pipepos_linear_rgb = 2,
 } dt_iop_dt_gmic_exp_pixelpipepos_t;
 
 typedef struct dt_iop_dt_gmic_exp_params_t
@@ -71,7 +71,8 @@ typedef struct dt_iop_dt_gmic_exp_gui_data_t
 	int width;
 	int height;
 	int ch;
-	
+	float imageScale;
+
 	GtkLabel *label_name;
 	GtkLabel *label_command;
 	GtkLabel *label_preview_command;
@@ -216,7 +217,7 @@ static void update_param_value_from_gui(gmic_filter_param_t *params, GtkWidget *
 		
 		if (params->str_current_value) free(params->str_current_value);
 		params->str_current_value = (char*)calloc(1, strlen(text) + 1);
-		strcpy(params->str_current_value, text);
+		sprintf(params->str_current_value, "\"%s\"", text);
 	}
 	else if (params->param_type == gmic_param_button)
 	{
@@ -388,43 +389,43 @@ static int get_single_control_index(GtkWidget ***widg_array, int *array_size)
 static int get_control_index(dt_iop_dt_gmic_exp_gui_data_t *g, int control_type)
 {
 	int index = -1;
-	if (control_type == dt_iop_dt_gmic_exp_control_sl)
+	if (control_type == dt_iop_gmic_control_sl)
 	{
 		index = get_single_control_index(&g->sl_widget, &g->sl_size);
 	}
-	else if (control_type == dt_iop_dt_gmic_exp_control_cmb)
+	else if (control_type == dt_iop_gmic_control_cmb)
 	{
 		index = get_single_control_index(&g->cmb_widget, &g->cmb_size);
 	}
-	else if (control_type == dt_iop_dt_gmic_exp_control_lbl)
+	else if (control_type == dt_iop_gmic_control_lbl)
 	{
 		index = get_single_control_index(&g->lbl_widget, &g->lbl_size);
 	}
-	else if (control_type == dt_iop_dt_gmic_exp_control_btn)
+	else if (control_type == dt_iop_gmic_control_btn)
 	{
 		index = get_single_control_index(&g->btn_widget, &g->btn_size);
 	}
-	else if (control_type == dt_iop_dt_gmic_exp_control_colorbtn)
+	else if (control_type == dt_iop_gmic_control_colorbtn)
 	{
 		index = get_single_control_index(&g->colorbtn_widget, &g->colorbtn_size);
 	}
-	else if (control_type == dt_iop_dt_gmic_exp_control_sep)
+	else if (control_type == dt_iop_gmic_control_sep)
 	{
 		index = get_single_control_index(&g->sep_widget, &g->sep_size);
 	}
-	else if (control_type == dt_iop_dt_gmic_exp_control_txt)
+	else if (control_type == dt_iop_gmic_control_txt)
 	{
 		index = get_single_control_index(&g->txt_widget, &g->txt_size);
 	}
-	else if (control_type == dt_iop_dt_gmic_exp_control_link)
+	else if (control_type == dt_iop_gmic_control_link)
 	{
 		index = get_single_control_index(&g->link_widget, &g->link_size);
 	}
-	else if (control_type == dt_iop_dt_gmic_exp_control_box)
+	else if (control_type == dt_iop_gmic_control_box)
 	{
 		index = get_single_control_index(&g->box_widget, &g->box_size);
 	}
-	else if (control_type == dt_iop_dt_gmic_exp_control_chk)
+	else if (control_type == dt_iop_gmic_control_chk)
 	{
 		index = get_single_control_index(&g->chk_widget, &g->chk_size);
 	}
@@ -523,6 +524,11 @@ static void update_gui_controls(dt_iop_module_t *self)
 			for (int num_p = 0; num_p < filter_definition->num_params; num_p++, params++)
 			{
 				GtkWidget *widg = g->actual_params_widg[num_p];
+				
+				if (widg == NULL)
+				{
+					continue;
+				}
 				
 				if (params->param_type == gmic_param_int || params->param_type == gmic_param_float)
 				{
@@ -638,6 +644,40 @@ static char *str_replace(char *orig, const char *rep, const char *with)
 	return result;
 }
 
+// return true if command changed or there's no command
+static int has_gmic_command_changed(dt_iop_dt_gmic_exp_gui_data_t *g, dt_iop_dt_gmic_exp_params_t *p, dt_iop_dt_gmic_exp_global_data_t *gd)
+{
+	int changed = 1;
+	
+  if (g->actual_params_widg != NULL && p->filter_data_size > 0)
+  {
+  	if (g->actual_params_widg[0] != NULL)
+  	{
+  		gmic_filter_definition_t *filter_definition = NULL;
+  	  
+			dt_pthread_mutex_lock(&darktable.plugin_threadsafe);
+			filter_definition = gmic_getFilterDefinitionFromFilterData(gd->gmic_gd, p->filter_data, p->filter_data_size);
+			dt_pthread_mutex_unlock(&darktable.plugin_threadsafe);
+
+			if (filter_definition)
+			{
+				if (filter_definition->filter_name && filter_definition->filter_command && filter_definition->filter_preview_command)
+				{
+					changed = strcmp(filter_definition->filter_name, gtk_label_get_text(g->label_name)) != 0 ||
+							strcmp(filter_definition->filter_command, gtk_label_get_text(g->label_command)) != 0 ||
+							strcmp(filter_definition->filter_preview_command, gtk_label_get_text(g->label_preview_command)) != 0;
+				}
+				
+				dt_pthread_mutex_lock(&darktable.plugin_threadsafe);
+				gmic_freeDefinition(filter_definition);
+				dt_pthread_mutex_unlock(&darktable.plugin_threadsafe);
+			}
+  	}
+  }
+  
+	return changed;
+}
+
 // create/update gui controls from the g'mic command in dt_iop_dt_gmic_exp_params_t->filter_data
 static void create_gui_controls(dt_iop_module_t *self)
 {
@@ -648,14 +688,20 @@ static void create_gui_controls(dt_iop_module_t *self)
   if (g == NULL || p == NULL || gd == NULL) return;
   
   // if command not changed controls are already created, so just update values
-  if (g->actual_params_widg != NULL)
-  {
-  	if (g->actual_params_widg[0] != NULL)
-  	{
+/*  if (g->actual_params_widg != NULL && p->filter_data_size > 0)
+	{
+		if (g->actual_params_widg[0] != NULL)
+		{
 			update_gui_controls(self);
 			return;
-  	}
-  }
+		}
+	}
+*/
+	if (!has_gmic_command_changed(g, p, gd))
+	{
+		update_gui_controls(self);
+		return;
+	}
 
   int reset = darktable.gui->reset;
   darktable.gui->reset = 1;
@@ -663,10 +709,15 @@ static void create_gui_controls(dt_iop_module_t *self)
   // new command, destroy old controls before create new ones
 	destroy_gui_controls(self);
 	
+	gmic_filter_definition_t *filter_definition = NULL;
+	
 	// get filter definition from g'mic
-	dt_pthread_mutex_lock(&darktable.plugin_threadsafe);
-	gmic_filter_definition_t *filter_definition = gmic_getFilterDefinitionFromFilterData(gd->gmic_gd, p->filter_data, p->filter_data_size);
-	dt_pthread_mutex_unlock(&darktable.plugin_threadsafe);
+	if (p->filter_data_size > 0)
+	{
+		dt_pthread_mutex_lock(&darktable.plugin_threadsafe);
+		filter_definition = gmic_getFilterDefinitionFromFilterData(gd->gmic_gd, p->filter_data, p->filter_data_size);
+		dt_pthread_mutex_unlock(&darktable.plugin_threadsafe);
+	}
 	if (filter_definition)
 	{
 		update_filter_labels(filter_definition, g);
@@ -693,7 +744,7 @@ static void create_gui_controls(dt_iop_module_t *self)
 					float sl_increment = (params->param_type == gmic_param_float) ? ((params->n_max_value-params->n_min_value)/100.f): 1.f;
 					int sl_num_decimals = (params->param_type == gmic_param_float) ? 2: 0;
 					
-					int w_index = get_control_index(g, dt_iop_dt_gmic_exp_control_sl);
+					int w_index = get_control_index(g, dt_iop_gmic_control_sl);
 					if (w_index >= 0)
 					{
 						g->sl_widget[w_index] = 
@@ -714,7 +765,7 @@ static void create_gui_controls(dt_iop_module_t *self)
 				}
 				else if (params->param_type == gmic_param_bool)
 				{
-					int w_index = get_control_index(g, dt_iop_dt_gmic_exp_control_chk);
+					int w_index = get_control_index(g, dt_iop_gmic_control_chk);
 					if (w_index >= 0)
 					{
 						g->chk_widget[w_index] = gtk_check_button_new_with_label(params->param_name);
@@ -730,7 +781,7 @@ static void create_gui_controls(dt_iop_module_t *self)
 				}
 				else if (params->param_type == gmic_param_choise)
 				{
-					int w_index = get_control_index(g, dt_iop_dt_gmic_exp_control_cmb);
+					int w_index = get_control_index(g, dt_iop_gmic_control_cmb);
 					if (w_index >= 0)
 					{
 						g->cmb_widget[w_index] = dt_bauhaus_combobox_new(self);
@@ -758,9 +809,9 @@ static void create_gui_controls(dt_iop_module_t *self)
 				}
 				else if (params->param_type == gmic_param_color)
 				{
-					int w_index = get_control_index(g, dt_iop_dt_gmic_exp_control_colorbtn);
-					int w_box_index = get_control_index(g, dt_iop_dt_gmic_exp_control_box);
-					int w_lbl_index = get_control_index(g, dt_iop_dt_gmic_exp_control_lbl);
+					int w_index = get_control_index(g, dt_iop_gmic_control_colorbtn);
+					int w_box_index = get_control_index(g, dt_iop_gmic_control_box);
+					int w_lbl_index = get_control_index(g, dt_iop_gmic_control_lbl);
 					if (w_index >= 0)
 					{
 						const int bs = DT_PIXEL_APPLY_DPI(14);
@@ -794,7 +845,7 @@ static void create_gui_controls(dt_iop_module_t *self)
 				}
 				else if (params->param_type == gmic_param_separator)
 				{
-					int w_index = get_control_index(g, dt_iop_dt_gmic_exp_control_sep);
+					int w_index = get_control_index(g, dt_iop_gmic_control_sep);
 					if (w_index >= 0)
 					{
 						g->sep_widget[w_index] = gtk_separator_new(GTK_ORIENTATION_HORIZONTAL);
@@ -809,7 +860,7 @@ static void create_gui_controls(dt_iop_module_t *self)
 				}
 				else if (params->param_type == gmic_param_note)
 				{
-					int w_index = get_control_index(g, dt_iop_dt_gmic_exp_control_lbl);
+					int w_index = get_control_index(g, dt_iop_gmic_control_lbl);
 					if (w_index >= 0)
 					{
 						char *new_value = str_replace(params->str_default_value, "color:orangered", "normal");
@@ -843,7 +894,7 @@ static void create_gui_controls(dt_iop_module_t *self)
 				}
 				else if (params->param_type == gmic_param_link)
 				{
-					int w_index = get_control_index(g, dt_iop_dt_gmic_exp_control_link);
+					int w_index = get_control_index(g, dt_iop_gmic_control_link);
 					if (w_index >= 0)
 					{
 						g->link_widget[w_index] = gtk_link_button_new_with_label(params->str_url, params->str_default_value);
@@ -856,7 +907,7 @@ static void create_gui_controls(dt_iop_module_t *self)
 				}
 				else if (params->param_type == gmic_param_text)
 				{
-					int w_index = get_control_index(g, dt_iop_dt_gmic_exp_control_txt);
+					int w_index = get_control_index(g, dt_iop_gmic_control_txt);
 					if (w_index >= 0)
 					{
 						g->txt_widget[w_index] = gtk_entry_new();
@@ -885,7 +936,7 @@ static void create_gui_controls(dt_iop_module_t *self)
 				}
 				else if (params->param_type == gmic_param_button || params->param_type == gmic_param_file || params->param_type == gmic_param_folder)
 				{
-					int w_index = get_control_index(g, dt_iop_dt_gmic_exp_control_btn);
+					int w_index = get_control_index(g, dt_iop_gmic_control_btn);
 					if (w_index >= 0)
 					{
 						char *str = (params->str_current_value) ? params->str_current_value: 
@@ -948,7 +999,8 @@ static void call_dt_gmic_exp_qt_callback(GtkWidget *widget, dt_iop_module_t *sel
   	
   	// call the plugin
   	dt_pthread_mutex_lock(&darktable.plugin_threadsafe);
-    gmic_filter_execution_data_t *filter_data = gmic_launchPluginCommand(p->filter_data, p->filter_data_size, g->image, g->width, g->height, g->ch);
+    gmic_filter_execution_data_t *filter_data = gmic_launchPluginCommand(p->filter_data, p->filter_data_size, g->image, 
+    		g->width, g->height, g->ch, g->imageScale);
   	dt_pthread_mutex_unlock(&darktable.plugin_threadsafe);
     
     // enable dt window and process the result
@@ -1155,6 +1207,7 @@ void gui_init(struct dt_iop_module_t *self)
   g->width = 0;
   g->height = 0;
   g->ch = 0;
+  g->imageScale = 1.f;
   g->image_requested = 0;
   g->image_locked = 0;
   
@@ -1298,7 +1351,7 @@ static void copy_image_to_gmic(float *image, float *gmic_image, const dt_iop_roi
     { 0.0719453, -0.2289914, 1.4052427 }
   };
 
-  if (pixelpipe_pos == dt_iop_dt_gmic_exp_rgb /*|| pixelpipe_pos == dt_iop_dt_gmic_exp_linear_rgb*/) // after colorout
+  if (pixelpipe_pos == dt_iop_gmic_pipepos_rgb /*|| pixelpipe_pos == dt_iop_gmic_pipepos_linear_rgb*/) // after colorout
   {
     if (cst != iop_cs_rgb) return;
     
@@ -1324,7 +1377,7 @@ static void copy_image_to_gmic(float *image, float *gmic_image, const dt_iop_roi
       }
     }
   }
-  else if (pixelpipe_pos == dt_iop_dt_gmic_exp_lab) // after colorin
+  else if (pixelpipe_pos == dt_iop_gmic_pipepos_lab) // after colorin
   {
     if (cst != iop_cs_Lab) return;
 
@@ -1343,8 +1396,8 @@ static void copy_image_to_gmic(float *image, float *gmic_image, const dt_iop_roi
         for(int r = 0; r < 3; r++)
           for(int c = 0; c < 3; c++) rgb[r] += xyz_to_srgb[r][c] * XYZ[c];
         // linear sRGB -> gamma corrected sRGB
-        for(int c = 0; c < 3; c++)
-          rgb[c] = rgb[c] <= 0.0031308 ? 12.92 * rgb[c] : (1.0 + 0.055) * powf(rgb[c], 1.0 / 2.4) - 0.055;
+//        for(int c = 0; c < 3; c++)
+//          rgb[c] = rgb[c] <= 0.0031308 ? 12.92 * rgb[c] : (1.0 + 0.055) * powf(rgb[c], 1.0 / 2.4) - 0.055;
 
         out[0] = rgb[0] * 255.f;
         out[1] = rgb[1] * 255.f;
@@ -1365,8 +1418,8 @@ static void copy_image_to_gmic(float *image, float *gmic_image, const dt_iop_roi
         for(int r = 0; r < 3; r++)
           for(int c = 0; c < 3; c++) rgb[r] += xyz_to_srgb[r][c] * XYZ[c];
         // linear sRGB -> gamma corrected sRGB
-        for(int c = 0; c < 3; c++)
-          rgb[c] = rgb[c] <= 0.0031308 ? 12.92 * rgb[c] : (1.0 + 0.055) * powf(rgb[c], 1.0 / 2.4) - 0.055;
+//        for(int c = 0; c < 3; c++)
+//          rgb[c] = rgb[c] <= 0.0031308 ? 12.92 * rgb[c] : (1.0 + 0.055) * powf(rgb[c], 1.0 / 2.4) - 0.055;
 
         out[0] = rgb[0] * 255.f;
         out[1] = rgb[1] * 255.f;
@@ -1374,7 +1427,7 @@ static void copy_image_to_gmic(float *image, float *gmic_image, const dt_iop_roi
       }
     }
   }
-  else if (pixelpipe_pos == dt_iop_dt_gmic_exp_linear_rgb) // after demosaic
+  else if (pixelpipe_pos == dt_iop_gmic_pipepos_linear_rgb) // after demosaic
   {
     if (cst != iop_cs_rgb) return;
  
@@ -1429,7 +1482,7 @@ static void copy_image_from_gmic(float *image, float *gmic_image, const dt_iop_r
     { 0.0139322, 0.0971045, 0.7141733 }
   };
 
-  if (pixelpipe_pos == dt_iop_dt_gmic_exp_rgb /*|| pixelpipe_pos == dt_iop_dt_gmic_exp_linear_rgb*/) // after colorout
+  if (pixelpipe_pos == dt_iop_gmic_pipepos_rgb /*|| pixelpipe_pos == dt_iop_gmic_pipepos_linear_rgb*/) // after colorout
   {
     if (cst != iop_cs_rgb) return;
     
@@ -1452,7 +1505,7 @@ static void copy_image_from_gmic(float *image, float *gmic_image, const dt_iop_r
       }
     }
   }
-  else if (pixelpipe_pos == dt_iop_dt_gmic_exp_lab) // after colorin
+  else if (pixelpipe_pos == dt_iop_gmic_pipepos_lab) // after colorin
   {
     if (cst != iop_cs_Lab) return;
 
@@ -1462,8 +1515,23 @@ static void copy_image_from_gmic(float *image, float *gmic_image, const dt_iop_r
     {
       for(int j = 0; j < roi_in->width*roi_in->height; j++, out += ch_in, in += ch_in)
       {
-        out[0] = in[0] / 255.f;
-        out[1] = out[2] = 0.f;
+        // transform the result back to Lab
+        // sRGB -> XYZ
+      	float rgb[3] = { 0, 0, 0 };
+      	float XYZ[3] = { 0, 0, 0 };
+        // gamma corrected sRGB -> linear sRGB
+/*        for(int c = 0; c < 1; c++)
+        {
+        	rgb[c] = in[c] / 255.f;
+          rgb[c] = rgb[c] <= 0.04045 ? rgb[c] / 12.92 : powf((rgb[c] + 0.055) / (1 + 0.055), 2.4);
+        }
+        rgb[1] = rgb[2] = rgb[0];
+        */
+      	rgb[1] = rgb[2] = rgb[0] = in[0] / 255.f;
+        for(int r = 0; r < 3; r++)
+          for(int c = 0; c < 3; c++) XYZ[r] += srgb_to_xyz[r][c] * rgb[c];
+        // XYZ -> Lab
+        dt_XYZ_to_Lab(XYZ, out);
       }
     }
     else
@@ -1475,11 +1543,13 @@ static void copy_image_from_gmic(float *image, float *gmic_image, const dt_iop_r
       	float rgb[3] = { 0, 0, 0 };
       	float XYZ[3] = { 0, 0, 0 };
         // gamma corrected sRGB -> linear sRGB
-        for(int c = 0; c < 3; c++)
+/*        for(int c = 0; c < 3; c++)
         {
         	rgb[c] = in[c] / 255.f;
           rgb[c] = rgb[c] <= 0.04045 ? rgb[c] / 12.92 : powf((rgb[c] + 0.055) / (1 + 0.055), 2.4);
-        }
+        }*/
+      	for(int c = 0; c < 3; c++)
+      		rgb[c] = in[c] / 255.f;
         for(int r = 0; r < 3; r++)
           for(int c = 0; c < 3; c++) XYZ[r] += srgb_to_xyz[r][c] * rgb[c];
         // XYZ -> Lab
@@ -1487,7 +1557,7 @@ static void copy_image_from_gmic(float *image, float *gmic_image, const dt_iop_r
       }
     }
   }
-  else if (pixelpipe_pos == dt_iop_dt_gmic_exp_linear_rgb) // after demosaic
+  else if (pixelpipe_pos == dt_iop_gmic_pipepos_linear_rgb) // after demosaic
   {
     if (cst != iop_cs_rgb) return;
 
@@ -1557,11 +1627,11 @@ static int get_module_colorspace(const dt_iop_module_t *module)
 
   /* let check which colorspace module is within */
   if(module->priority > gmic_iop_module_colorout)
-    return dt_iop_dt_gmic_exp_rgb;
+    return dt_iop_gmic_pipepos_rgb;
   else if(module->priority > gmic_iop_module_colorin)
-    return dt_iop_dt_gmic_exp_lab;
+    return dt_iop_gmic_pipepos_lab;
   else if(module->priority > gmic_iop_module_demosaic)
-    return dt_iop_dt_gmic_exp_linear_rgb;
+    return dt_iop_gmic_pipepos_linear_rgb;
   else
   	printf("gmic_eh.c: invalid colorspace\n");
   
@@ -1593,6 +1663,7 @@ void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const 
 				g->width = roi_in->width;
 				g->height = roi_in->height;
 				g->ch = ch-1;
+				g->imageScale = roi_in->scale / piece->iscale;
 				g->image = (float*)dt_alloc_align(64, g->width * g->height * g->ch * sizeof(float));
 				copy_image_to_gmic((float*)ivoid, g->image, roi_in, ch, ch-1, cst, colorspace);
 				
@@ -1624,7 +1695,8 @@ void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const 
     
 		// call g'mic
 		dt_pthread_mutex_lock(&darktable.plugin_threadsafe);
-		gmic_filter_execution_data_t *filter_data = gmic_launchPluginHeadless(gd->gmic_gd, p->filter_data, p->filter_data_size, (float*)ovoid, roi_out->width, roi_out->height, ch);
+		gmic_filter_execution_data_t *filter_data = gmic_launchPluginHeadless(gd->gmic_gd, p->filter_data, p->filter_data_size, (float*)ovoid, 
+				roi_out->width, roi_out->height, ch, roi_in->scale / piece->iscale);
 		dt_pthread_mutex_unlock(&darktable.plugin_threadsafe);
 		if (filter_data)
 		{

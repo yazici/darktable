@@ -30,7 +30,7 @@ extern "C" {
 
 extern "C" {
 
-DT_MODULE_INTROSPECTION(1, dt_iop_dt_gmic_params_t)
+DT_MODULE_INTROSPECTION(1, dt_iop_dt_gmic_lab_params_t)
 
 
 typedef enum dt_iop_gmic_control_type_t
@@ -47,22 +47,22 @@ typedef enum dt_iop_gmic_control_type_t
 	dt_iop_gmic_control_chk = 9,
 } dt_iop_gmic_control_type_t;
 
-typedef enum dt_iop_dt_gmic_pixelpipepos_t
+typedef enum dt_iop_dt_gmic_lab_pixelpipepos_t
 {
 	dt_iop_gmic_pipepos_rgb = 0,
 	dt_iop_gmic_pipepos_lab = 1,
 	dt_iop_gmic_pipepos_linear_rgb = 2,
-} dt_iop_dt_gmic_pixelpipepos_t;
+} dt_iop_dt_gmic_lab_pixelpipepos_t;
 
-typedef struct dt_iop_dt_gmic_params_t
+typedef struct dt_iop_dt_gmic_lab_params_t
 {
 	int num;
 	int keep_image_loaded;
   char filter_data[451];
   int filter_data_size;
-} dt_iop_dt_gmic_params_t;
+} dt_iop_dt_gmic_lab_params_t;
 
-typedef struct dt_iop_dt_gmic_gui_data_t
+typedef struct dt_iop_dt_gmic_lab_gui_data_t
 {
 	int image_requested;
 	int image_locked;
@@ -116,19 +116,19 @@ typedef struct dt_iop_dt_gmic_gui_data_t
 	int chk_size;
 	
 	dt_pthread_mutex_t lock;
-} dt_iop_dt_gmic_gui_data_t;
+} dt_iop_dt_gmic_lab_gui_data_t;
 
-typedef struct dt_iop_dt_gmic_params_t dt_iop_dt_gmic_data_t;
+typedef struct dt_iop_dt_gmic_lab_params_t dt_iop_dt_gmic_lab_data_t;
 
-typedef struct dt_iop_dt_gmic_global_data_t
+typedef struct dt_iop_dt_gmic_lab_global_data_t
 {
 	gmic_qt_lib_t * gmic_gd;
-} dt_iop_dt_gmic_global_data_t;
+} dt_iop_dt_gmic_lab_global_data_t;
 
 
 const char *name()
 {
-  return _("dt_gmic_eh");
+  return _("dt_gmic_lab_eh");
 }
 
 int groups()
@@ -216,7 +216,7 @@ static void update_param_value_from_gui(gmic_filter_param_t *params, GtkWidget *
 		const char * text = gtk_entry_get_text(GTK_ENTRY(widg));
 		
 		if (params->str_current_value) free(params->str_current_value);
-		params->str_current_value = (char*)calloc(1, strlen(text) + 3);
+		params->str_current_value = (char*)calloc(1, strlen(text) + 1);
 		sprintf(params->str_current_value, "\"%s\"", text);
 	}
 	else if (params->param_type == gmic_param_button)
@@ -228,9 +228,9 @@ static void update_param_value_from_gui(gmic_filter_param_t *params, GtkWidget *
 
 static void update_output_params_from_gui(GtkWidget *widget, dt_iop_module_t *self)
 {
-  dt_iop_dt_gmic_gui_data_t *g = (dt_iop_dt_gmic_gui_data_t *)self->gui_data;
-  dt_iop_dt_gmic_params_t *p = (dt_iop_dt_gmic_params_t *)self->params;
-  dt_iop_dt_gmic_global_data_t *gd = (dt_iop_dt_gmic_global_data_t *)self->data;
+  dt_iop_dt_gmic_lab_gui_data_t *g = (dt_iop_dt_gmic_lab_gui_data_t *)self->gui_data;
+  dt_iop_dt_gmic_lab_params_t *p = (dt_iop_dt_gmic_lab_params_t *)self->params;
+  dt_iop_dt_gmic_lab_global_data_t *gd = (dt_iop_dt_gmic_lab_global_data_t *)self->data;
   
   if (g == NULL || p == NULL || gd == NULL) return;
   
@@ -386,7 +386,7 @@ static int get_single_control_index(GtkWidget ***widg_array, int *array_size)
 	return index;
 }
 
-static int get_control_index(dt_iop_dt_gmic_gui_data_t *g, int control_type)
+static int get_control_index(dt_iop_dt_gmic_lab_gui_data_t *g, int control_type)
 {
 	int index = -1;
 	if (control_type == dt_iop_gmic_control_sl)
@@ -451,7 +451,7 @@ static void destroy_single_widget_array(GtkWidget **widg_arr, const int arr_size
 
 static void destroy_gui_controls(dt_iop_module_t *self)
 {
-	dt_iop_dt_gmic_gui_data_t *g = (dt_iop_dt_gmic_gui_data_t *)self->gui_data;
+	dt_iop_dt_gmic_lab_gui_data_t *g = (dt_iop_dt_gmic_lab_gui_data_t *)self->gui_data;
 	if (g == NULL) return;
 	
 	if (g->actual_params_widg)
@@ -473,7 +473,7 @@ static void destroy_gui_controls(dt_iop_module_t *self)
 	
 }
 
-static void update_filter_labels(gmic_filter_definition_t *filter_definition, dt_iop_dt_gmic_gui_data_t *g)
+static void update_filter_labels(gmic_filter_definition_t *filter_definition, dt_iop_dt_gmic_lab_gui_data_t *g)
 {
 	const char *blank = "";
 	const char *filter_name = blank;
@@ -496,12 +496,12 @@ static void update_filter_labels(gmic_filter_definition_t *filter_definition, dt
 
 }
 
-// update values on already created gui controls from values in dt_iop_dt_gmic_params_t->filter_data
+// update values on already created gui controls from values in dt_iop_dt_gmic_lab_params_t->filter_data
 static void update_gui_controls(dt_iop_module_t *self)
 {
-  dt_iop_dt_gmic_gui_data_t *g = (dt_iop_dt_gmic_gui_data_t *)self->gui_data;
-  dt_iop_dt_gmic_params_t *p = (dt_iop_dt_gmic_params_t *)self->params;
-  dt_iop_dt_gmic_global_data_t *gd = (dt_iop_dt_gmic_global_data_t *)self->data;
+  dt_iop_dt_gmic_lab_gui_data_t *g = (dt_iop_dt_gmic_lab_gui_data_t *)self->gui_data;
+  dt_iop_dt_gmic_lab_params_t *p = (dt_iop_dt_gmic_lab_params_t *)self->params;
+  dt_iop_dt_gmic_lab_global_data_t *gd = (dt_iop_dt_gmic_lab_global_data_t *)self->data;
   
   if (g == NULL || p == NULL || gd == NULL) return;
   if (g->actual_params_widg == NULL) return;
@@ -645,7 +645,7 @@ static char *str_replace(char *orig, const char *rep, const char *with)
 }
 
 // return true if command changed or there's no command
-static int has_gmic_command_changed(dt_iop_dt_gmic_gui_data_t *g, dt_iop_dt_gmic_params_t *p, dt_iop_dt_gmic_global_data_t *gd)
+static int has_gmic_command_changed(dt_iop_dt_gmic_lab_gui_data_t *g, dt_iop_dt_gmic_lab_params_t *p, dt_iop_dt_gmic_lab_global_data_t *gd)
 {
 	int changed = 1;
 	
@@ -678,12 +678,12 @@ static int has_gmic_command_changed(dt_iop_dt_gmic_gui_data_t *g, dt_iop_dt_gmic
 	return changed;
 }
 
-// create/update gui controls from the g'mic command in dt_iop_dt_gmic_params_t->filter_data
+// create/update gui controls from the g'mic command in dt_iop_dt_gmic_lab_params_t->filter_data
 static void create_gui_controls(dt_iop_module_t *self)
 {
-  dt_iop_dt_gmic_gui_data_t *g = (dt_iop_dt_gmic_gui_data_t *)self->gui_data;
-  dt_iop_dt_gmic_params_t *p = (dt_iop_dt_gmic_params_t *)self->params;
-  dt_iop_dt_gmic_global_data_t *gd = (dt_iop_dt_gmic_global_data_t *)self->data;
+  dt_iop_dt_gmic_lab_gui_data_t *g = (dt_iop_dt_gmic_lab_gui_data_t *)self->gui_data;
+  dt_iop_dt_gmic_lab_params_t *p = (dt_iop_dt_gmic_lab_params_t *)self->params;
+  dt_iop_dt_gmic_lab_global_data_t *gd = (dt_iop_dt_gmic_lab_global_data_t *)self->data;
   
   if (g == NULL || p == NULL || gd == NULL) return;
   
@@ -975,11 +975,11 @@ static void create_gui_controls(dt_iop_module_t *self)
   
 }
 
-static void call_dt_gmic_qt_callback(GtkWidget *widget, dt_iop_module_t *self)
+static void call_dt_gmic_lab_qt_callback(GtkWidget *widget, dt_iop_module_t *self)
 {
-  dt_iop_dt_gmic_gui_data_t *g = (dt_iop_dt_gmic_gui_data_t *)self->gui_data;
-  dt_iop_dt_gmic_params_t *p = (dt_iop_dt_gmic_params_t *)self->params;
-  dt_iop_dt_gmic_global_data_t *gd = (dt_iop_dt_gmic_global_data_t *)self->data;
+  dt_iop_dt_gmic_lab_gui_data_t *g = (dt_iop_dt_gmic_lab_gui_data_t *)self->gui_data;
+  dt_iop_dt_gmic_lab_params_t *p = (dt_iop_dt_gmic_lab_params_t *)self->params;
+  dt_iop_dt_gmic_lab_global_data_t *gd = (dt_iop_dt_gmic_lab_global_data_t *)self->data;
   
   if (g == NULL || p == NULL || gd == NULL) return;
 
@@ -1103,7 +1103,7 @@ static void call_dt_gmic_qt_callback(GtkWidget *widget, dt_iop_module_t *self)
 static void keep_image_loaded_callback(GtkComboBox *combo, dt_iop_module_t *self)
 {
   if(self->dt->gui->reset) return;
-  dt_iop_dt_gmic_params_t *p = (dt_iop_dt_gmic_params_t *)self->params;
+  dt_iop_dt_gmic_lab_params_t *p = (dt_iop_dt_gmic_lab_params_t *)self->params;
 
   p->keep_image_loaded = dt_bauhaus_combobox_get((GtkWidget *)combo);
   
@@ -1113,14 +1113,14 @@ static void keep_image_loaded_callback(GtkComboBox *combo, dt_iop_module_t *self
 void commit_params(struct dt_iop_module_t *self, dt_iop_params_t *p1, dt_dev_pixelpipe_t *pipe,
                    dt_dev_pixelpipe_iop_t *piece)
 {
-  dt_iop_dt_gmic_params_t *p = (dt_iop_dt_gmic_params_t *)p1;
-  dt_iop_dt_gmic_data_t *d = (dt_iop_dt_gmic_data_t *)piece->data;
-  memcpy(d, p, sizeof(dt_iop_dt_gmic_params_t));
+  dt_iop_dt_gmic_lab_params_t *p = (dt_iop_dt_gmic_lab_params_t *)p1;
+  dt_iop_dt_gmic_lab_data_t *d = (dt_iop_dt_gmic_lab_data_t *)piece->data;
+  memcpy(d, p, sizeof(dt_iop_dt_gmic_lab_params_t));
 }
 
 void init_pipe(struct dt_iop_module_t *self, dt_dev_pixelpipe_t *pipe, dt_dev_pixelpipe_iop_t *piece)
 {
-  piece->data = malloc(sizeof(dt_iop_dt_gmic_data_t));
+  piece->data = malloc(sizeof(dt_iop_dt_gmic_lab_data_t));
   self->commit_params(self, self->default_params, pipe, piece);
 }
 
@@ -1137,8 +1137,8 @@ void gui_reset(struct dt_iop_module_t *self)
 
 void gui_update(struct dt_iop_module_t *self)
 {
-  dt_iop_dt_gmic_gui_data_t *g = (dt_iop_dt_gmic_gui_data_t *)self->gui_data;
-  dt_iop_dt_gmic_params_t *p = (dt_iop_dt_gmic_params_t *)self->params;
+  dt_iop_dt_gmic_lab_gui_data_t *g = (dt_iop_dt_gmic_lab_gui_data_t *)self->gui_data;
+  dt_iop_dt_gmic_lab_params_t *p = (dt_iop_dt_gmic_lab_params_t *)self->params;
 
 	create_gui_controls(self);
   
@@ -1150,12 +1150,12 @@ void gui_update(struct dt_iop_module_t *self)
 
 void init(dt_iop_module_t *module)
 {
-  module->params = calloc(1, sizeof(dt_iop_dt_gmic_params_t));
-  module->default_params = calloc(1, sizeof(dt_iop_dt_gmic_params_t));
+  module->params = calloc(1, sizeof(dt_iop_dt_gmic_lab_params_t));
+  module->default_params = calloc(1, sizeof(dt_iop_dt_gmic_lab_params_t));
   module->default_enabled = 0;
-  module->params_size = sizeof(dt_iop_dt_gmic_params_t);
+  module->params_size = sizeof(dt_iop_dt_gmic_lab_params_t);
   module->gui_data = NULL;
-  module->priority = 955; // module order created by iop_dependencies.py, do not edit! // from frames
+  module->priority = 358; // module order created by iop_dependencies.py, do not edit! // from colorreconstruction
 //  module->priorityx = 955; // module order created by iop_dependencies.py, do not edit! // from frames
 //  module->priorityx = 179; // module order created by iop_dependencies.py, do not edit!
 //  module->priorityx = 164; // module order created by iop_dependencies.py, do not edit! // from exposure
@@ -1176,7 +1176,7 @@ void cleanup(dt_iop_module_t *module)
 
 void init_global(dt_iop_module_so_t *module)
 {
-  dt_iop_dt_gmic_global_data_t *gd = (dt_iop_dt_gmic_global_data_t *)malloc(sizeof(dt_iop_dt_gmic_global_data_t));
+  dt_iop_dt_gmic_lab_global_data_t *gd = (dt_iop_dt_gmic_lab_global_data_t *)malloc(sizeof(dt_iop_dt_gmic_lab_global_data_t));
   module->data = gd;
   
   dt_pthread_mutex_lock(&darktable.plugin_threadsafe);
@@ -1186,7 +1186,7 @@ void init_global(dt_iop_module_so_t *module)
 
 void cleanup_global(dt_iop_module_so_t *module)
 {
-  dt_iop_dt_gmic_global_data_t *gd = (dt_iop_dt_gmic_global_data_t *)module->data;
+  dt_iop_dt_gmic_lab_global_data_t *gd = (dt_iop_dt_gmic_lab_global_data_t *)module->data;
   
   dt_pthread_mutex_lock(&darktable.plugin_threadsafe);
   gmic_qt_free(gd->gmic_gd);
@@ -1199,8 +1199,8 @@ void cleanup_global(dt_iop_module_so_t *module)
 
 void gui_init(struct dt_iop_module_t *self)
 {
-  self->gui_data = malloc(sizeof(dt_iop_dt_gmic_gui_data_t));
-  dt_iop_dt_gmic_gui_data_t *g = (dt_iop_dt_gmic_gui_data_t *)self->gui_data;
+  self->gui_data = malloc(sizeof(dt_iop_dt_gmic_lab_gui_data_t));
+  dt_iop_dt_gmic_lab_gui_data_t *g = (dt_iop_dt_gmic_lab_gui_data_t *)self->gui_data;
 
   dt_pthread_mutex_init(&g->lock, NULL);
   g->image = NULL;
@@ -1249,7 +1249,7 @@ void gui_init(struct dt_iop_module_t *self)
 
   GtkWidget *widget = gtk_button_new_with_label(_("call G'MIC Qt plugin"));
   g->bt_call_gmic = GTK_BUTTON(widget);
-  g_signal_connect(G_OBJECT(widget), "clicked", G_CALLBACK(call_dt_gmic_qt_callback), self);
+  g_signal_connect(G_OBJECT(widget), "clicked", G_CALLBACK(call_dt_gmic_lab_qt_callback), self);
   gtk_box_pack_start(GTK_BOX(self->widget), widget, FALSE, TRUE, 0);
 
   GtkWidget *hbox_lbl_filter = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
@@ -1305,10 +1305,10 @@ void gui_init(struct dt_iop_module_t *self)
 
 void reload_defaults(dt_iop_module_t *self)
 {
-  dt_iop_dt_gmic_params_t tmp = { 0 };
+  dt_iop_dt_gmic_lab_params_t tmp = { 0 };
   
-  memcpy(self->params, &tmp, sizeof(dt_iop_dt_gmic_params_t));
-  memcpy(self->default_params, &tmp, sizeof(dt_iop_dt_gmic_params_t));
+  memcpy(self->params, &tmp, sizeof(dt_iop_dt_gmic_lab_params_t));
+  memcpy(self->default_params, &tmp, sizeof(dt_iop_dt_gmic_lab_params_t));
   self->default_enabled = 0;
   
   destroy_gui_controls(self);
@@ -1316,7 +1316,7 @@ void reload_defaults(dt_iop_module_t *self)
 
 void gui_cleanup(struct dt_iop_module_t *self)
 {
-  dt_iop_dt_gmic_gui_data_t *g = (dt_iop_dt_gmic_gui_data_t *)self->gui_data;
+  dt_iop_dt_gmic_lab_gui_data_t *g = (dt_iop_dt_gmic_lab_gui_data_t *)self->gui_data;
   
   destroy_gui_controls(self);
   
@@ -1641,9 +1641,9 @@ static int get_module_colorspace(const dt_iop_module_t *module)
 void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const void *const ivoid,
              void *const ovoid, const dt_iop_roi_t *const roi_in, const dt_iop_roi_t *const roi_out)
 {
-  dt_iop_dt_gmic_data_t *p = (dt_iop_dt_gmic_data_t *)piece->data;
-  dt_iop_dt_gmic_gui_data_t *g = (dt_iop_dt_gmic_gui_data_t *)self->gui_data;
-  dt_iop_dt_gmic_global_data_t *gd = (dt_iop_dt_gmic_global_data_t *)self->data;
+  dt_iop_dt_gmic_lab_data_t *p = (dt_iop_dt_gmic_lab_data_t *)piece->data;
+  dt_iop_dt_gmic_lab_gui_data_t *g = (dt_iop_dt_gmic_lab_gui_data_t *)self->gui_data;
+  dt_iop_dt_gmic_lab_global_data_t *gd = (dt_iop_dt_gmic_lab_global_data_t *)self->data;
   const dt_iop_colorspace_type_t cst = dt_iop_module_colorspace(self);
   const int ch = piece->colors;
   const int colorspace = get_module_colorspace(self);

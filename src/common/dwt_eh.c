@@ -259,7 +259,8 @@ static void dwt_wavelet_decompose(float *img, dwt_params_t *const p, _dwt_layer_
     dt_control_log(_("not enough memory for wavelet decomposition"));
     goto cleanup;
   }
-
+  memset(buffer[1], 0, size * sizeof(float));
+  
   // setup a temp buffer
   temp = dt_alloc_align(64, MAX(p->width, p->height) * p->ch * sizeof(float));
   if (temp == NULL)
@@ -267,7 +268,8 @@ static void dwt_wavelet_decompose(float *img, dwt_params_t *const p, _dwt_layer_
     dt_control_log(_("not enough memory for wavelet decomposition"));
     goto cleanup;
   }
-
+  memset(temp, 0, MAX(p->width, p->height) * p->ch * sizeof(float));
+  
   // buffer to reconstruct the image
   layers = dt_alloc_align(64, p->width * p->height * p->ch * sizeof(float));
   if (layers == NULL)
@@ -275,6 +277,7 @@ static void dwt_wavelet_decompose(float *img, dwt_params_t *const p, _dwt_layer_
     dt_control_log(_("not enough memory for wavelet decomposition"));
     goto cleanup;
   }
+  memset(layers, 0, p->width * p->height * p->ch * sizeof(float));
   
   // iterate over wavelet scales
   lpass = 1;
@@ -346,7 +349,7 @@ cleanup:
 void dwt_decompose(dwt_params_t *p, _dwt_layer_func layer_func)
 {
   double start = dt_get_wtime();
-  
+
   // this is a zoom scale, not a wavelet scale
   if (p->preview_scale <= 0.f) p->preview_scale = 1.f;
   

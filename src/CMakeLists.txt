@@ -85,6 +85,8 @@ FILE(GLOB SOURCE_FILES
   "common/dwt_eh.c"
   "common/heal_eh.c"
   "common/LocalLaplacian_eh.c"
+  "common/LocalLaplacian_den_eh.c"
+  "common/loclap_eh.c"
   "develop/masks/masks.c"
   "develop/format.c"
   "dtgtk/button.c"
