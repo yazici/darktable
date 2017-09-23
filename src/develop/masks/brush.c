@@ -890,13 +890,50 @@ static void dt_brush_get_distance(float x, int y, float as, dt_masks_form_gui_t 
   if(!gpt) return;
 
   // we first check if we are inside the source form
-  if(dt_masks_point_in_form_exact(x,yf,gpt->source,corner_count * 6,gpt->source_count))
+  
+  /* Begin Retouch */
+  // add support for clone masks
+  // check also the source area if it is a clone mask
+/*  if(dt_masks_point_in_form_exact(x,yf,gpt->source,corner_count * 6,gpt->source_count))
   {
     *inside_source = 1;
     *inside = 1;
     return;
   }
+*/
+  if(gpt->points_count > 2 + corner_count * 3 && gpt->source_count > 2 + corner_count * 3)
+  {
+    float dx = -gpt->points[2] + gpt->source[2];
+    float dy = -gpt->points[3] + gpt->source[3];
+    
+    int current_seg = 1;
+    for(int i = corner_count * 3; i < gpt->points_count; i++)
+    {
+      // do we change of path segment ?
+      if(gpt->points[i * 2 + 1] == gpt->points[current_seg * 6 + 3] && gpt->points[i * 2] == gpt->points[current_seg * 6 + 2])
+      {
+        current_seg = (current_seg + 1) % corner_count;
+      }
+      //distance from tested point to current form point
+      float yy = gpt->points[i * 2 + 1] + dy;
+      float xx = gpt->points[i * 2] + dx;
+      if ((yy-yf)<as && (yy-yf)>-as && (xx-x)<as && (xx-x)>-as)
+      {
+        if(current_seg == 0)
+          *inside_source = corner_count - 1;
+        else
+          *inside_source = current_seg - 1;
 
+        if (*inside_source)
+        {
+          *inside = 1;
+          return;
+        }
+      }
+    }
+  }
+  /* End Retouch */
+  
   // we check if it's inside borders
   if(gpt->border_count > 2 + corner_count * 3)
   {
@@ -995,8 +1032,12 @@ static int dt_brush_events_mouse_scrolled(struct dt_iop_module_t *module, float 
     if((state & GDK_SHIFT_MASK) == GDK_SHIFT_MASK)
     {
       float masks_hardness;
-      float amount = 1.25f;
-      if(up) amount = 0.8f;
+      /* Begin Retouch */
+/*      float amount = 1.25f;
+      if(up) amount = 0.8f;*/
+      float amount = 1.03f;
+      if(up) amount = 0.97f;
+      /* End Retouch */
 
       if(form->type & DT_MASKS_CLONE)
       {
@@ -1019,8 +1060,12 @@ static int dt_brush_events_mouse_scrolled(struct dt_iop_module_t *module, float 
     else if((state & GDK_CONTROL_MASK) == GDK_CONTROL_MASK)
     {
       float masks_density;
-      float amount = 1.25f;
-      if(up) amount = 0.8f;
+      /* Begin Retouch */
+/*      float amount = 1.25f;
+      if(up) amount = 0.8f;*/
+      float amount = 1.03f;
+      if(up) amount = 0.97f;
+      /* End Retouch */
 
       if(form->type & DT_MASKS_CLONE)
       {
@@ -1050,13 +1095,19 @@ static int dt_brush_events_mouse_scrolled(struct dt_iop_module_t *module, float 
       if(form->type & DT_MASKS_CLONE)
       {
         masks_border = dt_conf_get_float("plugins/darkroom/spots/brush_border");
-        masks_border = MAX(0.005f, MIN(masks_border * amount, 0.5f));
+        /* Begin Retouch */
+//        masks_border = MAX(0.005f, MIN(masks_border * amount, 0.5f));
+        masks_border = MAX(0.0005f, MIN(masks_border * amount, 0.5f));
+        /* End Retouch */
         dt_conf_set_float("plugins/darkroom/spots/brush_border", masks_border);
       }
       else
       {
         masks_border = dt_conf_get_float("plugins/darkroom/masks/brush/border");
-        masks_border = MAX(0.005f, MIN(masks_border * amount, 0.5f));
+        /* Begin Retouch */
+//        masks_border = MAX(0.005f, MIN(masks_border * amount, 0.5f));
+        masks_border = MAX(0.0005f, MIN(masks_border * amount, 0.5f));
+        /* End Retouch */
         dt_conf_set_float("plugins/darkroom/masks/brush/border", masks_border);
       }
 
@@ -1085,7 +1136,11 @@ static int dt_brush_events_mouse_scrolled(struct dt_iop_module_t *module, float 
     else
     {
       guint nb = g_list_length(form->points);
-      if(gui->border_selected || (state & GDK_SHIFT_MASK) == GDK_SHIFT_MASK)
+      /* Begin Retouch */
+      // resize don't care where the mouse is inside a shape
+//      if(gui->border_selected || (state & GDK_SHIFT_MASK) == GDK_SHIFT_MASK)
+      if((state & GDK_SHIFT_MASK) == GDK_SHIFT_MASK)
+      /* End Retouch */
       {
         float amount = 1.03f;
         if(up) amount = 0.97f;
@@ -1116,8 +1171,12 @@ static int dt_brush_events_mouse_scrolled(struct dt_iop_module_t *module, float 
       }
       else
       {
-        float amount = 1.25f;
-        if(up) amount = 0.8f;
+    	  /* Begin Retouch */
+/*        float amount = 1.25f;
+        if(up) amount = 0.8f;*/
+          float amount = 1.03f;
+          if(up) amount = 0.97f;
+        /* End Retouch */
         for(int k = 0; k < nb; k++)
         {
           dt_masks_point_brush_t *point = (dt_masks_point_brush_t *)g_list_nth_data(form->points, k);
@@ -1199,7 +1258,15 @@ static int dt_brush_events_button_pressed(struct dt_iop_module_t *module, float 
       dt_masks_dynbuf_add(gui->guipoints_payload, pressure);
 
       gui->guipoints_count = 1;
-
+      /* Begin Retouch */
+      // add support for clone masks
+      float pts[2] = { pzx * wd, pzy * ht };
+      dt_dev_distort_backtransform(darktable.develop, pts, 1);
+      pts[0] /= darktable.develop->preview_pipe->iwidth;
+      pts[1] /= darktable.develop->preview_pipe->iheight;
+      form->source[0] = pts[0] + 0.01f;
+      form->source[1] = pts[1] + 0.01f;
+      /* End Retouch */
       gui->pressure_sensitivity = DT_MASKS_PRESSURE_OFF;
       char *psens = dt_conf_get_string("pressure_sensitivity");
       if(psens)

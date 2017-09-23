@@ -1095,6 +1095,12 @@ static void list_view(dt_lib_collect_rule_t *dr)
                   sizeof(query));
         break;
 
+        /* Begin Retouch */
+      case DT_COLLECTION_PROP_IOP_EH:
+        g_strlcpy(query, "SELECT DISTINCT operation, 1 FROM main.history ORDER BY operation", sizeof(query));
+        break;
+        /* End Retouch */
+        
       default: // filmroll
         g_strlcpy(query, "SELECT DISTINCT folder, id FROM main.film_rolls ORDER BY folder DESC", sizeof(query));
         break;
@@ -1152,6 +1158,9 @@ static void list_view(dt_lib_collect_rule_t *dr)
      || property == DT_COLLECTION_PROP_LENS || property == DT_COLLECTION_PROP_PUBLISHER
      || property == DT_COLLECTION_PROP_RIGHTS || property == DT_COLLECTION_PROP_TIME
      || property == DT_COLLECTION_PROP_TITLE || property == DT_COLLECTION_PROP_APERTURE
+		 /* Begin Retouch */
+     || property == DT_COLLECTION_PROP_IOP_EH
+		 /* End Retouch */
      || property == DT_COLLECTION_PROP_FOCAL_LENGTH || property == DT_COLLECTION_PROP_ISO)
     gtk_tree_model_foreach(model, (GtkTreeModelForeachFunc)list_match_string, dr);
   // we update list selection
@@ -1973,6 +1982,9 @@ void init(struct dt_lib_module_t *self)
   luaA_enum_value(L,dt_collection_properties_t,DT_COLLECTION_PROP_APERTURE);
   luaA_enum_value(L,dt_collection_properties_t,DT_COLLECTION_PROP_FILENAME);
   luaA_enum_value(L,dt_collection_properties_t,DT_COLLECTION_PROP_GEOTAGGING);
+  /* Begin Retouch */
+  luaA_enum_value(L,dt_collection_properties_t,DT_COLLECTION_PROP_IOP_EH);
+  /* End Retouch */
 
 }
 #endif
