@@ -158,27 +158,12 @@ static void dwt_add_layer_sse(float *const img, float *layers, dwt_params_t *con
 {
   const int i_size = p->width*p->height*4;
   
-  if (n_scale == p->scales+1)
-  {
 #ifdef _OPENMP
 #pragma omp parallel for default(none) shared(layers) schedule(static)
 #endif
-    for (int i=0; i<i_size; i+=4)
-    {
-      _mm_store_ps(&(layers[i]), _mm_add_ps(_mm_load_ps(&(layers[i])), _mm_load_ps(&(img[i]))));
-    }
-  }
-  else
+  for (int i=0; i<i_size; i+=4)
   {
-    const __m128 lpass_sub = _mm_set1_ps(p->blend_factor);
-    
-#ifdef _OPENMP
-#pragma omp parallel for default(none) shared(layers) schedule(static)
-#endif
-    for (int i=0; i<i_size; i+=4)
-    {
-      _mm_store_ps(&(layers[i]), _mm_add_ps(_mm_load_ps(&(layers[i])), _mm_sub_ps(_mm_load_ps(&(img[i])), lpass_sub)));
-    }
+  	_mm_store_ps(&(layers[i]), _mm_add_ps(_mm_load_ps(&(layers[i])), _mm_load_ps(&(img[i]))));
   }
 
 }
@@ -195,40 +180,68 @@ static void dwt_add_layer(float *const img, float *layers, dwt_params_t *const p
 #endif
     
   const int i_size = p->width*p->height*p->ch;
-  const float lpass_sub = p->blend_factor;
   
-  if (n_scale == p->scales+1)
-  {
 #ifdef _OPENMP
 #pragma omp parallel for default(none) shared(layers) schedule(static)
 #endif
-    for (int i=0; i<i_size; i++)
-      layers[i] += img[i];
-  }
-  else
-  {
-#ifdef _OPENMP
-#pragma omp parallel for default(none) shared(layers) schedule(static)
-#endif
-    for (int i=0; i<i_size; i++)
-      layers[i] += img[i] - lpass_sub;
-  }
+  for (int i=0; i<i_size; i++)
+  	layers[i] += img[i];
 
 }
 
 static void dwt_get_image_layer(float *const layer, dwt_params_t *const p)
 {
-  if (p->image == layer) return;
-  
-  memcpy(p->image, layer, p->width * p->height * p->ch * sizeof(float));
+	const int size = p->width * p->height * p->ch;
+	
+	// only add blend_factor on a detail scale (not residual)
+	if (p->blend_factor == 0.f || p->return_layer == 0 || p->return_layer == p->scales+1)
+	{
+		if (p->image != layer)
+			memcpy(p->image, layer, size * sizeof(float));
+  	return;
+	}
+	
+#if defined(__SSE__)
+  if (p->ch == 4 && p->use_sse)
+  {
+    const __m128 v4_blend_factor = _mm_setr_ps(p->blend_factor, p->blend_factor, p->blend_factor, 0.f);
+    
+    for (int i = 0; i < size; i+=4)
+    {
+      _mm_store_ps(&(p->image[i]), _mm_add_ps(_mm_load_ps(&(layer[i])), v4_blend_factor));
+    }
+  }
+  else
+#endif
+  {
+		if (p->ch == 4)
+		{
+#ifdef _OPENMP
+#pragma omp parallel for default(none) schedule(static)
+#endif
+			for (int i = 0; i < size; i+=4)
+			{
+				p->image[i] = layer[i] + p->blend_factor;
+				p->image[i+1] = layer[i+1] + p->blend_factor;
+				p->image[i+2] = layer[i+2] + p->blend_factor;
+			}
+		}
+		else
+		{
+#ifdef _OPENMP
+#pragma omp parallel for default(none) schedule(static)
+#endif
+			for (int i = 0; i < size; i++)
+				p->image[i] = layer[i] + p->blend_factor;
+		}
+  }
+
 }
 
 #if defined(__SSE__)
 static void dwt_subtract_layer_sse(float *bl, float *bh, dwt_params_t *const p)
 {
-//  const __m128 v4_lpass_add = _mm_set1_ps(0.f);
   const __m128 v4_lpass_mult = _mm_set1_ps((1.f / 16.f));
-  const __m128 v4_lpass_sub = _mm_set1_ps(p->blend_factor);
   const int size = p->width * p->height * 4;
 
 #ifdef _OPENMP
@@ -237,9 +250,8 @@ static void dwt_subtract_layer_sse(float *bl, float *bh, dwt_params_t *const p)
   for (int i = 0; i < size; i+=4)
   {
     // rounding errors introduced here (division by 16)
-//    _mm_store_ps(&(bl[i]), _mm_mul_ps(_mm_add_ps(_mm_load_ps(&(bl[i])), v4_lpass_add), v4_lpass_mult));
     _mm_store_ps(&(bl[i]), _mm_mul_ps(_mm_load_ps(&(bl[i])), v4_lpass_mult));
-    _mm_store_ps(&(bh[i]), _mm_sub_ps(_mm_load_ps(&(bh[i])), _mm_sub_ps(_mm_load_ps(&(bl[i])), v4_lpass_sub)));
+    _mm_store_ps(&(bh[i]), _mm_sub_ps(_mm_load_ps(&(bh[i])), _mm_load_ps(&(bl[i]))));
   }
 }
 #endif
@@ -254,9 +266,7 @@ static void dwt_subtract_layer(float *bl, float *bh, dwt_params_t *const p)
   }
 #endif
     
-//  const float lpass_add = 0.f;
   const float lpass_mult = (1.f / 16.f);
-  const float lpass_sub = p->blend_factor;
   const int size = p->width * p->height * p->ch;
 
 #ifdef _OPENMP
@@ -265,8 +275,8 @@ static void dwt_subtract_layer(float *bl, float *bh, dwt_params_t *const p)
     for (int i = 0; i < size; i++) 
     {
       // rounding errors introduced here (division by 16)
-      bl[i] = ( bl[i] /*+ lpass_add*/ ) * lpass_mult;
-      bh[i] -= bl[i] - lpass_sub;
+      bl[i] = bl[i] * lpass_mult;
+      bh[i] -= bl[i];
     }
 }
 
@@ -422,6 +432,7 @@ dt_dwt_cl_global_t *dt_dwt_init_cl_global()
 
   const int program = 20; // dwt_eh.cl, from programs.conf
   g->kernel_dwt_add_img_to_layer = dt_opencl_create_kernel(program, "dwt_add_img_to_layer");
+  g->kernel_dwt_add_float_to_layer = dt_opencl_create_kernel(program, "dwt_add_float_to_layer");
   g->kernel_dwt_subtract_layer = dt_opencl_create_kernel(program, "dwt_subtract_layer");
   g->kernel_dwt_hat_transform_col = dt_opencl_create_kernel(program, "dwt_hat_transform_col");
   g->kernel_dwt_hat_transform_row = dt_opencl_create_kernel(program, "dwt_hat_transform_row");
@@ -435,6 +446,7 @@ void dt_dwt_free_cl_global(dt_dwt_cl_global_t *g)
   
   // destroy kernels
   dt_opencl_free_kernel(g->kernel_dwt_add_img_to_layer);
+  dt_opencl_free_kernel(g->kernel_dwt_add_float_to_layer);
   dt_opencl_free_kernel(g->kernel_dwt_subtract_layer);
   dt_opencl_free_kernel(g->kernel_dwt_hat_transform_col);
   dt_opencl_free_kernel(g->kernel_dwt_hat_transform_row);
@@ -496,7 +508,6 @@ static cl_int dwt_subtract_layer_cl(cl_mem bl, cl_mem bh, dwt_params_cl_t *const
   size_t sizes[] = { ROUNDUPWD(p->width), ROUNDUPHT(p->height), 1 };
   
   const float lpass_mult = (1.f / 16.f);
-  const float lpass_sub = p->blend_factor;
   const int width = p->width;
   const int height = p->height;
 
@@ -504,8 +515,7 @@ static cl_int dwt_subtract_layer_cl(cl_mem bl, cl_mem bh, dwt_params_cl_t *const
   dt_opencl_set_kernel_arg(devid, kernel, 1, sizeof(cl_mem), (void *)&bh);
   dt_opencl_set_kernel_arg(devid, kernel, 2, sizeof(int), (void *)&(width));
   dt_opencl_set_kernel_arg(devid, kernel, 3, sizeof(int), (void *)&(height));
-  dt_opencl_set_kernel_arg(devid, kernel, 4, sizeof(float), (void *)&lpass_sub);
-  dt_opencl_set_kernel_arg(devid, kernel, 5, sizeof(float), (void *)&lpass_mult);
+  dt_opencl_set_kernel_arg(devid, kernel, 4, sizeof(float), (void *)&lpass_mult);
   err = dt_opencl_enqueue_kernel_2d(devid, kernel, sizes);
 	
   return err;
@@ -520,7 +530,6 @@ static cl_int dwt_add_layer_cl(cl_mem img, cl_mem layers, dwt_params_cl_t *const
   
   size_t sizes[] = { ROUNDUPWD(p->width), ROUNDUPHT(p->height), 1 };
   
-  const float lpass_sub = (n_scale == p->scales+1) ? 0: p->blend_factor;
   const int width = p->width;
   const int height = p->height;
 
@@ -528,7 +537,6 @@ static cl_int dwt_add_layer_cl(cl_mem img, cl_mem layers, dwt_params_cl_t *const
   dt_opencl_set_kernel_arg(devid, kernel, 1, sizeof(cl_mem), (void *)&layers);
   dt_opencl_set_kernel_arg(devid, kernel, 2, sizeof(int), (void *)&(width));
   dt_opencl_set_kernel_arg(devid, kernel, 3, sizeof(int), (void *)&(height));
-  dt_opencl_set_kernel_arg(devid, kernel, 4, sizeof(float), (void *)&lpass_sub);
   err = dt_opencl_enqueue_kernel_2d(devid, kernel, sizes);
 	
   return err;
@@ -538,11 +546,36 @@ static cl_int dwt_get_image_layer_cl(cl_mem layer, dwt_params_cl_t *const p)
 {
 	cl_int err = CL_SUCCESS;
 	
-  if (p->image == layer) return err;
-  
-  err = dt_opencl_enqueue_copy_buffer_to_buffer(p->devid, layer, p->image, 0, 0, (size_t)p->width * p->height * p->ch * sizeof(float));
+	// only add blend_factor on a detail scale (not residual)
+	if (p->blend_factor == 0.f || p->return_layer == 0 || p->return_layer == p->scales+1)
+	{
+		if (p->image != layer)
+			err = dt_opencl_enqueue_copy_buffer_to_buffer(p->devid, layer, p->image, 0, 0, (size_t)p->width * p->height * p->ch * sizeof(float));
+  	return err;
+	}
+	
+	if (p->image != layer)
+		err = dt_opencl_enqueue_copy_buffer_to_buffer(p->devid, layer, p->image, 0, 0, (size_t)p->width * p->height * p->ch * sizeof(float));
 
-  return err;
+	if (err == CL_SUCCESS)
+	{
+		const int devid = p->devid;
+		const int kernel = p->global->kernel_dwt_add_float_to_layer;
+		
+		size_t sizes[] = { ROUNDUPWD(p->width), ROUNDUPHT(p->height), 1 };
+		
+		const float blend_factor = p->blend_factor;
+		const int width = p->width;
+		const int height = p->height;
+	
+		dt_opencl_set_kernel_arg(devid, kernel, 0, sizeof(cl_mem), (void *)&(p->image));
+		dt_opencl_set_kernel_arg(devid, kernel, 1, sizeof(int), (void *)&(width));
+		dt_opencl_set_kernel_arg(devid, kernel, 2, sizeof(int), (void *)&(height));
+		dt_opencl_set_kernel_arg(devid, kernel, 3, sizeof(float), (void *)&blend_factor);
+		err = dt_opencl_enqueue_kernel_2d(devid, kernel, sizes);
+	}
+	
+	return err;
 }
 
 static cl_int dwt_wavelet_decompose_cl(cl_mem img, dwt_params_cl_t *const p, _dwt_layer_func_cl layer_func)

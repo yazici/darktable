@@ -180,7 +180,6 @@ static void check_nan(const float* im, const int size)
 }
 
 
-
 //---------------------------------------------------------------------------------
 // draw buttons
 //---------------------------------------------------------------------------------
@@ -494,8 +493,8 @@ static float rt_get_shape_opacity(dt_iop_module_t *self, const int formid)
 
 static void rt_display_selected_fill_color(dt_iop_retouch2_gui_data_t *g, dt_iop_retouch2_params_t *p)
 {
-  GdkRGBA c = (GdkRGBA){.red = p->fill_color[0]+p->blend_factor, .green = p->fill_color[1]+p->blend_factor, 
-                          .blue = p->fill_color[2]+p->blend_factor, .alpha = 1.0 };
+  GdkRGBA c = (GdkRGBA){.red = p->fill_color[0], .green = p->fill_color[1], 
+                          .blue = p->fill_color[2], .alpha = 1.0 };
   gtk_color_chooser_set_rgba(GTK_COLOR_CHOOSER(g->colorpick), &c);
 }
 
@@ -909,12 +908,12 @@ static void rt_colorpick_color_set_callback(GtkColorButton *widget, dt_iop_modul
   // turn off the other color picker
   gtk_toggle_button_set_active(g->color_picker, FALSE);
 
-  GdkRGBA c = (GdkRGBA){.red = p->fill_color[0]+p->blend_factor, .green = p->fill_color[1]+p->blend_factor, 
-                          .blue = p->fill_color[2]+p->blend_factor, .alpha = 1.0 };
+  GdkRGBA c = (GdkRGBA){.red = p->fill_color[0], .green = p->fill_color[1], 
+                          .blue = p->fill_color[2], .alpha = 1.0 };
   gtk_color_chooser_get_rgba(GTK_COLOR_CHOOSER(widget), &c);
-  p->fill_color[0] = c.red-p->blend_factor;
-  p->fill_color[1] = c.green-p->blend_factor;
-  p->fill_color[2] = c.blue-p->blend_factor;
+  p->fill_color[0] = c.red;
+  p->fill_color[1] = c.green;
+  p->fill_color[2] = c.blue;
 
   const int index = rt_get_selected_shape_index(p);
   if (index >= 0)
@@ -941,17 +940,17 @@ static gboolean rt_draw_callback(GtkWidget *widget, cairo_t *cr, dt_iop_module_t
   // interrupt if no valid color reading
   if(self->picked_output_color_min[0] == INFINITY) return FALSE;
 
-  if(fabsf(p->fill_color[0]+p->blend_factor - self->picked_output_color[0]) < 0.0001f
-     && fabsf(p->fill_color[1]+p->blend_factor - self->picked_output_color[1]) < 0.0001f
-     && fabsf(p->fill_color[2]+p->blend_factor - self->picked_output_color[2]) < 0.0001f)
+  if(fabsf(p->fill_color[0] - self->picked_output_color[0]) < 0.0001f
+     && fabsf(p->fill_color[1] - self->picked_output_color[1]) < 0.0001f
+     && fabsf(p->fill_color[2] - self->picked_output_color[2]) < 0.0001f)
   {
     // interrupt infinite loops
     return FALSE;
   }
 
-  p->fill_color[0] = self->picked_output_color[0]-p->blend_factor;
-  p->fill_color[1] = self->picked_output_color[1]-p->blend_factor;
-  p->fill_color[2] = self->picked_output_color[2]-p->blend_factor;
+  p->fill_color[0] = self->picked_output_color[0];
+  p->fill_color[1] = self->picked_output_color[1];
+  p->fill_color[2] = self->picked_output_color[2];
 
   const int index = rt_get_selected_shape_index(p);
   if (index >= 0)
@@ -1718,9 +1717,9 @@ void gui_init(dt_iop_module_t *self)
   gtk_box_pack_start(GTK_BOX(hbox_blend), g->sl_blend_factor, TRUE, TRUE, 0);
   
   // color for fill algorithm
-  GdkRGBA color = (GdkRGBA){.red = p->fill_color[0]+p->blend_factor, 
-    .green = p->fill_color[1]+p->blend_factor, 
-    .blue = p->fill_color[2]+p->blend_factor, 
+  GdkRGBA color = (GdkRGBA){.red = p->fill_color[0], 
+    .green = p->fill_color[1], 
+    .blue = p->fill_color[2], 
     .alpha = 1.0 };
 
   g->hbox_color = gtk_box_new(GTK_ORIENTATION_VERTICAL, 5);
@@ -1768,7 +1767,7 @@ void gui_init(dt_iop_module_t *self)
   gtk_box_pack_start(GTK_BOX(self->widget), hbox_blend, TRUE, TRUE, 0);
 
   // mask opacity
-  g->sl_mask_opacity = dt_bauhaus_slider_new_with_range(self, 0.0, 1.0, 0.05, 0.128, 3);
+  g->sl_mask_opacity = dt_bauhaus_slider_new_with_range(self, 0.0, 1.0, 0.05, 1., 3);
   dt_bauhaus_widget_set_label(g->sl_mask_opacity, _("mask opacity"), _("mask opacity"));
   g_object_set(g->sl_mask_opacity, "tooltip-text", _("mask opacity."), (char *)NULL);
   g_signal_connect(G_OBJECT(g->sl_mask_opacity), "value-changed", G_CALLBACK(rt_mask_opacity_callback), self);
@@ -2288,7 +2287,7 @@ static void retouch2_heal(float *const in, dt_iop_roi_t *const roi_in, const int
   // alloc temp images for source and destination
   img_src = dt_alloc_align(64, roi_mask_scaled->width * roi_mask_scaled->height * ch * sizeof(float));
   img_dest = dt_alloc_align(64, roi_mask_scaled->width * roi_mask_scaled->height * ch * sizeof(float));
-  if ((img_src == NULL) || (img_dest == NULL) /*|| (mask_heal == NULL)*/)
+  if ((img_src == NULL) || (img_dest == NULL))
   {
     printf("error allocating memory for healing\n");
     goto cleanup;
@@ -2477,14 +2476,6 @@ static void rt_process_forms(float *layer, dwt_params_t *const wt_p, const int s
             fill_color[2] = p->rt_forms[index].fill_color[2]+p->rt_forms[index].fill_delta;
           }
           
-          // restore the blend factor on the scales (not the residual)
-          if (scale > 0 && scale < p->num_scales+1)
-          {
-            fill_color[0] += p->blend_factor;
-            fill_color[1] += p->blend_factor;
-            fill_color[2] += p->blend_factor;
-          }
-          
           retouch2_fill(layer, roi_layer, wt_p->ch, mask_scaled, &roi_mask_scaled, mask_display, 
                           grpt->opacity, fill_color, wt_p->use_sse);
           if(darktable.unmuted & DT_DEBUG_PERF) printf("rt_process_forms retouch2_fill took %0.04f sec\n", dt_get_wtime() - start);
@@ -2600,7 +2591,7 @@ void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const 
   rt_process(self, piece, ivoid, ovoid, roi_in, roi_out, 0);
 }
 
-#if defined(__SSE__)
+#if defined(__SSE__x)
 void process_sse2(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const void *const ivoid,
                   void *const ovoid, const dt_iop_roi_t *const roi_in, const dt_iop_roi_t *const roi_out)
 {
@@ -2707,7 +2698,7 @@ static cl_int rt_copy_image_masked_cl(const int devid, cl_mem dev_src, cl_mem de
 
   dev_roi_mask_scaled = dt_opencl_copy_host_to_device_constant(devid, sizeof (dt_iop_roi_t), (void *) roi_mask_scaled);
 
-  if (/*dev_roi_layer == NULL ||*/ dev_roi_dest == NULL || /*dev_roi_mask == NULL ||*/ dev_roi_mask_scaled == NULL)
+  if (dev_roi_dest == NULL || dev_roi_mask_scaled == NULL)
   {
   	err = CL_MEM_OBJECT_ALLOCATION_FAILURE;
     goto cleanup;
@@ -3131,14 +3122,6 @@ static cl_int rt_process_forms_cl(cl_mem dev_layer, dwt_params_cl_t *const wt_p,
             fill_color[0] = p->rt_forms[index].fill_color[0]+p->rt_forms[index].fill_delta;
             fill_color[1] = p->rt_forms[index].fill_color[1]+p->rt_forms[index].fill_delta;
             fill_color[2] = p->rt_forms[index].fill_color[2]+p->rt_forms[index].fill_delta;
-          }
-          
-          // restore the blend factor on the scales (not the residual)
-          if (scale > 0 && scale < p->num_scales+1)
-          {
-            fill_color[0] += p->blend_factor;
-            fill_color[1] += p->blend_factor;
-            fill_color[2] += p->blend_factor;
           }
           
           err = retouch2_fill_cl(devid, dev_layer, roi_layer, 
