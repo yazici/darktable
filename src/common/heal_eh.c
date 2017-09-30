@@ -1,6 +1,7 @@
 
 #include "control/control.h"
 #include "develop/imageop.h"
+#include "heal_eh.h"
 
 /* Based on the original source code of GIMP's Healing Tool, by Jean-Yves Couleaud 
  * 
@@ -116,16 +117,16 @@ static float dt_heal_laplace_iteration(float *pixels, const float *const Adiag, 
 #endif
   for (int i = nmask_from; i < nmask_to; i++)
   {
-    int j0 = Aidx[i * 5 + 0];
-    int j1 = Aidx[i * 5 + 1];
-    int j2 = Aidx[i * 5 + 2];
-    int j3 = Aidx[i * 5 + 3];
-    int j4 = Aidx[i * 5 + 4];
-    float a = Adiag[i];
+    const int j0 = Aidx[i * 5 + 0];
+    const int j1 = Aidx[i * 5 + 1];
+    const int j2 = Aidx[i * 5 + 2];
+    const int j3 = Aidx[i * 5 + 3];
+    const int j4 = Aidx[i * 5 + 4];
+    const float a = Adiag[i];
 
     for (int k = 0; k < ch1; k++)
     {
-      float diff = w * (a * pixels[j0 + k] -
+    	const float diff = w * (a * pixels[j0 + k] -
                         (pixels[j1 + k] +
                          pixels[j2 + k] +
                          pixels[j3 + k] +
@@ -207,7 +208,6 @@ static void dt_heal_laplace_loop(float *pixels, const int width, const int heigh
   const int max_iter = 1000;
   const float epsilon = (0.1/255);
   const float err_exit = epsilon * epsilon * w * w;
-//  const float err_exit = .001f;
   
   /* Gauss-Seidel with successive over-relaxation */
 	for (int iter = 0; iter < max_iter; iter++)
@@ -216,8 +216,7 @@ static void dt_heal_laplace_loop(float *pixels, const int width, const int heigh
 		float err = dt_heal_laplace_iteration(pixels, Adiag, Aidx, w, 0, nmask2, ch, use_sse);
 		err += dt_heal_laplace_iteration(pixels, Adiag, Aidx, w, nmask2, nmask, ch, use_sse);
 		
-		if (err < err_exit)
-			break;
+		if (err < err_exit) break;
 	}
   
 cleanup:
@@ -253,5 +252,100 @@ void dt_heal(const float *const src_buffer, float *dest_buffer, const float *con
 cleanup:
   if (diff_buffer) dt_free_align(diff_buffer);
 }
+
+#ifdef HAVE_OPENCL
+
+dt_heal_cl_global_t *dt_heal_init_cl_global()
+{
+  dt_heal_cl_global_t *g = (dt_heal_cl_global_t *)malloc(sizeof(dt_heal_cl_global_t));
+
+  return g;
+}
+
+void dt_heal_free_cl_global(dt_heal_cl_global_t *g)
+{
+  if(!g) return;
+  
+  free(g);
+}
+
+heal_params_cl_t *dt_heal_init_cl(const int devid)
+{
+
+  heal_params_cl_t *p = (heal_params_cl_t *)malloc(sizeof(heal_params_cl_t));
+  if(!p) return NULL;
+
+  p->global = darktable.opencl->heal;
+  p->devid = devid;
+
+  return p;
+}
+
+void dt_heal_free_cl(heal_params_cl_t *p)
+{
+  if(!p) return;
+  
+  // be sure we're done with the memory:
+  dt_opencl_finish(p->devid);
+
+  free(p);
+}
+
+cl_int dt_heal_cl(heal_params_cl_t *p, cl_mem dev_src, cl_mem dev_dest, const float *const mask_buffer, 
+    const int width, const int height)
+{
+	cl_int err = CL_SUCCESS;
+
+	const int ch = 4;
+	
+	float *src_buffer = NULL;
+	float *dest_buffer = NULL;
+	
+	src_buffer = dt_alloc_align(64, width * height * ch * sizeof(float));
+  if (src_buffer == NULL)
+  {
+  	printf("dt_heal_cl: error allocating memory for healing\n");
+    err = CL_MEM_OBJECT_ALLOCATION_FAILURE;
+    goto cleanup;
+  }
+
+  dest_buffer = dt_alloc_align(64, width * height * ch * sizeof(float));
+  if (dest_buffer == NULL)
+  {
+  	printf("dt_heal_cl: error allocating memory for healing\n");
+    err = CL_MEM_OBJECT_ALLOCATION_FAILURE;
+    goto cleanup;
+  }
+
+  err = dt_opencl_read_buffer_from_device(p->devid, (void *)src_buffer, dev_src, 0,
+                                          (size_t)width * height * ch * sizeof(float), CL_TRUE);
+  if(err != CL_SUCCESS)
+  {
+    goto cleanup;
+  }
+
+  err = dt_opencl_read_buffer_from_device(p->devid, (void *)dest_buffer, dev_dest, 0,
+                                          (size_t)width * height * ch * sizeof(float), CL_TRUE);
+  if(err != CL_SUCCESS)
+  {
+    goto cleanup;
+  }
+
+  dt_heal(src_buffer, dest_buffer, mask_buffer, width, height, ch, 0);
+  
+  err = dt_opencl_write_buffer_to_device(p->devid, dest_buffer, dev_dest, 0, width * height * ch * sizeof(float), TRUE);
+  if (err != CL_SUCCESS)
+  {
+    goto cleanup;
+  }
+
+cleanup:
+	if (src_buffer) dt_free_align(src_buffer);
+	if (dest_buffer) dt_free_align(dest_buffer);
+	
+	return err;
+}
+
+#endif
 
 

@@ -10,6 +10,41 @@
  * */
 
 
+dwt_params_t *dt_dwt_init(float *image, 
+														const int width, 
+														const int height, 
+														const int ch, 
+														const int scales, 
+														const int return_layer, 
+														const float blend_factor, 
+														void *user_data, 
+														const float preview_scale, 
+														const int use_sse)
+{
+  dwt_params_t *p = (dwt_params_t *)malloc(sizeof(dwt_params_t));
+  if(!p) return NULL;
+
+  p->image = image;
+  p->ch = ch;
+  p->width = width;
+  p->height = height;
+  p->scales = scales;
+  p->return_layer = return_layer;
+  p->blend_factor = blend_factor;
+  p->user_data = user_data;
+  p->preview_scale = preview_scale;
+  p->use_sse = use_sse;
+
+  return p;
+}
+
+void dt_dwt_free(dwt_params_t *p)
+{
+  if(!p) return;
+  
+  free(p);
+}
+
 static int _get_max_scale(const int width, const int height, const float preview_scale)
 {
   int maxscale = 0;
@@ -380,3 +415,349 @@ void dwt_decompose(dwt_params_t *p, _dwt_layer_func layer_func)
   if(darktable.unmuted & DT_DEBUG_PERF) printf("dwt_decompose took %0.04f sec\n", dt_get_wtime() - start);
 }
 
+#ifdef HAVE_OPENCL
+dt_dwt_cl_global_t *dt_dwt_init_cl_global()
+{
+  dt_dwt_cl_global_t *g = (dt_dwt_cl_global_t *)malloc(sizeof(dt_dwt_cl_global_t));
+
+  const int program = 20; // dwt_eh.cl, from programs.conf
+  g->kernel_dwt_add_img_to_layer = dt_opencl_create_kernel(program, "dwt_add_img_to_layer");
+  g->kernel_dwt_subtract_layer = dt_opencl_create_kernel(program, "dwt_subtract_layer");
+  g->kernel_dwt_hat_transform_col = dt_opencl_create_kernel(program, "dwt_hat_transform_col");
+  g->kernel_dwt_hat_transform_row = dt_opencl_create_kernel(program, "dwt_hat_transform_row");
+  g->kernel_dwt_init_buffer = dt_opencl_create_kernel(program, "dwt_init_buffer");
+  return g;
+}
+
+void dt_dwt_free_cl_global(dt_dwt_cl_global_t *g)
+{
+  if(!g) return;
+  
+  // destroy kernels
+  dt_opencl_free_kernel(g->kernel_dwt_add_img_to_layer);
+  dt_opencl_free_kernel(g->kernel_dwt_subtract_layer);
+  dt_opencl_free_kernel(g->kernel_dwt_hat_transform_col);
+  dt_opencl_free_kernel(g->kernel_dwt_hat_transform_row);
+  dt_opencl_free_kernel(g->kernel_dwt_init_buffer);
+  
+  free(g);
+}
+
+dwt_params_cl_t *dt_dwt_init_cl(const int devid, 
+																	cl_mem image, 
+																	const int width, 
+																	const int height, 
+																	const int scales, 
+																	const int return_layer, 
+																	const float blend_factor, 
+																	void *user_data, 
+																	const float preview_scale)
+{
+  dwt_params_cl_t *p = (dwt_params_cl_t *)malloc(sizeof(dwt_params_cl_t));
+  if(!p) return NULL;
+
+  p->global = darktable.opencl->dwt;
+  p->devid = devid;
+  p->image = image;
+  p->ch = 4;
+  p->width = width;
+  p->height = height;
+  p->scales = scales;
+  p->return_layer = return_layer;
+  p->blend_factor = blend_factor;
+  p->user_data = user_data;
+  p->preview_scale = preview_scale;
+
+  return p;
+}
+
+void dt_dwt_free_cl(dwt_params_cl_t *p)
+{
+  if(!p) return;
+  
+  // be sure we're done with the memory:
+  dt_opencl_finish(p->devid);
+
+  free(p);
+}
+
+int dwt_get_max_scale_cl(dwt_params_cl_t *p)
+{
+  return _get_max_scale(p->width/p->preview_scale, p->height/p->preview_scale, p->preview_scale);
+}
+
+static cl_int dwt_subtract_layer_cl(cl_mem bl, cl_mem bh, dwt_params_cl_t *const p)
+{
+  cl_int err = CL_MEM_OBJECT_ALLOCATION_FAILURE;
+  
+  const int devid = p->devid;
+  const int kernel = p->global->kernel_dwt_subtract_layer;
+  
+  size_t sizes[] = { ROUNDUPWD(p->width), ROUNDUPHT(p->height), 1 };
+  
+  const float lpass_mult = (1.f / 16.f);
+  const float lpass_sub = p->blend_factor;
+  const int width = p->width;
+  const int height = p->height;
+
+  dt_opencl_set_kernel_arg(devid, kernel, 0, sizeof(cl_mem), (void *)&bl);
+  dt_opencl_set_kernel_arg(devid, kernel, 1, sizeof(cl_mem), (void *)&bh);
+  dt_opencl_set_kernel_arg(devid, kernel, 2, sizeof(int), (void *)&(width));
+  dt_opencl_set_kernel_arg(devid, kernel, 3, sizeof(int), (void *)&(height));
+  dt_opencl_set_kernel_arg(devid, kernel, 4, sizeof(float), (void *)&lpass_sub);
+  dt_opencl_set_kernel_arg(devid, kernel, 5, sizeof(float), (void *)&lpass_mult);
+  err = dt_opencl_enqueue_kernel_2d(devid, kernel, sizes);
+	
+  return err;
+}
+
+static cl_int dwt_add_layer_cl(cl_mem img, cl_mem layers, dwt_params_cl_t *const p, const int n_scale)
+{
+  cl_int err = CL_MEM_OBJECT_ALLOCATION_FAILURE;
+  
+  const int devid = p->devid;
+  const int kernel = p->global->kernel_dwt_add_img_to_layer;
+  
+  size_t sizes[] = { ROUNDUPWD(p->width), ROUNDUPHT(p->height), 1 };
+  
+  const float lpass_sub = (n_scale == p->scales+1) ? 0: p->blend_factor;
+  const int width = p->width;
+  const int height = p->height;
+
+  dt_opencl_set_kernel_arg(devid, kernel, 0, sizeof(cl_mem), (void *)&img);
+  dt_opencl_set_kernel_arg(devid, kernel, 1, sizeof(cl_mem), (void *)&layers);
+  dt_opencl_set_kernel_arg(devid, kernel, 2, sizeof(int), (void *)&(width));
+  dt_opencl_set_kernel_arg(devid, kernel, 3, sizeof(int), (void *)&(height));
+  dt_opencl_set_kernel_arg(devid, kernel, 4, sizeof(float), (void *)&lpass_sub);
+  err = dt_opencl_enqueue_kernel_2d(devid, kernel, sizes);
+	
+  return err;
+}
+
+static cl_int dwt_get_image_layer_cl(cl_mem layer, dwt_params_cl_t *const p)
+{
+	cl_int err = CL_SUCCESS;
+	
+  if (p->image == layer) return err;
+  
+  err = dt_opencl_enqueue_copy_buffer_to_buffer(p->devid, layer, p->image, 0, 0, (size_t)p->width * p->height * p->ch * sizeof(float));
+
+  return err;
+}
+
+static cl_int dwt_wavelet_decompose_cl(cl_mem img, dwt_params_cl_t *const p, _dwt_layer_func_cl layer_func)
+{
+  cl_int err = CL_SUCCESS;
+  
+  const int devid = p->devid;
+  
+  cl_mem temp = NULL;
+  cl_mem layers = NULL;
+  unsigned int lpass, hpass;
+  cl_mem buffer[2] = {0, 0};
+  int bcontinue = 1;
+
+  if (layer_func)
+  {
+  	err = layer_func(img, p, 0);
+  	if(err != CL_SUCCESS) goto cleanup;
+  }
+  
+  if (p->scales <= 0)
+    goto cleanup;
+  
+  /* image buffers */
+  buffer[0] = img;
+  /* temporary storage */
+  buffer[1] = dt_opencl_alloc_device_buffer(devid, (size_t)p->width * p->height * p->ch * sizeof(float));
+  if (buffer[1] == NULL)
+  {
+    dt_control_log(_("not enough memory for wavelet decomposition"));
+    err = CL_MEM_OBJECT_ALLOCATION_FAILURE;
+    goto cleanup;
+  }
+
+  // setup a temp buffer
+  temp = dt_opencl_alloc_device_buffer(devid, (size_t)p->width * p->height * p->ch * sizeof(float));
+  if (temp == NULL)
+  {
+    dt_control_log(_("not enough memory for wavelet decomposition"));
+    err = CL_MEM_OBJECT_ALLOCATION_FAILURE;
+    goto cleanup;
+  }
+
+  // buffer to reconstruct the image
+  layers = dt_opencl_alloc_device_buffer(devid, (size_t)p->width * p->height * p->ch * sizeof(float));
+  if (layers == NULL)
+  {
+    dt_control_log(_("not enough memory for wavelet decomposition"));
+    err = CL_MEM_OBJECT_ALLOCATION_FAILURE;
+    goto cleanup;
+  }
+  // init layer buffer
+  {
+    const int kernel = p->global->kernel_dwt_init_buffer;
+    
+    size_t sizes[] = { ROUNDUPWD(p->width), ROUNDUPHT(p->height), 1 };
+    const int width = p->width;
+    const int height = p->height;
+
+    dt_opencl_set_kernel_arg(devid, kernel, 0, sizeof(cl_mem), (void *)&layers);
+    dt_opencl_set_kernel_arg(devid, kernel, 1, sizeof(int), (void *)&(width));
+    dt_opencl_set_kernel_arg(devid, kernel, 2, sizeof(int), (void *)&(height));
+    err = dt_opencl_enqueue_kernel_2d(devid, kernel, sizes);
+    if(err != CL_SUCCESS) goto cleanup;
+  }
+  
+  // iterate over wavelet scales
+  lpass = 1;
+  hpass = 0;
+  for (unsigned int lev = 0; lev < p->scales && bcontinue; lev++) 
+  {
+    lpass = (1 - (lev & 1));
+
+    // hat transform by row
+    {
+			const int kernel = p->global->kernel_dwt_hat_transform_row;
+			
+			int sc = 1 << lev;
+			sc = (int)(sc * p->preview_scale);
+			if (sc > p->width) sc = p->width;
+			
+			size_t sizes[] = { ROUNDUPWD(p->width), ROUNDUPHT(p->height), 1 };
+			
+			dt_opencl_set_kernel_arg(devid, kernel, 0, sizeof(cl_mem), (void *)&temp);
+			dt_opencl_set_kernel_arg(devid, kernel, 1, sizeof(cl_mem), (void *)&(buffer[hpass]));
+			dt_opencl_set_kernel_arg(devid, kernel, 2, sizeof(int), (void *)&(p->width));
+			dt_opencl_set_kernel_arg(devid, kernel, 3, sizeof(int), (void *)&(p->height));
+			dt_opencl_set_kernel_arg(devid, kernel, 4, sizeof(int), (void *)&sc);
+			err = dt_opencl_enqueue_kernel_2d(devid, kernel, sizes);
+			if(err != CL_SUCCESS) goto cleanup;
+    }
+    
+    // hat transform by col
+    {
+			const int kernel = p->global->kernel_dwt_hat_transform_col;
+			
+			int sc = 1 << lev;
+			sc = (int)(sc * p->preview_scale);
+			if (sc > p->height) sc = p->height;
+			const float lpass_mult = (1.f / 16.f);
+			
+			size_t sizes[] = { ROUNDUPWD(p->width), ROUNDUPHT(p->height), 1 };
+			
+			dt_opencl_set_kernel_arg(devid, kernel, 0, sizeof(cl_mem), (void *)&temp);
+			dt_opencl_set_kernel_arg(devid, kernel, 1, sizeof(int), (void *)&(p->width));
+			dt_opencl_set_kernel_arg(devid, kernel, 2, sizeof(int), (void *)&(p->height));
+			dt_opencl_set_kernel_arg(devid, kernel, 3, sizeof(int), (void *)&sc);
+			dt_opencl_set_kernel_arg(devid, kernel, 4, sizeof(cl_mem), (void *)&(buffer[lpass]));
+			dt_opencl_set_kernel_arg(devid, kernel, 5, sizeof(float), (void *)&lpass_mult);
+			err = dt_opencl_enqueue_kernel_2d(devid, kernel, sizes);
+			if(err != CL_SUCCESS) goto cleanup;
+    }
+    
+    err = dwt_subtract_layer_cl(buffer[lpass], buffer[hpass], p);
+    if(err != CL_SUCCESS) goto cleanup;
+    
+    if (layer_func)
+    {
+    	err = layer_func(buffer[hpass], p, lev + 1);
+    	if(err != CL_SUCCESS) goto cleanup;
+    }
+    
+    if (p->return_layer == 0)
+    {
+    	err = dwt_add_layer_cl(buffer[hpass], layers, p, lev + 1);
+    	if(err != CL_SUCCESS) goto cleanup;
+    }
+    else if (p->return_layer == lev + 1)
+    {
+    	err = dwt_get_image_layer_cl(buffer[hpass], p);
+      if(err != CL_SUCCESS) goto cleanup;
+  
+      bcontinue = 0;
+    }
+    
+    hpass = lpass;
+  }
+
+  // Wavelet residual
+  if (p->return_layer == p->scales+1)
+  {
+    if (layer_func)
+    {
+    	err = layer_func(buffer[lpass], p, p->scales+1);
+    	if(err != CL_SUCCESS) goto cleanup;
+    }
+    
+    err = dwt_get_image_layer_cl(buffer[lpass], p);
+    if(err != CL_SUCCESS) goto cleanup;
+  }
+  else if (p->return_layer == 0 && p->scales > 0)
+  {
+    if (layer_func)
+    {
+    	err = layer_func(buffer[hpass], p, p->scales+1);
+    	if(err != CL_SUCCESS) goto cleanup;
+    }
+    
+    err = dwt_add_layer_cl(buffer[hpass], layers, p, p->scales+1);
+    if(err != CL_SUCCESS) goto cleanup;
+    
+    if (layer_func)
+    {
+    	err = layer_func(layers, p, p->scales+2);
+    	if(err != CL_SUCCESS) goto cleanup;
+    }
+    
+    err = dwt_get_image_layer_cl(layers, p);
+    if(err != CL_SUCCESS) goto cleanup;
+  }
+
+cleanup:
+  if (layers) dt_opencl_release_mem_object(layers);
+  if (temp) dt_opencl_release_mem_object(temp);
+  if (buffer[1]) dt_opencl_release_mem_object(buffer[1]);
+
+  return err;
+}
+
+cl_int dwt_decompose_cl(dwt_params_cl_t *p, _dwt_layer_func_cl layer_func)
+{
+  double start = dt_get_wtime();
+  
+  cl_int err = CL_SUCCESS;
+
+  // this is a zoom scale, not a wavelet scale
+  if (p->preview_scale <= 0.f) p->preview_scale = 1.f;
+  
+  // if a single scale is requested it cannot be grather than the residual
+  if (p->return_layer > p->scales+1)
+  {
+    p->return_layer = p->scales+1;
+  }
+  
+  const int max_scale = dwt_get_max_scale_cl(p);
+  
+  // if requested scales is grather than max scales adjust it
+  if (p->scales > max_scale)
+  {
+    // residual shoud be returned
+    if (p->return_layer > p->scales)
+      p->return_layer = max_scale+1;
+    // a scale should be returned, it cannot be grather than max scales
+    else if (p->return_layer > max_scale)
+      p->return_layer = max_scale;
+    
+    p->scales = max_scale;
+  }
+  
+  // call the actual decompose
+  err = dwt_wavelet_decompose_cl(p->image, p, layer_func);
+
+  if(darktable.unmuted & DT_DEBUG_PERF) printf("dwt_decompose took %0.04f sec\n", dt_get_wtime() - start);
+  
+  return err;
+}
+
+#endif
