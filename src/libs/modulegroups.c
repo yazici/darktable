@@ -277,6 +277,10 @@ static void _lib_modulegroups_update_iop_visibility(dt_lib_module_t *self)
           else
           {
             if(darktable.develop->gui_module == module) dt_iop_request_focus(NULL);
+            /* Begin Retouch */
+            // avoid GTK_IS_WIDGET assertion
+            if ( GTK_IS_WIDGET(w) )
+            /* End Retouch */
             gtk_widget_hide(w);
           }
         }

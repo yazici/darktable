@@ -1,8 +1,9 @@
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
-#include "develop/imageop.h"
 #include <stdlib.h>
+#include "develop/imageop.h"
+#include "common/gaussian.h"
 #include "LocalLaplacian_eh.h"
 
 /* 
@@ -64,180 +65,52 @@ static float _loclap_fastexp[4096] = {4.5399929762484854e-05f, 4.562215119831641
 
 static inline float loclap_fastexp(float x) 
 {
-  if (x < -9) { return exp(x); } if (x > 9) { return exp(x); } return _loclap_fastexp[(int)(x * 0.05f * 4096) + 2048];
+  if (x < -9.f) { return expf(x); } if (x > 9.f) { return expf(x); } return _loclap_fastexp[(int)(x * 0.05f * 4096) + 2048];
 }
 
-void loclap_get_max_min(float *in, const int size, double * max, double * min)
+static void loclap_get_max_min(float *in, const int size, float * max, float * min)
 {
-  *max = *min = 0;
-
+  float maximum = 0.f;
+  float minimum = 0.f;
+  
+#ifdef _OPENMP
+#pragma omp parallel for default(none) shared(in) schedule(static) reduction(max : maximum) reduction(min : minimum)
+#endif
   for (int i = 0; i < size; i++) 
   {
-    *max = fmax(in[i], *max);
-    *min = fmin(in[i], *min);
+  	maximum = MAX(in[i], maximum);
+    minimum = MIN(in[i], minimum);
   }
-}
-
-void loclap_paste_image(_loclap_image_t * into, _loclap_image_t * from,
-                  int xdst, int ydst, 
-                  int xsrc, int ysrc, 
-                  int width, int height) 
-{
-  g_assert(ydst >= 0 &&
-      xdst >= 0 &&
-      ydst + height <= into->height &&
-      xdst + width  <= into->width); // "Cannot paste outside the target image\n"
-  g_assert(ysrc >= 0 &&
-      xsrc >= 0 &&
-      ysrc + height <= from->height &&
-      xsrc + width  <= from->width); // "Cannot paste from outside the source image\n"
-
-  for (int y = 0; y < height; y++) 
-  {
-    float *in = into->im + (y + ydst)*into->width;
-    float *fr = from->im + (y + ysrc)*from->width;
-
-    for (int x = 0; x < width; x++) 
-    {
-      in[(x + xdst)] = fr[(x + xsrc)];
-    }
-  }
-}
-
-void loclap_paste_image_2(_loclap_image_t * into, _loclap_image_t * from,
-                  int xdst, int ydst) 
-{
-  loclap_paste_image(into, from,
-          xdst, ydst, 
-          0, 0,
-          from->width, from->height);
-}
-
-void loclap_convolve(_loclap_image_t * in, float * filter, _loclap_image_t * out, const int filter_width, const int filter_height) 
-{
-  const int filterSize = filter_width * filter_height;
   
-  g_assert(filterSize % 2 == 1); // "filter must have odd size\n"
-  g_assert(out->im != NULL);
-  g_assert(in->width == out->width && in->height == out->height);
-
-  const int xoff = (filter_width - 1)/2;
-  const int yoff = (filter_height - 1)/2;
-
-  float filterSum = 0;
-  for (int i = 0; i < filterSize; i++) filterSum += filter[i];
-
-  for (int y = 0; y < in->height; y++) 
-  {
-    float *f_out = out->im + y*out->width;
-
-    for (int x = 0; x < in->width; x++, f_out++) 
-    {
-        float weightSum = 0;
-        float v = 0;
-
-        for (int dy = -yoff; dy <= yoff; dy++) 
-        {
-          if (y + dy < 0) continue;
-          if (y + dy >= in->height) break;
-
-          for (int dx = -xoff; dx <= xoff; dx++) 
-          {
-            if (x + dx < 0) continue;
-            if (x + dx >= in->width) break;
-
-            float w = filter[(xoff-dx) + (yoff-dy)*filter_width];
-            v += in->im[(x+dx) + (y+dy)*in->width] * w;
-            weightSum += w;
-          }
-        }
-        if (filterSum != weightSum) 
-        {
-          v *= filterSum / weightSum;
-        }
-
-        f_out[0] += v;
-    }
-  }
+  *max = maximum;
+  *min = minimum;
 }
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic warning "-Wvla"
-#pragma GCC diagnostic ignored "-Wstack-usage="
-
-void loclap_gaussian_blur(_loclap_image_t * im_src, _loclap_image_t * im_dest, float filterWidth, float filterHeight) 
+static void loclap_gaussian_blur(_loclap_image_t * im_src, const float sigma) 
 {
-  g_assert(im_dest->im != NULL);
-  g_assert(im_src->width == im_dest->width && im_src->height == im_dest->height);
+	
+	float Labmax[] = { INFINITY, INFINITY, INFINITY, INFINITY };
+	float Labmin[] = { -INFINITY, -INFINITY, -INFINITY, -INFINITY };
 
-  memcpy(im_dest->im, im_src->im, im_src->width * im_src->height * sizeof(float));
-
-  if (filterWidth != 0) 
-  {
-    // make the width filter
-    int size = (int)(filterWidth * 6 + 1) | 1;
-    // even tiny filters should do something, otherwise we
-    // wouldn't have called this function.
-    if (size == 1) { size = 3; }
-    const int radius = size / 2;
-
-    float filter[size];
-    float sum = 0;
-    for (int i = 0; i < size; i++) 
-    {
-      const float diff = (i-radius)/filterWidth;
-      const float value = expf(-diff * diff / 2);
-      filter[i] = value;
-      sum += value;
-    }
-
-    for (int i = 0; i < size; i++) 
-    {
-      filter[i] /= sum;
-    }
-
-    loclap_convolve(im_dest, filter, im_dest, size, 1);
-  }
-
-  if (filterHeight != 0) 
-  {
-    // make the height filter
-    int size = (int)(filterHeight * 6 + 1) | 1;
-    // even tiny filters should do something, otherwise we
-    // wouldn't have called this function.
-    if (size == 1) { size = 3; }
-    const int radius = size / 2;
-
-    float filter[size];
-    float sum = 0;
-    for (int i = 0; i < size; i++) 
-    {
-      const float diff = (i-radius)/filterHeight;
-      const float value = expf(-diff * diff / 2);
-      filter[i] = value;
-      sum += value;
-    }
-
-    for (int i = 0; i < size; i++) 
-    {
-      filter[i] /= sum;
-    }
-
-    loclap_convolve(im_dest, filter, im_dest, 1, size);
-  }
-
+	dt_gaussian_t *g = dt_gaussian_init(im_src->width, im_src->height, 1, Labmax, Labmin, sigma, DT_IOP_GAUSSIAN_ZERO);
+	if(g)
+	{
+		dt_gaussian_blur(g, im_src->im, im_src->im);
+		dt_gaussian_free(g);
+	}
+	
 }
 
-void loclap_fast_blur_calculate_coefficients(float sigma, float *c0, float *c1, float *c2, float *c3) 
+static void loclap_fast_blur_calculate_coefficients(const float sigma, float *c0, float *c1, float *c2, float *c3) 
 {
   // performs the necessary conversion between the sigma of a Gaussian blur
   // and the coefficients used in the IIR filter
 
   float q;
 
-  g_assert(sigma >= 0.5); // "To use IIR filtering, standard deviation of blur must be >= 0.5\n"
+  g_assert(sigma >= 0.5f); // "To use IIR filtering, standard deviation of blur must be >= 0.5\n"
 
-  if (sigma < 2.5) 
+  if (sigma < 2.5f) 
   {
     q = (3.97156 - 4.14554 * sqrtf(1 - 0.26891 * sigma));
   } else 
@@ -253,7 +126,7 @@ void loclap_fast_blur_calculate_coefficients(float sigma, float *c0, float *c1, 
   *c0 = 1 - (*c1 + *c2 + *c3);
 }
 
-void loclap_fast_blur_blurX(_loclap_image_t * im, float sigma, int ts) 
+static void loclap_fast_blur_blurX(_loclap_image_t * im, const float sigma, const int ts) 
 {
   if (sigma == 0) { return; }
 
@@ -271,54 +144,54 @@ void loclap_fast_blur_blurX(_loclap_image_t * im, float sigma, int ts)
   {
     float *in = im->im + y*im->width;
     
-      // forward pass
+		// forward pass
 
-      // use a zero boundary condition in the homogeneous
-      // sense (ie zero weight outside the image, divide by
-      // the sum of the weights)
-      for (int j = 0; j < ts; j++) 
-      {
-        in[(ts+j)] = (c0*in[(ts+j)] + c1*in[j]) * invC01;
-        in[(2*ts+j)] = (c0*in[(2*ts+j)] + c1*in[(ts+j)] + c2*in[j]) * invC012;
-      }
+		// use a zero boundary condition in the homogeneous
+		// sense (ie zero weight outside the image, divide by
+		// the sum of the weights)
+		for (int j = 0; j < ts; j++) 
+		{
+			in[(ts+j)] = (c0*in[(ts+j)] + c1*in[j]) * invC01;
+			in[(2*ts+j)] = (c0*in[(2*ts+j)] + c1*in[(ts+j)] + c2*in[j]) * invC012;
+		}
 
-      // now apply the forward filter
-      for (int x = 3*ts; x < im->width; x++) 
-      {
-        in[x] = (c0 * in[x] +
-            c1 * in[(x-ts)] +
-            c2 * in[(x-2*ts)] + 
-            c3 * in[(x-3*ts)]);
-      }
+		// now apply the forward filter
+		for (int x = 3*ts; x < im->width; x++) 
+		{
+			in[x] = (c0 * in[x] +
+					c1 * in[(x-ts)] +
+					c2 * in[(x-2*ts)] + 
+					c3 * in[(x-3*ts)]);
+		}
 
-      // use a zero boundary condition in the homogeneous
-      // sense
-      int x = im->width-3*ts;
-      for (int j = 0; j < ts; j++) 
-      {
-        in[(x+ts+j)] = (c0*in[(x+ts+j)] + c1*in[(x+2*ts+j)]) * invC01;
-        in[(x+j)] = (c0*in[(x+j)] + c1*in[(x+ts+j)] + c2*in[(x+2*ts+j)]) * invC012;
-      }
+		// use a zero boundary condition in the homogeneous
+		// sense
+		const int x = im->width-3*ts;
+		for (int j = 0; j < ts; j++) 
+		{
+			in[(x+ts+j)] = (c0*in[(x+ts+j)] + c1*in[(x+2*ts+j)]) * invC01;
+			in[(x+j)] = (c0*in[(x+j)] + c1*in[(x+ts+j)] + c2*in[(x+2*ts+j)]) * invC012;
+		}
 
-      // backward pass
-      for (int x1 = im->width-3*ts-1; x1 >= 0; x1--) 
-      {
-        in[x1] = (c0 * in[x1] + 
-            c1 * in[(x1+ts)] + 
-            c2 * in[(x1+2*ts)] + 
-            c3 * in[(x1+3*ts)]);
-      }
+		// backward pass
+		for (int x1 = im->width-3*ts-1; x1 >= 0; x1--) 
+		{
+			in[x1] = (c0 * in[x1] + 
+					c1 * in[(x1+ts)] + 
+					c2 * in[(x1+2*ts)] + 
+					c3 * in[(x1+3*ts)]);
+		}
   }
 }
 
-void loclap_fast_blur_blurY(_loclap_image_t * im, float sigma, int ts) 
+static void loclap_fast_blur_blurY(_loclap_image_t * im, const float sigma, const int ts) 
 {
-  if (sigma == 0) { return; }
+  if (sigma == 0.f) { return; }
 
   float c0, c1, c2, c3;
   loclap_fast_blur_calculate_coefficients(sigma, &c0, &c1, &c2, &c3);
-  float invC01 = 1.0f/(c0+c1);
-  float invC012 = 1.0f/(c0+c1+c2);
+  const float invC01 = 1.0f/(c0+c1);
+  const float invC012 = 1.0f/(c0+c1+c2);
 
   // blur in the y-direction
   //  we do the same thing here as in the x-direction
@@ -352,7 +225,7 @@ void loclap_fast_blur_blurY(_loclap_image_t * im, float sigma, int ts)
   // use a zero boundary condition in the homogeneous
   // sense (ie zero weight outside the image, divide by
   // the sum of the weights)
-  int y = im->height-3*ts;
+  const int y = im->height-3*ts;
   for (int j = 0; j < ts; j++) 
   {
     for (int x = 0; x < im->width; x++) 
@@ -376,21 +249,21 @@ void loclap_fast_blur_blurY(_loclap_image_t * im, float sigma, int ts)
 
 }
 
-void loclap_fast_blur(_loclap_image_t * im, float filterWidth, float filterHeight) 
+static void loclap_fast_blur(_loclap_image_t * im, float filterWidth, float filterHeight) 
 {
-  g_assert(filterWidth >= 0 && filterHeight >= 0); // "Filter sizes must be non-negative\n"
-
   // Prevent filtering in useless directions
-  if (im->width == 1) { filterWidth = 0; }
-  if (im->height == 1) { filterHeight = 0; }
+  if (im->width == 1) filterWidth = 0.f;
+  if (im->height == 1) filterHeight = 0.f;
 
   // Filter in very narrow directions using the regular Gaussian, as
   // the IIR requires a few pixels to get going. If the Gaussian
   // blur is very narrow, also revert to the naive method, as IIR
   // won't work.
-  if (filterWidth > 0 && (im->width < 16 || filterWidth < 0.5)) 
+  if (filterWidth > 0.f && (im->width < 16 || filterWidth < 0.5f)) 
   {
-    _loclap_image_t blurry = { NULL, 0, 0 };
+  	loclap_gaussian_blur(im, filterWidth);
+  	
+/*    _loclap_image_t blurry = { NULL, 0, 0 };
     blurry.width = im->width;
     blurry.height = im->height;
     blurry.im = dt_alloc_align(64, blurry.width * blurry.height * sizeof(float));
@@ -403,13 +276,16 @@ void loclap_fast_blur(_loclap_image_t * im, float filterWidth, float filterHeigh
     {
       dt_free_align(blurry.im);
       blurry.im = NULL;
-    }
+    }*/
+  	
     return;
   }
 
-  if (filterHeight > 0 && (im->height < 16 || filterHeight < 0.5)) 
+  if (filterHeight > 0.f && (im->height < 16 || filterHeight < 0.5f)) 
   {
-    _loclap_image_t blurry = { NULL, 0, 0 };
+    loclap_gaussian_blur(im, filterHeight);
+    
+/*    _loclap_image_t blurry = { NULL, 0, 0 };
     blurry.width = im->width;
     blurry.height = im->height;
     blurry.im = dt_alloc_align(64, blurry.width * blurry.height * sizeof(float));
@@ -422,13 +298,16 @@ void loclap_fast_blur(_loclap_image_t * im, float filterWidth, float filterHeigh
     {
       dt_free_align(blurry.im);
       blurry.im = NULL;
-    }
+    }*/
+    
     return;
   }
 
   // now perform the blur
   if (filterWidth > 32) 
   {
+  	printf("filterWidth > 32\n");
+  	
     // for large filters, we decompose into a dense blur and a
     // sparse blur, by spacing out the taps on the IIR
     float remainingStdDev = sqrtf(filterWidth*filterWidth - 32*32);
@@ -436,48 +315,65 @@ void loclap_fast_blur(_loclap_image_t * im, float filterWidth, float filterHeigh
     loclap_fast_blur_blurX(im, remainingStdDev/tapSpacing, tapSpacing);
     loclap_fast_blur_blurX(im, 32, 1);
   } 
-  else if (filterWidth > 0) 
+  else if (filterWidth > 0.f) 
   {
-    loclap_fast_blur_blurX(im, filterWidth, 1);
+    loclap_fast_blur_blurX(im, filterWidth, 1.f);
   }
 
   if (filterHeight > 32) 
   {
+  	printf("filterHeight > 32\n");
+  	
     float remainingStdDev = sqrtf(filterHeight*filterHeight - 32*32);
     int tapSpacing = (int)(remainingStdDev / 32 + 1);
     loclap_fast_blur_blurY(im, remainingStdDev/tapSpacing, tapSpacing);
     loclap_fast_blur_blurY(im, 32, 1);
   } 
-  else if (filterHeight > 0) 
+  else if (filterHeight > 0.f) 
   {
-    loclap_fast_blur_blurY(im, filterHeight, 1);
+    loclap_fast_blur_blurY(im, filterHeight, 1.f);
   }
 
 }
 
-void loclap_pyramid_down(_loclap_image_t *im_src, _loclap_image_t *im_dest) 
+static void loclap_pyramid_down(_loclap_image_t *im_src, _loclap_image_t *im_dest, const float preview_scale) 
 {
-  _loclap_image_t smaller = { NULL, 0, 0 };
-  _loclap_image_t blurry = { NULL, 0, 0 };
+  _loclap_image_t smaller = {0};
+  _loclap_image_t blurry = {0};
 
-  if (im_dest->im) printf("loclap_pyramid_down Error 2\n");
-  g_assert(im_dest->im == NULL);
+  if (im_dest->im != NULL)
+  {
+  	printf("loclap_pyramid_down im_dest->im must be NULL\n");
+  	goto cleanup;
+  }
 
   smaller.width = ((im_src->width+1)/2);
   smaller.height = ((im_src->height+1)/2);
   smaller.im = dt_alloc_align(64, smaller.width * smaller.height * sizeof(float));
-  g_assert(smaller.im != NULL);
+  if (smaller.im == NULL)
+  {
+  	printf("loclap_pyramid_down() Error allocating memory for smaller image\n");
+  	goto cleanup;
+  }
+  
   memset(smaller.im, 0, smaller.width * smaller.height * sizeof(float));
 
   blurry.width = im_src->width;
   blurry.height = im_src->height;
   blurry.im = dt_alloc_align(64, blurry.width * blurry.height * sizeof(float));
-  g_assert(blurry.im != NULL);
+  if (blurry.im == NULL)
+  {
+  	printf("loclap_pyramid_down() Error allocating memory for blurry image\n");
+  	goto cleanup;
+  }
 
   memcpy(blurry.im, im_src->im, im_src->width * im_src->height * sizeof(float));
 
-  loclap_fast_blur(&blurry, 1, 1);
+  loclap_fast_blur(&blurry, 1.f/preview_scale, 1.f/preview_scale);
 
+#ifdef _OPENMP
+#pragma omp parallel for default(none) shared(blurry, smaller, im_src) schedule(static)
+#endif
   for (int y = 0; y < im_src->height; y++) 
   {
     float *bl =  blurry.im + y*blurry.width;
@@ -489,9 +385,12 @@ void loclap_pyramid_down(_loclap_image_t *im_src, _loclap_image_t *im_dest)
     }
   }
 
-  float scale[4] = {0.125f, 0.25f, 0.5f, 1.0f};
-
+  const float scale[4] = {0.125f, 0.25f, 0.5f, 1.0f};
   const int tFactor = 1;
+  
+#ifdef _OPENMP
+#pragma omp parallel for default(none) shared(smaller, im_src) schedule(static)
+#endif
   for (int y = 0; y < smaller.height; y++) 
   {
     float *sm = smaller.im + y*smaller.width;
@@ -508,24 +407,29 @@ void loclap_pyramid_down(_loclap_image_t *im_src, _loclap_image_t *im_dest)
   im_dest->width = smaller.width;
   im_dest->height = smaller.height;
 
-  if (blurry.im) 
-  {
-    dt_free_align(blurry.im);
-    blurry.im = NULL;
-  }
+cleanup:
+  if (blurry.im) dt_free_align(blurry.im);
 
 }
 
-void loclap_pyramid_up(_loclap_image_t *im_src, _loclap_image_t *im_dest, /*const int w, const int h,*/ const int bAdd) 
+static void loclap_pyramid_up(_loclap_image_t *im_src, _loclap_image_t *im_dest, const int bAdd, const float preview_scale) 
 {
-  _loclap_image_t larger;
+  _loclap_image_t larger = {0};
 
   larger.width = im_dest->width;
   larger.height = im_dest->height;
   larger.im = dt_alloc_align(64, larger.width * larger.height * sizeof(float));
-  g_assert(larger.im != NULL);
+  if (larger.im == NULL)
+  {
+  	printf("loclap_pyramid_up() Error allocating memory for larger image\n");
+  	goto cleanup;
+  }
+  
   memset(larger.im, 0, larger.width * larger.height * sizeof(float));
 
+#ifdef _OPENMP
+#pragma omp parallel for default(none) shared(larger, im_src) schedule(static)
+#endif
   for (int y = 0; y < larger.height; y++) 
   {
     float *lg = larger.im + y*larger.width;
@@ -537,28 +441,31 @@ void loclap_pyramid_up(_loclap_image_t *im_src, _loclap_image_t *im_dest, /*cons
     }
   }
 
-  loclap_fast_blur(&larger, 1, 1);
-
+ 	loclap_fast_blur(&larger, 1.f/preview_scale, 1.f/preview_scale);
+  	
   if (bAdd)
   {
+#ifdef _OPENMP
+#pragma omp parallel for default(none) shared(im_dest, larger) schedule(static)
+#endif
     for (int i = 0; i < im_dest->width*im_dest->height; i++)
       im_dest->im[i] += larger.im[i];
   }
   else
   {
+#ifdef _OPENMP
+#pragma omp parallel for default(none) shared(im_dest, larger) schedule(static)
+#endif
     for (int i = 0; i < im_dest->width*im_dest->height; i++)
       im_dest->im[i] -= larger.im[i];
   }
 
-  if (larger.im)
-  {
-    dt_free_align(larger.im);
-    larger.im = NULL;
-  }
+cleanup:
+  if (larger.im) dt_free_align(larger.im);
 
 }
 
-int loclap_get_max_scale(const int width, const int height)
+static int loclap_get_max_scale(const int width, const int height)
 {
   int maxscale = 1;
   
@@ -569,36 +476,42 @@ int loclap_get_max_scale(const int width, const int height)
   return maxscale;
 } 
 
-void loclap_LocalLaplacian(float *im_in, float *im_out, const int width, const int height, float alpha, float beta)
+void loclap_LocalLaplacian(float *im_in, float *im_out, const int width, const int height, 
+															const float _alpha, const float beta, const float *const scales, const float _preview_scale, const int use_sse)
 {
-  int K = 8, J = 8;
-  double maximum, minimum;
-  int max_scale = loclap_get_max_scale(width, height);
+  const int max_scale = loclap_get_max_scale(width, height);
+  
   // do nothing on too small images
   if (max_scale < 2)
   {
     memcpy(im_out, im_in, width * height * sizeof(float));
     return;
   }
-  if (max_scale < K) K = J = max_scale;
+
+  const float preview_scale = sqrtf(_preview_scale);
+  const float alpha = _alpha * sqrtf(_preview_scale);
+  		
+#define MAX_K 8
+#define MAX_J 8
   
-//  printf("Max scale=%i\n", max_scale);
+  const int K = MIN(MAX_K, max_scale);
+  const int J = MIN(MAX_J, max_scale);
   
-  _loclap_image_t processed[K];
-  _loclap_image_t imPyramid[J];
-  _loclap_image_t imLPyramid[J];
-  
-  memset(imPyramid, 0, sizeof(_loclap_image_t)*J);
-  memset(imLPyramid, 0, sizeof(_loclap_image_t)*J);
-  
-  // this will hold the original alpha channel
+  _loclap_image_t processed[MAX_K] = {0};
+  _loclap_image_t imPyramid[MAX_J] = {0};
+  _loclap_image_t imLPyramid[MAX_J] = {0};
+  _loclap_image_t pyramid[MAX_K][MAX_J] = {0};
+
+  // this will hold the original image
   imPyramid[0].width = width;
   imPyramid[0].height = height;
   imPyramid[0].im = im_in;
  
-  // Compute a discretized set of K intensities that span the values in the image
+  float maximum, minimum;
   loclap_get_max_min(imPyramid[0].im, width*height, &maximum, &minimum);
-  float target[K];
+  
+  // Compute a discretized set of K intensities that span the values in the image
+  float target[MAX_K] = {0};
   for (int k = 0; k < K; k++) 
   {
     target[k] = ((float)k)/(K-1) * (maximum - minimum) + minimum;
@@ -608,104 +521,130 @@ void loclap_LocalLaplacian(float *im_in, float *im_out, const int width, const i
   sigma = - sigma * sigma * 0.5f;
 
   // Make a set of K processed images
-//  printf("Computing different processed images\n");
+  // printf("Computing different processed images\n");
 
   for (int k = 0; k < K; k++) 
   {
     processed[k].width = width;
     processed[k].height = height;
     processed[k].im = dt_alloc_align(64, processed[k].width * processed[k].height * sizeof(float));
-    g_assert(processed[k].im != NULL);
+    if (processed[k].im == NULL)
+    {
+    	printf("loclap_LocalLaplacian() Error allocating memory for processed images\n");
+    	goto cleanup;
+    }
+    
     memcpy(processed[k].im, imPyramid[0].im, width * height * sizeof(float));
     
-    float *p = processed[k].im;
-    for (int i = 0; i < processed[k].width*processed[k].height; i++)
-    {
-      // Attract (or repel for negative alpha) the luminance towards the target value
-      const float v = p[i] - target[k];
-      const float adjustment = alpha * v * loclap_fastexp(sigma*v*v);
-      
-      p[i] += adjustment;
-    }
-  }
+#ifdef _OPENMP
+#pragma omp parallel for default(none) shared(processed, k, target, sigma) schedule(static)
+#endif
+		for (int i = 0; i < processed[k].width*processed[k].height; i++)
+		{
+			// Attract (or repel for negative alpha) the luminance towards the target value
+			const float v = processed[k].im[i] - target[k];
+			const float adjustment = alpha * v * loclap_fastexp(sigma*v*v);
+			
+			processed[k].im[i] += adjustment;
+		}
+	}
 
   // Compute a J-level laplacian pyramid per processed image
-//  printf("Computing their laplacian pyramids\n");
-  
-  _loclap_image_t pyramid[K][J];
-  memset(pyramid, 0, sizeof(_loclap_image_t)*K*J);
-  
+  // printf("Computing their laplacian pyramids\n");
+    
+#ifdef _OPENMP
+#pragma omp parallel for default(none) shared(pyramid, processed) schedule(static)
+#endif
   for (int k = 0; k < K; k++) 
   {
     pyramid[k][0] = processed[k];
     for (int j = 1; j < J; j++) 
     {
-      loclap_pyramid_down(&pyramid[k][j-1], &pyramid[k][j]);
-      loclap_pyramid_up(&pyramid[k][j], &pyramid[k][j-1], 0);
+      loclap_pyramid_down(&pyramid[k][j-1], &pyramid[k][j], preview_scale);
+      loclap_pyramid_up(&pyramid[k][j], &pyramid[k][j-1], 0, preview_scale);
     }
   }
 
+
   // Now compute a Gaussian and Laplacian pyramid for the input
-//  printf("Computing Gaussian pyramid for input\n");
+  // printf("Computing Gaussian pyramid for input\n");
 
   imLPyramid[0].width = width;
   imLPyramid[0].height = height;
   imLPyramid[0].im = dt_alloc_align(64, width * height * sizeof(float));
-  g_assert(imLPyramid[0].im != NULL);
+  if (imLPyramid[0].im == NULL)
+  {
+  	printf("loclap_LocalLaplacian() Error allocating memory for imLPyramid[0]\n");
+  	goto cleanup;
+  }
+  
   memcpy(imLPyramid[0].im, imPyramid[0].im, width * height * sizeof(float));
 
   for (int j = 1; j < J; j++) 
   {
-    loclap_pyramid_down(&imPyramid[j-1], &imPyramid[j]);
+    loclap_pyramid_down(&imPyramid[j-1], &imPyramid[j], preview_scale);
     
     imLPyramid[j].width = imPyramid[j].width;
     imLPyramid[j].height = imPyramid[j].height;
     imLPyramid[j].im = dt_alloc_align(64, imPyramid[j].width * imPyramid[j].height * sizeof(float));
-    g_assert(imLPyramid[j].im != NULL);
+    if (imLPyramid[j].im == NULL)
+    {
+    	printf("loclap_LocalLaplacian() Error allocating memory for imLPyramid\n");
+    	goto cleanup;
+    }
+    
     memcpy(imLPyramid[j].im, imPyramid[j].im, imPyramid[j].width * imPyramid[j].height * sizeof(float));
     
-    loclap_pyramid_up(&imPyramid[j], &imLPyramid[j-1], 0);
+    loclap_pyramid_up(&imPyramid[j], &imLPyramid[j-1], 0, preview_scale);
   }
 
   // Now construct output laplacian pyramid by looking up the
   // Laplacian pyramids as a function of intensity found in the Gaussian pyramid
-
-//  printf("Computing laplacian pyramid for input\n");
+  // printf("Computing laplacian pyramid for input\n");
   
   for (int j = 0; j < J; j++) 
   {
-    float scale;
-    if (beta < 0) 
-    {
-      scale = ((float)j/(J-1))*(-beta) + 1-(-beta);
-    } 
-    else 
-    {
-      scale = (1.0f - ((float)j/(J-1)))*beta + 1-beta;
-    }
-
+    const float scale = (beta < 0) ?  
+										((float)j/(J-1))*(-beta) + 1.f-(-beta) : 
+										(1.0f - ((float)j/(J-1)))*beta + 1.f-beta;
+    
     float *mp = imPyramid[j].im;
     float *mLP = imLPyramid[j].im;
+    
+#ifdef _OPENMP
+#pragma omp parallel for default(none) shared(imPyramid, mLP, j, mp, minimum, maximum, pyramid) schedule(static)
+#endif
     for (int i = 0; i < imPyramid[j].width*imPyramid[j].height; i++)
     {
-      float luminance = mp[i];
-
-      luminance -= minimum;
-      luminance /= maximum - minimum;
-      luminance *= K-1;
-
-      int K0 = (int)(luminance);
-      if (K0 < 0) K0 = 0;
-      if (K0 >= K-1) K0 = K-2;
-
+    	const float luminance = ((mp[i] - minimum) / (maximum - minimum)) * (K-1);
+    	const int K0 = MIN(MAX((int)(luminance), 0), K-2);
+    	
       const int K1 = K0+1;
       const float alpha1 = luminance - K0;
-      const float modified = alpha1 * pyramid[K1][j].im[i] + (1 - alpha1) * pyramid[K0][j].im[i];
+      const float modified = alpha1 * pyramid[K1][j].im[i] + (1.f - alpha1) * pyramid[K0][j].im[i];
 
-      mLP[i] = (1-scale) * mLP[i] + scale * modified;
+      mLP[i] = (1.f-scale) * mLP[i] + scale * modified;
     }
   }
   
+
+  // Now collapse the output laplacian pyramid
+  // printf("Collapsing laplacian pyramid down to output image\n");
+  
+  _loclap_image_t output = {0};
+  output = imLPyramid[J-1];
+
+  for (int j = J-2; j >= 0; j--) 
+  { 
+    loclap_pyramid_up(&output, &imLPyramid[j], 1, preview_scale);
+    output = imLPyramid[j];
+  }
+
+  // return output
+  memcpy(im_out, output.im, width * height * sizeof(float));
+
+  
+cleanup:
   for (int i = 1; i < J; i++)
   {
     if (imPyramid[i].im) dt_free_align(imPyramid[i].im);
@@ -719,27 +658,12 @@ void loclap_LocalLaplacian(float *im_in, float *im_out, const int width, const i
     }
   }
 
-  // Now collapse the output laplacian pyramid
-//  printf("Collapsing laplacian pyramid down to output image\n");
-  
-  _loclap_image_t output;
-  output = imLPyramid[J-1];
-
-  for (int j = J-2; j >= 0; j--) 
-  { 
-    loclap_pyramid_up(&output, &imLPyramid[j], 1);
-    output = imLPyramid[j];
-  }
-
-  // return output
-  memcpy(im_out, output.im, width * height * sizeof(float));
-  
   for (int i = 0; i < J; i++)
   {
     if (imLPyramid[i].im) dt_free_align(imLPyramid[i].im);
   }
 
+#undef MAX_K
+#undef MAX_J
 }
-
-#pragma GCC diagnostic pop
 

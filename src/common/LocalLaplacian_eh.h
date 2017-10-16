@@ -1,11 +1,9 @@
 
-#ifndef DT_DEVELOP_LOCALLAPLACIAN_1_H
-#define DT_DEVELOP_LOCALLAPLACIAN_1_H
+#ifndef DT_DEVELOP_LOCALLAPLACIAN_EH_H
+#define DT_DEVELOP_LOCALLAPLACIAN_EH_H
 
-//void loclap_get_L_from_rgb(float *image, float *pL, const int width, const int height, const int forward);
-//void loclap_get_L_from_lab(float *image, float *pL, const int width, const int height, const int forward);
-
-void loclap_LocalLaplacian(float *im_in, float *im_out, const int width, const int height, float alpha, float beta);
+void loclap_LocalLaplacian(float *im_in, float *im_out, const int width, const int height, 
+															const float alpha, const float beta, const float *const scales, const float preview_scale, const int use_sse);
 
 #endif
 

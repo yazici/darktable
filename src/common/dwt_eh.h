@@ -39,6 +39,7 @@ void dwt_decompose(dwt_params_t *p, _dwt_layer_func layer_func);
 typedef struct dt_dwt_cl_global_t
 {
   int kernel_dwt_add_img_to_layer;
+  int kernel_dwt_add_float_to_layer;
   int kernel_dwt_subtract_layer;
   int kernel_dwt_hat_transform_col;
   int kernel_dwt_hat_transform_row;

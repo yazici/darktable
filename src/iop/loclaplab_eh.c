@@ -20,34 +20,8 @@
 #include "config.h"
 #endif
 
-#include <assert.h>
-#include <math.h>
-#include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
-#if defined(__SSE__)
-#include <xmmintrin.h>
-#endif
-
 #include "bauhaus/bauhaus.h"
-#include "common/histogram.h"
-#include "common/image_cache.h"
-#include "common/mipmap_cache.h"
-#include "common/opencl.h"
-#include "control/control.h"
-#include "develop/develop.h"
-#include "develop/imageop.h"
-#include "develop/imageop_math.h"
-#include "develop/pixelpipe.h"
-#include "dtgtk/paint.h"
-#include "dtgtk/resetlabel.h"
-#include "gui/accelerators.h"
-#include "gui/gtk.h"
-#include "gui/presets.h"
-#include "iop/iop_api.h"
-
-//#include "common/loclap_eh.h"
-#include "common/LocalLaplacian_den_eh.h"
+#include "common/LocalLaplacian_eh.h"
 
 DT_MODULE_INTROSPECTION(1, dt_iop_loclaplab_params_t)
 
@@ -64,7 +38,7 @@ typedef struct dt_iop_loclaplab_gui_data_t
 {
   GtkWidget *sl_alpha;
   GtkWidget *sl_beta;
-  GtkWidget *sl_scales[LOCLAP_MAX_SCALES];
+//  GtkWidget *sl_scales[LOCLAP_MAX_SCALES];
 } dt_iop_loclaplab_gui_data_t;
 
 typedef struct dt_iop_loclaplab_params_t dt_iop_loclaplab_data_t;
@@ -76,7 +50,7 @@ const char *name()
 
 int groups()
 {
-  return IOP_GROUP_BASIC;
+  return IOP_GROUP_TONE;
 }
 
 int flags()
@@ -110,8 +84,8 @@ void gui_update(struct dt_iop_module_t *self)
 
   dt_bauhaus_slider_set(g->sl_alpha, p->alpha);
   dt_bauhaus_slider_set(g->sl_beta, p->beta);
-  for (int i = 0; i < LOCLAP_MAX_SCALES; i++)
-  	dt_bauhaus_slider_set(g->sl_scales[i], p->scales[i]);
+//  for (int i = 0; i < LOCLAP_MAX_SCALES; i++)
+//  	dt_bauhaus_slider_set(g->sl_scales[i], p->scales[i]);
 }
 
 void init(dt_iop_module_t *module)
@@ -120,9 +94,7 @@ void init(dt_iop_module_t *module)
   module->params = calloc(1, sizeof(dt_iop_loclaplab_params_t));
   module->default_params = calloc(1, sizeof(dt_iop_loclaplab_params_t));
   module->default_enabled = 0;
-//  module->priority = 164; // module order created by iop_dependencies.py, do not edit! // from exposure
-//  module->priority = 671; // from tonecurve
-  module->priority = 582; // module order created by iop_dependencies.py, do not edit! // from bilat (local contrast)
+  module->priority = 594; // module order created by iop_dependencies.py, do not edit!
   module->params_size = sizeof(dt_iop_loclaplab_params_t);
   module->gui_data = NULL;
   
@@ -158,7 +130,7 @@ static void beta_callback(GtkWidget *slider, dt_iop_module_t *self)
 
   dt_dev_add_history_item(darktable.develop, self, TRUE);
 }
-
+/*
 static void scales_callback(GtkWidget *slider, dt_iop_module_t *self)
 {
   if(self->dt->gui->reset) return;
@@ -176,7 +148,7 @@ static void scales_callback(GtkWidget *slider, dt_iop_module_t *self)
 
   dt_dev_add_history_item(darktable.develop, self, TRUE);
 }
-
+*/
 void gui_init(struct dt_iop_module_t *self)
 {
   self->gui_data = malloc(sizeof(dt_iop_loclaplab_gui_data_t));
@@ -202,7 +174,7 @@ void gui_init(struct dt_iop_module_t *self)
   
   gtk_box_pack_start(GTK_BOX(self->widget), g->sl_beta, TRUE, TRUE, 0);
 
-  for (int i = 0; i < LOCLAP_MAX_SCALES; i++)
+/*  for (int i = 0; i < LOCLAP_MAX_SCALES; i++)
   {
     g->sl_scales[i] = dt_bauhaus_slider_new_with_range(self, -5.0, 5.0, 0.05, 0.0, 3);
     dt_bauhaus_widget_set_label(g->sl_scales[i], _("scale"), _("scale"));
@@ -210,7 +182,7 @@ void gui_init(struct dt_iop_module_t *self)
     g_signal_connect(G_OBJECT(g->sl_scales[i]), "value-changed", G_CALLBACK(scales_callback), self);
     
     gtk_box_pack_start(GTK_BOX(self->widget), g->sl_scales[i], TRUE, TRUE, 0);
-  }
+  }*/
   
 }
 
@@ -225,17 +197,6 @@ void process_internal(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piec
 {
   const dt_iop_loclaplab_data_t *const p = (const dt_iop_loclaplab_data_t *const)piece->data;
 
-/*  loclap_eh((const float *const)ivoid,   // input buffer in some Labx or yuvx format
-      (float *const) ovoid,           // output buffer with colour
-			roi_out->width,               // width and
-			roi_out->height,               // height of the input buffer
-			0.2f,          // user param: separate shadows/midtones/highlights
-      1,        // user param: lift shadows
-      1,     // user param: compress highlights
-      0,
-			p->alpha);
-*/
-  
   const dt_iop_colorspace_type_t cst = dt_iop_module_colorspace(self);
   const int stride = roi_in->width * roi_in->height;
   const int ch = piece->colors;
@@ -253,7 +214,7 @@ void process_internal(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piec
 	for (int i = 0; i < stride; i++, in += ch)
 		image_L[i] = *in;
 
-	loclapden_LocalLaplacian(image_L, image_L, roi_out->width, roi_out->height, p->alpha, p->beta, p->scales, (roi_in->scale / piece->iscale), use_sse);
+	loclap_LocalLaplacian(image_L, image_L, roi_out->width, roi_out->height, p->alpha, p->beta, NULL/*p->scales*/, (roi_in->scale / piece->iscale), use_sse);
 	
 	float *out = (float*)ovoid;
 	
@@ -262,7 +223,6 @@ void process_internal(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piec
   
   if (image_L) dt_free_align(image_L);
   
-//  if(piece->pipe->mask_display) dt_iop_alpha_copy(ivoid, ovoid, roi_out->width, roi_out->height);
 }
 
 void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const void *const ivoid, void *const ovoid,

@@ -18,8 +18,25 @@
 
 
 kernel void
+dwt_add_float_to_layer(global float4 *layer,
+	     int width, int height, const float v_float)
+{
+  const int x = get_global_id(0);
+  const int y = get_global_id(1);
+
+  if(x >= width || y >= height) return;
+
+  const int idx = mad24(y, width, x);
+  const float w = layer[idx].w;
+  
+  layer[idx] += v_float;
+  layer[idx].w = w;
+  
+}
+
+kernel void
 dwt_add_img_to_layer(global float4 *img, global float4 *layer,
-	     int width, int height, const float lpass_sub)
+	     int width, int height)
 {
   const int x = get_global_id(0);
   const int y = get_global_id(1);
@@ -28,13 +45,13 @@ dwt_add_img_to_layer(global float4 *img, global float4 *layer,
 
   const int idx = mad24(y, width, x);
 
-  layer[idx] = layer[idx] + (img[idx] - lpass_sub);
+  layer[idx] += img[idx];
 
 }
 
 kernel void
 dwt_subtract_layer(global float4 *bl, global float4 *bh,
-	     int width, int height, const float lpass_sub, const float lpass_mult)
+	     int width, int height, const float lpass_mult)
 {
   const int x = get_global_id(0);
   const int y = get_global_id(1);
@@ -43,7 +60,7 @@ dwt_subtract_layer(global float4 *bl, global float4 *bh,
 
   const int idx = mad24(y, width, x);
   
-  bh[idx] = bh[idx] - (bl[idx] - lpass_sub);
+  bh[idx] -= bl[idx];
 
 }
 

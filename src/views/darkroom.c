@@ -594,6 +594,10 @@ static void dt_dev_change_image(dt_develop_t *dev, const uint32_t imgid)
         gtk_container_remove(
             GTK_CONTAINER(dt_ui_get_container(darktable.gui->ui, DT_UI_CONTAINER_PANEL_RIGHT_CENTER)),
             module->expander);
+        /* Begin Retouch */
+        // avoid GTK_IS_WIDGET assertion
+        if ( GTK_IS_WIDGET(module->widget) )
+        /* End Retouch */
         gtk_widget_destroy(module->widget);
         dt_iop_gui_cleanup_module(module);
       }
