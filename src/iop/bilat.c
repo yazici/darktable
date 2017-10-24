@@ -34,7 +34,7 @@
 
 // this is the version of the modules parameters,
 // and includes version information about compile-time dt
-DT_MODULE_INTROSPECTION(2, dt_iop_bilat_params_t)
+DT_MODULE_INTROSPECTION(3, dt_iop_bilat_params_t)
 
 typedef enum dt_iop_bilat_mode_t
 {
@@ -62,8 +62,18 @@ typedef struct dt_iop_bilat_params_t
   float sigma_r;
   float sigma_s;
   float detail;
+  float midtone;
 }
 dt_iop_bilat_params_t;
+
+typedef struct dt_iop_bilat_params_v2_t
+{
+  uint32_t mode;
+  float sigma_r;
+  float sigma_s;
+  float detail;
+}
+dt_iop_bilat_params_v2_t;
 
 typedef struct dt_iop_bilat_params_v1_t
 {
@@ -103,7 +113,7 @@ int groups()
 {
   return IOP_GROUP_TONE;
 }
-
+/*
 int legacy_params(
     dt_iop_module_t *self, const void *const old_params, const int old_version,
     void *new_params, const int new_version)
@@ -116,6 +126,35 @@ int legacy_params(
     p2->sigma_r = p1->sigma_r;
     p2->sigma_s = p1->sigma_s;
     p2->mode    = s_mode_bilateral;
+    return 0;
+  }
+  return 1;
+}
+*/
+int legacy_params(
+    dt_iop_module_t *self, const void *const old_params, const int old_version,
+    void *new_params, const int new_version)
+{
+  if(old_version == 2 && new_version == 3)
+  {
+    const dt_iop_bilat_params_v2_t *p2 = old_params;
+    dt_iop_bilat_params_t *p = new_params;
+    p->detail  = p2->detail;
+    p->sigma_r = p2->sigma_r;
+    p->sigma_s = p2->sigma_s;
+    p->midtone = 0.2f;
+    p->mode    = p2->mode;
+    return 0;
+  }
+  else if(old_version == 1 && new_version == 3)
+  {
+    const dt_iop_bilat_params_v1_t *p1 = old_params;
+    dt_iop_bilat_params_t *p = new_params;
+    p->detail  = p1->detail;
+    p->sigma_r = p1->sigma_r;
+    p->sigma_s = p1->sigma_s;
+    p->midtone = 0.2f;
+    p->mode    = s_mode_bilateral;
     return 0;
   }
   return 1;
@@ -286,11 +325,12 @@ void init(dt_iop_module_t *module)
   // by default:
   module->default_enabled = 0;
   // order has to be changed by editing the dependencies in tools/iop_dependencies.py
-  module->priority = 582; // module order created by iop_dependencies.py, do not edit!
+  module->priority = 581; // module order created by iop_dependencies.py, do not edit!
   module->params_size = sizeof(dt_iop_bilat_params_t);
   module->gui_data = NULL;
   // init defaults:
-  dt_iop_bilat_params_t tmp = (dt_iop_bilat_params_t){ s_mode_local_laplacian, 1.0, 1.0, 0.2 };
+//  dt_iop_bilat_params_t tmp = (dt_iop_bilat_params_t){ s_mode_local_laplacian, 1.0, 1.0, 0.2 };
+  dt_iop_bilat_params_t tmp = (dt_iop_bilat_params_t){ s_mode_local_laplacian, 1.0, 1.0, 0.2, 0.2 };
 
   memcpy(module->params, &tmp, sizeof(dt_iop_bilat_params_t));
   memcpy(module->default_params, &tmp, sizeof(dt_iop_bilat_params_t));
@@ -450,6 +490,7 @@ void gui_cleanup(dt_iop_module_t *self)
   free(self->gui_data);
   self->gui_data = NULL;
 }
+
 
 // modelines: These editor modelines have been set for all relevant files by tools/update_modelines.sh
 // vim: shiftwidth=2 expandtab tabstop=2 cindent

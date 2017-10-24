@@ -86,7 +86,7 @@ FILE(GLOB SOURCE_FILES
   "common/heal_eh.c"
   "common/LocalLaplacian_eh.c"
   "common/richardson_lucy_deconvolution.c"
-  "common/fftw3_convolution.c"
+  "common/convolution.c"
 #  "common/LocalLaplacian_den_eh.c"
 #  "common/loclap_eh.c"
   "develop/masks/masks.c"
