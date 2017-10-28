@@ -1358,13 +1358,13 @@ int dt_masks_events_button_pressed(struct dt_iop_module_t *module, double x, dou
   pzy += 0.5f;
 
   /* Begin Retouch */
-  // allow to select a shape inside retouch iop
+  // allow to select a shape inside an iop
   if (gui && which == 1)
   {
     dt_masks_form_t *sel = NULL;
     
-    // should we add other _selected fields?
-    if ((gui->form_selected || gui->source_selected) && !gui->creation && gui->group_edited >= 0)
+    if ((gui->form_selected || gui->source_selected || gui->point_selected || gui->seg_selected || gui->feather_selected) && 
+        !gui->creation && gui->group_edited >= 0)
     {
       // we get the slected form
       dt_masks_point_group_t *fpt = (dt_masks_point_group_t *)g_list_nth_data(form->points, gui->group_edited);

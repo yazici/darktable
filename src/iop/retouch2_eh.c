@@ -1,6 +1,7 @@
 /*
     This file is part of darktable,
     copyright (c) 2011 johannes hanika.
+    copyright (c) 2017 edgardo hoszowski.
 
     darktable is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -15,10 +16,10 @@
     You should have received a copy of the GNU General Public License
     along with darktable.  If not, see <http://www.gnu.org/licenses/>.
 */
+
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
-#include <stdlib.h>
 #include "bauhaus/bauhaus.h"
 #include "develop/masks.h"
 #include "develop/blend.h"
@@ -28,6 +29,7 @@
 #include "common/gaussian.h"
 #include "common/heal_eh.h"
 #include "common/dwt_eh.h"
+#include <stdlib.h>
 
 
 // this is the version of the modules parameters,
@@ -169,7 +171,7 @@ int flags()
 {
   return IOP_FLAGS_SUPPORTS_BLENDING | IOP_FLAGS_NO_MASKS;
 }
-
+/*
 static void check_nan(const float* im, const int size)
 {
   int i_nan = 0;
@@ -178,7 +180,7 @@ static void check_nan(const float* im, const int size)
 
   if (i_nan > 0) printf("retouch2_eh nan: %i\n", i_nan);
 }
-
+*/
 
 //---------------------------------------------------------------------------------
 // draw buttons
@@ -2033,7 +2035,7 @@ static void rt_build_scaled_mask(float *const mask, dt_iop_roi_t *const roi_mask
   mask_tmp = calloc(roi_mask_scaled->width * roi_mask_scaled->height, sizeof(float));
   if (mask_tmp == NULL)
   {
-    printf("retouch: error allocating memory\n");
+    printf("rt_build_scaled_mask: error allocating memory\n");
     goto cleanup;
   }
 
@@ -2218,7 +2220,7 @@ static void retouch2_clone(float *const in, dt_iop_roi_t *const roi_in, const in
   float *img_src = dt_alloc_align(64, roi_mask_scaled->width * roi_mask_scaled->height * ch * sizeof(float));
   if (img_src == NULL)
   {
-    printf("error allocating memory for cloning\n");
+    printf("retouch2_clone: error allocating memory for cloning\n");
     goto cleanup;
   }
   
@@ -2245,7 +2247,7 @@ static void retouch2_gaussian_blur(float *const in, dt_iop_roi_t *const roi_in, 
   img_dest = dt_alloc_align(64, roi_mask_scaled->width * roi_mask_scaled->height * ch * sizeof(float));
   if (img_dest == NULL)
   {
-    printf("error allocating memory for blurring\n");
+    printf("retouch2_gaussian_blur: error allocating memory for blurring\n");
     goto cleanup;
   }
   
@@ -2289,7 +2291,7 @@ static void retouch2_heal(float *const in, dt_iop_roi_t *const roi_in, const int
   img_dest = dt_alloc_align(64, roi_mask_scaled->width * roi_mask_scaled->height * ch * sizeof(float));
   if ((img_src == NULL) || (img_dest == NULL))
   {
-    printf("error allocating memory for healing\n");
+    printf("retouch2_heal: error allocating memory for healing\n");
     goto cleanup;
   }
 
@@ -2349,13 +2351,13 @@ static void rt_process_forms(float *layer, dwt_params_t *const wt_p, const int s
       dt_masks_point_group_t *grpt = (dt_masks_point_group_t *)forms->data;
       if(grpt == NULL)
       {
-        printf("rt_process_forms invalid form\n");
+        printf("rt_process_forms: invalid form\n");
         forms = g_list_next(forms);
         continue;
       }
       if(grpt->formid == 0)
       {
-        printf("rt_process_forms form is null\n");
+        printf("rt_process_forms: form is null\n");
         forms = g_list_next(forms);
         continue;
       }
@@ -2364,7 +2366,7 @@ static void rt_process_forms(float *layer, dwt_params_t *const wt_p, const int s
       {
         // FIXME: we get this error when adding a new form and the system is still processing a previous add
         // we should not report an error in this case (and have a better way of adding a form)
-        printf("rt_process_forms missing form from array=%i\n", grpt->formid);
+        printf("rt_process_forms: missing form=%i from array\n", grpt->formid);
         forms = g_list_next(forms);
         continue;
       }
@@ -2380,7 +2382,7 @@ static void rt_process_forms(float *layer, dwt_params_t *const wt_p, const int s
       dt_masks_form_t *form = dt_masks_get_from_id(self->dev, grpt->formid);
       if(form == NULL)
       {
-        printf("rt_process_forms missing form from masks=%i\n", grpt->formid);
+        printf("rt_process_forms: missing form=%i from masks\n", grpt->formid);
         forms = g_list_next(forms);
         continue;
       }
@@ -2399,7 +2401,7 @@ static void rt_process_forms(float *layer, dwt_params_t *const wt_p, const int s
       dt_masks_get_mask(self, piece, form, &mask, &roi_mask.width, &roi_mask.height, &roi_mask.x, &roi_mask.y);
       if(mask == NULL)
       {
-        printf("rt_process_forms error retrieving mask\n");
+        printf("rt_process_forms: error retrieving mask\n");
         forms = g_list_next(forms);
         continue;
       }
@@ -2440,25 +2442,25 @@ static void rt_process_forms(float *layer, dwt_params_t *const wt_p, const int s
       if ((dx != 0 || dy != 0 || algo == dt_iop_retouch2_gaussian_blur || algo == dt_iop_retouch2_fill) && 
           ((roi_mask_scaled.width > 2) && (roi_mask_scaled.height > 2)))
       {
-        double start = dt_get_wtime();
+//        double start = dt_get_wtime();
         
         if (algo == dt_iop_retouch2_clone)
         {
           retouch2_clone(layer, roi_layer, wt_p->ch, mask_scaled, &roi_mask_scaled, mask_display, dx, dy,
                           grpt->opacity, wt_p->use_sse);
-          if(darktable.unmuted & DT_DEBUG_PERF) printf("rt_process_forms retouch2_clone took %0.04f sec\n", dt_get_wtime() - start);
+//          if(darktable.unmuted & DT_DEBUG_PERF) printf("rt_process_forms retouch2_clone took %0.04f sec\n", dt_get_wtime() - start);
         }
         else if (algo == dt_iop_retouch2_heal)
         {
           retouch2_heal(layer, roi_layer, wt_p->ch, mask_scaled, &roi_mask_scaled, mask_display, dx, dy,
                           grpt->opacity, wt_p->use_sse);
-          if(darktable.unmuted & DT_DEBUG_PERF) printf("rt_process_forms retouch2_heal took %0.04f sec\n", dt_get_wtime() - start);
+//          if(darktable.unmuted & DT_DEBUG_PERF) printf("rt_process_forms retouch2_heal took %0.04f sec\n", dt_get_wtime() - start);
         }
         else if (algo == dt_iop_retouch2_gaussian_blur)
         {
           retouch2_gaussian_blur(layer, roi_layer, wt_p->ch, mask_scaled, &roi_mask_scaled, mask_display, 
                           grpt->opacity, p->rt_forms[index].blur_radius, piece, wt_p->use_sse);
-          if(darktable.unmuted & DT_DEBUG_PERF) printf("rt_process_forms retouch2_gaussian_blur took %0.04f sec\n", dt_get_wtime() - start);
+//          if(darktable.unmuted & DT_DEBUG_PERF) printf("rt_process_forms retouch2_gaussian_blur took %0.04f sec\n", dt_get_wtime() - start);
         }
         else if (algo == dt_iop_retouch2_fill)
         {
@@ -2478,10 +2480,10 @@ static void rt_process_forms(float *layer, dwt_params_t *const wt_p, const int s
           
           retouch2_fill(layer, roi_layer, wt_p->ch, mask_scaled, &roi_mask_scaled, mask_display, 
                           grpt->opacity, fill_color, wt_p->use_sse);
-          if(darktable.unmuted & DT_DEBUG_PERF) printf("rt_process_forms retouch2_fill took %0.04f sec\n", dt_get_wtime() - start);
+//          if(darktable.unmuted & DT_DEBUG_PERF) printf("rt_process_forms retouch2_fill took %0.04f sec\n", dt_get_wtime() - start);
         }
         else
-          printf("rt_process_forms unknown algorithm %i\n", algo);
+          printf("rt_process_forms: unknown algorithm %i\n", algo);
         
       }
       
@@ -2507,7 +2509,7 @@ static void rt_process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *pie
   
   const int ch = piece->colors;
   _rt_user_data_t usr_data = {0};
-  dwt_params_t dwt_p = {0};
+  dwt_params_t *dwt_p = NULL;
   dt_iop_retouch2_preview_types_t preview_type = p->preview_type;
   
   int gui_active = 0;
@@ -2517,6 +2519,8 @@ static void rt_process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *pie
   // we will do all the clone, heal, etc on the input image, 
   // this way the source for one algorithm can be the destination from a previous one
   in_retouch = dt_alloc_align(64, roi_rt->width * roi_rt->height * ch * sizeof(float));
+  if (in_retouch == NULL) goto cleanup;
+  
   memcpy(in_retouch, ivoid, roi_rt->width * roi_rt->height * ch * sizeof(float));
 
   // user data passed from the decompose routine to the one that process each scale
@@ -2526,17 +2530,18 @@ static void rt_process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *pie
   usr_data.mask_display = 0;
   usr_data.display_scale = p->curr_scale;
 
-  // parameters for the decompose routine
-  dwt_p.image = in_retouch;
-  dwt_p.ch = ch;
-  dwt_p.width = roi_rt->width;
-  dwt_p.height = roi_rt->height;
-  dwt_p.scales = p->num_scales;
-  dwt_p.return_layer = (preview_type == dt_iop_rt_preview_final_image) ? 0: p->curr_scale;
-  dwt_p.blend_factor = p->blend_factor;
-  dwt_p.user_data = &usr_data;
-  dwt_p.preview_scale = roi_in->scale / piece->iscale;
-  dwt_p.use_sse = use_sse;
+  // init the decompose routine
+  dwt_p = dt_dwt_init(in_retouch, 
+                        roi_rt->width, 
+                        roi_rt->height, 
+                        ch, 
+                        p->num_scales, 
+                        (preview_type == dt_iop_rt_preview_final_image) ? 0: p->curr_scale, 
+                        p->blend_factor, 
+                        &usr_data, 
+                        roi_in->scale / piece->iscale, 
+                        use_sse);
+  if (dwt_p == NULL) goto cleanup;
 
   // check if this module should expose mask. 
   if(self->request_mask_display && self->dev->gui_attached && (self == self->dev->gui_module)
@@ -2551,8 +2556,8 @@ static void rt_process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *pie
   // check if the image support this number of scales
   if (piece->pipe->type == DT_DEV_PIXELPIPE_FULL && gui_active)
   {
-    const int max_scales = dwt_get_max_scale(&dwt_p);
-    if (dwt_p.scales > max_scales)
+    const int max_scales = dwt_get_max_scale(dwt_p);
+    if (dwt_p->scales > max_scales)
     {
       dt_control_log(_("max scale is %i for this image size"), max_scales);
     }
@@ -2562,11 +2567,11 @@ static void rt_process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *pie
   if(self->suppress_mask && self->dev->gui_attached && (self == self->dev->gui_module)
      && (piece->pipe == self->dev->pipe))
   {
-    dwt_decompose(&dwt_p, NULL);
+    dwt_decompose(dwt_p, NULL);
   }
   else
   {
-    dwt_decompose(&dwt_p, rt_process_forms);
+    dwt_decompose(dwt_p, rt_process_forms);
   }
 
   // copy alpha channel if nedded
@@ -2579,10 +2584,13 @@ static void rt_process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *pie
   // return final image
   rt_copy_in_to_out(in_retouch, roi_rt, ovoid, roi_out, ch, 0, 0);
   
-  check_nan(in_retouch, roi_rt->width*roi_rt->height*ch);
+//  check_nan(in_retouch, roi_rt->width*roi_rt->height*ch);
+  
+cleanup:
   
   if (in_retouch) dt_free_align(in_retouch);
-
+  if(dwt_p) dt_dwt_free(dwt_p);
+  
 }
 
 void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const void *const ivoid,
@@ -2653,8 +2661,6 @@ static cl_int rt_build_scaled_mask_cl(const int devid, float *const mask, dt_iop
   rt_build_scaled_mask(mask, roi_mask, mask_scaled, roi_mask_scaled, roi_in, dx, dy, algo);
   if (*mask_scaled == NULL)
   {
-//  	printf("rt_build_scaled_mask_cl error 1\n");
-//  	err = CL_MEM_OBJECT_ALLOCATION_FAILURE;
     goto cleanup;
   }
 
@@ -2988,13 +2994,13 @@ static cl_int rt_process_forms_cl(cl_mem dev_layer, dwt_params_cl_t *const wt_p,
       dt_masks_point_group_t *grpt = (dt_masks_point_group_t *)forms->data;
       if(grpt == NULL)
       {
-        printf("rt_process_forms invalid form\n");
+        printf("rt_process_forms: invalid form\n");
         forms = g_list_next(forms);
         continue;
       }
       if(grpt->formid == 0)
       {
-        printf("rt_process_forms form is null\n");
+        printf("rt_process_forms: form is null\n");
         forms = g_list_next(forms);
         continue;
       }
@@ -3003,7 +3009,7 @@ static cl_int rt_process_forms_cl(cl_mem dev_layer, dwt_params_cl_t *const wt_p,
       {
         // FIXME: we get this error when adding a new form and the system is still processing a previous add
         // we should not report an error in this case (and have a better way of adding a form)
-        printf("rt_process_forms missing form from array=%i\n", grpt->formid);
+        printf("rt_process_forms: missing form=%i from array\n", grpt->formid);
         forms = g_list_next(forms);
         continue;
       }
@@ -3019,7 +3025,7 @@ static cl_int rt_process_forms_cl(cl_mem dev_layer, dwt_params_cl_t *const wt_p,
       dt_masks_form_t *form = dt_masks_get_from_id(self->dev, grpt->formid);
       if(form == NULL)
       {
-        printf("rt_process_forms missing form from masks=%i\n", grpt->formid);
+        printf("rt_process_forms: missing form=%i from masks\n", grpt->formid);
         forms = g_list_next(forms);
         continue;
       }
@@ -3038,7 +3044,7 @@ static cl_int rt_process_forms_cl(cl_mem dev_layer, dwt_params_cl_t *const wt_p,
       dt_masks_get_mask(self, piece, form, &mask, &roi_mask.width, &roi_mask.height, &roi_mask.x, &roi_mask.y);
       if(mask == NULL)
       {
-        printf("rt_process_forms error retrieving mask\n");
+        printf("rt_process_forms: error retrieving mask\n");
         forms = g_list_next(forms);
         continue;
       }
@@ -3092,28 +3098,28 @@ static cl_int rt_process_forms_cl(cl_mem dev_layer, dwt_params_cl_t *const wt_p,
       if ((err == CL_SUCCESS) && (dx != 0 || dy != 0 || algo == dt_iop_retouch2_gaussian_blur || algo == dt_iop_retouch2_fill) && 
           ((roi_mask_scaled.width > 2) && (roi_mask_scaled.height > 2)))
       {
-        double start = dt_get_wtime();
+//        double start = dt_get_wtime();
 
         if (algo == dt_iop_retouch2_clone)
         {
           err = retouch2_clone_cl(devid, dev_layer, roi_layer, 
               dev_mask_scaled, &roi_mask_scaled, mask_display, 
               dx, dy, grpt->opacity, gd);
-          if(darktable.unmuted & DT_DEBUG_PERF) printf("rt_process_forms retouch2_clone took %0.04f sec\n", dt_get_wtime() - start);
+//          if(darktable.unmuted & DT_DEBUG_PERF) printf("rt_process_forms retouch2_clone took %0.04f sec\n", dt_get_wtime() - start);
         }
         else if (algo == dt_iop_retouch2_heal)
         {
           err = retouch2_heal_cl(devid, dev_layer, roi_layer, 
               mask_scaled, dev_mask_scaled, &roi_mask_scaled, 
               dx, dy, mask_display, grpt->opacity, gd);
-          if(darktable.unmuted & DT_DEBUG_PERF) printf("rt_process_forms retouch2_heal took %0.04f sec\n", dt_get_wtime() - start);
+//          if(darktable.unmuted & DT_DEBUG_PERF) printf("rt_process_forms retouch2_heal took %0.04f sec\n", dt_get_wtime() - start);
         }
         else if (algo == dt_iop_retouch2_gaussian_blur)
         {
           err = retouch2_gaussian_blur_cl(devid, dev_layer, roi_layer, 
               dev_mask_scaled, &roi_mask_scaled, mask_display, 
               grpt->opacity, p->rt_forms[index].blur_radius, piece, gd);
-          if(darktable.unmuted & DT_DEBUG_PERF) printf("rt_process_forms retouch2_gaussian_blur took %0.04f sec\n", dt_get_wtime() - start);
+//          if(darktable.unmuted & DT_DEBUG_PERF) printf("rt_process_forms retouch2_gaussian_blur took %0.04f sec\n", dt_get_wtime() - start);
         }
         else if (algo == dt_iop_retouch2_fill)
         {
@@ -3134,10 +3140,10 @@ static cl_int rt_process_forms_cl(cl_mem dev_layer, dwt_params_cl_t *const wt_p,
           err = retouch2_fill_cl(devid, dev_layer, roi_layer, 
               dev_mask_scaled, &roi_mask_scaled, mask_display, 
               grpt->opacity, fill_color, gd);
-          if(darktable.unmuted & DT_DEBUG_PERF) printf("rt_process_forms retouch2_fill took %0.04f sec\n", dt_get_wtime() - start);
+//          if(darktable.unmuted & DT_DEBUG_PERF) printf("rt_process_forms retouch2_fill took %0.04f sec\n", dt_get_wtime() - start);
         }
         else
-          printf("rt_process_forms unknown algorithm %i\n", algo);
+          printf("rt_process_forms: unknown algorithm %i\n", algo);
 
       }
 

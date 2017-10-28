@@ -1,3 +1,20 @@
+/*
+    This file is part of darktable,
+    copyright (c) 2017 edgardo hoszowski.
+
+    darktable is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    darktable is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with darktable.  If not, see <http://www.gnu.org/licenses/>.
+*/
 
 #include "control/control.h"
 #include "develop/imageop.h"
@@ -301,7 +318,7 @@ static void dwt_wavelet_decompose(float *img, dwt_params_t *const p, _dwt_layer_
   buffer[1] = dt_alloc_align(64, size * sizeof(float));
   if (buffer[1] == NULL)
   {
-    dt_control_log(_("not enough memory for wavelet decomposition"));
+    printf("not enough memory for wavelet decomposition");
     goto cleanup;
   }
   memset(buffer[1], 0, size * sizeof(float));
@@ -310,7 +327,7 @@ static void dwt_wavelet_decompose(float *img, dwt_params_t *const p, _dwt_layer_
   temp = dt_alloc_align(64, MAX(p->width, p->height) * p->ch * sizeof(float));
   if (temp == NULL)
   {
-    dt_control_log(_("not enough memory for wavelet decomposition"));
+    printf("not enough memory for wavelet decomposition");
     goto cleanup;
   }
   memset(temp, 0, MAX(p->width, p->height) * p->ch * sizeof(float));
@@ -319,7 +336,7 @@ static void dwt_wavelet_decompose(float *img, dwt_params_t *const p, _dwt_layer_
   layers = dt_alloc_align(64, p->width * p->height * p->ch * sizeof(float));
   if (layers == NULL)
   {
-    dt_control_log(_("not enough memory for wavelet decomposition"));
+    printf("not enough memory for wavelet decomposition");
     goto cleanup;
   }
   memset(layers, 0, p->width * p->height * p->ch * sizeof(float));
@@ -393,7 +410,7 @@ cleanup:
 /* this function prepares for decomposing, which is done in the function dwt_wavelet_decompose() */
 void dwt_decompose(dwt_params_t *p, _dwt_layer_func layer_func)
 {
-  double start = dt_get_wtime();
+//  double start = dt_get_wtime();
 
   // this is a zoom scale, not a wavelet scale
   if (p->preview_scale <= 0.f) p->preview_scale = 1.f;
@@ -422,7 +439,7 @@ void dwt_decompose(dwt_params_t *p, _dwt_layer_func layer_func)
   // call the actual decompose
   dwt_wavelet_decompose(p->image, p, layer_func);
 
-  if(darktable.unmuted & DT_DEBUG_PERF) printf("dwt_decompose took %0.04f sec\n", dt_get_wtime() - start);
+//  if(darktable.unmuted & DT_DEBUG_PERF) printf("dwt_decompose took %0.04f sec\n", dt_get_wtime() - start);
 }
 
 #ifdef HAVE_OPENCL
@@ -605,7 +622,7 @@ static cl_int dwt_wavelet_decompose_cl(cl_mem img, dwt_params_cl_t *const p, _dw
   buffer[1] = dt_opencl_alloc_device_buffer(devid, (size_t)p->width * p->height * p->ch * sizeof(float));
   if (buffer[1] == NULL)
   {
-    dt_control_log(_("not enough memory for wavelet decomposition"));
+    printf("not enough memory for wavelet decomposition");
     err = CL_MEM_OBJECT_ALLOCATION_FAILURE;
     goto cleanup;
   }
@@ -614,7 +631,7 @@ static cl_int dwt_wavelet_decompose_cl(cl_mem img, dwt_params_cl_t *const p, _dw
   temp = dt_opencl_alloc_device_buffer(devid, (size_t)p->width * p->height * p->ch * sizeof(float));
   if (temp == NULL)
   {
-    dt_control_log(_("not enough memory for wavelet decomposition"));
+    printf("not enough memory for wavelet decomposition");
     err = CL_MEM_OBJECT_ALLOCATION_FAILURE;
     goto cleanup;
   }
@@ -623,7 +640,7 @@ static cl_int dwt_wavelet_decompose_cl(cl_mem img, dwt_params_cl_t *const p, _dw
   layers = dt_opencl_alloc_device_buffer(devid, (size_t)p->width * p->height * p->ch * sizeof(float));
   if (layers == NULL)
   {
-    dt_control_log(_("not enough memory for wavelet decomposition"));
+    printf("not enough memory for wavelet decomposition");
     err = CL_MEM_OBJECT_ALLOCATION_FAILURE;
     goto cleanup;
   }
@@ -654,7 +671,7 @@ static cl_int dwt_wavelet_decompose_cl(cl_mem img, dwt_params_cl_t *const p, _dw
     temp = dt_opencl_alloc_device_buffer(devid, (size_t)p->width * p->height * p->ch * sizeof(float));
     if (temp == NULL)
     {
-      dt_control_log(_("not enough memory for wavelet decomposition"));
+      printf("not enough memory for wavelet decomposition");
       err = CL_MEM_OBJECT_ALLOCATION_FAILURE;
       goto cleanup;
     }
@@ -773,7 +790,7 @@ cleanup:
 
 cl_int dwt_decompose_cl(dwt_params_cl_t *p, _dwt_layer_func_cl layer_func)
 {
-  double start = dt_get_wtime();
+//  double start = dt_get_wtime();
 
   cl_int err = CL_SUCCESS;
 
@@ -804,7 +821,7 @@ cl_int dwt_decompose_cl(dwt_params_cl_t *p, _dwt_layer_func_cl layer_func)
   // call the actual decompose
   err = dwt_wavelet_decompose_cl(p->image, p, layer_func);
 
-  if(darktable.unmuted & DT_DEBUG_PERF) printf("dwt_decompose took %0.04f sec\n", dt_get_wtime() - start);
+//  if(darktable.unmuted & DT_DEBUG_PERF) printf("dwt_decompose took %0.04f sec\n", dt_get_wtime() - start);
 
   return err;
 }
