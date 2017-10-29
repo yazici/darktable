@@ -101,7 +101,7 @@ retouch_fill(global float4 *in, global dt_iop_roi_t *roi_in,
   
   in[dest_index] = in[dest_index] * (1.0f - f) + fill_color * f;
   
-  if (mask_display && f)
+  if (mask_display && f > 0.f)
     in[dest_index].w = f;
   else
   	in[dest_index].w = w;
@@ -128,7 +128,7 @@ retouch_copy_buffer_to_buffer_masked(global float4 *buffer_src, global float4 *b
 
   buffer_dest[idx_dest] = buffer_dest[idx_dest] * (1.0f - f) + buffer_src[idx_src] * f;
 
-  if (mask_display && f)
+  if (mask_display && f > 0.f)
     buffer_dest[idx_dest].w = f;
   else
     buffer_dest[idx_dest].w = w;
@@ -155,7 +155,7 @@ retouch_copy_image_to_buffer_masked(__read_only image2d_t buffer_src, global flo
   float4 pix = read_imagef(buffer_src, (int2)(x, y));
   buffer_dest[idx_dest] = buffer_dest[idx_dest] * (1.0f - f) + pix * f;
 
-  if (mask_display && f)
+  if (mask_display && f > 0.f)
     buffer_dest[idx_dest].w = f;
   else
     buffer_dest[idx_dest].w = w;

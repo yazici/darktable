@@ -68,7 +68,7 @@ static int _get_max_scale(const int width, const int height, const float preview
   
   // smallest edge must be higher than or equal to 2^scales
   unsigned int size = MIN(width, height);
-  while ((size >>= 1) * preview_scale) maxscale++;
+  while (((size >>= 1) * preview_scale)) maxscale++;
 
   // avoid rounding issues...
   size = MIN(width, height);
