@@ -2089,7 +2089,7 @@ static void rt_copy_image_masked(float *const img_src, float *img_dest, dt_iop_r
 
         _mm_store_ps(d, _mm_add_ps(_mm_mul_ps(_mm_load_ps(d), val1_f), _mm_mul_ps(_mm_load_ps(s), valf)));
 
-        if (mask_display && f)
+        if (mask_display && f > 0.f)
           d[3] = f;
       }
     }
@@ -2120,7 +2120,7 @@ static void rt_copy_image_masked(float *const img_src, float *img_dest, dt_iop_r
         {
           d[c] = d[c] * (1.0f - f) + s[c] * f;
         }
-        if (mask_display && f)
+        if (mask_display && f > 0.f)
           d[3] = f;
       }
     }
@@ -2159,7 +2159,7 @@ static void retouch_fill_sse(float *const in, dt_iop_roi_t *const roi_in,
       
       _mm_store_ps(d, _mm_add_ps(_mm_mul_ps(_mm_load_ps(d), val1_f), _mm_mul_ps(val_fill, valf)));
 
-      if (mask_display && f)
+      if (mask_display && f > 0.f)
         d[3] = f;
     }
   }
@@ -2198,7 +2198,7 @@ static void retouch_fill(float *const in, dt_iop_roi_t *const roi_in, const int 
       for(int c = 0; c < ch1; c++)
         d[c] = d[c] * (1.0f - f) + fill_color[c] * f;
 
-      if (mask_display && f)
+      if (mask_display && f > 0.f)
         d[3] = f;
     }
   }

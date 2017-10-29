@@ -19,6 +19,9 @@
 #include "control/control.h"
 #include "develop/imageop.h"
 #include "dwt.h"
+#if defined(__SSE__)
+#include <xmmintrin.h>
+#endif
 
 /* Based on the original source code of GIMP's Wavelet Decompose plugin, by Marco Rossini 
  * 
@@ -64,11 +67,16 @@ void dt_dwt_free(dwt_params_t *p)
 
 static int _get_max_scale(const int width, const int height, const float preview_scale)
 {
-  int maxscale = 0;
+  int maxscale = 1;
   
   // smallest edge must be higher than or equal to 2^scales
   unsigned int size = MIN(width, height);
-  while (((size >>= 1) * preview_scale)) maxscale++;
+  unsigned int size_tmp = (unsigned int)((size >>= 1) * preview_scale);
+  while ( size_tmp > 0 )
+  {
+    size_tmp = (unsigned int)((size >>= 1) * preview_scale);
+    maxscale++;
+  }
 
   // avoid rounding issues...
   size = MIN(width, height);

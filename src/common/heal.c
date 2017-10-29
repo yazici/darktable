@@ -19,6 +19,9 @@
 #include "control/control.h"
 #include "develop/imageop.h"
 #include "heal.h"
+#if defined(__SSE__)
+#include <xmmintrin.h>
+#endif
 
 /* Based on the original source code of GIMP's Healing Tool, by Jean-Yves Couleaud 
  * 
