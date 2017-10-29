@@ -839,12 +839,8 @@ static int dt_path_events_mouse_scrolled(struct dt_iop_module_t *module, float p
                                          uint32_t state, dt_masks_form_t *form, int parentid,
                                          dt_masks_form_gui_t *gui, int index)
 {
-  /* Begin Retouch */
   // resize a shape even if on a node or segment
-  if(gui->form_selected || gui->point_selected >= 0 || gui->feather_selected >= 0
-            || gui->seg_selected >= 0)
-//  if(gui->form_selected)
-    /* End Retouch */
+  if(gui->form_selected || gui->point_selected >= 0 || gui->feather_selected >= 0 || gui->seg_selected >= 0)
   {
     // we register the current position
     if(gui->scrollx == 0.0f && gui->scrolly == 0.0f)
@@ -862,11 +858,8 @@ static int dt_path_events_mouse_scrolled(struct dt_iop_module_t *module, float p
       float amount = 1.03f;
       if(up) amount = 0.97f;
       guint nb = g_list_length(form->points);
-      /* Begin Retouch */ 
       // resize don't care where the mouse is inside a shape
-      // if(gui->border_selected || (state & GDK_SHIFT_MASK) == GDK_SHIFT_MASK)
       if ((state & GDK_SHIFT_MASK) == GDK_SHIFT_MASK)
-      /* End Retouch */
       {
         // do not exceed upper limit of 1.0
         for(int k = 0; k < nb; k++)
@@ -880,10 +873,7 @@ static int dt_path_events_mouse_scrolled(struct dt_iop_module_t *module, float p
           point->border[0] *= amount;
           point->border[1] *= amount;
         }
-        /* Begin Retouch */
-    //      if(form->type & DT_MASKS_CLONE)
         if(form->type & (DT_MASKS_CLONE|DT_MASKS_NON_CLONE))
-        /* End Retouch */
         {
           float masks_border = dt_conf_get_float("plugins/darkroom/spots/path_border");
           masks_border = MAX(0.005f, MIN(masks_border * amount, 0.5f));
@@ -976,10 +966,7 @@ static int dt_path_events_button_pressed(struct dt_iop_module_t *module, float p
   if(!gpt) return 0;
 
   float masks_border;
-  /* Begin Retouch */
-//      if(form->type & DT_MASKS_CLONE)
   if(form->type & (DT_MASKS_CLONE|DT_MASKS_NON_CLONE))
-  /* End Retouch */
     masks_border = MIN(dt_conf_get_float("plugins/darkroom/spots/path_border"), 0.5f);
   else
     masks_border = MIN(dt_conf_get_float("plugins/darkroom/masks/path/border"), 0.5f);

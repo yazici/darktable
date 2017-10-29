@@ -59,7 +59,6 @@ static int dt_circle_events_mouse_scrolled(struct dt_iop_module_t *module, float
                                            uint32_t state, dt_masks_form_t *form, int parentid,
                                            dt_masks_form_gui_t *gui, int index)
 {
-  /* Begin Retouch */
   // add a preview when creating a circle
   if(gui->creation)
   {
@@ -69,10 +68,7 @@ static int dt_circle_events_mouse_scrolled(struct dt_iop_module_t *module, float
       {
         float masks_border;
 
-        /* Begin Retouch */
-  //      if(form->type & DT_MASKS_CLONE)
         if(form->type & (DT_MASKS_CLONE|DT_MASKS_NON_CLONE))
-        /* End Retouch */
           masks_border = dt_conf_get_float("plugins/darkroom/spots/circle_border");
         else
           masks_border = dt_conf_get_float("plugins/darkroom/masks/circle/border");
@@ -82,10 +78,7 @@ static int dt_circle_events_mouse_scrolled(struct dt_iop_module_t *module, float
         else if(!up && masks_border < 1.0f)
           masks_border *= 1.0f / 0.97f;
 
-        /* Begin Retouch */
-  //      if(form->type & DT_MASKS_CLONE)
         if(form->type & (DT_MASKS_CLONE|DT_MASKS_NON_CLONE))
-        /* End Retouch */
           dt_conf_set_float("plugins/darkroom/spots/circle_border", masks_border);
         else
           dt_conf_set_float("plugins/darkroom/masks/circle/border", masks_border);
@@ -94,10 +87,7 @@ static int dt_circle_events_mouse_scrolled(struct dt_iop_module_t *module, float
       {
         float masks_size;
 
-        /* Begin Retouch */
-  //      if(form->type & DT_MASKS_CLONE)
         if(form->type & (DT_MASKS_CLONE|DT_MASKS_NON_CLONE))
-        /* End Retouch */
           masks_size = dt_conf_get_float("plugins/darkroom/spots/circle_size");
         else
           masks_size = dt_conf_get_float("plugins/darkroom/masks/circle/size");
@@ -107,10 +97,7 @@ static int dt_circle_events_mouse_scrolled(struct dt_iop_module_t *module, float
         else if(!up && masks_size < 1.0f)
           masks_size *= 1.0f / 0.97f;
 
-        /* Begin Retouch */
-  //      if(form->type & DT_MASKS_CLONE)
         if(form->type & (DT_MASKS_CLONE|DT_MASKS_NON_CLONE))
-        /* End Retouch */
           dt_conf_set_float("plugins/darkroom/spots/circle_size", masks_size);
         else
           dt_conf_set_float("plugins/darkroom/masks/circle/size", masks_size);
@@ -118,7 +105,6 @@ static int dt_circle_events_mouse_scrolled(struct dt_iop_module_t *module, float
       return 1;
     }
   }
-  /* End Retouch */
 
   if(gui->form_selected)
   {
@@ -136,11 +122,8 @@ static int dt_circle_events_mouse_scrolled(struct dt_iop_module_t *module, float
     else
     {
       dt_masks_point_circle_t *circle = (dt_masks_point_circle_t *)(g_list_first(form->points)->data);
-      /* Begin Retouch */ 
       // resize don't care where the mouse is inside a shape
-      // if(gui->border_selected || (state & GDK_SHIFT_MASK) == GDK_SHIFT_MASK)
       if (((state & GDK_SHIFT_MASK) == GDK_SHIFT_MASK) && (gui->border_selected || gui->edit_mode == DT_MASKS_EDIT_FULL) )
-      /* End Retouch */
       {
         if(up && circle->border > 0.001f)
           circle->border *= 0.97f;
@@ -151,10 +134,7 @@ static int dt_circle_events_mouse_scrolled(struct dt_iop_module_t *module, float
         dt_masks_write_form(form, darktable.develop);
         dt_masks_gui_form_remove(form, gui, index);
         dt_masks_gui_form_create(form, gui, index);
-        /* Begin Retouch */
-  //      if(form->type & DT_MASKS_CLONE)
         if(form->type & (DT_MASKS_CLONE|DT_MASKS_NON_CLONE))
-        /* End Retouch */
           dt_conf_set_float("plugins/darkroom/spots/circle_border", circle->border);
         else
           dt_conf_set_float("plugins/darkroom/masks/circle/border", circle->border);
@@ -170,10 +150,7 @@ static int dt_circle_events_mouse_scrolled(struct dt_iop_module_t *module, float
         dt_masks_write_form(form, darktable.develop);
         dt_masks_gui_form_remove(form, gui, index);
         dt_masks_gui_form_create(form, gui, index);
-        /* Begin Retouch */
-  //      if(form->type & DT_MASKS_CLONE)
         if(form->type & (DT_MASKS_CLONE|DT_MASKS_NON_CLONE))
-        /* End Retouch */
           dt_conf_set_float("plugins/darkroom/spots/circle_size", circle->radius);
         else
           dt_conf_set_float("plugins/darkroom/masks/circle/size", circle->radius);
@@ -240,10 +217,7 @@ static int dt_circle_events_button_pressed(struct dt_iop_module_t *module, float
     circle->center[0] = pts[0] / darktable.develop->preview_pipe->iwidth;
     circle->center[1] = pts[1] / darktable.develop->preview_pipe->iheight;
 
-    /* Begin Retouch */
-//      if(form->type & DT_MASKS_CLONE)
     if(form->type & (DT_MASKS_CLONE|DT_MASKS_NON_CLONE))
-    /* End Retouch */
     {
       const float spots_size = MIN(0.5f, dt_conf_get_float("plugins/darkroom/spots/circle_size"));
       const float spots_border = MIN(0.5f, dt_conf_get_float("plugins/darkroom/spots/circle_border"));
@@ -463,7 +437,6 @@ static int dt_circle_events_mouse_moved(struct dt_iop_module_t *module, float pz
     if(gui->edit_mode != DT_MASKS_EDIT_FULL) return 0;
     return 1;
   }
-  /* Begin Retouch */
   // add a preview when creating a circle
   else if(gui->creation)
   {
@@ -473,7 +446,6 @@ static int dt_circle_events_mouse_moved(struct dt_iop_module_t *module, float pz
     dt_control_queue_redraw_center();
     return 1;
   }
-  /* End Retouch */
   
   return 0;
 }
@@ -486,7 +458,6 @@ static void dt_circle_events_post_expose(cairo_t *cr, float zoom_scale, dt_masks
   int len = sizeof(dashed) / sizeof(dashed[0]);
   dt_masks_form_gui_points_t *gpt = (dt_masks_form_gui_points_t *)g_list_nth_data(gui->points, index);
   
-  /* Begin Retouch */
   // add a preview when creating a circle
   // in creation mode
   if(gui->creation)
@@ -500,10 +471,7 @@ static void dt_circle_events_post_expose(cairo_t *cr, float zoom_scale, dt_masks
       if(!form) return;
 
       float radius1, radius2;
-      /* Begin Retouch */
-//      if(form->type & DT_MASKS_CLONE)
       if(form->type & (DT_MASKS_CLONE|DT_MASKS_NON_CLONE))
-      /* End Retouch */
       {
         radius1 = MIN(0.5f, dt_conf_get_float("plugins/darkroom/spots/circle_size"));
         radius2 = MIN(0.5f, dt_conf_get_float("plugins/darkroom/spots/circle_border"));
@@ -564,7 +532,6 @@ static void dt_circle_events_post_expose(cairo_t *cr, float zoom_scale, dt_masks
 
     return;
   }
-  /* End Retouch */
   
   if(!gpt) return;
   float dx = 0, dy = 0, dxs = 0, dys = 0;

@@ -37,10 +37,8 @@ typedef enum dt_masks_type_t
   DT_MASKS_CLONE = 1 << 3,
   DT_MASKS_GRADIENT = 1 << 4,
   DT_MASKS_ELLIPSE = 1 << 5,
-  DT_MASKS_BRUSH = 1 << 6
-  /* Begin Retouch */
-  , DT_MASKS_NON_CLONE = 1 << 7
-  /* End Retouch */
+  DT_MASKS_BRUSH = 1 << 6,
+  DT_MASKS_NON_CLONE = 1 << 7
 } dt_masks_type_t;
 
 /**masts states */

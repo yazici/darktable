@@ -891,16 +891,7 @@ static void dt_brush_get_distance(float x, int y, float as, dt_masks_form_gui_t 
 
   // we first check if we are inside the source form
   
-  /* Begin Retouch */
   // add support for clone masks
-  // check also the source area if it is a clone mask
-/*  if(dt_masks_point_in_form_exact(x,yf,gpt->source,corner_count * 6,gpt->source_count))
-  {
-    *inside_source = 1;
-    *inside = 1;
-    return;
-  }
-*/
   if(gpt->points_count > 2 + corner_count * 3 && gpt->source_count > 2 + corner_count * 3)
   {
     float dx = -gpt->points[2] + gpt->source[2];
@@ -932,7 +923,6 @@ static void dt_brush_get_distance(float x, int y, float as, dt_masks_form_gui_t 
       }
     }
   }
-  /* End Retouch */
   
   // we check if it's inside borders
   if(gpt->border_count > 2 + corner_count * 3)
@@ -1032,17 +1022,10 @@ static int dt_brush_events_mouse_scrolled(struct dt_iop_module_t *module, float 
     if((state & GDK_SHIFT_MASK) == GDK_SHIFT_MASK)
     {
       float masks_hardness;
-      /* Begin Retouch */
-/*      float amount = 1.25f;
-      if(up) amount = 0.8f;*/
       float amount = 1.03f;
       if(up) amount = 0.97f;
-      /* End Retouch */
 
-      /* Begin Retouch */
-//      if(form->type & DT_MASKS_CLONE)
       if(form->type & (DT_MASKS_CLONE|DT_MASKS_NON_CLONE))
-      /* End Retouch */
       {
         masks_hardness = dt_conf_get_float("plugins/darkroom/spots/brush_hardness");
         masks_hardness = MAX(0.05f, MIN(masks_hardness * amount, 1.0f));
@@ -1063,17 +1046,10 @@ static int dt_brush_events_mouse_scrolled(struct dt_iop_module_t *module, float 
     else if((state & GDK_CONTROL_MASK) == GDK_CONTROL_MASK)
     {
       float masks_density;
-      /* Begin Retouch */
-/*      float amount = 1.25f;
-      if(up) amount = 0.8f;*/
       float amount = 1.03f;
       if(up) amount = 0.97f;
-      /* End Retouch */
 
-      /* Begin Retouch */
-//      if(form->type & DT_MASKS_CLONE)
       if(form->type & (DT_MASKS_CLONE|DT_MASKS_NON_CLONE))
-      /* End Retouch */
       {
         masks_density = dt_conf_get_float("plugins/darkroom/spots/brush_density");
         masks_density = MAX(0.05f, MIN(masks_density * amount, 1.0f));
@@ -1098,16 +1074,10 @@ static int dt_brush_events_mouse_scrolled(struct dt_iop_module_t *module, float 
       float amount = 1.03f;
       if(up) amount = 0.97f;
 
-      /* Begin Retouch */
-//      if(form->type & DT_MASKS_CLONE)
       if(form->type & (DT_MASKS_CLONE|DT_MASKS_NON_CLONE))
-      /* End Retouch */
       {
         masks_border = dt_conf_get_float("plugins/darkroom/spots/brush_border");
-        /* Begin Retouch */
-//        masks_border = MAX(0.005f, MIN(masks_border * amount, 0.5f));
         masks_border = MAX(0.0005f, MIN(masks_border * amount, 0.5f));
-        /* End Retouch */
         dt_conf_set_float("plugins/darkroom/spots/brush_border", masks_border);
       }
       else
@@ -1142,11 +1112,8 @@ static int dt_brush_events_mouse_scrolled(struct dt_iop_module_t *module, float 
     else
     {
       guint nb = g_list_length(form->points);
-      /* Begin Retouch */
       // resize don't care where the mouse is inside a shape
-//      if(gui->border_selected || (state & GDK_SHIFT_MASK) == GDK_SHIFT_MASK)
       if((state & GDK_SHIFT_MASK) == GDK_SHIFT_MASK)
-      /* End Retouch */
       {
         float amount = 1.03f;
         if(up) amount = 0.97f;
@@ -1162,10 +1129,7 @@ static int dt_brush_events_mouse_scrolled(struct dt_iop_module_t *module, float 
           point->border[0] *= amount;
           point->border[1] *= amount;
         }
-        /* Begin Retouch */
-  //      if(form->type & DT_MASKS_CLONE)
         if(form->type & (DT_MASKS_CLONE|DT_MASKS_NON_CLONE))
-        /* End Retouch */
         {
           float masks_border = dt_conf_get_float("plugins/darkroom/spots/brush_border");
           masks_border = MAX(0.005f, MIN(masks_border * amount, 0.5f));
@@ -1180,22 +1144,15 @@ static int dt_brush_events_mouse_scrolled(struct dt_iop_module_t *module, float 
       }
       else
       {
-    	  /* Begin Retouch */
-/*        float amount = 1.25f;
-        if(up) amount = 0.8f;*/
           float amount = 1.03f;
           if(up) amount = 0.97f;
-        /* End Retouch */
         for(int k = 0; k < nb; k++)
         {
           dt_masks_point_brush_t *point = (dt_masks_point_brush_t *)g_list_nth_data(form->points, k);
           float masks_hardness = point->hardness;
           point->hardness = MAX(0.05f, MIN(masks_hardness * amount, 1.0f));
         }
-        /* Begin Retouch */
-  //      if(form->type & DT_MASKS_CLONE)
         if(form->type & (DT_MASKS_CLONE|DT_MASKS_NON_CLONE))
-        /* End Retouch */
         {
           float masks_hardness = dt_conf_get_float("plugins/darkroom/spots/brush_hardness");
           masks_hardness = MAX(0.05f, MIN(masks_hardness * amount, 1.0f));
@@ -1234,28 +1191,19 @@ static int dt_brush_events_button_pressed(struct dt_iop_module_t *module, float 
   if(!gpt) return 0;
 
   float masks_border;
-  /* Begin Retouch */
-//      if(form->type & DT_MASKS_CLONE)
   if(form->type & (DT_MASKS_CLONE|DT_MASKS_NON_CLONE))
-  /* End Retouch */
     masks_border = MIN(dt_conf_get_float("plugins/darkroom/spots/brush_border"), 0.5f);
   else
     masks_border = MIN(dt_conf_get_float("plugins/darkroom/masks/brush/border"), 0.5f);
 
   float masks_hardness;
-  /* Begin Retouch */
-//      if(form->type & DT_MASKS_CLONE)
   if(form->type & (DT_MASKS_CLONE|DT_MASKS_NON_CLONE))
-  /* End Retouch */
     masks_hardness = MIN(dt_conf_get_float("plugins/darkroom/spots/brush_hardness"), 1.0f);
   else
     masks_hardness = MIN(dt_conf_get_float("plugins/darkroom/masks/brush/hardness"), 1.0f);
 
   float masks_density;
-  /* Begin Retouch */
-//      if(form->type & DT_MASKS_CLONE)
   if(form->type & (DT_MASKS_CLONE|DT_MASKS_NON_CLONE))
-  /* End Retouch */
     masks_density = MIN(dt_conf_get_float("plugins/darkroom/spots/brush_density"), 1.0f);
   else
     masks_density = MIN(dt_conf_get_float("plugins/darkroom/masks/brush/density"), 1.0f);
@@ -1279,7 +1227,7 @@ static int dt_brush_events_button_pressed(struct dt_iop_module_t *module, float 
       dt_masks_dynbuf_add(gui->guipoints_payload, pressure);
 
       gui->guipoints_count = 1;
-      /* Begin Retouch */
+
       // add support for clone masks
       float pts[2] = { pzx * wd, pzy * ht };
       dt_dev_distort_backtransform(darktable.develop, pts, 1);
@@ -1287,7 +1235,7 @@ static int dt_brush_events_button_pressed(struct dt_iop_module_t *module, float 
       pts[1] /= darktable.develop->preview_pipe->iheight;
       form->source[0] = pts[0] + 0.01f;
       form->source[1] = pts[1] + 0.01f;
-      /* End Retouch */
+
       gui->pressure_sensitivity = DT_MASKS_PRESSURE_OFF;
       char *psens = dt_conf_get_string("pressure_sensitivity");
       if(psens)
@@ -1566,10 +1514,7 @@ static int dt_brush_events_button_released(struct dt_iop_module_t *module, float
   if(!gpt) return 0;
 
   float masks_border;
-  /* Begin Retouch */
-//      if(form->type & DT_MASKS_CLONE)
   if(form->type & (DT_MASKS_CLONE|DT_MASKS_NON_CLONE))
-  /* End Retouch */
     masks_border = MIN(dt_conf_get_float("plugins/darkroom/spots/brush_border"), 0.5f);
   else
     masks_border = MIN(dt_conf_get_float("plugins/darkroom/masks/brush/border"), 0.5f);
@@ -2144,28 +2089,19 @@ static void dt_brush_events_post_expose(cairo_t *cr, float zoom_scale, dt_masks_
       if(!form) return;
 
       float masks_border;
-      /* Begin Retouch */
-//      if(form->type & DT_MASKS_CLONE)
       if(form->type & (DT_MASKS_CLONE|DT_MASKS_NON_CLONE))
-      /* End Retouch */
         masks_border = MIN(dt_conf_get_float("plugins/darkroom/spots/brush_border"), 0.5f);
       else
         masks_border = MIN(dt_conf_get_float("plugins/darkroom/masks/brush/border"), 0.5f);
 
       float masks_hardness;
-      /* Begin Retouch */
-//      if(form->type & DT_MASKS_CLONE)
       if(form->type & (DT_MASKS_CLONE|DT_MASKS_NON_CLONE))
-      /* End Retouch */
         masks_hardness = MIN(dt_conf_get_float("plugins/darkroom/spots/brush_hardness"), 1.0f);
       else
         masks_hardness = MIN(dt_conf_get_float("plugins/darkroom/masks/brush/hardness"), 1.0f);
 
       float masks_density;
-      /* Begin Retouch */
-//      if(form->type & DT_MASKS_CLONE)
       if(form->type & (DT_MASKS_CLONE|DT_MASKS_NON_CLONE))
-      /* End Retouch */
         masks_density = MIN(dt_conf_get_float("plugins/darkroom/spots/brush_density"), 1.0f);
       else
         masks_density = MIN(dt_conf_get_float("plugins/darkroom/masks/brush/density"), 1.0f);

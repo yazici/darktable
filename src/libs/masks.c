@@ -1045,10 +1045,7 @@ static int _tree_button_pressed(GtkWidget *treeview, GdkEventButton *event, dt_l
         while(forms)
         {
           dt_masks_form_t *form = (dt_masks_form_t *)forms->data;
-          /* Begin Retouch */
-//          if((form->type & DT_MASKS_CLONE) || form->formid == grpid)
           if((form->type & (DT_MASKS_CLONE|DT_MASKS_NON_CLONE)) || form->formid == grpid)
-          /* End Retouch */
           {
             forms = g_list_next(forms);
             continue;
@@ -1291,10 +1288,7 @@ static void _lib_masks_list_recurs(GtkTreeStore *treestore, GtkTreeIter *topleve
                                    int grp_id, dt_iop_module_t *module, int gstate, float opacity,
                                    dt_lib_masks_t *lm)
 {
-  /* Begin Retouch */
-//  if(form->type & DT_MASKS_CLONE) return;
   if(form->type & (DT_MASKS_CLONE|DT_MASKS_NON_CLONE)) return;
-  /* End Retouch */
   // we create the text entry
   char str[256] = "";
   g_strlcat(str, form->name, sizeof(str));
