@@ -725,7 +725,8 @@ static void rt_resynch_params(struct dt_iop_module_t *self)
   dt_iop_retouch_params_t *p = (dt_iop_retouch_params_t *)self->params;
   dt_develop_blend_params_t *bp = self->blend_params;
   
-  dt_iop_retouch_form_data_t forms_d[RETOUCH_NO_FORMS] = { 0 };
+  dt_iop_retouch_form_data_t forms_d[RETOUCH_NO_FORMS];
+  memset(forms_d, 0, sizeof(dt_iop_retouch_form_data_t)*RETOUCH_NO_FORMS);
   
   // we go through all forms in blend params
   dt_masks_form_t *grp = dt_masks_get_from_id(darktable.develop, bp->mask_id);
@@ -1319,7 +1320,8 @@ void init(dt_iop_module_t *module)
   module->gui_data = NULL;
   
   // init defaults:
-  dt_iop_retouch_params_t tmp = {0};
+  dt_iop_retouch_params_t tmp;
+  memset(&tmp, 0, sizeof(tmp));
   
   tmp.algorithm = dt_iop_retouch_clone, 
   tmp.num_scales = 0, 
