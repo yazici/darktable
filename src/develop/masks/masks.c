@@ -339,7 +339,10 @@ void dt_masks_gui_form_save_creation(dt_develop_t *dev, dt_iop_module_t *module,
     if(!grp)
     {
       // we create a new group
-      if(form->type & DT_MASKS_CLONE)
+      /* Begin Retouch */
+//      if(form->type & DT_MASKS_CLONE)
+      if(form->type & (DT_MASKS_CLONE|DT_MASKS_NON_CLONE))
+      /* End Retouch */
         grp = dt_masks_create(DT_MASKS_GROUP | DT_MASKS_CLONE);
       else
         grp = dt_masks_create(DT_MASKS_GROUP);
@@ -1232,6 +1235,10 @@ void dt_masks_free_form(dt_masks_form_t *form)
 
 int dt_masks_events_mouse_moved(struct dt_iop_module_t *module, double x, double y, double pressure, int which)
 {
+  /* Begin Retouch */
+  // add an option to allow skip mouse events while editing masks
+  if (darktable.develop->darkroom_skip_mouse_events) return 0;
+  /* End Retouch */
   dt_masks_form_t *form = darktable.develop->form_visible;
   dt_masks_form_gui_t *gui = darktable.develop->form_gui;
 
@@ -1277,6 +1284,10 @@ int dt_masks_events_mouse_moved(struct dt_iop_module_t *module, double x, double
 int dt_masks_events_button_released(struct dt_iop_module_t *module, double x, double y, int which,
                                     uint32_t state)
 {
+  /* Begin Retouch */
+  // add an option to allow skip mouse events while editing masks
+  if (darktable.develop->darkroom_skip_mouse_events) return 0;
+  /* End Retouch */
   dt_masks_form_t *form = darktable.develop->form_visible;
   dt_masks_form_gui_t *gui = darktable.develop->form_gui;
   float pzx, pzy;
@@ -1300,9 +1311,48 @@ int dt_masks_events_button_released(struct dt_iop_module_t *module, double x, do
   return 0;
 }
 
+/* Begin Retouch */
+// allow to select a shape inside retouch iop
+static void dt_masks_select_form(struct dt_iop_module_t *module, dt_masks_form_t *sel)
+{
+  int selection_changed = 0;
+  
+  if (sel)
+  {
+    if (sel->formid != darktable.develop->mask_form_selected_id)
+    {
+      darktable.develop->mask_form_selected_id = sel->formid;
+      selection_changed = 1;
+    }
+  }
+  else
+  {
+    if (darktable.develop->mask_form_selected_id != 0)
+    {
+      darktable.develop->mask_form_selected_id = 0;
+      selection_changed = 1;
+    }
+  }
+  if (selection_changed)
+  {
+    if (!module && darktable.develop->mask_form_selected_id == 0)
+      module = darktable.develop->gui_module;
+    if (module)
+    {
+      if (module->masks_selection_changed)
+        module->masks_selection_changed(module, darktable.develop->mask_form_selected_id);
+    }
+  }
+}
+/* End Retouch */
+
 int dt_masks_events_button_pressed(struct dt_iop_module_t *module, double x, double y, double pressure,
                                    int which, int type, uint32_t state)
 {
+  /* Begin Retouch */
+	// add an option to allow skip mouse events while editing masks
+  if (darktable.develop->darkroom_skip_mouse_events) return 0;
+  /* End Retouch */
   dt_masks_form_t *form = darktable.develop->form_visible;
   dt_masks_form_gui_t *gui = darktable.develop->form_gui;
   float pzx, pzy;
@@ -1310,6 +1360,27 @@ int dt_masks_events_button_pressed(struct dt_iop_module_t *module, double x, dou
   pzx += 0.5f;
   pzy += 0.5f;
 
+  /* Begin Retouch */
+  // allow to select a shape inside an iop
+  if (gui && which == 1)
+  {
+    dt_masks_form_t *sel = NULL;
+    
+    if ((gui->form_selected || gui->source_selected || gui->point_selected || gui->seg_selected || gui->feather_selected) && 
+        !gui->creation && gui->group_edited >= 0)
+    {
+      // we get the slected form
+      dt_masks_point_group_t *fpt = (dt_masks_point_group_t *)g_list_nth_data(form->points, gui->group_edited);
+      if (fpt)
+      {
+        sel = dt_masks_get_from_id(darktable.develop, fpt->formid);
+      }
+    }
+  
+    dt_masks_select_form(module, sel);
+  }
+  /* End Retouch */
+  
   if(form->type & DT_MASKS_CIRCLE)
     return dt_circle_events_button_pressed(module, pzx, pzy, pressure, which, type, state, form, 0, gui, 0);
   else if(form->type & DT_MASKS_PATH)
@@ -1328,6 +1399,10 @@ int dt_masks_events_button_pressed(struct dt_iop_module_t *module, double x, dou
 
 int dt_masks_events_mouse_scrolled(struct dt_iop_module_t *module, double x, double y, int up, uint32_t state)
 {
+  /* Begin Retouch */
+  // add an option to allow skip mouse events while editing masks
+  if (darktable.develop->darkroom_skip_mouse_events) return 0;
+  /* End Retouch */
   dt_masks_form_t *form = darktable.develop->form_visible;
   dt_masks_form_gui_t *gui = darktable.develop->form_gui;
   float pzx, pzy;
@@ -1359,7 +1434,11 @@ void dt_masks_events_post_expose(struct dt_iop_module_t *module, cairo_t *cr, in
   if(!gui) return;
   if(!form) return;
   // if it's a spot in creation, nothing to draw
-  if(((form->type & DT_MASKS_CIRCLE) || (form->type & DT_MASKS_ELLIPSE) || (form->type & DT_MASKS_GRADIENT))
+/* Begin Retouch */
+  // add preview when creating a circle
+/*  if(((form->type & DT_MASKS_CIRCLE) || (form->type & DT_MASKS_ELLIPSE) || (form->type & DT_MASKS_GRADIENT))*/
+  if(((form->type & DT_MASKS_ELLIPSE) || (form->type & DT_MASKS_GRADIENT))
+/* End Retouch */
      && gui->creation)
     return;
   float wd = dev->preview_pipe->backbuf_width;
@@ -1385,6 +1464,10 @@ void dt_masks_events_post_expose(struct dt_iop_module_t *module, cairo_t *cr, in
   cairo_set_line_cap(cr, CAIRO_LINE_CAP_ROUND);
 
   // we update the form if needed
+/* Begin Retouch */
+  // add preview when creating a circle
+if ( !((form->type & DT_MASKS_CIRCLE) && gui->creation) )
+/* End Retouch */
   dt_masks_gui_form_test_create(form, gui);
 
   // draw form
@@ -1433,6 +1516,10 @@ void dt_masks_clear_form_gui(dt_develop_t *dev)
   dev->form_gui->group_edited = -1;
   dev->form_gui->group_selected = -1;
   dev->form_gui->edit_mode = DT_MASKS_EDIT_OFF;
+  /* Begin Retouch */
+  // allow to select a shape inside retouch iop
+  dt_masks_select_form(NULL, NULL);
+  /* Begin Retouch */
 }
 
 void dt_masks_change_form_gui(dt_masks_form_t *newform)
@@ -1693,7 +1780,10 @@ void dt_masks_iop_combo_populate(struct dt_iop_module_t **m)
   while(forms)
   {
     dt_masks_form_t *form = (dt_masks_form_t *)forms->data;
-    if((form->type & DT_MASKS_CLONE) || form->formid == module->blend_params->mask_id)
+    /* Begin Retouch */
+//    if((form->type & DT_MASKS_CLONE) || form->formid == module->blend_params->mask_id)
+    if((form->type & (DT_MASKS_CLONE|DT_MASKS_NON_CLONE)) || form->formid == module->blend_params->mask_id)
+    /* End Retouch */
     {
       forms = g_list_next(forms);
       continue;
@@ -1848,7 +1938,10 @@ void dt_masks_form_remove(struct dt_iop_module_t *module, dt_masks_form_t *grp, 
   int id = form->formid;
   if(grp && !(grp->type & DT_MASKS_GROUP)) return;
 
-  if(!(form->type & DT_MASKS_CLONE) && grp)
+  /* Begin Retouch */
+//  if(!(form->type & DT_MASKS_CLONE) && grp)
+  if(!(form->type & (DT_MASKS_CLONE|DT_MASKS_NON_CLONE)) && grp)
+  /* End Retouch */
   {
     // we try to remove the form from the masks group
     int ok = 0;

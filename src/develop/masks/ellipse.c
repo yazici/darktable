@@ -200,7 +200,11 @@ static int dt_ellipse_events_mouse_scrolled(struct dt_iop_module_t *module, floa
     else
     {
       dt_masks_point_ellipse_t *ellipse = (dt_masks_point_ellipse_t *)(g_list_first(form->points)->data);
-      if(gui->border_selected || (state & GDK_SHIFT_MASK) == GDK_SHIFT_MASK)
+      /* Begin Retouch */ 
+      // resize don't care where the mouse is inside a shape
+      // if(gui->border_selected || (state & GDK_SHIFT_MASK) == GDK_SHIFT_MASK)
+      if (((state & GDK_SHIFT_MASK) == GDK_SHIFT_MASK) && (gui->border_selected || gui->edit_mode == DT_MASKS_EDIT_FULL) )
+      /* End Retouch */
       {
         const float reference = (ellipse->flags & DT_MASKS_ELLIPSE_PROPORTIONAL ? 1.0f/fmin(ellipse->radius[0], ellipse->radius[1]) : 1.0f);
         if(up && ellipse->border > 0.001f * reference)
@@ -212,7 +216,10 @@ static int dt_ellipse_events_mouse_scrolled(struct dt_iop_module_t *module, floa
         dt_masks_write_form(form, darktable.develop);
         dt_masks_gui_form_remove(form, gui, index);
         dt_masks_gui_form_create(form, gui, index);
-        if(form->type & DT_MASKS_CLONE)
+        /* Begin Retouch */
+  //      if(form->type & DT_MASKS_CLONE)
+        if(form->type & (DT_MASKS_CLONE|DT_MASKS_NON_CLONE))
+        /* End Retouch */
           dt_conf_set_float("plugins/darkroom/spots/ellipse_border", ellipse->border);
         else
           dt_conf_set_float("plugins/darkroom/masks/ellipse/border", ellipse->border);
@@ -235,7 +242,10 @@ static int dt_ellipse_events_mouse_scrolled(struct dt_iop_module_t *module, floa
         dt_masks_write_form(form, darktable.develop);
         dt_masks_gui_form_remove(form, gui, index);
         dt_masks_gui_form_create(form, gui, index);
-        if(form->type & DT_MASKS_CLONE)
+        /* Begin Retouch */
+  //      if(form->type & DT_MASKS_CLONE)
+        if(form->type & (DT_MASKS_CLONE|DT_MASKS_NON_CLONE))
+        /* End Retouch */
         {
           dt_conf_set_float("plugins/darkroom/spots/ellipse_radius_a", ellipse->radius[0]);
           dt_conf_set_float("plugins/darkroom/spots/ellipse_radius_b", ellipse->radius[1]);
@@ -334,7 +344,10 @@ static int dt_ellipse_events_button_pressed(struct dt_iop_module_t *module, floa
     ellipse->center[0] = pts[0] / darktable.develop->preview_pipe->iwidth;
     ellipse->center[1] = pts[1] / darktable.develop->preview_pipe->iheight;
 
-    if(form->type & DT_MASKS_CLONE)
+    /* Begin Retouch */
+//      if(form->type & DT_MASKS_CLONE)
+    if(form->type & (DT_MASKS_CLONE|DT_MASKS_NON_CLONE))
+    /* End Retouch */
     {
       const float a = dt_conf_get_float("plugins/darkroom/spots/ellipse_radius_a");
       const float b = dt_conf_get_float("plugins/darkroom/spots/ellipse_radius_b");
@@ -348,8 +361,20 @@ static int dt_ellipse_events_button_pressed(struct dt_iop_module_t *module, floa
       const float min_radius = fmin(ellipse->radius[0], ellipse->radius[1]);
       const float reference = (ellipse->flags & DT_MASKS_ELLIPSE_PROPORTIONAL ? 1.0f/min_radius : 1.0f);
       ellipse->border = MAX(0.005f * reference, MIN(0.5f * reference, ellipse_border));
+      /* Begin Retouch */
+      if(form->type & DT_MASKS_CLONE)
+      {
+      /* End Retouch */
       form->source[0] = ellipse->center[0] + 0.02f;
       form->source[1] = ellipse->center[1] + 0.02f;
+      /* Begin Retouch */
+      }
+      else
+      {
+        // not used for regular masks
+        form->source[0] = form->source[1] = 0.0f;
+      }
+      /* End Retouch */
     }
     else
     {
@@ -509,7 +534,10 @@ static int dt_ellipse_events_button_released(struct dt_iop_module_t *module, flo
       ellipse->flags |= DT_MASKS_ELLIPSE_PROPORTIONAL;
     }
 
-    if(form->type & DT_MASKS_CLONE)
+    /* Begin Retouch */
+//      if(form->type & DT_MASKS_CLONE)
+    if(form->type & (DT_MASKS_CLONE|DT_MASKS_NON_CLONE))
+    /* End Retouch */
     {
       dt_conf_set_int("plugins/darkroom/spots/ellipse_flags", ellipse->flags);
       dt_conf_set_float("plugins/darkroom/spots/ellipse_border", ellipse->border);
@@ -556,7 +584,10 @@ static int dt_ellipse_events_button_released(struct dt_iop_module_t *module, flo
     ellipse->rotation += dv / M_PI * 180.0f;
     ellipse->rotation = fmodf(ellipse->rotation, 360.0f);
 
-    if(form->type & DT_MASKS_CLONE)
+    /* Begin Retouch */
+//      if(form->type & DT_MASKS_CLONE)
+    if(form->type & (DT_MASKS_CLONE|DT_MASKS_NON_CLONE))
+    /* End Retouch */
       dt_conf_set_float("plugins/darkroom/spots/ellipse_rotation", ellipse->rotation);
     else
       dt_conf_set_float("plugins/darkroom/masks/ellipse/rotation", ellipse->rotation);
@@ -602,7 +633,10 @@ static int dt_ellipse_events_button_released(struct dt_iop_module_t *module, flo
        || ((k == 3 || k == 4) && ellipse->radius[0] <= ellipse->radius[1]))
     {
       ellipse->radius[0] = MAX(0.002f, ellipse->radius[0] * s);
-      if(form->type & DT_MASKS_CLONE)
+      /* Begin Retouch */
+//      if(form->type & DT_MASKS_CLONE)
+      if(form->type & (DT_MASKS_CLONE|DT_MASKS_NON_CLONE))
+      /* End Retouch */
         dt_conf_set_float("plugins/darkroom/spots/ellipse_radius_a", ellipse->radius[0]);
       else
         dt_conf_set_float("plugins/darkroom/masks/ellipse/radius_a", ellipse->radius[0]);
@@ -610,7 +644,10 @@ static int dt_ellipse_events_button_released(struct dt_iop_module_t *module, flo
     else
     {
       ellipse->radius[1] = MAX(0.002f, ellipse->radius[1] * s);
-      if(form->type & DT_MASKS_CLONE)
+      /* Begin Retouch */
+//      if(form->type & DT_MASKS_CLONE)
+      if(form->type & (DT_MASKS_CLONE|DT_MASKS_NON_CLONE))
+      /* End Retouch */
         dt_conf_set_float("plugins/darkroom/spots/ellipse_radius_b", ellipse->radius[1]);
       else
         dt_conf_set_float("plugins/darkroom/masks/ellipse/radius_b", ellipse->radius[1]);

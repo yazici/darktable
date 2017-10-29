@@ -26,6 +26,10 @@
 #include "common/dlopencl.h"
 #include "common/gaussian.h"
 #include "common/interpolation.h"
+/* Begin Retouch */
+#include "common/dwt.h"
+#include "common/heal.h"
+/* End Retouch */
 #include "common/nvidia_gpus.h"
 #include "common/opencl_drivers_blacklist.h"
 #include "control/conf.h"
@@ -707,6 +711,10 @@ finally:
     cl->gaussian = dt_gaussian_init_cl_global();
     cl->interpolation = dt_interpolation_init_cl_global();
     cl->local_laplacian = dt_local_laplacian_init_cl_global();
+    /* Begin Retouch */
+    cl->dwt = dt_dwt_init_cl_global();
+    cl->heal = dt_heal_init_cl_global();
+    /* End Retouch */
 
     char checksum[64];
     snprintf(checksum, sizeof(checksum), "%u", cl->crc);
@@ -808,6 +816,10 @@ void dt_opencl_cleanup(dt_opencl_t *cl)
     dt_bilateral_free_cl_global(cl->bilateral);
     dt_gaussian_free_cl_global(cl->gaussian);
     dt_interpolation_free_cl_global(cl->interpolation);
+    /* Begin Retouch */
+    dt_dwt_free_cl_global(cl->dwt);
+    dt_heal_free_cl_global(cl->heal);
+    /* End Retouch */
     for(int i = 0; i < cl->num_devs; i++)
     {
       dt_pthread_mutex_destroy(&cl->dev[i].lock);

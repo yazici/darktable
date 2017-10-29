@@ -2185,7 +2185,14 @@ int key_released(dt_view_t *self, guint key, guint state)
     dt_dev_invalidate(darktable.develop);
     dt_control_queue_redraw_center();
   }
-
+  /* Begin Retouch */
+  // add an option to allow skip mouse events while editing masks
+  if(key == accels->darkroom_skip_mouse_events.accel_key && state == accels->darkroom_skip_mouse_events.accel_mods)
+  {
+    darktable.develop->darkroom_skip_mouse_events = FALSE;
+  }
+  /* End Retouch */
+  
   return 1;
 }
 
@@ -2230,6 +2237,13 @@ int key_pressed(dt_view_t *self, guint key, guint state)
     else
       return 0;
   }
+  /* Begin Retouch */
+  // add an option to allow skip mouse events while editing masks
+  if(key == accels->darkroom_skip_mouse_events.accel_key && state == accels->darkroom_skip_mouse_events.accel_mods)
+  {
+    darktable.develop->darkroom_skip_mouse_events = TRUE;
+  }
+  /* End Retouch */
   return 1;
 }
 
@@ -2288,6 +2302,10 @@ void init_key_accels(dt_view_t *self)
   dt_accel_register_view(self, NC_("accel", "undo"), GDK_KEY_z, GDK_CONTROL_MASK);
   dt_accel_register_view(self, NC_("accel", "redo"), GDK_KEY_y, GDK_CONTROL_MASK);
 
+  /* Begin Retouch */
+  // add an option to allow skip mouse events while editing masks
+  dt_accel_register_view(self, NC_("accel", "skip mouse on masks"), GDK_KEY_a, 0);
+  /* End Retouch */
 }
 
 static gboolean _darkroom_undo_callback(GtkAccelGroup *accel_group, GObject *acceleratable, guint keyval,
