@@ -519,6 +519,13 @@ static void rt_show_hide_controls(dt_iop_retouch_gui_data_t *d, dt_iop_retouch_p
       gtk_widget_hide(GTK_WIDGET(d->hbox_color));
       break;
   }
+  
+  dt_masks_form_t *form = dt_masks_get_from_id(darktable.develop, rt_get_selected_shape_id());
+  if (form)
+    gtk_widget_show(GTK_WIDGET(d->sl_mask_opacity));
+  else
+    gtk_widget_hide(GTK_WIDGET(d->sl_mask_opacity));
+
 }
 
 static void rt_display_selected_shapes_lbl(dt_iop_retouch_gui_data_t *g)
@@ -591,6 +598,11 @@ static void rt_shape_selection_changed(dt_iop_module_t *self)
   
   rt_display_selected_shapes_lbl(g);
   
+  if (index >= 0)
+    gtk_widget_show(GTK_WIDGET(g->sl_mask_opacity));
+  else
+    gtk_widget_hide(GTK_WIDGET(g->sl_mask_opacity));
+
   darktable.gui->reset = reset;
   
   if (selection_changed)
@@ -1536,7 +1548,8 @@ void gui_init(dt_iop_module_t *self)
   GtkWidget *label = gtk_label_new(_("# shapes:"));
   gtk_box_pack_start(GTK_BOX(hbox_shapes), label, FALSE, TRUE, 0);
   g->label_form = GTK_LABEL(gtk_label_new("-1"));
-  g_object_set(G_OBJECT(hbox_shapes), "tooltip-text", _("to add a shape select an algorithm and a shape and click on the image.\nshapes are added to the current scale."), (char *)NULL);
+  g_object_set(G_OBJECT(hbox_shapes), "tooltip-text", _("to add a shape select an algorithm and a shape type and click on the image.\n"
+      "shapes are added to the current scale."), (char *)NULL);
 
   g->bt_brush = dtgtk_togglebutton_new(dtgtk_cairo_paint_masks_brush, CPF_STYLE_FLAT | CPF_DO_NOT_USE_BORDER);
   g_signal_connect(G_OBJECT(g->bt_brush), "button-press-event", G_CALLBACK(rt_add_shape_callback), self);
@@ -1614,28 +1627,28 @@ void gui_init(dt_iop_module_t *self)
   GtkWidget *label1 = gtk_label_new(_("shape selected:"));
   gtk_box_pack_start(GTK_BOX(hbox_shape_sel), label1, FALSE, TRUE, 0);
   g->label_form_selected = GTK_LABEL(gtk_label_new("-1"));
-  g_object_set(G_OBJECT(hbox_shape_sel), "tooltip-text", _("click on a shape to select it\nto unselect click on the image."), (char *)NULL);
+  g_object_set(G_OBJECT(hbox_shape_sel), "tooltip-text", _("click on a shape to select it,\nto unselect click on an empty space."), (char *)NULL);
   gtk_box_pack_start(GTK_BOX(hbox_shape_sel), GTK_WIDGET(g->label_form_selected), FALSE, TRUE, 0);
 
   // suppress or show masks toolbar
-  GtkWidget *hbox_show_hide = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
+  GtkWidget *hbox_masks_display = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
   
   GtkWidget *label3 = gtk_label_new(_("masks display:"));
-  gtk_box_pack_start(GTK_BOX(hbox_show_hide), label3, FALSE, TRUE, 0);
+  gtk_box_pack_start(GTK_BOX(hbox_masks_display), label3, FALSE, TRUE, 0);
   
   g->bt_showmask = dtgtk_togglebutton_new(dtgtk_cairo_paint_showmask, CPF_STYLE_FLAT | CPF_DO_NOT_USE_BORDER);
-  g_object_set(G_OBJECT(g->bt_showmask), "tooltip-text", _("display mask"), (char *)NULL);
+  g_object_set(G_OBJECT(g->bt_showmask), "tooltip-text", _("display masks"), (char *)NULL);
   g_signal_connect(G_OBJECT(g->bt_showmask), "toggled", G_CALLBACK(rt_showmask_callback), self);
   gtk_widget_set_size_request(GTK_WIDGET(g->bt_showmask), bs, bs);
   gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(g->bt_showmask), FALSE);
-  gtk_box_pack_end(GTK_BOX(hbox_show_hide), g->bt_showmask, FALSE, FALSE, 0);
+  gtk_box_pack_end(GTK_BOX(hbox_masks_display), g->bt_showmask, FALSE, FALSE, 0);
 
   g->bt_suppress = dtgtk_togglebutton_new(dtgtk_cairo_paint_eye_toggle, CPF_STYLE_FLAT | CPF_DO_NOT_USE_BORDER);
   g_object_set(G_OBJECT(g->bt_suppress), "tooltip-text", _("temporarily switch off shapes"), (char *)NULL);
   g_signal_connect(G_OBJECT(g->bt_suppress), "toggled", G_CALLBACK(rt_suppress_callback), self);
   gtk_widget_set_size_request(GTK_WIDGET(g->bt_suppress), bs, bs);
   gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(g->bt_suppress), FALSE);
-  gtk_box_pack_end(GTK_BOX(hbox_show_hide), g->bt_suppress, FALSE, FALSE, 0);
+  gtk_box_pack_end(GTK_BOX(hbox_masks_display), g->bt_suppress, FALSE, FALSE, 0);
 
   // blur radius for blur algorithm
   g->hbox_blur = gtk_box_new(GTK_ORIENTATION_VERTICAL, 5);
@@ -1652,8 +1665,8 @@ void gui_init(dt_iop_module_t *self)
   GtkWidget *hbox_scale = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
 
   g->sl_num_scales = dt_bauhaus_slider_new_with_range(self, 0.0, RETOUCH_MAX_SCALES, 1, 0.0, 0);
-  dt_bauhaus_widget_set_label(g->sl_num_scales, _("number of scales"), _("scale"));
-  g_object_set(g->sl_num_scales, "tooltip-text", _("number of scales to decompose."), (char *)NULL);
+  dt_bauhaus_widget_set_label(g->sl_num_scales, _("number of scales"), _("number of scales"));
+  g_object_set(g->sl_num_scales, "tooltip-text", _("number of scales to decompose.\nmaximum number of scales depend on image size."), (char *)NULL);
   g_signal_connect(G_OBJECT(g->sl_num_scales), "value-changed", G_CALLBACK(rt_num_scales_callback), self);
   
   g->bt_show_final_image = dtgtk_togglebutton_new(_retouch_cairo_paint_show_final_image, CPF_STYLE_FLAT | CPF_DO_NOT_USE_BORDER);
@@ -1684,7 +1697,7 @@ void gui_init(dt_iop_module_t *self)
   
   g->sl_curr_scale = dt_bauhaus_slider_new_with_range(self, 0.0, RETOUCH_MAX_SCALES+1, 1, 0.0, 0);
   dt_bauhaus_widget_set_label(g->sl_curr_scale, _("current scale"), _("current scale"));
-  g_object_set(g->sl_curr_scale, "tooltip-text", _("current decomposed scale, if zero, final image is displayed."), (char *)NULL);
+  g_object_set(g->sl_curr_scale, "tooltip-text", _("current decomposed scale. if zero, final image is displayed."), (char *)NULL);
   g_signal_connect(G_OBJECT(g->sl_curr_scale), "value-changed", G_CALLBACK(rt_curr_scale_callback), self);
   
   g->bt_copy_scale = dtgtk_togglebutton_new(_retouch_cairo_paint_cut_forms, CPF_STYLE_FLAT | CPF_DO_NOT_USE_BORDER);
@@ -1706,7 +1719,7 @@ void gui_init(dt_iop_module_t *self)
   // blend factor
   GtkWidget *hbox_blend = gtk_box_new(GTK_ORIENTATION_VERTICAL, 5);
   
-  g->sl_blend_factor = dt_bauhaus_slider_new_with_range(self, 0.0, 1.0, 0.05, 0.128, 3);
+  g->sl_blend_factor = dt_bauhaus_slider_new_with_range(self, 0.0, 1.0, 0.01, 0.128, 3);
   dt_bauhaus_widget_set_label(g->sl_blend_factor, _("blend factor"), _("blend factor"));
   g_object_set(g->sl_blend_factor, "tooltip-text", _("blend factor, increse to lighten the image scale. works only for preview."), (char *)NULL);
   g_signal_connect(G_OBJECT(g->sl_blend_factor), "value-changed", G_CALLBACK(rt_blend_factor_callback), self);
@@ -1726,11 +1739,12 @@ void gui_init(dt_iop_module_t *self)
   gtk_color_chooser_set_use_alpha(GTK_COLOR_CHOOSER(g->colorpick), FALSE);
   gtk_widget_set_size_request(GTK_WIDGET(g->colorpick), bs, bs);
   gtk_color_button_set_title(GTK_COLOR_BUTTON(g->colorpick), _("select fill color"));
+  g_object_set(G_OBJECT(g->colorpick), "tooltip-text", _("select fill color."), (char *)NULL);
 
   g_signal_connect(G_OBJECT(g->colorpick), "color-set", G_CALLBACK(rt_colorpick_color_set_callback), self);
 
   g->color_picker = GTK_TOGGLE_BUTTON(dtgtk_togglebutton_new(dtgtk_cairo_paint_colorpicker, CPF_STYLE_FLAT | CPF_DO_NOT_USE_BORDER));
-  g_object_set(G_OBJECT(g->color_picker), "tooltip-text", _("pick fill color from image"), (char *)NULL);
+  g_object_set(G_OBJECT(g->color_picker), "tooltip-text", _("pick fill color from image."), (char *)NULL);
   gtk_widget_set_size_request(GTK_WIDGET(g->color_picker), bs, bs);
   g_signal_connect(G_OBJECT(g->color_picker), "toggled", G_CALLBACK(rt_request_pick_toggled_callback), self);
 
@@ -1755,25 +1769,46 @@ void gui_init(dt_iop_module_t *self)
   gtk_box_pack_start(GTK_BOX(g->hbox_color), g->hbox_color_pick, TRUE, TRUE, 0);
   gtk_box_pack_start(GTK_BOX(g->hbox_color), g->sl_fill_delta, TRUE, TRUE, 0);
 
-  
-  gtk_box_pack_start(GTK_BOX(self->widget), hbox_shapes, TRUE, TRUE, 0);
-  gtk_box_pack_start(GTK_BOX(self->widget), hbox_algo, TRUE, TRUE, 0);
-  gtk_box_pack_start(GTK_BOX(self->widget), hbox_shape_sel, TRUE, TRUE, 0);
-  gtk_box_pack_start(GTK_BOX(self->widget), hbox_scale, TRUE, TRUE, 0);
-  gtk_box_pack_start(GTK_BOX(self->widget), hbox_n_image, TRUE, TRUE, 0);
-  gtk_box_pack_start(GTK_BOX(self->widget), hbox_blend, TRUE, TRUE, 0);
-
   // mask opacity
   g->sl_mask_opacity = dt_bauhaus_slider_new_with_range(self, 0.0, 1.0, 0.05, 1., 3);
-  dt_bauhaus_widget_set_label(g->sl_mask_opacity, _("mask opacity"), _("mask opacity"));
-  g_object_set(g->sl_mask_opacity, "tooltip-text", _("mask opacity."), (char *)NULL);
+  dt_bauhaus_widget_set_label(g->sl_mask_opacity, _("shape opacity"), _("shape opacity"));
+  g_object_set(g->sl_mask_opacity, "tooltip-text", _("set the opacity on the selected shape."), (char *)NULL);
   g_signal_connect(G_OBJECT(g->sl_mask_opacity), "value-changed", G_CALLBACK(rt_mask_opacity_callback), self);
   
-  gtk_box_pack_start(GTK_BOX(self->widget), g->sl_mask_opacity, TRUE, TRUE, 0);
+
+  GtkWidget *lbl_rt_tools = gtk_label_new(_("retouch tools"));
+  gtk_box_pack_start(GTK_BOX(self->widget), lbl_rt_tools, FALSE, TRUE, 0);
+
+  // shapes toolbar
+  gtk_box_pack_start(GTK_BOX(self->widget), hbox_shapes, TRUE, TRUE, 0);
+  // algorithms toolbar
+  gtk_box_pack_start(GTK_BOX(self->widget), hbox_algo, TRUE, TRUE, 0);
   
-  gtk_box_pack_start(GTK_BOX(self->widget), hbox_show_hide, TRUE, TRUE, 0);
+  // wavelet decompose
+  GtkWidget *lbl_wd = gtk_label_new(_("wavelet decompose"));
+  gtk_box_pack_start(GTK_BOX(self->widget), lbl_wd, FALSE, TRUE, 0);
+
+  // number of scales
+  gtk_box_pack_start(GTK_BOX(self->widget), hbox_scale, TRUE, TRUE, 0);
+  // current scale
+  gtk_box_pack_start(GTK_BOX(self->widget), hbox_n_image, TRUE, TRUE, 0);
+  // blend factor
+  gtk_box_pack_start(GTK_BOX(self->widget), hbox_blend, TRUE, TRUE, 0);
+
+  // shapes
+  GtkWidget *lbl_shapes = gtk_label_new(_("shapes"));
+  gtk_box_pack_start(GTK_BOX(self->widget), lbl_shapes, FALSE, TRUE, 0);
+
+  // shape selected
+  gtk_box_pack_start(GTK_BOX(self->widget), hbox_shape_sel, TRUE, TRUE, 0);
+  // blur radius
   gtk_box_pack_start(GTK_BOX(self->widget), g->hbox_blur, TRUE, TRUE, 0);
+  // fill color
   gtk_box_pack_start(GTK_BOX(self->widget), g->hbox_color, TRUE, TRUE, 0);
+  // mask (shape) opacity
+  gtk_box_pack_start(GTK_BOX(self->widget), g->sl_mask_opacity, TRUE, TRUE, 0);
+  // turn off masks & display masks
+  gtk_box_pack_start(GTK_BOX(self->widget), hbox_masks_display, TRUE, TRUE, 0);
 
   
   g_signal_connect(G_OBJECT(self->widget), "draw", G_CALLBACK(rt_draw_callback), self);
@@ -1783,6 +1818,7 @@ void gui_init(dt_iop_module_t *self)
 
   gtk_widget_show_all(g->hbox_color);
   gtk_widget_set_no_show_all(g->hbox_color, TRUE);
+
 
   rt_show_hide_controls(g, p);
 }
