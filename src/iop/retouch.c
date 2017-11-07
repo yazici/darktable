@@ -110,6 +110,8 @@ typedef struct dt_iop_retouch_gui_data_t
   dt_pthread_mutex_t lock;
   
   int copied_scale; // scale to be copied to another scale
+  int mask_display;
+  int suppress_mask;
 
   GtkLabel *label_form; // display number of forms
   GtkLabel *label_form_selected; // display number of forms selected
@@ -493,7 +495,7 @@ static void rt_display_selected_fill_color(dt_iop_retouch_gui_data_t *g, dt_iop_
   gtk_color_chooser_set_rgba(GTK_COLOR_CHOOSER(g->colorpick), &c);
 }
 
-static void rt_show_hide_controls(dt_iop_retouch_gui_data_t *d, dt_iop_retouch_params_t *p)
+static void rt_show_hide_controls(dt_iop_module_t *self, dt_iop_retouch_gui_data_t *d, dt_iop_retouch_params_t *p)
 {
   switch (p->algorithm)
   {
@@ -526,6 +528,15 @@ static void rt_show_hide_controls(dt_iop_retouch_gui_data_t *d, dt_iop_retouch_p
   else
     gtk_widget_hide(GTK_WIDGET(d->sl_mask_opacity));
 
+/*  int enabled = 1;
+  if (self->blend_params) enabled = !(self->blend_params->mask_mode & DEVELOP_MASK_ENABLED);
+  if (enabled)
+    gtk_widget_show(GTK_WIDGET(d->bt_showmask));
+  else
+  {
+    d->mask_display = 0;
+    gtk_widget_hide(GTK_WIDGET(d->bt_showmask));
+  }*/
 }
 
 static void rt_display_selected_shapes_lbl(dt_iop_retouch_gui_data_t *g)
@@ -593,7 +604,7 @@ static void rt_shape_selection_changed(dt_iop_module_t *self)
     }
     
     if (selection_changed)
-      rt_show_hide_controls(g, p);
+      rt_show_hide_controls(self, g, p);
   }
   
   rt_display_selected_shapes_lbl(g);
@@ -1210,7 +1221,7 @@ static void rt_select_algorithm_callback(GtkToggleButton *togglebutton, dt_iop_m
   gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(g->bt_gaussian_blur), (p->algorithm == dt_iop_retouch_gaussian_blur));
   gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(g->bt_fill), (p->algorithm == dt_iop_retouch_fill));
 
-  rt_show_hide_controls(g, p);
+  rt_show_hide_controls(self, g, p);
   
   darktable.gui->reset = reset;
   
@@ -1219,19 +1230,44 @@ static void rt_select_algorithm_callback(GtkToggleButton *togglebutton, dt_iop_m
 
 static void rt_showmask_callback(GtkToggleButton *togglebutton, dt_iop_module_t *module)
 {
-  module->request_mask_display = gtk_toggle_button_get_active(togglebutton);
   if(darktable.gui->reset) return;
 
-  if(module->off) gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(module->off), 1);
-  dt_iop_request_focus(module);
-
-  dt_dev_reprocess_all(module->dev);
+  dt_iop_retouch_gui_data_t *g = (dt_iop_retouch_gui_data_t *)module->gui_data;
+  int enabled = 1;
+  if (module->blend_params) enabled = !(module->blend_params->mask_mode & DEVELOP_MASK_ENABLED);
+  
+  if (enabled)
+  {
+    g->mask_display = gtk_toggle_button_get_active(togglebutton);
+    if (g->mask_display)
+      module->request_mask_display |= DT_DEV_PIXELPIPE_DISPLAY_MASK;
+    else
+      module->request_mask_display &= ~DT_DEV_PIXELPIPE_DISPLAY_MASK;
+  
+    if(module->off) gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(module->off), 1);
+    dt_iop_request_focus(module);
+  
+    dt_dev_reprocess_all(module->dev);
+  }
+  else
+  {
+    darktable.gui->reset = 1;
+    
+    g->mask_display = 0;
+    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(togglebutton), 0);
+    
+    dt_control_log(_("display masks is not active when blend module is in use"));
+    
+    darktable.gui->reset = 0;
+  }
 }
 
 static void rt_suppress_callback(GtkToggleButton *togglebutton, dt_iop_module_t *module)
 {
-  module->suppress_mask = gtk_toggle_button_get_active(togglebutton);
   if(darktable.gui->reset) return;
+  
+  dt_iop_retouch_gui_data_t *g = (dt_iop_retouch_gui_data_t *)module->gui_data;
+  g->suppress_mask = gtk_toggle_button_get_active(togglebutton);
 
   if(module->off) gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(module->off), 1);
   dt_iop_request_focus(module);
@@ -1279,7 +1315,7 @@ static void rt_fill_mode_callback(GtkComboBox *combo, dt_iop_module_t *self)
     }
   }
   
-  rt_show_hide_controls(g, p);
+  rt_show_hide_controls(self, g, p);
   
   darktable.gui->reset = reset;
   
@@ -1514,7 +1550,7 @@ void gui_update(dt_iop_module_t *self)
   gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(g->bt_paste_scale), g->copied_scale < 0);
   
   // show/hide some fields
-  rt_show_hide_controls(g, p);
+  rt_show_hide_controls(self, g, p);
   
   // update edit shapes status
   dt_iop_gui_blend_data_t *bd = (dt_iop_gui_blend_data_t *)self->blend_data;
@@ -1539,6 +1575,8 @@ void gui_init(dt_iop_module_t *self)
 
   dt_pthread_mutex_init(&g->lock, NULL);
   g->copied_scale = -1;
+  g->mask_display = 0;
+  g->suppress_mask = 0;
   
   self->widget = gtk_box_new(GTK_ORIENTATION_VERTICAL, 5);
   
@@ -1820,7 +1858,7 @@ void gui_init(dt_iop_module_t *self)
   gtk_widget_set_no_show_all(g->hbox_color, TRUE);
 
 
-  rt_show_hide_controls(g, p);
+  rt_show_hide_controls(self, g, p);
 }
 
 void gui_reset(struct dt_iop_module_t *self)
@@ -2526,7 +2564,8 @@ static void process_internal(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_
                 int use_sse)
 {
   dt_iop_retouch_params_t *p = (dt_iop_retouch_params_t *)piece->data;
-  
+  dt_iop_retouch_gui_data_t *g = (dt_iop_retouch_gui_data_t *)self->gui_data;
+
   float *in_retouch = NULL;
   
   dt_iop_roi_t roi_retouch = *roi_in;
@@ -2569,12 +2608,12 @@ static void process_internal(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_
   if (dwt_p == NULL) goto cleanup;
 
   // check if this module should expose mask. 
-  if(self->request_mask_display && self->dev->gui_attached && (self == self->dev->gui_module)
-     && (piece->pipe == self->dev->pipe) )
+  if((self->request_mask_display & DT_DEV_PIXELPIPE_DISPLAY_MASK) && self->dev->gui_attached && (self == self->dev->gui_module)
+      && (piece->pipe == self->dev->pipe) && g && g->mask_display)
   {
     for(size_t j = 0; j < roi_rt->width*roi_rt->height*ch; j += ch) in_retouch[j + 3] = 0.f;
     
-    piece->pipe->mask_display = 1;
+    piece->pipe->mask_display |= DT_DEV_PIXELPIPE_DISPLAY_MASK;
     usr_data.mask_display = 1;
   }
   
@@ -2589,7 +2628,7 @@ static void process_internal(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_
   }
   
   // decompose it
-  if(self->suppress_mask && self->dev->gui_attached && (self == self->dev->gui_module)
+  if(g && g->suppress_mask && self->dev->gui_attached && (self == self->dev->gui_module)
      && (piece->pipe == self->dev->pipe))
   {
     dwt_decompose(dwt_p, NULL);
@@ -2600,10 +2639,9 @@ static void process_internal(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_
   }
 
   // copy alpha channel if nedded
-  if(piece->pipe->mask_display && !usr_data.mask_display) 
+  if((piece->pipe->mask_display & DT_DEV_PIXELPIPE_DISPLAY_MASK) && !usr_data.mask_display) 
   {
-    const float *const i = ivoid;
-    for(size_t j = 0; j < roi_rt->width*roi_rt->height*ch; j += ch) in_retouch[j + 3] = i[j + 3];
+    dt_iop_alpha_copy(ivoid, in_retouch, roi_rt->width, roi_rt->height);
   }
   
   // return final image
@@ -3180,7 +3218,8 @@ int process_cl(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, cl_m
 {
   dt_iop_retouch_params_t *p = (dt_iop_retouch_params_t *)piece->data;
   dt_iop_retouch_global_data_t *gd = (dt_iop_retouch_global_data_t *)self->data;
-
+  dt_iop_retouch_gui_data_t *g = (dt_iop_retouch_gui_data_t *)self->gui_data;
+  
   cl_int err = CL_SUCCESS;
   const int devid = piece->pipe->devid;
 
@@ -3241,8 +3280,8 @@ int process_cl(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, cl_m
   }
 
   // check if this module should expose mask. 
-  if(self->request_mask_display && self->dev->gui_attached && (self == self->dev->gui_module)
-      && (piece->pipe == self->dev->pipe) )
+  if((self->request_mask_display & DT_DEV_PIXELPIPE_DISPLAY_MASK) && self->dev->gui_attached && (self == self->dev->gui_module)
+      && (piece->pipe == self->dev->pipe) && g && g->mask_display)
   {
     const int kernel = gd->kernel_retouch_clear_alpha;
     size_t sizes[] = { ROUNDUPWD(roi_rt->width), ROUNDUPHT(roi_rt->height), 1 };
@@ -3253,7 +3292,7 @@ int process_cl(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, cl_m
     err = dt_opencl_enqueue_kernel_2d(devid, kernel, sizes);
     if (err != CL_SUCCESS) goto cleanup;
 
-    piece->pipe->mask_display = 1;
+    piece->pipe->mask_display |= DT_DEV_PIXELPIPE_DISPLAY_MASK;
     usr_data.mask_display = 1;
   }
   
@@ -3268,7 +3307,7 @@ int process_cl(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, cl_m
   }
   
   // decompose it
-  if(self->suppress_mask && self->dev->gui_attached && (self == self->dev->gui_module)
+  if(g && g->suppress_mask && self->dev->gui_attached && (self == self->dev->gui_module)
       && (piece->pipe == self->dev->pipe))
   {
     err = dwt_decompose_cl(dwt_p, NULL);
@@ -3281,7 +3320,7 @@ int process_cl(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, cl_m
   }
 
   // copy alpha channel if nedded
-  if(piece->pipe->mask_display && !usr_data.mask_display) 
+  if((piece->pipe->mask_display & DT_DEV_PIXELPIPE_DISPLAY_MASK) && !usr_data.mask_display) 
   {
     const int kernel = gd->kernel_retouch_copy_alpha;
     size_t sizes[] = { ROUNDUPWD(roi_rt->width), ROUNDUPHT(roi_rt->height), 1 };

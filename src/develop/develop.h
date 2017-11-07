@@ -250,7 +250,6 @@ typedef struct dt_develop_t
     GtkWidget *floating_window, *softproof_button, *gamut_button;
   } profile;
 
-  gboolean darkroom_skip_mouse_events; // skip mouse events for masks
   int mask_form_selected_id; // select a mask inside an iop
 } dt_develop_t;
 
