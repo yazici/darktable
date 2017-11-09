@@ -22,6 +22,7 @@
 
 #include "bauhaus/bauhaus.h"
 #include "common/richardson_lucy_deconvolution.h"
+#include "common/rldeco.h"
 
 #ifdef HAVE_FFTW3_OMP
 #include <fftw3.h>
@@ -34,15 +35,16 @@ DT_MODULE_INTROSPECTION(1, dt_iop_rlucydec_params_t)
 typedef struct dt_iop_rlucydec_params_t
 {
   int blur_type;
-  int quality;
-  float artifacts_damping;
+  int refine_quality;
+  float ringing_factor;
   int deblur_strength;
   int blur_width;
   int blur_strength;
   int refine;
   float mask[4];
   int use_mask;
-  float backvsmask_ratio;
+  float auto_quality;
+  float noise_reduction_factor;
 } dt_iop_rlucydec_params_t;
 
 typedef struct dt_iop_rlucydec_gui_data_t
@@ -52,14 +54,15 @@ typedef struct dt_iop_rlucydec_gui_data_t
 
   GtkWidget *bt_draw_focus_zone;
   GtkWidget *cmb_blur_type;
-  GtkWidget *sl_quality;
-  GtkWidget *sl_artifacts_damping;
+  GtkWidget *sl_refine_quality;
+  GtkWidget *sl_ringing_factor;
   GtkWidget *sl_deblur_strength;
   GtkWidget *sl_blur_width;
   GtkWidget *sl_blur_strength;
   GtkWidget *chk_refine;
   GtkWidget *chk_use_mask;
-  GtkWidget *sl_backvsmask_ratio;
+  GtkWidget *sl_auto_quality;
+  GtkWidget *sl_noise_reduction_factor;
 } dt_iop_rlucydec_gui_data_t;
 
 typedef struct dt_iop_rlucydec_params_t dt_iop_rlucydec_data_t;
@@ -119,22 +122,22 @@ static void rlucy_blur_type_callback(GtkComboBox *combo, dt_iop_module_t *self)
   dt_dev_add_history_item(darktable.develop, self, TRUE);
 }
 
-static void rlucy_quality_callback(GtkWidget *slider, dt_iop_module_t *self)
+static void rlucy_refine_quality_callback(GtkWidget *slider, dt_iop_module_t *self)
 {
   if(darktable.gui->reset) return;
   dt_iop_rlucydec_params_t *p = (dt_iop_rlucydec_params_t *)self->params;
   
-  p->quality = dt_bauhaus_slider_get(slider);
+  p->refine_quality = dt_bauhaus_slider_get(slider);
   
   dt_dev_add_history_item(darktable.develop, self, TRUE);
 }
 
-static void rlucy_artifacts_damping_callback(GtkWidget *slider, dt_iop_module_t *self)
+static void rlucy_ringing_factor_callback(GtkWidget *slider, dt_iop_module_t *self)
 {
   if(darktable.gui->reset) return;
   dt_iop_rlucydec_params_t *p = (dt_iop_rlucydec_params_t *)self->params;
   
-  p->artifacts_damping = dt_bauhaus_slider_get(slider);
+  p->ringing_factor = dt_bauhaus_slider_get(slider);
   
   dt_dev_add_history_item(darktable.develop, self, TRUE);
 }
@@ -189,12 +192,22 @@ static void rlucy_chk_use_mask_callback(GtkWidget *widget, dt_iop_module_t *self
 	dt_dev_add_history_item(darktable.develop, self, TRUE);
 }
 
-static void rlucy_backvsmask_ratio_callback(GtkWidget *slider, dt_iop_module_t *self)
+static void rlucy_auto_quality_callback(GtkWidget *slider, dt_iop_module_t *self)
 {
   if(darktable.gui->reset) return;
   dt_iop_rlucydec_params_t *p = (dt_iop_rlucydec_params_t *)self->params;
   
-  p->backvsmask_ratio = dt_bauhaus_slider_get(slider);
+  p->auto_quality = dt_bauhaus_slider_get(slider);
+  
+  dt_dev_add_history_item(darktable.develop, self, TRUE);
+}
+
+static void rlucy_noise_reduction_factor_callback(GtkWidget *slider, dt_iop_module_t *self)
+{
+  if(darktable.gui->reset) return;
+  dt_iop_rlucydec_params_t *p = (dt_iop_rlucydec_params_t *)self->params;
+  
+  p->noise_reduction_factor = dt_bauhaus_slider_get(slider);
   
   dt_dev_add_history_item(darktable.develop, self, TRUE);
 }
@@ -299,14 +312,15 @@ void gui_update(struct dt_iop_module_t *self)
 
   dt_bauhaus_combobox_set(g->cmb_blur_type, p->blur_type);
   
-  dt_bauhaus_slider_set(g->sl_quality, p->quality);
-  dt_bauhaus_slider_set(g->sl_artifacts_damping, p->artifacts_damping);
+  dt_bauhaus_slider_set(g->sl_refine_quality, p->refine_quality);
+  dt_bauhaus_slider_set(g->sl_ringing_factor, p->ringing_factor);
   dt_bauhaus_slider_set(g->sl_deblur_strength, p->deblur_strength);
   dt_bauhaus_slider_set(g->sl_blur_width, p->blur_width);
   dt_bauhaus_slider_set(g->sl_blur_strength, p->blur_strength);
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(g->chk_refine), p->refine);
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(g->chk_use_mask), p->use_mask);
-  dt_bauhaus_slider_set(g->sl_backvsmask_ratio, p->backvsmask_ratio);
+  dt_bauhaus_slider_set(g->sl_auto_quality, p->auto_quality);
+  dt_bauhaus_slider_set(g->sl_noise_reduction_factor, p->noise_reduction_factor);
 
 }
 
@@ -323,14 +337,16 @@ void init(dt_iop_module_t *module)
   
   dt_iop_rlucydec_params_t tmp = {0};
   
-  tmp.blur_type = blur_type_kaiser;
-  tmp.quality = 50;
-  tmp.artifacts_damping = 0.00003f;
-  tmp.deblur_strength = 20;
+  tmp.blur_type = rldeco_blur_type_auto;
   tmp.blur_width = 11;
+  tmp.deblur_strength = 0;
   tmp.blur_strength = 8;
+  tmp.auto_quality = 1.f;
+  tmp.noise_reduction_factor = 1000.f;
+  tmp.refine_quality = 50;
+  tmp.ringing_factor = 0.001f;
   tmp.refine = 0;
-  tmp.backvsmask_ratio = 0.f;
+  tmp.refine_quality = 0;
 
   memcpy(module->params, &tmp, sizeof(dt_iop_rlucydec_params_t));
   memcpy(module->default_params, &tmp, sizeof(dt_iop_rlucydec_params_t));
@@ -364,33 +380,23 @@ void gui_init(struct dt_iop_module_t *self)
   g_object_set(g->cmb_blur_type, "tooltip-text", _("blur type."), (char *)NULL);
   g_signal_connect(G_OBJECT(g->cmb_blur_type), "value-changed", G_CALLBACK(rlucy_blur_type_callback), self);
 
-  gtk_box_pack_start(GTK_BOX(self->widget), GTK_WIDGET(g->cmb_blur_type), TRUE, TRUE, 0);
+  g->sl_refine_quality = dt_bauhaus_slider_new_with_range(self, 0, 100, 1, p->refine_quality, 0);
+  dt_bauhaus_widget_set_label(g->sl_refine_quality, _("refine quality"), _("refine quality"));
+//  dt_bauhaus_slider_set_format(g->sl_refine_quality, "%.01f");
+  g_object_set(g->sl_refine_quality, "tooltip-text", _("the number of iterations to perform during the refinement step."), (char *)NULL);
+  g_signal_connect(G_OBJECT(g->sl_refine_quality), "value-changed", G_CALLBACK(rlucy_refine_quality_callback), self);
 
-  g->sl_quality = dt_bauhaus_slider_new_with_range(self, 1, 100, 1, p->quality, 0);
-  dt_bauhaus_widget_set_label(g->sl_quality, _("quality"), _("quality"));
-//  dt_bauhaus_slider_set_format(g->sl_quality, "%.01f");
-  g_object_set(g->sl_quality, "tooltip-text", _("quality of the refining\n"
-      "(ie the total number of iterations to compute)."), (char *)NULL);
-  g_signal_connect(G_OBJECT(g->sl_quality), "value-changed", G_CALLBACK(rlucy_quality_callback), self);
+  g->sl_ringing_factor = dt_bauhaus_slider_new_with_range(self, 0.00001, 1.0, 0.00001, p->ringing_factor, 6);
+  dt_bauhaus_widget_set_label(g->sl_ringing_factor, _("ringing factor"), _("ringing factor"));
+//  dt_bauhaus_slider_set_format(g->sl_ringing_factor, "%.01f");
+  g_object_set(g->sl_ringing_factor, "tooltip-text", _("the iterations factor. Typically 1e-3, reduce it to 5e-4 or ever 1e-4 if you see ringing or periodic edges appear."), (char *)NULL);
+  g_signal_connect(G_OBJECT(g->sl_ringing_factor), "value-changed", G_CALLBACK(rlucy_ringing_factor_callback), self);
 
-  gtk_box_pack_start(GTK_BOX(self->widget), g->sl_quality, TRUE, TRUE, 0);
-
-  g->sl_artifacts_damping = dt_bauhaus_slider_new_with_range(self, 0.00003, 1.0, 0.00001, p->artifacts_damping, 6);
-  dt_bauhaus_widget_set_label(g->sl_artifacts_damping, _("artifacts damping"), _("artifacts damping"));
-//  dt_bauhaus_slider_set_format(g->sl_artifacts_damping, "%.01f");
-  g_object_set(g->sl_artifacts_damping, "tooltip-text", _("the noise and artifacts reduction factor lambda.\n"
-      "increase it if smudges, noise or ringing appear."), (char *)NULL);
-  g_signal_connect(G_OBJECT(g->sl_artifacts_damping), "value-changed", G_CALLBACK(rlucy_artifacts_damping_callback), self);
-
-  gtk_box_pack_start(GTK_BOX(self->widget), g->sl_artifacts_damping, TRUE, TRUE, 0);
-
-  g->sl_blur_width = dt_bauhaus_slider_new_with_range(self, 3, 11.0, 1, p->blur_width, 0);
+  g->sl_blur_width = dt_bauhaus_slider_new_with_range(self, 3, 111.0, 1, p->blur_width, 0);
   dt_bauhaus_widget_set_label(g->sl_blur_width, _("blur width"), _("blur width"));
 //  dt_bauhaus_slider_set_format(g->sl_blur_width, "%.01f");
-  g_object_set(g->sl_blur_width, "tooltip-text", _("width of the blur in px."), (char *)NULL);
+  g_object_set(g->sl_blur_width, "tooltip-text", _("the width of the blur in px - must be an odd integer"), (char *)NULL);
   g_signal_connect(G_OBJECT(g->sl_blur_width), "value-changed", G_CALLBACK(rlucy_blur_width_callback), self);
-
-  gtk_box_pack_start(GTK_BOX(self->widget), g->sl_blur_width, TRUE, TRUE, 0);
 
   g->sl_blur_strength = dt_bauhaus_slider_new_with_range(self, 1, 50.0, 1, p->blur_strength, 0);
   dt_bauhaus_widget_set_label(g->sl_blur_strength, _("blur strength"), _("blur strength"));
@@ -398,14 +404,10 @@ void gui_init(struct dt_iop_module_t *self)
   g_object_set(g->sl_blur_strength, "tooltip-text", _("standard deviation of the blur kernel."), (char *)NULL);
   g_signal_connect(G_OBJECT(g->sl_blur_strength), "value-changed", G_CALLBACK(rlucy_blur_strength_callback), self);
 
-  gtk_box_pack_start(GTK_BOX(self->widget), g->sl_blur_strength, TRUE, TRUE, 0);
-
 	g->chk_refine = gtk_check_button_new_with_label("refine");
-	g_object_set(G_OBJECT(g->chk_refine), "tooltip-text", _("refine"), (char *)NULL);
+	g_object_set(G_OBJECT(g->chk_refine), "tooltip-text", _("decide if the blur kernel should be refined through myopic deconvolution"), (char *)NULL);
 	g_signal_connect(G_OBJECT(g->chk_refine), "toggled", G_CALLBACK(rlucy_chk_refine_callback), self);
 
-	gtk_box_pack_start(GTK_BOX(self->widget), g->chk_refine, TRUE, TRUE, 0);
-	
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(g->chk_refine), p->refine);
 	
   g->sl_deblur_strength = dt_bauhaus_slider_new_with_range(self, 0, 100.0, 1, p->deblur_strength, 0);
@@ -413,8 +415,6 @@ void gui_init(struct dt_iop_module_t *self)
 //  dt_bauhaus_slider_set_format(g->sl_deblur_strength, "%.01f");
   g_object_set(g->sl_deblur_strength, "tooltip-text", _("number of debluring iterations to perform."), (char *)NULL);
   g_signal_connect(G_OBJECT(g->sl_deblur_strength), "value-changed", G_CALLBACK(rlucy_deblur_strength_callback), self);
-
-  gtk_box_pack_start(GTK_BOX(self->widget), g->sl_deblur_strength, TRUE, TRUE, 0);
 
   GtkWidget *hbox_mask = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
 
@@ -433,18 +433,39 @@ void gui_init(struct dt_iop_module_t *self)
   
   gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(g->chk_use_mask), p->use_mask);
 
+  g->sl_auto_quality = dt_bauhaus_slider_new_with_range(self, 0.0, 2.0, 0.01, p->auto_quality, 3);
+  dt_bauhaus_widget_set_label(g->sl_auto_quality, _("auto quality"), _("auto quality"));
+//  dt_bauhaus_slider_set_format(g->sl_auto_quality, "%.01f");
+  g_object_set(g->sl_auto_quality, "tooltip-text", _("when the `blur_type` is `auto`, the number of iterations of the initial blur estimation is half the"
+     "square of the PSF size.\nThe `auto_quality` parameter is a factor that allows you to reduce the number of iteration to speed up the process.\n"
+    "Default : 1. Recommended values : between 0.25 and 2."), (char *)NULL);
+  g_signal_connect(G_OBJECT(g->sl_auto_quality), "value-changed", G_CALLBACK(rlucy_auto_quality_callback), self);
+
+  g->sl_noise_reduction_factor = dt_bauhaus_slider_new_with_range(self, 0.0, 30000.0, 1.0, p->noise_reduction_factor, 3);
+  dt_bauhaus_widget_set_label(g->sl_noise_reduction_factor, _("noise reduction factor"), _("noise reduction factor"));
+//  dt_bauhaus_slider_set_format(g->sl_noise_reduction_factor, "%.01f");
+  g_object_set(g->sl_noise_reduction_factor, "tooltip-text", _("the noise reduction factor lambda.\n"
+      "For the `best` method, default is 1000, use 12000 to 30000 to speed up the convergence.\n"
+      "Lower values don't help to reduce the noise, decrease the `ringing_facter` instead."), (char *)NULL);
+  g_signal_connect(G_OBJECT(g->sl_noise_reduction_factor), "value-changed", G_CALLBACK(rlucy_noise_reduction_factor_callback), self);
+
+  
+  gtk_box_pack_start(GTK_BOX(self->widget), g->sl_deblur_strength, TRUE, TRUE, 0);
+  
+  gtk_box_pack_start(GTK_BOX(self->widget), GTK_WIDGET(g->cmb_blur_type), TRUE, TRUE, 0);
+  gtk_box_pack_start(GTK_BOX(self->widget), g->sl_blur_width, TRUE, TRUE, 0);
+  gtk_box_pack_start(GTK_BOX(self->widget), g->sl_blur_strength, TRUE, TRUE, 0);
+
+  gtk_box_pack_start(GTK_BOX(self->widget), g->chk_refine, TRUE, TRUE, 0);
+  gtk_box_pack_start(GTK_BOX(self->widget), g->sl_refine_quality, TRUE, TRUE, 0);
+
+  gtk_box_pack_start(GTK_BOX(self->widget), g->sl_ringing_factor, TRUE, TRUE, 0);
+
+  gtk_box_pack_start(GTK_BOX(self->widget), g->sl_auto_quality, TRUE, TRUE, 0);
+  gtk_box_pack_start(GTK_BOX(self->widget), g->sl_noise_reduction_factor, TRUE, TRUE, 0);
+
   gtk_box_pack_start(GTK_BOX(self->widget), hbox_mask, TRUE, TRUE, 0);
 
-	g->sl_backvsmask_ratio = dt_bauhaus_slider_new_with_range(self, 0.0, 1.0, 0.01, p->backvsmask_ratio, 3);
-  dt_bauhaus_widget_set_label(g->sl_backvsmask_ratio, _("back vs. mask ratio"), _("back vs. mask ratio"));
-//  dt_bauhaus_slider_set_format(g->sl_backvsmask_ratio, "%.01f");
-  g_object_set(g->sl_backvsmask_ratio, "tooltip-text", _("when a mask is used, the ratio  of weights of the whole image / the masked zone.\n"
-         "0 means only the masked zone is used,\n"
-      "1 means the masked zone is ignored and only the whole image is taken.\n"
-      "0 runs faster, 1 runs much slower."), (char *)NULL);
-  g_signal_connect(G_OBJECT(g->sl_backvsmask_ratio), "value-changed", G_CALLBACK(rlucy_backvsmask_ratio_callback), self);
-
-  gtk_box_pack_start(GTK_BOX(self->widget), g->sl_backvsmask_ratio, TRUE, TRUE, 0);
 
 }
 
@@ -654,7 +675,7 @@ static void check_nan(const float* im, const int size)
 	if (i_nan > 0) printf("Richardson-Lucy deconvolution nan: %i\n", i_nan);
 }
 
-void process_internal(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const void *const ivoid, void *const ovoid,
+void _rlucy_process_internal(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const void *const ivoid, void *const ovoid,
     const dt_iop_roi_t *const roi_in, const dt_iop_roi_t *const roi_out, const int use_sse)
 {
   const dt_iop_rlucydec_data_t *const p = (const dt_iop_rlucydec_data_t *const)piece->data;
@@ -667,14 +688,14 @@ void process_internal(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piec
   float *kernel = NULL;
 
   int blur_type = p->blur_type;
-  int quality = p->quality;
-  float artifacts_damping = p->artifacts_damping;
+  int refine_quality = p->refine_quality;
+  float ringing_factor = p->ringing_factor;
   int deblur_strength = p->deblur_strength;
   int blur_width = p->blur_width;
   int blur_strength = p->blur_strength;
   int refine = p->refine;
   int *mask = NULL;
-  float backvsmask_ratio = p->backvsmask_ratio;
+  float auto_quality = p->auto_quality;
 
   float pt_x = p->mask[0];
   float pt_y = p->mask[1];
@@ -689,13 +710,13 @@ void process_internal(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piec
 
     distord_rec(self, dev, piece->pipe, from_scale, to_scale, 0, self->priority - 1, &pt_x, &pt_y, &pt_w, &pt_h);
 
-    //  printf("process_internal pt_x=%f, pt_y=%f, pt_w=%f, pt_h=%f\n", pt_x, pt_y, pt_w, pt_h);
-    //  printf("process_internal roi_in->x=%i, roi_in->y=%i, roi_in->width=%i, roi_in->height=%i\n", roi_in->x, roi_in->y, roi_in->width, roi_in->height);
+    //  printf("rlucy_process_internal pt_x=%f, pt_y=%f, pt_w=%f, pt_h=%f\n", pt_x, pt_y, pt_w, pt_h);
+    //  printf("rlucy_process_internal roi_in->x=%i, roi_in->y=%i, roi_in->width=%i, roi_in->height=%i\n", roi_in->x, roi_in->y, roi_in->width, roi_in->height);
 
     pt_x -= (float)roi_in->x;
     pt_y -= (float)roi_in->y;
 
-    //  printf("process_internal x=%f, y=%f, w=%f, h=%f\n", pt_x, pt_y, pt_w, pt_h);
+    //  printf("rlucy_process_internal x=%f, y=%f, w=%f, h=%f\n", pt_x, pt_y, pt_w, pt_h);
     if (pt_w > 0. && pt_h > 0.)
     {
       rl_mask[0] = MAX(pt_x, 0.);
@@ -714,7 +735,7 @@ void process_internal(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piec
       if (rl_mask[2] > 0 && rl_mask[3] > 0)
       {
         mask = rl_mask;
-        //  		printf("process_internal x=%i, y=%i, w=%i, h=%i\n", rl_mask[0], rl_mask[1], rl_mask[2], rl_mask[3]);
+        //      printf("rlucy_process_internal x=%i, y=%i, w=%i, h=%i\n", rl_mask[0], rl_mask[1], rl_mask[2], rl_mask[3]);
       }
     }
   }
@@ -728,12 +749,12 @@ void process_internal(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piec
 
       richardson_lucy_build_kernel(im_tmp, roi_out->width, roi_out->height, 1, 
           kernel, blur_width, blur_strength, 
-          blur_type, quality, artifacts_damping);
+          blur_type, refine_quality, ringing_factor);
       
       richardson_lucy(im_tmp, roi_out->width, roi_out->height, 1, 
           kernel, blur_width, 
-          quality, artifacts_damping, deblur_strength, 
-          refine, mask, backvsmask_ratio);
+          refine_quality, ringing_factor, deblur_strength, 
+          refine, mask, auto_quality);
     }
   }
   else if (cst == iop_cs_Lab)
@@ -753,12 +774,12 @@ void process_internal(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piec
 
       richardson_lucy_build_kernel(im_tmp, roi_out->width, roi_out->height, 1, 
           kernel, blur_width, blur_strength, 
-          blur_type, quality, artifacts_damping);
+          blur_type, refine_quality, ringing_factor);
       
       richardson_lucy(im_tmp, roi_out->width, roi_out->height, 1, 
           kernel, blur_width, 
-          quality, artifacts_damping, deblur_strength, 
-          refine, mask, backvsmask_ratio);
+          refine_quality, ringing_factor, deblur_strength, 
+          refine, mask, auto_quality);
       
       float *im_dest = (float*)ovoid;
 
@@ -780,17 +801,184 @@ void process_internal(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piec
 
 }
 
+void rlucy_process_internal(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const void *const ivoid, void *const ovoid,
+    const dt_iop_roi_t *const roi_in, const dt_iop_roi_t *const roi_out, const int use_sse)
+{
+  const dt_iop_rlucydec_data_t *const p = (const dt_iop_rlucydec_data_t *const)piece->data;
+  dt_develop_t *dev = self->dev;
+
+  const dt_iop_colorspace_type_t cst = dt_iop_module_colorspace(self);
+  const int ch = piece->colors;
+
+  float *im_tmp = NULL;
+  float *kernel = NULL;
+
+  int blur_type = p->blur_type;
+  int deblur_strength = p->deblur_strength;
+  int blur_width = p->blur_width;
+  int blur_strength = p->blur_strength;
+  int refine = p->refine;
+  float ringing_factor = p->ringing_factor;
+  float auto_quality = p->auto_quality;
+  float noise_reduction_factor = p->noise_reduction_factor;
+  int refine_quality = p->refine_quality;
+  float effect_strength = 1.f;
+  int denoise = 0;
+  int method = rldeco_method_best;
+  
+  float *psf_in = NULL;
+  int *mask = NULL;
+
+  float pt_x = p->mask[0];
+  float pt_y = p->mask[1];
+  float pt_w = p->mask[2];
+  float pt_h = p->mask[3];
+  int rl_mask[4] = {0};
+
+  if (p->use_mask)
+  {
+    float from_scale = 1.0;
+    float to_scale = roi_in->scale / piece->iscale;
+
+    distord_rec(self, dev, piece->pipe, from_scale, to_scale, 0, self->priority - 1, &pt_x, &pt_y, &pt_w, &pt_h);
+
+    //  printf("rlucy_process_internal pt_x=%f, pt_y=%f, pt_w=%f, pt_h=%f\n", pt_x, pt_y, pt_w, pt_h);
+    //  printf("rlucy_process_internal roi_in->x=%i, roi_in->y=%i, roi_in->width=%i, roi_in->height=%i\n", roi_in->x, roi_in->y, roi_in->width, roi_in->height);
+
+    pt_x -= (float)roi_in->x;
+    pt_y -= (float)roi_in->y;
+
+    //  printf("rlucy_process_internal x=%f, y=%f, w=%f, h=%f\n", pt_x, pt_y, pt_w, pt_h);
+    if (pt_w > 0. && pt_h > 0.)
+    {
+      rl_mask[0] = MAX(pt_x, 0.);
+      rl_mask[1] = MAX(pt_y, 0.);
+      if (pt_x < 0.)
+        rl_mask[2] = pt_w + pt_x;
+      else
+        rl_mask[2] = pt_w;
+      if (pt_y < 0.)
+        rl_mask[3] = pt_h + pt_y;
+      else
+        rl_mask[3] = pt_h;
+      rl_mask[2] = MIN(rl_mask[2], roi_in->width-rl_mask[0]);
+      rl_mask[3] = MIN(rl_mask[3], roi_in->height-rl_mask[1]);
+
+      if (rl_mask[2] > 0 && rl_mask[3] > 0)
+      {
+        mask = rl_mask;
+        //      printf("rlucy_process_internal x=%i, y=%i, w=%i, h=%i\n", rl_mask[0], rl_mask[1], rl_mask[2], rl_mask[3]);
+      }
+    }
+  }
+
+/*  if (cst == iop_cs_rgb)
+  {
+    kernel = (float*)dt_alloc_align(64, blur_width * blur_width * ch * sizeof(float));
+    if (im_tmp && kernel)
+    {
+      memcpy(ovoid, ivoid, roi_in->width * roi_in->height * ch * sizeof(float));
+
+      richardson_lucy_build_kernel(im_tmp, roi_out->width, roi_out->height, 1, 
+          kernel, blur_width, blur_strength, 
+          blur_type, refine_quality, ringing_factor);
+      
+      richardson_lucy(im_tmp, roi_out->width, roi_out->height, 1, 
+          kernel, blur_width, 
+          refine_quality, ringing_factor, deblur_strength, 
+          refine, mask, auto_quality);
+    }
+  }
+  else*/ 
+  if (cst == iop_cs_rgb)
+  {
+    rldeco_deblur_module((float*)ivoid,
+        blur_type,
+            blur_width,
+            noise_reduction_factor,
+            deblur_strength,
+            blur_strength,
+            auto_quality,
+            ringing_factor,
+            refine,
+            refine_quality,
+            mask,
+            effect_strength,
+            psf_in,
+            denoise,
+            method,
+                              (float*)ovoid,
+                              roi_out->width,
+                              roi_out->height,
+                              ch);
+  }
+  else if (cst == iop_cs_Lab)
+  {
+    memcpy(ovoid, ivoid, roi_in->width * roi_in->height * ch * sizeof(float));
+
+    im_tmp = (float*)dt_alloc_align(64, roi_out->width * roi_out->height * sizeof(float));
+    kernel = (float*)dt_alloc_align(64, blur_width * blur_width * sizeof(float));
+    if (im_tmp && kernel)
+    {
+      float *im_src = (float*)ivoid;
+
+      for (int i = 0; i < roi_out->width * roi_out->height; i++)
+      {
+        im_tmp[i] = im_src[i*ch] * (1.f / 100.f);
+      }
+
+      rldeco_deblur_module(im_tmp,
+          blur_type,
+              blur_width,
+              noise_reduction_factor,
+              deblur_strength,
+              blur_strength,
+              auto_quality,
+              ringing_factor,
+              refine,
+              refine_quality,
+              mask,
+              effect_strength,
+              psf_in,
+              denoise,
+              method,
+                                im_tmp,
+                                roi_out->width,
+                                roi_out->height,
+                                1);
+
+      
+      float *im_dest = (float*)ovoid;
+
+      for (int i = 0; i < roi_out->width * roi_out->height; i++)
+      {
+        im_dest[i*ch] = im_tmp[i] * 100.f;
+      }
+    }
+  }
+  else
+  {
+    memcpy(ovoid, ivoid, roi_in->width * roi_in->height * ch * sizeof(float));
+  }
+
+  check_nan((float*)ovoid, roi_out->width*roi_out->height*ch);
+
+  if (im_tmp) dt_free_align(im_tmp);
+  if (kernel) dt_free_align(kernel);
+
+}
+
 void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const void *const ivoid, void *const ovoid,
              const dt_iop_roi_t *const roi_in, const dt_iop_roi_t *const roi_out)
 {
-	process_internal(self, piece, ivoid, ovoid, roi_in, roi_out, 0);
+	rlucy_process_internal(self, piece, ivoid, ovoid, roi_in, roi_out, 0);
 }
 
 #if defined(__SSE__x)
 void process_sse2(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const void *const ivoid, void *const ovoid,
     				const dt_iop_roi_t *const roi_in, const dt_iop_roi_t *const roi_out)
 {
-	process_internal(self, piece, ivoid, ovoid, roi_in, roi_out, 1);
+	rlucy_process_internal(self, piece, ivoid, ovoid, roi_in, roi_out, 1);
 }
 #endif
 
