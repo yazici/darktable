@@ -317,6 +317,8 @@ int dt_masks_form_duplicate(dt_develop_t *dev, int formid);
 int dt_masks_point_in_form_exact(float x, float y, float *points, int points_start, int points_count);
 int dt_masks_point_in_form_near(float x, float y, float *points, int points_start, int points_count, float distance, int *near);
 
+void dt_masks_select_form(struct dt_iop_module_t *module, dt_masks_form_t *sel);
+
 
 /** code for dynamic handling of intermediate buffers */
 static inline

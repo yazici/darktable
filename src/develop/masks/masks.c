@@ -1300,39 +1300,6 @@ int dt_masks_events_button_released(struct dt_iop_module_t *module, double x, do
   return 0;
 }
 
-// allow to select a shape inside an iop
-static void dt_masks_select_form(struct dt_iop_module_t *module, dt_masks_form_t *sel)
-{
-  int selection_changed = 0;
-  
-  if (sel)
-  {
-    if (sel->formid != darktable.develop->mask_form_selected_id)
-    {
-      darktable.develop->mask_form_selected_id = sel->formid;
-      selection_changed = 1;
-    }
-  }
-  else
-  {
-    if (darktable.develop->mask_form_selected_id != 0)
-    {
-      darktable.develop->mask_form_selected_id = 0;
-      selection_changed = 1;
-    }
-  }
-  if (selection_changed)
-  {
-    if (!module && darktable.develop->mask_form_selected_id == 0)
-      module = darktable.develop->gui_module;
-    if (module)
-    {
-      if (module->masks_selection_changed)
-        module->masks_selection_changed(module, darktable.develop->mask_form_selected_id);
-    }
-  }
-}
-
 int dt_masks_events_button_pressed(struct dt_iop_module_t *module, double x, double y, double pressure,
                                    int which, int type, uint32_t state)
 {
@@ -2395,6 +2362,40 @@ int dt_masks_point_in_form_near(float x, float y, float *points, int points_star
   }
   return 0;
 }
+
+// allow to select a shape inside an iop
+void dt_masks_select_form(struct dt_iop_module_t *module, dt_masks_form_t *sel)
+{
+  int selection_changed = 0;
+  
+  if (sel)
+  {
+    if (sel->formid != darktable.develop->mask_form_selected_id)
+    {
+      darktable.develop->mask_form_selected_id = sel->formid;
+      selection_changed = 1;
+    }
+  }
+  else
+  {
+    if (darktable.develop->mask_form_selected_id != 0)
+    {
+      darktable.develop->mask_form_selected_id = 0;
+      selection_changed = 1;
+    }
+  }
+  if (selection_changed)
+  {
+    if (!module && darktable.develop->mask_form_selected_id == 0)
+      module = darktable.develop->gui_module;
+    if (module)
+    {
+      if (module->masks_selection_changed)
+        module->masks_selection_changed(module, darktable.develop->mask_form_selected_id);
+    }
+  }
+}
+
 // modelines: These editor modelines have been set for all relevant files by tools/update_modelines.sh
 // vim: shiftwidth=2 expandtab tabstop=2 cindent
 // kate: tab-indents: off; indent-width 2; replace-tabs on; indent-mode cstyle; remove-trailing-spaces modified;

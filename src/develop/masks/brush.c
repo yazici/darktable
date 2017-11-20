@@ -1631,6 +1631,31 @@ static int dt_brush_events_button_released(struct dt_iop_module_t *module, float
       {
         dt_dev_masks_selection_change(darktable.develop, form->formid, TRUE);
       }
+      
+      if(form->type & (DT_MASKS_CLONE|DT_MASKS_NON_CLONE))
+      {
+        dt_masks_form_t *grp = darktable.develop->form_visible;
+        if(!grp || !(grp->type & DT_MASKS_GROUP)) return 1;
+        int pos3 = 0, pos2 = -1;
+        GList *fs = g_list_first(grp->points);
+        while(fs)
+        {
+          dt_masks_point_group_t *pt = (dt_masks_point_group_t *)fs->data;
+          if(pt->formid == form->formid)
+          {
+            pos2 = pos3;
+            break;
+          }
+          pos3++;
+          fs = g_list_next(fs);
+        }
+        if(pos2 < 0) return 1;
+        dt_masks_form_gui_t *gui2 = darktable.develop->form_gui;
+        if(!gui2) return 1;
+        gui2->group_selected = pos2;
+
+        dt_masks_select_form(crea_module, dt_masks_get_from_id(darktable.develop, form->formid));
+      }
     }
     else
     {
