@@ -68,6 +68,7 @@ def add_edges(gr):
   gr.add_edge(('demosaic', 'rawdenoise'))
   gr.add_edge(('demosaic', 'cacorrect'))
 
+
   # highlights come directly after whitebalance
   gr.add_edge(('highlights', 'temperature'))
 
@@ -75,10 +76,12 @@ def add_edges(gr):
   gr.add_edge(('hotpixels', 'cacorrect'))
   gr.add_edge(('rawdenoise', 'cacorrect'))
 
+
   # all these need white balanced and clipped input:
   gr.add_edge(('rawdenoise', 'highlights'))
   gr.add_edge(('hotpixels', 'highlights'))
   gr.add_edge(('cacorrect', 'highlights'))
+
 
   # we want cropped and B/W rescaled pixels,
   # after after uint16 -> float conversion
@@ -96,6 +99,7 @@ def add_edges(gr):
   # these need to be in camera color space (linear input rgb):
   gr.add_edge(('colorin', 'exposure'))
   gr.add_edge(('colorin', 'highlights'))
+  gr.add_edge(('colorin', 'rlucy_deblur'))
   gr.add_edge(('colorin', 'graduatednd'))
   gr.add_edge(('colorin', 'basecurve'))
   gr.add_edge(('colorin', 'lens'))
@@ -124,7 +128,7 @@ def add_edges(gr):
   gr.add_edge(('flip', 'spots'))
   gr.add_edge(('flip', 'liquify'))
   gr.add_edge(('flip', 'ashift'))
-  
+
   # ashift wants a lens corrected image with straight lines.
   # therefore lens shoucl come before and liquify should come after ashift
   gr.add_edge(('ashift', 'lens'))
@@ -479,6 +483,11 @@ def add_edges(gr):
   gr.add_edge(('colorbalance', 'vibrance'))
   gr.add_edge(('colorize', 'vibrance'))
 
+  gr.add_edge(('exposure', 'rlucy_deblur'))
+  gr.add_edge(('rlucy_deblur', 'demosaic'))
+  gr.add_edge(('tonemap', 'rlucy_deblur'))
+  
+
 gr = digraph()
 gr.add_nodes([
 'atrous',
@@ -535,6 +544,7 @@ gr.add_nodes([
 'relight',
 'scalepixels',
 'rotatepixels',
+    'rlucy_deblur',
 'shadhi',
 'sharpen',
 'soften',
