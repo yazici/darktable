@@ -39,7 +39,7 @@ typedef struct dt_dev_history_item_t
   struct dt_develop_blend_params_t *blend_params;
   int multi_priority;
   char multi_name[128];
-  int32_t focus_hash;             // used to determine whether or not to start a new item or to merge down
+  int32_t focus_hash; // used to determine whether or not to start a new item or to merge down
 } dt_dev_history_item_t;
 
 typedef enum dt_dev_overexposed_colorscheme_t
@@ -49,13 +49,15 @@ typedef enum dt_dev_overexposed_colorscheme_t
   DT_DEV_OVEREXPOSED_PURPLEGREEN = 2
 } dt_dev_overexposed_colorscheme_t;
 
-typedef enum dt_dev_rawoverexposed_mode_t {
+typedef enum dt_dev_rawoverexposed_mode_t
+{
   DT_DEV_RAWOVEREXPOSED_MODE_MARK_CFA = 0,
   DT_DEV_RAWOVEREXPOSED_MODE_MARK_SOLID = 1,
   DT_DEV_RAWOVEREXPOSED_MODE_FALSECOLOR = 2,
 } dt_dev_rawoverexposed_mode_t;
 
-typedef enum dt_dev_rawoverexposed_colorscheme_t {
+typedef enum dt_dev_rawoverexposed_colorscheme_t
+{
   DT_DEV_RAWOVEREXPOSED_RED = 0,
   DT_DEV_RAWOVEREXPOSED_GREEN = 1,
   DT_DEV_RAWOVEREXPOSED_BLUE = 2,
@@ -154,8 +156,7 @@ typedef struct dt_develop_t
   // histogram for display.
   uint32_t *histogram, *histogram_pre_tonecurve, *histogram_pre_levels;
   uint32_t histogram_max, histogram_pre_tonecurve_max, histogram_pre_levels_max;
-  uint32_t *histogram_waveform, histogram_waveform_width, histogram_waveform_height,
-      histogram_waveform_stride;
+  uint32_t *histogram_waveform, histogram_waveform_width, histogram_waveform_height, histogram_waveform_stride;
   // we should process the waveform histogram in the correct size to make it not look like crap. since this
   // requires gui knowledge we need this mutex
   //   dt_pthread_mutex_t histogram_waveform_mutex;
@@ -168,7 +169,7 @@ typedef struct dt_develop_t
   // all forms to be linked here for cleanup:
   GList *allforms;
 
-  //full preview stuff
+  // full preview stuff
   int full_preview;
   int full_preview_last_zoom, full_preview_last_closeup;
   float full_preview_last_zoom_x, full_preview_last_zoom_y;
@@ -283,11 +284,10 @@ void dt_dev_reprocess_all(dt_develop_t *dev);
 void dt_dev_reprocess_center(dt_develop_t *dev);
 
 void dt_dev_get_processed_size(const dt_develop_t *dev, int *procw, int *proch);
-void dt_dev_check_zoom_bounds(dt_develop_t *dev, float *zoom_x, float *zoom_y, dt_dev_zoom_t zoom,
-                              int closeup, float *boxw, float *boxh);
+void dt_dev_check_zoom_bounds(dt_develop_t *dev, float *zoom_x, float *zoom_y, dt_dev_zoom_t zoom, int closeup,
+                              float *boxw, float *boxh);
 float dt_dev_get_zoom_scale(dt_develop_t *dev, dt_dev_zoom_t zoom, int closeup_factor, int mode);
-void dt_dev_get_pointer_zoom_pos(dt_develop_t *dev, const float px, const float py, float *zoom_x,
-                                 float *zoom_y);
+void dt_dev_get_pointer_zoom_pos(dt_develop_t *dev, const float px, const float py, float *zoom_x, float *zoom_y);
 
 
 void dt_dev_configure(dt_develop_t *dev, int wd, int ht);
@@ -378,21 +378,21 @@ uint64_t dt_dev_hash(dt_develop_t *dev);
 /** same function, but we can specify iop with priority between pmin and pmax */
 uint64_t dt_dev_hash_plus(dt_develop_t *dev, struct dt_dev_pixelpipe_t *pipe, int pmin, int pmax);
 /** wait until hash value found in hash matches hash value defined by dev/pipe/pmin/pmax with timeout */
-int dt_dev_wait_hash(dt_develop_t *dev, struct dt_dev_pixelpipe_t *pipe, int pmin, int pmax, dt_pthread_mutex_t *lock,
-                     const volatile uint64_t *const hash);
+int dt_dev_wait_hash(dt_develop_t *dev, struct dt_dev_pixelpipe_t *pipe, int pmin, int pmax,
+                     dt_pthread_mutex_t *lock, const volatile uint64_t *const hash);
 /** synchronize pixelpipe by means hash values by waiting with timeout and potential reprocessing */
-int dt_dev_sync_pixelpipe_hash(dt_develop_t *dev, struct dt_dev_pixelpipe_t *pipe, int pmin, int pmax, dt_pthread_mutex_t *lock,
-                               const volatile uint64_t *const hash);
+int dt_dev_sync_pixelpipe_hash(dt_develop_t *dev, struct dt_dev_pixelpipe_t *pipe, int pmin, int pmax,
+                               dt_pthread_mutex_t *lock, const volatile uint64_t *const hash);
 /** generate hash value out of module settings of all distorting modules of pixelpipe */
 uint64_t dt_dev_hash_distort(dt_develop_t *dev);
 /** same function, but we can specify iop with priority between pmin and pmax */
 uint64_t dt_dev_hash_distort_plus(dt_develop_t *dev, struct dt_dev_pixelpipe_t *pipe, int pmin, int pmax);
 /** same as dt_dev_wait_hash but only for distorting modules */
-int dt_dev_wait_hash_distort(dt_develop_t *dev, struct dt_dev_pixelpipe_t *pipe, int pmin, int pmax, dt_pthread_mutex_t *lock,
-                             const volatile uint64_t *const hash);
+int dt_dev_wait_hash_distort(dt_develop_t *dev, struct dt_dev_pixelpipe_t *pipe, int pmin, int pmax,
+                             dt_pthread_mutex_t *lock, const volatile uint64_t *const hash);
 /** same as dt_dev_sync_pixelpipe_hash but ony for distorting modules */
-int dt_dev_sync_pixelpipe_hash_distort (dt_develop_t *dev, struct dt_dev_pixelpipe_t *pipe, int pmin, int pmax, dt_pthread_mutex_t *lock,
-                                        const volatile uint64_t *const hash);
+int dt_dev_sync_pixelpipe_hash_distort(dt_develop_t *dev, struct dt_dev_pixelpipe_t *pipe, int pmin, int pmax,
+                                       dt_pthread_mutex_t *lock, const volatile uint64_t *const hash);
 
 // modelines: These editor modelines have been set for all relevant files by tools/update_modelines.sh
 // vim: shiftwidth=2 expandtab tabstop=2 cindent

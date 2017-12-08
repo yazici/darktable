@@ -25,7 +25,8 @@ struct dt_dev_pixelpipe_iop_t;
 struct dt_dev_pixelpipe_t;
 struct dt_iop_module_t;
 
-typedef enum dt_iop_buffer_type_t {
+typedef enum dt_iop_buffer_type_t
+{
   TYPE_UNKNOWN,
   TYPE_FLOAT,
   TYPE_UINT16,

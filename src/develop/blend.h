@@ -372,9 +372,8 @@ int dt_develop_blend_version(void);
 gboolean dt_develop_blend_params_is_all_zero(const void *params, size_t length);
 
 /** update blendop params from older versions */
-int dt_develop_blend_legacy_params(dt_iop_module_t *module, const void *const old_params,
-                                   const int old_version, void *new_params, const int new_version,
-                                   const int lenght);
+int dt_develop_blend_legacy_params(dt_iop_module_t *module, const void *const old_params, const int old_version,
+                                   void *new_params, const int new_version, const int lenght);
 
 /** gui related stuff */
 void dt_iop_gui_init_blendif(GtkBox *blendw, dt_iop_module_t *module);
@@ -390,8 +389,8 @@ int dt_iop_gui_blending_mode_seq(dt_iop_gui_blend_data_t *bd, int mode);
 
 #ifdef HAVE_OPENCL
 /** apply blend for opencl modules*/
-int dt_develop_blend_process_cl(struct dt_iop_module_t *self, struct dt_dev_pixelpipe_iop_t *piece,
-                                cl_mem dev_in, cl_mem dev_out, const struct dt_iop_roi_t *roi_in,
+int dt_develop_blend_process_cl(struct dt_iop_module_t *self, struct dt_dev_pixelpipe_iop_t *piece, cl_mem dev_in,
+                                cl_mem dev_out, const struct dt_iop_roi_t *roi_in,
                                 const struct dt_iop_roi_t *roi_out);
 #endif
 

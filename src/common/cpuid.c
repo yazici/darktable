@@ -46,11 +46,11 @@
 
 dt_cpu_flags_t dt_detect_cpu_features()
 {
-#define cpuid(cmd) \
-  __asm volatile("push %%" R_BX "\n"                                                                         \
-                 "cpuid\n"                                                                                   \
-                 "pop %%" R_BX "\n"                                                                          \
-                 : "=a"(ax), "=c"(cx), "=d"(dx)                                                              \
+#define cpuid(cmd)                                                                                                \
+  __asm volatile("push %%" R_BX "\n"                                                                              \
+                 "cpuid\n"                                                                                        \
+                 "pop %%" R_BX "\n"                                                                               \
+                 : "=a"(ax), "=c"(cx), "=d"(dx)                                                                   \
                  : "0"(cmd))
 
 #ifdef __x86_64__

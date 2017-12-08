@@ -25,7 +25,7 @@
 
 // this was removed from lcms2 in 2.4
 #ifndef TYPE_XYZA_FLT
-  #define TYPE_XYZA_FLT         (FLOAT_SH(1)|COLORSPACE_SH(PT_XYZ)|EXTRA_SH(1)|CHANNELS_SH(3)|BYTES_SH(4))
+#define TYPE_XYZA_FLT (FLOAT_SH(1) | COLORSPACE_SH(PT_XYZ) | EXTRA_SH(1) | CHANNELS_SH(3) | BYTES_SH(4))
 #endif
 
 // constants fit to the ones from lcms.h:
@@ -172,22 +172,25 @@ void hsl2rgb(float rgb[3], float h, float s, float l);
 void dt_colorspaces_set_display_profile();
 /** get the profile described by type & filename.
  *  this doesn't support image specifics like embedded profiles or camera matrices */
-const dt_colorspaces_color_profile_t *
-dt_colorspaces_get_profile(dt_colorspaces_color_profile_type_t type, const char *filename,
-                           dt_colorspaces_profile_direction_t direction);
+const dt_colorspaces_color_profile_t *dt_colorspaces_get_profile(dt_colorspaces_color_profile_type_t type,
+                                                                 const char *filename,
+                                                                 dt_colorspaces_profile_direction_t direction);
 
 /** update the display transforms of srgb and adobergb to the display profile.
  * make sure that darktable.color_profiles->xprofile_lock is held when calling this! */
 void dt_colorspaces_update_display_transforms();
 
 /** Calculate CAM->XYZ, XYZ->CAM matrices **/
-int dt_colorspaces_conversion_matrices_xyz(const char *name, float in_XYZ_to_CAM[9], double XYZ_to_CAM[4][3], double CAM_to_XYZ[3][4]);
+int dt_colorspaces_conversion_matrices_xyz(const char *name, float in_XYZ_to_CAM[9], double XYZ_to_CAM[4][3],
+                                           double CAM_to_XYZ[3][4]);
 
 /** Calculate CAM->RGB, RGB->CAM matrices and default WB multipliers */
-int dt_colorspaces_conversion_matrices_rgb(const char *name, double RGB_to_CAM[4][3], double CAM_to_RGB[3][4], double mul[4]);
+int dt_colorspaces_conversion_matrices_rgb(const char *name, double RGB_to_CAM[4][3], double CAM_to_RGB[3][4],
+                                           double mul[4]);
 
 /** Applies CYGM WB coeffs to an image that's already been converted to RGB by dt_colorspaces_cygm_to_rgb */
-void dt_colorspaces_cygm_apply_coeffs_to_rgb(float *out, const float *in, int num, double RGB_to_CAM[4][3], double CAM_to_RGB[3][4], float coeffs[4]);
+void dt_colorspaces_cygm_apply_coeffs_to_rgb(float *out, const float *in, int num, double RGB_to_CAM[4][3],
+                                             double CAM_to_RGB[3][4], float coeffs[4]);
 
 /** convert CYGM buffer to RGB */
 void dt_colorspaces_cygm_to_rgb(float *out, int num, double CAM_to_RGB[3][4]);

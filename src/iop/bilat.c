@@ -41,8 +41,7 @@ typedef enum dt_iop_bilat_mode_t
 {
   s_mode_bilateral = 0,
   s_mode_local_laplacian = 1,
-}
-dt_iop_bilat_mode_t;
+} dt_iop_bilat_mode_t;
 
 typedef struct dt_iop_bilat_params_t
 {
@@ -51,8 +50,7 @@ typedef struct dt_iop_bilat_params_t
   float sigma_s;
   float detail;
   float midtone;
-}
-dt_iop_bilat_params_t;
+} dt_iop_bilat_params_t;
 
 typedef struct dt_iop_bilat_params_v2_t
 {
@@ -60,16 +58,14 @@ typedef struct dt_iop_bilat_params_v2_t
   float sigma_r;
   float sigma_s;
   float detail;
-}
-dt_iop_bilat_params_v2_t;
+} dt_iop_bilat_params_v2_t;
 
 typedef struct dt_iop_bilat_params_v1_t
 {
   float sigma_r;
   float sigma_s;
   float detail;
-}
-dt_iop_bilat_params_v1_t;
+} dt_iop_bilat_params_v1_t;
 
 typedef dt_iop_bilat_params_t dt_iop_bilat_data_t;
 
@@ -86,8 +82,7 @@ typedef struct dt_iop_bilat_gui_data_t
   local_laplacian_boundary_t ll_boundary;
   uint64_t hash;
   dt_pthread_mutex_t lock;
-}
-dt_iop_bilat_gui_data_t;
+} dt_iop_bilat_gui_data_t;
 
 // this returns a translatable name
 const char *name()
@@ -107,30 +102,29 @@ int groups()
   return IOP_GROUP_TONE;
 }
 
-int legacy_params(
-    dt_iop_module_t *self, const void *const old_params, const int old_version,
-    void *new_params, const int new_version)
+int legacy_params(dt_iop_module_t *self, const void *const old_params, const int old_version, void *new_params,
+                  const int new_version)
 {
   if(old_version == 2 && new_version == 3)
   {
     const dt_iop_bilat_params_v2_t *p2 = old_params;
     dt_iop_bilat_params_t *p = new_params;
-    p->detail  = p2->detail;
+    p->detail = p2->detail;
     p->sigma_r = p2->sigma_r;
     p->sigma_s = p2->sigma_s;
     p->midtone = 0.2f;
-    p->mode    = p2->mode;
+    p->mode = p2->mode;
     return 0;
   }
   else if(old_version == 1 && new_version == 3)
   {
     const dt_iop_bilat_params_v1_t *p1 = old_params;
     dt_iop_bilat_params_t *p = new_params;
-    p->detail  = p1->detail;
+    p->detail = p1->detail;
     p->sigma_r = p1->sigma_r;
     p->sigma_s = p1->sigma_s;
     p->midtone = 0.2f;
-    p->mode    = s_mode_bilateral;
+    p->mode = s_mode_bilateral;
     return 0;
   }
   return 1;
@@ -152,7 +146,7 @@ int process_cl(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, cl_m
     cl_int err = -666;
 
     dt_bilateral_cl_t *b
-      = dt_bilateral_init_cl(piece->pipe->devid, roi_in->width, roi_in->height, sigma_s, sigma_r);
+        = dt_bilateral_init_cl(piece->pipe->devid, roi_in->width, roi_in->height, sigma_s, sigma_r);
     if(!b) goto error;
     err = dt_bilateral_splat_cl(b, dev_in);
     if(err != CL_SUCCESS) goto error;
@@ -162,7 +156,7 @@ int process_cl(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, cl_m
     if(err != CL_SUCCESS) goto error;
     dt_bilateral_free_cl(b);
     return TRUE;
-error:
+  error:
     dt_bilateral_free_cl(b);
     dt_print(DT_DEBUG_OPENCL, "[opencl_bilateral] couldn't enqueue kernel! %d\n", err);
     return FALSE;
@@ -170,12 +164,12 @@ error:
   else // mode == s_mode_local_laplacian
   {
     dt_local_laplacian_cl_t *b = dt_local_laplacian_init_cl(piece->pipe->devid, roi_in->width, roi_in->height,
-        d->midtone, d->sigma_s, d->sigma_r, d->detail);
+                                                            d->midtone, d->sigma_s, d->sigma_r, d->detail);
     if(!b) goto error_ll;
     if(dt_local_laplacian_cl(b, dev_in, dev_out) != CL_SUCCESS) goto error_ll;
     dt_local_laplacian_free_cl(b);
     return TRUE;
-error_ll:
+  error_ll:
     dt_local_laplacian_free_cl(b);
     return FALSE;
   }
@@ -184,8 +178,7 @@ error_ll:
 
 
 void tiling_callback(struct dt_iop_module_t *self, struct dt_dev_pixelpipe_iop_t *piece,
-                     const dt_iop_roi_t *roi_in, const dt_iop_roi_t *roi_out,
-                     struct dt_develop_tiling_t *tiling)
+                     const dt_iop_roi_t *roi_in, const dt_iop_roi_t *roi_out, struct dt_develop_tiling_t *tiling)
 {
   dt_iop_bilat_data_t *d = (dt_iop_bilat_data_t *)piece->data;
   // the total scale is composed of scale before input to the pipeline (iscale),
@@ -211,7 +204,7 @@ void tiling_callback(struct dt_iop_module_t *self, struct dt_dev_pixelpipe_iop_t
     tiling->xalign = 1;
     tiling->yalign = 1;
   }
-  else  // mode == s_mode_local_laplacian
+  else // mode == s_mode_local_laplacian
   {
     const int width = roi_in->width;
     const int height = roi_in->height;
@@ -221,8 +214,7 @@ void tiling_callback(struct dt_iop_module_t *self, struct dt_dev_pixelpipe_iop_t
     const int rad = MIN(roi_in->width, ceilf(256 * roi_in->scale / piece->iscale));
 
     tiling->factor = 2.0f + (float)local_laplacian_memory_use(width, height) / basebuffer;
-    tiling->maxbuf
-        = fmax(1.0f, (float)local_laplacian_singlebuffer_size(width, height) / basebuffer);
+    tiling->maxbuf = fmax(1.0f, (float)local_laplacian_singlebuffer_size(width, height) / basebuffer);
     tiling->overhead = 0;
     tiling->overlap = rad;
     tiling->xalign = 1;
@@ -241,8 +233,7 @@ void commit_params(struct dt_iop_module_t *self, dt_iop_params_t *p1, dt_dev_pix
   if(d->mode == s_mode_bilateral)
     piece->process_cl_ready = (piece->process_cl_ready && !(darktable.opencl->avoid_atomics));
 #endif
-  if(d->mode == s_mode_local_laplacian)
-    piece->process_tiling_ready = 0; // can't deal with tiles, sorry.
+  if(d->mode == s_mode_local_laplacian) piece->process_tiling_ready = 0; // can't deal with tiles, sorry.
 }
 
 
@@ -262,7 +253,7 @@ void cleanup_pipe(struct dt_iop_module_t *self, dt_dev_pixelpipe_t *pipe, dt_dev
 
 #if defined(__SSE2__)
 void process_sse2(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const void *const i, void *const o,
-             const dt_iop_roi_t *const roi_in, const dt_iop_roi_t *const roi_out)
+                  const dt_iop_roi_t *const roi_in, const dt_iop_roi_t *const roi_out)
 {
   // this is called for preview and full pipe separately, each with its own pixelpipe piece.
   // get our data struct:
@@ -284,7 +275,7 @@ void process_sse2(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, c
   }
   else // s_mode_local_laplacian
   {
-    local_laplacian_boundary_t b = {0};
+    local_laplacian_boundary_t b = { 0 };
     if(self->dev->gui_attached && g && piece->pipe->type == DT_DEV_PIXELPIPE_PREVIEW)
     {
       b.mode = 1;
@@ -293,8 +284,8 @@ void process_sse2(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, c
     {
       // full pipeline working on ROI needs boundary conditions from preview pipe
       // only do this if roi covers less than 90% of full width
-      if(MIN(roi_in->width/roi_in->scale / piece->buf_in.width,
-             roi_in->height/roi_in->scale / piece->buf_in.height) < 0.9)
+      if(MIN(roi_in->width / roi_in->scale / piece->buf_in.width,
+             roi_in->height / roi_in->scale / piece->buf_in.height) < 0.9)
       {
         dt_pthread_mutex_lock(&g->lock);
         const uint64_t hash = g->hash;
@@ -327,7 +318,8 @@ void process_sse2(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, c
     }
   }
 
-  if(piece->pipe->mask_display & DT_DEV_PIXELPIPE_DISPLAY_MASK) dt_iop_alpha_copy(i, o, roi_in->width, roi_in->height);
+  if(piece->pipe->mask_display & DT_DEV_PIXELPIPE_DISPLAY_MASK)
+    dt_iop_alpha_copy(i, o, roi_in->width, roi_in->height);
 }
 #endif
 
@@ -356,7 +348,8 @@ void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const 
     local_laplacian(i, o, roi_in->width, roi_in->height, d->midtone, d->sigma_s, d->sigma_r, d->detail, 0);
   }
 
-  if(piece->pipe->mask_display & DT_DEV_PIXELPIPE_DISPLAY_MASK) dt_iop_alpha_copy(i, o, roi_in->width, roi_in->height);
+  if(piece->pipe->mask_display & DT_DEV_PIXELPIPE_DISPLAY_MASK)
+    dt_iop_alpha_copy(i, o, roi_in->width, roi_in->height);
 }
 
 /** init, cleanup, commit to pipeline */
@@ -368,7 +361,7 @@ void init(dt_iop_module_t *module)
   // by default:
   module->default_enabled = 0;
   // order has to be changed by editing the dependencies in tools/iop_dependencies.py
-    module->priority = 594; // module order created by iop_dependencies.py, do not edit!
+  module->priority = 594; // module order created by iop_dependencies.py, do not edit!
   module->params_size = sizeof(dt_iop_bilat_params_t);
   module->gui_data = NULL;
   // init defaults:
@@ -401,14 +394,14 @@ static void range_callback(GtkWidget *w, dt_iop_module_t *self)
 static void highlights_callback(GtkWidget *w, dt_iop_module_t *self)
 {
   dt_iop_bilat_params_t *p = (dt_iop_bilat_params_t *)self->params;
-  p->sigma_r = dt_bauhaus_slider_get(w)/100.0f;
+  p->sigma_r = dt_bauhaus_slider_get(w) / 100.0f;
   dt_dev_add_history_item(darktable.develop, self, TRUE);
 }
 
 static void shadows_callback(GtkWidget *w, dt_iop_module_t *self)
 {
   dt_iop_bilat_params_t *p = (dt_iop_bilat_params_t *)self->params;
-  p->sigma_s = dt_bauhaus_slider_get(w)/100.0f;
+  p->sigma_s = dt_bauhaus_slider_get(w) / 100.0f;
   dt_dev_add_history_item(darktable.develop, self, TRUE);
 }
 
@@ -422,7 +415,7 @@ static void midtone_callback(GtkWidget *w, dt_iop_module_t *self)
 static void detail_callback(GtkWidget *w, dt_iop_module_t *self)
 {
   dt_iop_bilat_params_t *p = (dt_iop_bilat_params_t *)self->params;
-  p->detail = (dt_bauhaus_slider_get(w)-100.0f)/100.0f;
+  p->detail = (dt_bauhaus_slider_get(w) - 100.0f) / 100.0f;
   dt_dev_add_history_item(darktable.develop, self, TRUE);
 }
 
@@ -460,12 +453,12 @@ void gui_update(dt_iop_module_t *self)
   // let gui slider match current parameters:
   dt_iop_bilat_gui_data_t *g = (dt_iop_bilat_gui_data_t *)self->gui_data;
   dt_iop_bilat_params_t *p = (dt_iop_bilat_params_t *)self->params;
-  dt_bauhaus_slider_set(g->detail, 100.0f*p->detail+100.0f);
+  dt_bauhaus_slider_set(g->detail, 100.0f * p->detail + 100.0f);
   dt_bauhaus_combobox_set(g->mode, p->mode);
   if(p->mode == s_mode_local_laplacian)
   {
-    dt_bauhaus_slider_set(g->shadows, p->sigma_s*100.0f);
-    dt_bauhaus_slider_set(g->highlights, p->sigma_r*100.0f);
+    dt_bauhaus_slider_set(g->shadows, p->sigma_s * 100.0f);
+    dt_bauhaus_slider_set(g->highlights, p->sigma_r * 100.0f);
     dt_bauhaus_slider_set(g->midtone, p->midtone);
     gtk_widget_set_visible(g->range, FALSE);
     gtk_widget_set_visible(g->spatial, FALSE);
@@ -505,7 +498,8 @@ void gui_init(dt_iop_module_t *self)
   dt_bauhaus_combobox_add(g->mode, _("local laplacian filter"));
   dt_bauhaus_combobox_set_default(g->mode, s_mode_local_laplacian);
   dt_bauhaus_combobox_set(g->mode, s_mode_local_laplacian);
-  gtk_widget_set_tooltip_text(g->mode, _("the filter used for local contrast enhancement. bilateral is faster but can lead to artifacts around edges for extreme settings."));
+  gtk_widget_set_tooltip_text(g->mode, _("the filter used for local contrast enhancement. bilateral is faster but "
+                                         "can lead to artifacts around edges for extreme settings."));
 
   g->detail = dt_bauhaus_slider_new_with_range(self, 0.0, 500.0, 1.0, 100.0, 0);
   gtk_box_pack_start(GTK_BOX(self->widget), g->detail, TRUE, TRUE, 0);
@@ -538,7 +532,9 @@ void gui_init(dt_iop_module_t *self)
   g->midtone = dt_bauhaus_slider_new_with_range(self, 0.001, 1.0, 0.001, 0.2, 3);
   gtk_box_pack_start(GTK_BOX(self->widget), g->midtone, TRUE, TRUE, 0);
   dt_bauhaus_widget_set_label(g->midtone, NULL, _("midtone range"));
-  gtk_widget_set_tooltip_text(g->midtone, _("defines what counts as midtones. lower for better dynamic range compression (reduce shadow and highlight contrast), increase for more powerful local contrast"));
+  gtk_widget_set_tooltip_text(
+      g->midtone, _("defines what counts as midtones. lower for better dynamic range compression (reduce shadow "
+                    "and highlight contrast), increase for more powerful local contrast"));
 
   // work around multi-instance issue which calls show all a fair bit:
   g_object_set(G_OBJECT(g->highlights), "no-show-all", TRUE, NULL);

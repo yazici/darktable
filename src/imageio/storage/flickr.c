@@ -64,7 +64,7 @@ typedef struct dt_storage_flickr_gui_data_t
   GtkLabel *status_label;
   GtkEntry *user_entry, *title_entry, *summary_entry;
   GtkWidget *export_tags;
-  GtkBox *create_box;                               // Create album options...
+  GtkBox *create_box; // Create album options...
   GtkWidget *permission_list, *album_list;
 
   char *user_token;
@@ -256,8 +256,8 @@ static _flickr_api_context_t *_flickr_api_authenticate(dt_storage_flickr_gui_dat
 }
 
 
-static flickcurl_upload_status *_flickr_api_upload_photo(dt_storage_flickr_params_t *p, char *fname,
-                                                         char *caption, char *description, gint imgid)
+static flickcurl_upload_status *_flickr_api_upload_photo(dt_storage_flickr_params_t *p, char *fname, char *caption,
+                                                         char *description, gint imgid)
 {
 
   flickcurl_upload_params *params = g_malloc0(sizeof(flickcurl_upload_params));
@@ -385,7 +385,7 @@ static void refresh_albums(dt_storage_flickr_gui_data_t *ui)
     // Add standard action
     dt_bauhaus_combobox_add(ui->album_list, _("without album"));
     dt_bauhaus_combobox_add(ui->album_list, _("create new album"));
-//     dt_bauhaus_combobox_add(ui->album_list, ""); // Separator // FIXME: bauhaus doesn't support separators
+    //     dt_bauhaus_combobox_add(ui->album_list, ""); // Separator // FIXME: bauhaus doesn't support separators
 
     // Then add albums from list...
     for(i = 0; ui->albums[i]; i++)
@@ -642,8 +642,8 @@ int store(dt_imageio_module_storage_t *self, dt_imageio_module_data_t *sdata, co
   }
   dt_image_cache_read_release(darktable.image_cache, img);
 
-  if(dt_imageio_export(imgid, fname, format, fdata, high_quality, upscale, FALSE, icc_type, icc_filename, icc_intent,
-                       self, sdata, num, total) != 0)
+  if(dt_imageio_export(imgid, fname, format, fdata, high_quality, upscale, FALSE, icc_type, icc_filename,
+                       icc_intent, self, sdata, num, total) != 0)
   {
     fprintf(stderr, "[imageio_storage_flickr] could not export to file: `%s'!\n", fname);
     dt_control_log(_("could not export to file `%s'!"), fname);
@@ -717,8 +717,8 @@ cleanup:
   if(!result)
   {
     // this makes sense only if the export was successful
-    dt_control_log(ngettext("%d/%d exported to flickr webalbum", "%d/%d exported to flickr webalbum", num),
-                   num, total);
+    dt_control_log(ngettext("%d/%d exported to flickr webalbum", "%d/%d exported to flickr webalbum", num), num,
+                   total);
   }
   return result;
 }
@@ -764,8 +764,7 @@ void *get_params(dt_imageio_module_storage_t *self)
           break;
         default:
           // use existing album
-          d->flickr_api->current_album
-              = flickcurl_photosets_getInfo(d->flickr_api->fc, ui->albums[index - 2]->id);
+          d->flickr_api->current_album = flickcurl_photosets_getInfo(d->flickr_api->fc, ui->albums[index - 2]->id);
           if(d->flickr_api->current_album == NULL)
           {
             // Something went wrong...

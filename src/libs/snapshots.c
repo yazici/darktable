@@ -81,7 +81,7 @@ const char *name(dt_lib_module_t *self)
 
 const char **views(dt_lib_module_t *self)
 {
-  static const char *v[] = {"darkroom", NULL};
+  static const char *v[] = { "darkroom", NULL };
   return v;
 }
 
@@ -121,10 +121,8 @@ void gui_post_expose(dt_lib_module_t *self, cairo_t *cri, int32_t width, int32_t
     /* set x,y,w,h of surface depending on split align and invert */
     double x = d->vertical ? (d->inverted ? width * d->vp_xpointer : 0) : 0;
     double y = d->vertical ? 0 : (d->inverted ? height * d->vp_ypointer : 0);
-    double w = d->vertical ? (d->inverted ? (width * (1.0 - d->vp_xpointer)) : width * d->vp_xpointer)
-                           : width;
-    double h = d->vertical ? height
-                           : (d->inverted ? (height * (1.0 - d->vp_ypointer)) : height * d->vp_ypointer);
+    double w = d->vertical ? (d->inverted ? (width * (1.0 - d->vp_xpointer)) : width * d->vp_xpointer) : width;
+    double h = d->vertical ? height : (d->inverted ? (height * (1.0 - d->vp_ypointer)) : height * d->vp_ypointer);
 
     cairo_set_source_surface(cri, d->snapshot_image, 0, 0);
     // cairo_rectangle(cri, 0, 0, width*d->vp_xpointer, height);
@@ -183,10 +181,9 @@ int button_pressed(struct dt_lib_module_t *self, double x, double y, double pres
 
     /* do the split rotating */
     double hhs = HANDLE_SIZE * 0.5;
-    if(which == 1
-       && (((d->vertical && xp > d->vp_xpointer - hhs && xp < d->vp_xpointer + hhs) && yp > 0.5 - hhs
-            && yp < 0.5 + hhs)
-           || ((yp > d->vp_ypointer - hhs && yp < d->vp_ypointer + hhs) && xp > 0.5 - hhs && xp < 0.5 + hhs)))
+    if(which == 1 && (((d->vertical && xp > d->vp_xpointer - hhs && xp < d->vp_xpointer + hhs) && yp > 0.5 - hhs
+                       && yp < 0.5 + hhs) || ((yp > d->vp_ypointer - hhs && yp < d->vp_ypointer + hhs)
+                                              && xp > 0.5 - hhs && xp < 0.5 + hhs)))
     {
       /* let's rotate */
       _lib_snapshot_rotation_cnt++;
@@ -284,15 +281,13 @@ void gui_init(dt_lib_module_t *self)
     /* create snapshot button */
     d->snapshot[k].button = gtk_toggle_button_new_with_label(wdname);
     gtk_widget_set_halign(gtk_bin_get_child(GTK_BIN(d->snapshot[k].button)), GTK_ALIGN_START);
-    g_signal_connect(G_OBJECT(d->snapshot[k].button), "clicked", G_CALLBACK(_lib_snapshots_toggled_callback),
-                     self);
+    g_signal_connect(G_OBJECT(d->snapshot[k].button), "clicked", G_CALLBACK(_lib_snapshots_toggled_callback), self);
 
     /* assign snapshot number to widget */
     g_object_set_data(G_OBJECT(d->snapshot[k].button), "snapshot", GINT_TO_POINTER(k + 1));
 
     /* setup filename for snapshot */
-    snprintf(d->snapshot[k].filename, sizeof(d->snapshot[k].filename), "%s/dt_snapshot_%d.png", localtmpdir,
-             k);
+    snprintf(d->snapshot[k].filename, sizeof(d->snapshot[k].filename), "%s/dt_snapshot_%d.png", localtmpdir, k);
 
     /* add button to snapshot box */
     gtk_box_pack_start(GTK_BOX(d->snapshots_box), d->snapshot[k].button, TRUE, TRUE, 0);
@@ -343,8 +338,8 @@ static void _lib_snapshots_add_button_clicked_callback(GtkWidget *widget, gpoint
   const gchar *name = _("original");
   if(darktable.develop->history_end > 0)
   {
-    dt_dev_history_item_t *history_item = g_list_nth_data(darktable.develop->history,
-                                                          darktable.develop->history_end - 1);
+    dt_dev_history_item_t *history_item
+        = g_list_nth_data(darktable.develop->history, darktable.develop->history_end - 1);
     if(history_item && history_item->module)
       name = history_item->module->name();
     else
@@ -571,10 +566,12 @@ static int number_member(lua_State *L)
   dt_lib_module_t *self = *(dt_lib_module_t **)lua_touserdata(L, 1);
   dt_lib_snapshots_t *d = (dt_lib_snapshots_t *)self->data;
   int index = luaL_checkinteger(L, 2);
-  if( index < 1)
+  if(index < 1)
   {
     return luaL_error(L, "Accessing a non-existant snapshot");
-  }else if(index > d->num_snapshots ) {
+  }
+  else if(index > d->num_snapshots)
+  {
     lua_pushnil(L);
     return 1;
   }
@@ -667,7 +664,7 @@ void init(struct dt_lib_module_t *self)
   lua_pushlightuserdata(L, self);
   lua_pushcclosure(L, name_member, 1);
   dt_lua_gtk_wrap(L);
-  dt_lua_type_setmetafield(L,dt_lua_snapshot_t,"__tostring");
+  dt_lua_type_setmetafield(L, dt_lua_snapshot_t, "__tostring");
 
 
 

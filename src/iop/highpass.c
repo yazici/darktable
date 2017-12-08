@@ -104,8 +104,7 @@ void connect_key_accels(dt_iop_module_t *self)
 #endif
 
 void tiling_callback(struct dt_iop_module_t *self, struct dt_dev_pixelpipe_iop_t *piece,
-                     const dt_iop_roi_t *roi_in, const dt_iop_roi_t *roi_out,
-                     struct dt_develop_tiling_t *tiling)
+                     const dt_iop_roi_t *roi_in, const dt_iop_roi_t *roi_out, struct dt_develop_tiling_t *tiling)
 {
   dt_iop_highpass_data_t *d = (dt_iop_highpass_data_t *)piece->data;
 
@@ -164,10 +163,14 @@ int process_cl(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, cl_m
   float contrast_scale = ((d->contrast / 100.0f) * 7.5f);
 
   int hblocksize;
-  dt_opencl_local_buffer_t hlocopt
-    = (dt_opencl_local_buffer_t){ .xoffset = 2 * wdh, .xfactor = 1, .yoffset = 0, .yfactor = 1,
-                                  .cellsize = sizeof(float), .overhead = 0,
-                                  .sizex = 1 << 16, .sizey = 1 };
+  dt_opencl_local_buffer_t hlocopt = (dt_opencl_local_buffer_t){.xoffset = 2 * wdh,
+                                                                .xfactor = 1,
+                                                                .yoffset = 0,
+                                                                .yfactor = 1,
+                                                                .cellsize = sizeof(float),
+                                                                .overhead = 0,
+                                                                .sizex = 1 << 16,
+                                                                .sizey = 1 };
 
   if(dt_opencl_local_buffer_opt(devid, gd->kernel_highpass_hblur, &hlocopt))
     hblocksize = hlocopt.sizex;
@@ -175,10 +178,14 @@ int process_cl(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, cl_m
     hblocksize = 1;
 
   int vblocksize;
-  dt_opencl_local_buffer_t vlocopt
-    = (dt_opencl_local_buffer_t){ .xoffset = 1, .xfactor = 1, .yoffset = 2 * wdh, .yfactor = 1,
-                                  .cellsize = sizeof(float), .overhead = 0,
-                                  .sizex = 1, .sizey = 1 << 16 };
+  dt_opencl_local_buffer_t vlocopt = (dt_opencl_local_buffer_t){.xoffset = 1,
+                                                                .xfactor = 1,
+                                                                .yoffset = 2 * wdh,
+                                                                .yfactor = 1,
+                                                                .cellsize = sizeof(float),
+                                                                .overhead = 0,
+                                                                .sizex = 1,
+                                                                .sizey = 1 << 16 };
 
   if(dt_opencl_local_buffer_opt(devid, gd->kernel_highpass_vblur, &vlocopt))
     vblocksize = vlocopt.sizey;
@@ -432,7 +439,7 @@ void init(dt_iop_module_t *module)
   module->params = calloc(1, sizeof(dt_iop_highpass_params_t));
   module->default_params = calloc(1, sizeof(dt_iop_highpass_params_t));
   module->default_enabled = 0;
-    module->priority = 768; // module order created by iop_dependencies.py, do not edit!
+  module->priority = 768; // module order created by iop_dependencies.py, do not edit!
   module->params_size = sizeof(dt_iop_highpass_params_t);
   module->gui_data = NULL;
   dt_iop_highpass_params_t tmp = (dt_iop_highpass_params_t){ 50, 50 };

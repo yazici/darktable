@@ -70,9 +70,8 @@ const char *name(const struct dt_imageio_module_storage_t *self)
   return _("LaTeX book template");
 }
 
-void *legacy_params(dt_imageio_module_storage_t *self, const void *const old_params,
-                    const size_t old_params_size, const int old_version, const int new_version,
-                    size_t *new_size)
+void *legacy_params(dt_imageio_module_storage_t *self, const void *const old_params, const size_t old_params_size,
+                    const int old_version, const int new_version, size_t *new_size)
 {
   if(old_version == 1 && new_version == 2)
   {
@@ -216,7 +215,7 @@ static gint sort_pos(pair_t *a, pair_t *b)
 
 int store(dt_imageio_module_storage_t *self, dt_imageio_module_data_t *sdata, const int imgid,
           dt_imageio_module_format_t *format, dt_imageio_module_data_t *fdata, const int num, const int total,
-          const gboolean high_quality, const gboolean upscale,dt_colorspaces_color_profile_type_t icc_type,
+          const gboolean high_quality, const gboolean upscale, dt_colorspaces_color_profile_type_t icc_type,
           const gchar *icc_filename, dt_iop_color_intent_t icc_intent)
 {
   dt_imageio_latex_t *d = (dt_imageio_latex_t *)sdata;
@@ -348,14 +347,14 @@ int store(dt_imageio_module_storage_t *self, dt_imageio_module_data_t *sdata, co
   dt_pthread_mutex_unlock(&darktable.plugin_threadsafe);
 
   /* export image to file */
-  dt_imageio_export(imgid, filename, format, fdata, high_quality, upscale, FALSE, icc_type, icc_filename, icc_intent,
-                    self, sdata, num, total);
+  dt_imageio_export(imgid, filename, format, fdata, high_quality, upscale, FALSE, icc_type, icc_filename,
+                    icc_intent, self, sdata, num, total);
 
   printf("[export_job] exported to `%s'\n", filename);
   char *trunc = filename + strlen(filename) - 32;
   if(trunc < filename) trunc = filename;
-  dt_control_log(ngettext("%d/%d exported to `%s%s'", "%d/%d exported to `%s%s'", num),
-                 num, total, trunc != filename ? ".." : "", trunc);
+  dt_control_log(ngettext("%d/%d exported to `%s%s'", "%d/%d exported to `%s%s'", num), num, total,
+                 trunc != filename ? ".." : "", trunc);
   return 0;
 }
 
@@ -437,8 +436,7 @@ size_t params_size(dt_imageio_module_storage_t *self)
 void init(dt_imageio_module_storage_t *self)
 {
 #ifdef USE_LUA
-  dt_lua_register_module_member(darktable.lua_state.state, self, dt_imageio_latex_t, filename,
-                                char_path_length);
+  dt_lua_register_module_member(darktable.lua_state.state, self, dt_imageio_latex_t, filename, char_path_length);
   dt_lua_register_module_member(darktable.lua_state.state, self, dt_imageio_latex_t, title, char_1024);
 #endif
 }

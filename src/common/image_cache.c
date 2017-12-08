@@ -52,8 +52,8 @@ void dt_image_cache_allocate(void *data, dt_cache_entry_t *entry)
     img->width = sqlite3_column_int(stmt, 3);
     img->height = sqlite3_column_int(stmt, 4);
     img->crop_x = img->crop_y = img->crop_width = img->crop_height = 0;
-    img->filename[0] = img->exif_maker[0] = img->exif_model[0] = img->exif_lens[0]
-        = img->exif_datetime_taken[0] = '\0';
+    img->filename[0] = img->exif_maker[0] = img->exif_model[0] = img->exif_lens[0] = img->exif_datetime_taken[0]
+        = '\0';
     str = (char *)sqlite3_column_text(stmt, 5);
     if(str) g_strlcpy(img->filename, str, sizeof(img->filename));
     str = (char *)sqlite3_column_text(stmt, 6);
@@ -172,8 +172,7 @@ void dt_image_cache_cleanup(dt_image_cache_t *cache)
 void dt_image_cache_print(dt_image_cache_t *cache)
 {
   printf("[image cache] fill %.2f/%.2f MB (%.2f%%)\n", cache->cache.cost / (1024.0 * 1024.0),
-         cache->cache.cost_quota / (1024.0 * 1024.0),
-         (float)cache->cache.cost / (float)cache->cache.cost_quota);
+         cache->cache.cost_quota / (1024.0 * 1024.0), (float)cache->cache.cost / (float)cache->cache.cost_quota);
 }
 
 dt_image_t *dt_image_cache_get(dt_image_cache_t *cache, const uint32_t imgid, char mode)

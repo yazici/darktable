@@ -138,8 +138,8 @@ int groups()
   return IOP_GROUP_EFFECT;
 }
 
-int legacy_params(dt_iop_module_t *self, const void *const old_params, const int old_version,
-                  void *new_params, const int new_version)
+int legacy_params(dt_iop_module_t *self, const void *const old_params, const int old_version, void *new_params,
+                  const int new_version)
 {
   if(old_version == 1 && new_version == 4)
   {
@@ -332,8 +332,7 @@ error:
 #endif
 
 void tiling_callback(struct dt_iop_module_t *self, struct dt_dev_pixelpipe_iop_t *piece,
-                     const dt_iop_roi_t *roi_in, const dt_iop_roi_t *roi_out,
-                     struct dt_develop_tiling_t *tiling)
+                     const dt_iop_roi_t *roi_in, const dt_iop_roi_t *roi_out, struct dt_develop_tiling_t *tiling)
 {
   dt_iop_lowpass_data_t *d = (dt_iop_lowpass_data_t *)piece->data;
 
@@ -351,7 +350,8 @@ void tiling_callback(struct dt_iop_module_t *self, struct dt_dev_pixelpipe_iop_t
   if(d->lowpass_algo == LOWPASS_ALGO_BILATERAL)
   {
     // bilateral filter
-    tiling->factor = 2.0f + fmax(1.0f, (float)dt_bilateral_memory_use(width, height, sigma_s, sigma_r) / basebuffer);
+    tiling->factor = 2.0f
+                     + fmax(1.0f, (float)dt_bilateral_memory_use(width, height, sigma_s, sigma_r) / basebuffer);
     tiling->maxbuf
         = fmax(1.0f, (float)dt_bilateral_singlebuffer_size(width, height, sigma_s, sigma_r) / basebuffer);
   }
@@ -598,7 +598,7 @@ void init(dt_iop_module_t *module)
   module->params = calloc(1, sizeof(dt_iop_lowpass_params_t));
   module->default_params = calloc(1, sizeof(dt_iop_lowpass_params_t));
   module->default_enabled = 0;
-    module->priority = 753; // module order created by iop_dependencies.py, do not edit!
+  module->priority = 753; // module order created by iop_dependencies.py, do not edit!
   module->params_size = sizeof(dt_iop_lowpass_params_t);
   module->gui_data = NULL;
   dt_iop_lowpass_params_t tmp = (dt_iop_lowpass_params_t){ 0, 10.0f, 1.0f, 0.0f, 1.0f, LOWPASS_ALGO_GAUSSIAN, 1 };
@@ -609,8 +609,7 @@ void init(dt_iop_module_t *module)
 void init_global(dt_iop_module_so_t *module)
 {
   const int program = 6; // gaussian.cl, from programs.conf
-  dt_iop_lowpass_global_data_t *gd
-      = (dt_iop_lowpass_global_data_t *)malloc(sizeof(dt_iop_lowpass_global_data_t));
+  dt_iop_lowpass_global_data_t *gd = (dt_iop_lowpass_global_data_t *)malloc(sizeof(dt_iop_lowpass_global_data_t));
   module->data = gd;
   gd->kernel_lowpass_mix = dt_opencl_create_kernel(program, "lowpass_mix");
 }

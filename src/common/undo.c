@@ -18,8 +18,8 @@
 
 #include "common/darktable.h"
 #include "common/undo.h"
-#include <glib.h>    // for GList, gpointer, g_list_first, g_list_prepend
-#include <stdlib.h>  // for NULL, malloc, free
+#include <glib.h>   // for GList, gpointer, g_list_first, g_list_prepend
+#include <stdlib.h> // for NULL, malloc, free
 #include <sys/time.h>
 
 const double MAX_TIME_PERIOD = 0.5; // in second
@@ -52,7 +52,7 @@ void dt_undo_cleanup(dt_undo_t *self)
 static void _free_undo_data(void *p)
 {
   dt_undo_item_t *item = (dt_undo_item_t *)p;
-  if (item->free_data) item->free_data(item->data);
+  if(item->free_data) item->free_data(item->data);
   free(item);
 }
 
@@ -65,11 +65,11 @@ void dt_undo_record(dt_undo_t *self, gpointer user_data, dt_undo_type_t type, dt
   dt_undo_item_t *item = malloc(sizeof(dt_undo_item_t));
 
   item->user_data = user_data;
-  item->type      = type;
-  item->data      = data;
-  item->undo      = undo;
+  item->type = type;
+  item->data = data;
+  item->undo = undo;
   item->free_data = free_data;
-  item->ts        = dt_get_wtime();
+  item->ts = dt_get_wtime();
 
   dt_pthread_mutex_lock(&self->mutex);
   self->undo_list = g_list_prepend(self->undo_list, (gpointer)item);
@@ -114,8 +114,8 @@ void dt_undo_do_redo(dt_undo_t *self, uint32_t filter)
         self->undo_list = g_list_prepend(self->undo_list, item);
 
         l = next;
-        if (l) item = (dt_undo_item_t *)l->data;
-      } while (l && (item->type & filter) && (item->ts - first_item_ts < MAX_TIME_PERIOD));
+        if(l) item = (dt_undo_item_t *)l->data;
+      } while(l && (item->type & filter) && (item->ts - first_item_ts < MAX_TIME_PERIOD));
 
       break;
     }
@@ -149,7 +149,7 @@ void dt_undo_do_undo(dt_undo_t *self, uint32_t filter)
       //  now record in the redo list also all items that are on the same time period
 
       l = next;
-      while (l)
+      while(l)
       {
         next = g_list_next(l);
         item = (dt_undo_item_t *)l->data;
@@ -157,7 +157,7 @@ void dt_undo_do_undo(dt_undo_t *self, uint32_t filter)
         item->undo(item->user_data, item->type, item->data);
 
         //  if we are on the same time frame, just continue
-        if (item->type & filter && (first_item_ts - item->ts < MAX_TIME_PERIOD))
+        if(item->type & filter && (first_item_ts - item->ts < MAX_TIME_PERIOD))
         {
           self->undo_list = g_list_remove(self->undo_list, item);
           self->redo_list = g_list_prepend(self->redo_list, item);

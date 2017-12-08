@@ -187,11 +187,10 @@ void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const 
       for(int j = step / 2; j < height; j += step)
         for(int i = 0; i < width; i += step) out[(size_t)chs * width * j + chs * i + ch] *= coeff;
       for(int j = step / 2; j < height; j += step)
-        for(int i = step / 2; i < width; i += step)
-          out[(size_t)chs * width * j + chs * i + ch] *= coeff * coeff;
+        for(int i = step / 2; i < width; i += step) out[(size_t)chs * width * j + chs * i + ch] *= coeff * coeff;
 #else // soft-thresholding (shrinkage)
-#define wshrink                                                                                              \
-  (copysignf(fmaxf(0.0f, fabsf(out[(size_t)chs * width * j + chs * i + ch]) - (1.0 - coeff)),                \
+#define wshrink                                                                                                   \
+  (copysignf(fmaxf(0.0f, fabsf(out[(size_t)chs * width * j + chs * i + ch]) - (1.0 - coeff)),                     \
              out[(size_t)chs * width * j + chs * i + ch]))
       for(int j = 0; j < height; j += step)
         for(int i = step / 2; i < width; i += step) out[(size_t)chs * width * j + chs * i + ch] = wshrink;
@@ -249,7 +248,7 @@ void init_pipe(struct dt_iop_module_t *self, dt_dev_pixelpipe_t *pipe, dt_dev_pi
 
 void cleanup_pipe(struct dt_iop_module_t *self, dt_dev_pixelpipe_t *pipe, dt_dev_pixelpipe_iop_t *piece)
 {
-// clean up everything again.
+  // clean up everything again.
   dt_iop_equalizer_data_t *d = (dt_iop_equalizer_data_t *)(piece->data);
   for(int ch = 0; ch < 3; ch++) dt_draw_curve_destroy(d->curve[ch]);
   free(piece->data);
@@ -267,7 +266,7 @@ void init(dt_iop_module_t *module)
   module->params = calloc(1, sizeof(dt_iop_equalizer_params_t));
   module->default_params = calloc(1, sizeof(dt_iop_equalizer_params_t));
   module->default_enabled = 0; // we're a rather slow and rare op.
-    module->priority = 420; // module order created by iop_dependencies.py, do not edit!
+  module->priority = 420;      // module order created by iop_dependencies.py, do not edit!
   module->params_size = sizeof(dt_iop_equalizer_params_t);
   module->gui_data = NULL;
   dt_iop_equalizer_params_t tmp;

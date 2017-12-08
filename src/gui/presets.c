@@ -42,16 +42,13 @@ static const char *dt_gui_presets_exposure_value_str[]
         "1\"",   "2\"",    "4\"",    "8\"",    "15\"",   "30\"",   "60\"",  "+" };
 static const int dt_gui_presets_aperture_value_cnt = 19;
 static const float dt_gui_presets_aperture_value[]
-    = { 0,    0.5,  0.7,  1.0,  1.4,  2.0,  2.8,  4.0,   5.6,    8.0,
-        11.0, 16.0, 22.0, 32.0, 45.0, 64.0, 90.0, 128.0, FLT_MAX };
+    = { 0, 0.5, 0.7, 1.0, 1.4, 2.0, 2.8, 4.0, 5.6, 8.0, 11.0, 16.0, 22.0, 32.0, 45.0, 64.0, 90.0, 128.0, FLT_MAX };
 static const char *dt_gui_presets_aperture_value_str[]
     = { "f/0",  "f/0.5", "f/0.7", "f/1.0", "f/1.4", "f/2",  "f/2.8", "f/4",   "f/5.6", "f/8",
         "f/11", "f/16",  "f/22",  "f/32",  "f/45",  "f/64", "f/90",  "f/128", "f/+" };
 
 // format string and corresponding flag stored into the database
-static const char *dt_gui_presets_format_value_str[3] = { N_("normal images"),
-                                                          N_("raw"),
-                                                          N_("HDR")};
+static const char *dt_gui_presets_format_value_str[3] = { N_("normal images"), N_("raw"), N_("HDR") };
 static const int dt_gui_presets_format_flag[3] = { FOR_LDR, FOR_RAW, FOR_HDR };
 
 typedef struct dt_gui_presets_edit_dialog_t
@@ -79,8 +76,8 @@ void dt_gui_presets_init()
                         NULL, NULL);
 }
 
-void dt_gui_presets_add_generic(const char *name, dt_dev_operation_t op, const int32_t version,
-                                const void *params, const int32_t params_size, const int32_t enabled)
+void dt_gui_presets_add_generic(const char *name, dt_dev_operation_t op, const int32_t version, const void *params,
+                                const int32_t params_size, const int32_t enabled)
 {
   sqlite3_stmt *stmt;
   dt_develop_blend_params_t default_blendop_params
@@ -92,10 +89,10 @@ void dt_gui_presets_add_generic(const char *name, dt_dev_operation_t op, const i
           0,
           0.0f,
           { 0, 0, 0, 0 },
-          { 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f,
-            0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f,
-            0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f,
-            0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f } };
+          { 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f,
+            0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f,
+            1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f,
+            1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f } };
 
   DT_DEBUG_SQLITE3_PREPARE_V2(
       dt_database_get(darktable.db),
@@ -113,8 +110,7 @@ void dt_gui_presets_add_generic(const char *name, dt_dev_operation_t op, const i
   DT_DEBUG_SQLITE3_BIND_INT(stmt, 3, version);
   DT_DEBUG_SQLITE3_BIND_BLOB(stmt, 4, params, params_size, SQLITE_TRANSIENT);
   DT_DEBUG_SQLITE3_BIND_INT(stmt, 5, enabled);
-  DT_DEBUG_SQLITE3_BIND_BLOB(stmt, 6, &default_blendop_params, sizeof(dt_develop_blend_params_t),
-                             SQLITE_TRANSIENT);
+  DT_DEBUG_SQLITE3_BIND_BLOB(stmt, 6, &default_blendop_params, sizeof(dt_develop_blend_params_t), SQLITE_TRANSIENT);
   DT_DEBUG_SQLITE3_BIND_INT(stmt, 7, dt_develop_blend_version());
   sqlite3_step(stmt);
   sqlite3_finalize(stmt);
@@ -164,8 +160,8 @@ static gchar *get_active_preset_name(dt_iop_module_t *module)
     int32_t bl_params_size = sqlite3_column_bytes(stmt, 2);
     int enabled = sqlite3_column_int(stmt, 3);
     if(!memcmp(module->params, op_params, MIN(op_params_size, module->params_size))
-       && !memcmp(module->blend_params, blendop_params,
-                  MIN(bl_params_size, sizeof(dt_develop_blend_params_t))) && module->enabled == enabled)
+       && !memcmp(module->blend_params, blendop_params, MIN(bl_params_size, sizeof(dt_develop_blend_params_t)))
+       && module->enabled == enabled)
     {
       name = g_strdup((char *)sqlite3_column_text(stmt, 0));
       break;
@@ -236,8 +232,8 @@ static void edit_preset_response(GtkDialog *dialog, gint response_id, dt_gui_pre
       // name:
       DT_DEBUG_SQLITE3_PREPARE_V2(
           dt_database_get(darktable.db),
-          "SELECT name FROM data.presets WHERE name = ?1 AND operation=?2 AND op_version=?3 LIMIT 1",
-          -1, &stmt, NULL);
+          "SELECT name FROM data.presets WHERE name = ?1 AND operation=?2 AND op_version=?3 LIMIT 1", -1, &stmt,
+          NULL);
       DT_DEBUG_SQLITE3_BIND_TEXT(stmt, 1, name, -1, SQLITE_TRANSIENT);
       DT_DEBUG_SQLITE3_BIND_TEXT(stmt, 2, g->module->op, -1, SQLITE_TRANSIENT);
       DT_DEBUG_SQLITE3_BIND_INT(stmt, 3, g->module->version());
@@ -322,14 +318,10 @@ static void edit_preset_response(GtkDialog *dialog, gint response_id, dt_gui_pre
     DT_DEBUG_SQLITE3_BIND_TEXT(stmt, 11, gtk_entry_get_text(GTK_ENTRY(g->lens)), -1, SQLITE_TRANSIENT);
     DT_DEBUG_SQLITE3_BIND_DOUBLE(stmt, 12, gtk_spin_button_get_value(GTK_SPIN_BUTTON(g->iso_min)));
     DT_DEBUG_SQLITE3_BIND_DOUBLE(stmt, 13, gtk_spin_button_get_value(GTK_SPIN_BUTTON(g->iso_max)));
-    DT_DEBUG_SQLITE3_BIND_DOUBLE(stmt, 14,
-                                 dt_gui_presets_exposure_value[dt_bauhaus_combobox_get(g->exposure_min)]);
-    DT_DEBUG_SQLITE3_BIND_DOUBLE(stmt, 15,
-                                 dt_gui_presets_exposure_value[dt_bauhaus_combobox_get(g->exposure_max)]);
-    DT_DEBUG_SQLITE3_BIND_DOUBLE(stmt, 16,
-                                 dt_gui_presets_aperture_value[dt_bauhaus_combobox_get(g->aperture_min)]);
-    DT_DEBUG_SQLITE3_BIND_DOUBLE(stmt, 17,
-                                 dt_gui_presets_aperture_value[dt_bauhaus_combobox_get(g->aperture_max)]);
+    DT_DEBUG_SQLITE3_BIND_DOUBLE(stmt, 14, dt_gui_presets_exposure_value[dt_bauhaus_combobox_get(g->exposure_min)]);
+    DT_DEBUG_SQLITE3_BIND_DOUBLE(stmt, 15, dt_gui_presets_exposure_value[dt_bauhaus_combobox_get(g->exposure_max)]);
+    DT_DEBUG_SQLITE3_BIND_DOUBLE(stmt, 16, dt_gui_presets_aperture_value[dt_bauhaus_combobox_get(g->aperture_min)]);
+    DT_DEBUG_SQLITE3_BIND_DOUBLE(stmt, 17, dt_gui_presets_aperture_value[dt_bauhaus_combobox_get(g->aperture_max)]);
     DT_DEBUG_SQLITE3_BIND_DOUBLE(stmt, 18, gtk_spin_button_get_value(GTK_SPIN_BUTTON(g->focal_length_min)));
     DT_DEBUG_SQLITE3_BIND_DOUBLE(stmt, 19, gtk_spin_button_get_value(GTK_SPIN_BUTTON(g->focal_length_max)));
     DT_DEBUG_SQLITE3_BIND_INT(stmt, 20, gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(g->autoapply)));
@@ -390,8 +382,7 @@ static void edit_preset(const char *name_in, dt_iop_module_t *module)
   gtk_container_add(content_area, GTK_WIDGET(box));
   GtkWidget *label;
 
-  dt_gui_presets_edit_dialog_t *g
-      = (dt_gui_presets_edit_dialog_t *)malloc(sizeof(dt_gui_presets_edit_dialog_t));
+  dt_gui_presets_edit_dialog_t *g = (dt_gui_presets_edit_dialog_t *)malloc(sizeof(dt_gui_presets_edit_dialog_t));
   g->old_id = -1;
   g->original_name = name;
   g->module = module;
@@ -404,13 +395,11 @@ static void edit_preset(const char *name_in, dt_iop_module_t *module)
   gtk_box_pack_start(box, GTK_WIDGET(g->description), FALSE, FALSE, 0);
   gtk_widget_set_tooltip_text(GTK_WIDGET(g->description), _("description or further information"));
 
-  g->autoapply
-      = GTK_CHECK_BUTTON(gtk_check_button_new_with_label(_("auto apply this preset to matching images")));
+  g->autoapply = GTK_CHECK_BUTTON(gtk_check_button_new_with_label(_("auto apply this preset to matching images")));
   gtk_box_pack_start(box, GTK_WIDGET(g->autoapply), FALSE, FALSE, 0);
-  g->filter
-      = GTK_CHECK_BUTTON(gtk_check_button_new_with_label(_("only show this preset for matching images")));
+  g->filter = GTK_CHECK_BUTTON(gtk_check_button_new_with_label(_("only show this preset for matching images")));
   gtk_widget_set_tooltip_text(GTK_WIDGET(g->filter), _("be very careful with this option. "
-                                                           "this might be the last time you see your preset."));
+                                                       "this might be the last time you see your preset."));
   gtk_box_pack_start(box, GTK_WIDGET(g->filter), FALSE, FALSE, 0);
   g_signal_connect(G_OBJECT(g->autoapply), "toggled", G_CALLBACK(check_buttons_activated), g);
   g_signal_connect(G_OBJECT(g->filter), "toggled", G_CALLBACK(check_buttons_activated), g);
@@ -616,8 +605,7 @@ static void menuitem_update_preset(GtkMenuItem *menuitem, dt_iop_module_t *modul
   DT_DEBUG_SQLITE3_BIND_INT(stmt, 2, module->version());
   DT_DEBUG_SQLITE3_BIND_BLOB(stmt, 3, module->params, module->params_size, SQLITE_TRANSIENT);
   DT_DEBUG_SQLITE3_BIND_INT(stmt, 4, module->enabled);
-  DT_DEBUG_SQLITE3_BIND_BLOB(stmt, 5, module->blend_params, sizeof(dt_develop_blend_params_t),
-                             SQLITE_TRANSIENT);
+  DT_DEBUG_SQLITE3_BIND_BLOB(stmt, 5, module->blend_params, sizeof(dt_develop_blend_params_t), SQLITE_TRANSIENT);
   DT_DEBUG_SQLITE3_BIND_INT(stmt, 6, dt_develop_blend_version());
   DT_DEBUG_SQLITE3_BIND_TEXT(stmt, 7, name, -1, SQLITE_TRANSIENT);
   sqlite3_step(stmt);
@@ -760,8 +748,8 @@ void dt_gui_favorite_presets_menu_show()
 
 static void dt_gui_presets_popup_menu_show_internal(dt_dev_operation_t op, int32_t version,
                                                     dt_iop_params_t *params, int32_t params_size,
-                                                    dt_develop_blend_params_t *bl_params,
-                                                    dt_iop_module_t *module, const dt_image_t *image,
+                                                    dt_develop_blend_params_t *bl_params, dt_iop_module_t *module,
+                                                    const dt_image_t *image,
                                                     void (*pick_callback)(GtkMenuItem *, void *),
                                                     void *callback_data)
 {
@@ -918,10 +906,8 @@ static void dt_gui_presets_popup_menu_show_internal(dt_dev_operation_t op, int32
 }
 
 void dt_gui_presets_popup_menu_show_for_params(dt_dev_operation_t op, int32_t version, void *params,
-                                               int32_t params_size, void *blendop_params,
-                                               const dt_image_t *image,
-                                               void (*pick_callback)(GtkMenuItem *, void *),
-                                               void *callback_data)
+                                               int32_t params_size, void *blendop_params, const dt_image_t *image,
+                                               void (*pick_callback)(GtkMenuItem *, void *), void *callback_data)
 {
   dt_gui_presets_popup_menu_show_internal(op, version, params, params_size, blendop_params, NULL, image,
                                           pick_callback, callback_data);
@@ -930,12 +916,11 @@ void dt_gui_presets_popup_menu_show_for_params(dt_dev_operation_t op, int32_t ve
 void dt_gui_presets_popup_menu_show_for_module(dt_iop_module_t *module)
 {
   dt_gui_presets_popup_menu_show_internal(module->op, module->version(), module->params, module->params_size,
-                                          module->blend_params, module, &module->dev->image_storage, NULL,
-                                          NULL);
+                                          module->blend_params, module, &module->dev->image_storage, NULL, NULL);
 }
 
-void dt_gui_presets_update_mml(const char *name, dt_dev_operation_t op, const int32_t version,
-                               const char *maker, const char *model, const char *lens)
+void dt_gui_presets_update_mml(const char *name, dt_dev_operation_t op, const int32_t version, const char *maker,
+                               const char *model, const char *lens)
 {
   char tmp[1024];
   sqlite3_stmt *stmt;
@@ -956,8 +941,8 @@ void dt_gui_presets_update_mml(const char *name, dt_dev_operation_t op, const in
   sqlite3_finalize(stmt);
 }
 
-void dt_gui_presets_update_iso(const char *name, dt_dev_operation_t op, const int32_t version,
-                               const float min, const float max)
+void dt_gui_presets_update_iso(const char *name, dt_dev_operation_t op, const int32_t version, const float min,
+                               const float max)
 {
   sqlite3_stmt *stmt;
   DT_DEBUG_SQLITE3_PREPARE_V2(
@@ -1024,8 +1009,7 @@ void dt_gui_presets_update_fl(const char *name, dt_dev_operation_t op, const int
   sqlite3_finalize(stmt);
 }
 
-void dt_gui_presets_update_ldr(const char *name, dt_dev_operation_t op, const int32_t version,
-                               const int ldrflag)
+void dt_gui_presets_update_ldr(const char *name, dt_dev_operation_t op, const int32_t version, const int ldrflag)
 {
   sqlite3_stmt *stmt;
   DT_DEBUG_SQLITE3_PREPARE_V2(dt_database_get(darktable.db),
@@ -1054,8 +1038,7 @@ void dt_gui_presets_update_autoapply(const char *name, dt_dev_operation_t op, co
   sqlite3_finalize(stmt);
 }
 
-void dt_gui_presets_update_filter(const char *name, dt_dev_operation_t op, const int32_t version,
-                                  const int filter)
+void dt_gui_presets_update_filter(const char *name, dt_dev_operation_t op, const int32_t version, const int filter)
 {
   sqlite3_stmt *stmt;
   DT_DEBUG_SQLITE3_PREPARE_V2(dt_database_get(darktable.db),

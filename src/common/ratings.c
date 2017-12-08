@@ -48,8 +48,8 @@ void dt_ratings_apply_to_selection(int rating)
     if(rating == 6)
       dt_control_log(ngettext("rejecting %d image", "rejecting %d images", count), count);
     else
-      dt_control_log(ngettext("applying rating %d to %d image", "applying rating %d to %d images", count),
-                     rating, count);
+      dt_control_log(ngettext("applying rating %d to %d image", "applying rating %d to %d images", count), rating,
+                     count);
 #if 0 // not updating cache
     gchar query[1024]= {0};
     g_snprintf(query,sizeof(query), "UPDATE main.images SET flags=(flags & ~7) | (7 & %d) WHERE id IN "

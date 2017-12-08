@@ -40,7 +40,8 @@
 #include "win/main_wrapper.h"
 #endif
 
-static int generate_thumbnail_cache(const dt_mipmap_size_t min_mip, const dt_mipmap_size_t max_mip, const int32_t min_imgid, const int32_t max_imgid)
+static int generate_thumbnail_cache(const dt_mipmap_size_t min_mip, const dt_mipmap_size_t max_mip,
+                                    const int32_t min_imgid, const int32_t max_imgid)
 {
   fprintf(stderr, _("creating cache directories\n"));
   for(dt_mipmap_size_t k = min_mip; k <= max_mip; k++)
@@ -92,7 +93,8 @@ static int generate_thumbnail_cache(const dt_mipmap_size_t min_mip, const dt_mip
     const int32_t imgid = sqlite3_column_int(stmt, 0);
 
     counter++;
-    fprintf(stderr, "image %zu/%zu (%.02f%%) (id:%d)\n", counter, image_count, 100.0 * counter / (float)image_count, imgid);
+    fprintf(stderr, "image %zu/%zu (%.02f%%) (id:%d)\n", counter, image_count,
+            100.0 * counter / (float)image_count, imgid);
 
     for(int k = max_mip; k >= min_mip && k >= 0; k--)
     {
@@ -120,19 +122,17 @@ static int generate_thumbnail_cache(const dt_mipmap_size_t min_mip, const dt_mip
 
 static void usage(const char *progname)
 {
-  fprintf(
-      stderr,
-      "usage: %s [-h, --help; --version]\n"
-      "  [--min-mip <0-7> (default = 0)] [-m, --max-mip <0-7> (default = 2)]\n"
-      "  [--min-imgid <N>] [--max-imgid <N>]\n"
-      "  [--core <darktable options>]\n"
-      "\n"
-      "When multiple mipmap sizes are requested, the biggest one is computed\n"
-      "while the rest are quickly downsampled.\n"
-      "\n"
-      "The --min-imgid and --max-imgid specify the range of internal image ID\n"
-      "numbers to work on.\n",
-      progname);
+  fprintf(stderr, "usage: %s [-h, --help; --version]\n"
+                  "  [--min-mip <0-7> (default = 0)] [-m, --max-mip <0-7> (default = 2)]\n"
+                  "  [--min-imgid <N>] [--max-imgid <N>]\n"
+                  "  [--core <darktable options>]\n"
+                  "\n"
+                  "When multiple mipmap sizes are requested, the biggest one is computed\n"
+                  "while the rest are quickly downsampled.\n"
+                  "\n"
+                  "The --min-imgid and --max-imgid specify the range of internal image ID\n"
+                  "numbers to work on.\n",
+          progname);
 }
 
 int main(int argc, char *arg[])
@@ -207,10 +207,9 @@ int main(int argc, char *arg[])
 
   if(!dt_conf_get_bool("cache_disk_backend"))
   {
-    fprintf(stderr,
-            _("warning: disk backend for thumbnail cache is disabled (cache_disk_backend)\nif you want "
-              "to pre-generate thumbnails and for darktable to use them, you need to enable disk backend "
-              "for thumbnail cache\nno thumbnails to be generated, done."));
+    fprintf(stderr, _("warning: disk backend for thumbnail cache is disabled (cache_disk_backend)\nif you want "
+                      "to pre-generate thumbnails and for darktable to use them, you need to enable disk backend "
+                      "for thumbnail cache\nno thumbnails to be generated, done."));
     dt_cleanup();
     free(m_arg);
     exit(EXIT_FAILURE);

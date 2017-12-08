@@ -52,7 +52,8 @@
 static void usage(const char *progname)
 {
   fprintf(stderr, "usage: %s <input file> [<xmp file>] <output file> [--width <max width>,--height <max "
-                  "height>,--bpp <bpp>,--hq <0|1|true|false>,--upscale <0|1|true|false>,--verbose] [--core <darktable options>]\n",
+                  "height>,--bpp <bpp>,--hq <0|1|true|false>,--upscale <0|1|true|false>,--verbose] [--core "
+                  "<darktable options>]\n",
           progname);
 }
 
@@ -102,8 +103,8 @@ int main(int argc, char *arg[])
       {
         k++;
         bpp = MAX(atoi(arg[k]), 0);
-        fprintf(stderr, "%s %d\n",
-                _("TODO: sorry, due to API restrictions we currently cannot set the BPP to"), bpp);
+        fprintf(stderr, "%s %d\n", _("TODO: sorry, due to API restrictions we currently cannot set the BPP to"),
+                bpp);
       }
       else if(!strcmp(arg[k], "--hq") && argc > k + 1)
       {
@@ -128,7 +129,7 @@ int main(int argc, char *arg[])
         if(!g_strcmp0(str, "0") || !g_strcmp0(str, "FALSE"))
           upscale = FALSE;
         else if(!g_strcmp0(str, "1") || !g_strcmp0(str, "TRUE"))
-          upscale= TRUE;
+          upscale = TRUE;
         else
         {
           fprintf(stderr, "%s: %s\n", _("unknown option for --upscale"), arg[k]);
@@ -290,9 +291,8 @@ int main(int argc, char *arg[])
   storage = dt_imageio_get_storage_by_name("disk"); // only exporting to disk makes sense
   if(storage == NULL)
   {
-    fprintf(
-        stderr, "%s\n",
-        _("cannot find disk storage module. please check your installation, something seems to be broken."));
+    fprintf(stderr, "%s\n",
+            _("cannot find disk storage module. please check your installation, something seems to be broken."));
     free(m_arg);
     exit(1);
   }

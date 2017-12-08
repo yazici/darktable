@@ -91,8 +91,7 @@ static int32_t dt_camera_capture_job_run(dt_job_t *job)
   char *expprogram = (char *)dt_camctl_camera_get_property(darktable.camctl, NULL, "expprogram");
 
   /* if fail, lets try fetching mode for cannon */
-  if(!expprogram)
-    expprogram = (char *)dt_camctl_camera_get_property(darktable.camctl, NULL, "autoexposuremode");
+  if(!expprogram) expprogram = (char *)dt_camctl_camera_get_property(darktable.camctl, NULL, "autoexposuremode");
 
   /* Fetch all values for shutterspeed and initialize current value */
   GList *values = NULL;
@@ -109,8 +108,7 @@ static int32_t dt_camera_capture_job_run(dt_job_t *job)
       values = g_list_append(values, g_strdup(value));
       // Check if current values is the same as original value, then lets store item ptr
       if(strcmp(value, cvalue) == 0) original_value = g_list_last(values)->data;
-    } while((value = dt_camctl_camera_property_get_next_choice(darktable.camctl, NULL, "shutterspeed"))
-            != NULL);
+    } while((value = dt_camctl_camera_property_get_next_choice(darktable.camctl, NULL, "shutterspeed")) != NULL);
   }
   else
   {
@@ -249,8 +247,8 @@ static void dt_camera_get_previews_cleanup(void *p)
   free(params);
 }
 
-dt_job_t *dt_camera_get_previews_job_create(dt_camera_t *camera, dt_camctl_listener_t *listener,
-                                            uint32_t flags, void *data)
+dt_job_t *dt_camera_get_previews_job_create(dt_camera_t *camera, dt_camctl_listener_t *listener, uint32_t flags,
+                                            void *data)
 {
   dt_job_t *job = dt_control_job_create(&dt_camera_get_previews_job_run, "get camera previews job");
   if(!job) return NULL;
@@ -299,8 +297,7 @@ static const char *_camera_request_image_filename(const dt_camera_t *camera, con
   /* update import session with orginal filename so that $(FILE_EXTENSION)
    *     and alikes can be expanded. */
   dt_import_session_set_filename(shared->session, filename);
-  if(exif_time)
-    dt_import_session_set_exif_time(shared->session, *exif_time);
+  if(exif_time) dt_import_session_set_exif_time(shared->session, *exif_time);
   file = dt_import_session_filename(shared->session, FALSE);
 
   if(file == NULL) return NULL;
@@ -312,8 +309,7 @@ static const char *_camera_request_image_path(const dt_camera_t *camera, time_t 
 {
   struct dt_camera_shared_t *shared;
   shared = (struct dt_camera_shared_t *)data;
-  if(exif_time)
-    dt_import_session_set_exif_time(shared->session, *exif_time);
+  if(exif_time) dt_import_session_set_exif_time(shared->session, *exif_time);
   return dt_import_session_path(shared->session, FALSE);
 }
 

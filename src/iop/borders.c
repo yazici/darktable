@@ -92,8 +92,8 @@ typedef struct dt_iop_borders_gui_data_t
   GtkWidget *active_colorpick;
 } dt_iop_borders_gui_data_t;
 
-int legacy_params(dt_iop_module_t *self, const void *const old_params, const int old_version,
-                  void *new_params, const int new_version)
+int legacy_params(dt_iop_module_t *self, const void *const old_params, const int old_version, void *new_params,
+                  const int new_version)
 {
   if(old_version == 1 && new_version == 3)
   {
@@ -210,8 +210,7 @@ int distort_transform(dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, floa
 
   return 1;
 }
-int distort_backtransform(dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, float *points,
-                          size_t points_count)
+int distort_backtransform(dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, float *points, size_t points_count)
 {
   dt_iop_borders_data_t *d = (dt_iop_borders_data_t *)piece->data;
 
@@ -288,8 +287,8 @@ void modify_roi_out(struct dt_iop_module_t *self, struct dt_dev_pixelpipe_iop_t 
 }
 
 // 2nd pass: which roi would this operation need as input to fill the given output region?
-void modify_roi_in(struct dt_iop_module_t *self, struct dt_dev_pixelpipe_iop_t *piece,
-                   const dt_iop_roi_t *roi_out, dt_iop_roi_t *roi_in)
+void modify_roi_in(struct dt_iop_module_t *self, struct dt_dev_pixelpipe_iop_t *piece, const dt_iop_roi_t *roi_out,
+                   dt_iop_roi_t *roi_in)
 {
   dt_iop_borders_data_t *d = (dt_iop_borders_data_t *)piece->data;
   *roi_in = *roi_out;
@@ -304,8 +303,7 @@ void modify_roi_in(struct dt_iop_module_t *self, struct dt_dev_pixelpipe_iop_t *
   roi_in->height -= MAX(bh * d->pos_v - roi_out->y, 0);
 
   // subtract lower right border from dimensions
-  roi_in->width -= roi_out->scale
-                   * MAX((roi_in->x + roi_in->width) / roi_out->scale - (piece->buf_in.width), 0);
+  roi_in->width -= roi_out->scale * MAX((roi_in->x + roi_in->width) / roi_out->scale - (piece->buf_in.width), 0);
   roi_in->height -= roi_out->scale
                     * MAX((roi_in->y + roi_in->height) / roi_out->scale - (piece->buf_in.height), 0);
   // don't request nothing or outside roi
@@ -372,8 +370,7 @@ void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const 
     for(int r = frame_tl_out_y; r <= frame_br_out_y; r++)
     {
       buf = (float *)ovoid + ((size_t)r * out_stride + frame_tl_out_x * ch);
-      for(int c = frame_tl_out_x; c <= frame_br_out_x; c++, buf += 4)
-        memcpy(buf, col_frame, sizeof(float) * 4);
+      for(int c = frame_tl_out_x; c <= frame_br_out_x; c++, buf += 4) memcpy(buf, col_frame, sizeof(float) * 4);
     }
     for(int r = frame_tl_in_y; r <= frame_br_in_y; r++)
     {
@@ -500,8 +497,7 @@ error:
 void init_global(dt_iop_module_so_t *module)
 {
   const int program = 2; // basic.cl from programs.conf
-  dt_iop_borders_global_data_t *gd
-      = (dt_iop_borders_global_data_t *)malloc(sizeof(dt_iop_borders_global_data_t));
+  dt_iop_borders_global_data_t *gd = (dt_iop_borders_global_data_t *)malloc(sizeof(dt_iop_borders_global_data_t));
   module->data = gd;
   gd->kernel_borders_fill = dt_opencl_create_kernel(program, "borders_fill");
 }
@@ -538,19 +534,9 @@ void cleanup_pipe(struct dt_iop_module_t *self, dt_dev_pixelpipe_t *pipe, dt_dev
 
 void init_presets(dt_iop_module_so_t *self)
 {
-  dt_iop_borders_params_t p = (dt_iop_borders_params_t){ { 1.0f, 1.0f, 1.0f },
-                                                         3.0f / 2.0f,
-                                                         "3:2",
-                                                         0,
-                                                         0.1f,
-                                                         0.5f,
-                                                         "1/2",
-                                                         0.5f,
-                                                         "1/2",
-                                                         0.0f,
-                                                         0.5f,
-                                                         { 0.0f, 0.0f, 0.0f },
-                                                         TRUE };
+  dt_iop_borders_params_t p = (dt_iop_borders_params_t){
+    { 1.0f, 1.0f, 1.0f }, 3.0f / 2.0f, "3:2", 0, 0.1f, 0.5f, "1/2", 0.5f, "1/2", 0.0f, 0.5f, { 0.0f, 0.0f, 0.0f }, TRUE
+  };
   dt_gui_presets_add_generic(_("15:10 postcard white"), self->op, self->version(), &p, sizeof(p), 1);
   p.color[0] = p.color[1] = p.color[2] = 0.0f;
   p.frame_color[0] = p.frame_color[1] = p.frame_color[2] = 1.0f;
@@ -602,8 +588,7 @@ static gboolean borders_draw(GtkWidget *widget, cairo_t *cr, dt_iop_module_t *se
   // interrupt if no valid color reading
   if(self->picked_color_min[0] == INFINITY) return FALSE;
 
-  if(fabsf(p->color[0] - self->picked_color[0]) < 0.0001f
-     && fabsf(p->color[1] - self->picked_color[1]) < 0.0001f
+  if(fabsf(p->color[0] - self->picked_color[0]) < 0.0001f && fabsf(p->color[1] - self->picked_color[1]) < 0.0001f
      && fabsf(p->color[2] - self->picked_color[2]) < 0.0001f)
   {
     // interrupt infinite loops
@@ -618,10 +603,9 @@ static gboolean borders_draw(GtkWidget *widget, cairo_t *cr, dt_iop_module_t *se
     return FALSE;
   }
 
-  GdkRGBA c = (GdkRGBA){.red = self->picked_color[0],
-                        .green = self->picked_color[1],
-                        .blue = self->picked_color[2],
-                        .alpha = 1.0 };
+  GdkRGBA c = (GdkRGBA){
+    .red = self->picked_color[0], .green = self->picked_color[1], .blue = self->picked_color[2], .alpha = 1.0
+  };
   if(g->active_colorpick == g->frame_colorpick)
   {
     p->frame_color[0] = self->picked_color[0];
@@ -881,9 +865,8 @@ void gui_update(struct dt_iop_module_t *self)
   gtk_color_chooser_set_rgba(GTK_COLOR_CHOOSER(g->colorpick), &c);
 
   // ----- Frame Color
-  GdkRGBA fc = (GdkRGBA){
-    .red = p->frame_color[0], .green = p->frame_color[1], .blue = p->frame_color[2], .alpha = 1.0
-  };
+  GdkRGBA fc
+      = (GdkRGBA){.red = p->frame_color[0], .green = p->frame_color[1], .blue = p->frame_color[2], .alpha = 1.0 };
   gtk_color_chooser_set_rgba(GTK_COLOR_CHOOSER(g->frame_colorpick), &fc);
 }
 
@@ -895,7 +878,7 @@ void init(dt_iop_module_t *module)
   module->default_enabled = 0;
   module->params_size = sizeof(dt_iop_borders_params_t);
   module->gui_data = NULL;
-    module->priority = 956; // module order created by iop_dependencies.py, do not edit!
+  module->priority = 956; // module order created by iop_dependencies.py, do not edit!
 }
 
 void cleanup(dt_iop_module_t *module)

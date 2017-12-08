@@ -27,7 +27,8 @@
 
 #define MAX_LINE_LENGTH 512
 
-typedef enum parser_state_t {
+typedef enum parser_state_t
+{
   BLOCK_NONE = 0,
   BLOCK_BOXES,
   BLOCK_BOX_SHRINK,

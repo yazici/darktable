@@ -82,8 +82,8 @@ int flags()
   return IOP_FLAGS_INCLUDE_IN_STYLES | IOP_FLAGS_SUPPORTS_BLENDING | IOP_FLAGS_ALLOW_TILING;
 }
 
-int legacy_params(dt_iop_module_t *self, const void *const old_params, const int old_version,
-                  void *new_params, const int new_version)
+int legacy_params(dt_iop_module_t *self, const void *const old_params, const int old_version, void *new_params,
+                  const int new_version)
 {
   if(old_version == 1 && new_version == 2)
   {
@@ -189,8 +189,7 @@ void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const 
     {
       const float tt = envelope(in[0]);
       const float t = tt + (1.0f - tt) * (1.0f - d->highlights);
-      out[0] = (1.0f - t) * in[0]
-               + t * out[0] * (1.0f / 100.0f) * in[0]; // normalized filter * input brightness
+      out[0] = (1.0f - t) * in[0] + t * out[0] * (1.0f / 100.0f) * in[0]; // normalized filter * input brightness
     }
   }
 }
@@ -265,8 +264,7 @@ error:
 #endif
 
 void tiling_callback(struct dt_iop_module_t *self, struct dt_dev_pixelpipe_iop_t *piece,
-                     const dt_iop_roi_t *roi_in, const dt_iop_roi_t *roi_out,
-                     struct dt_develop_tiling_t *tiling)
+                     const dt_iop_roi_t *roi_in, const dt_iop_roi_t *roi_out, struct dt_develop_tiling_t *tiling)
 {
   const float scale = piece->iscale / roi_in->scale;
   const float sigma_s = 20.0f / scale;
@@ -279,8 +277,7 @@ void tiling_callback(struct dt_iop_module_t *self, struct dt_dev_pixelpipe_iop_t
   const size_t basebuffer = width * height * channels * sizeof(float);
 
   tiling->factor = 3.0f + (float)dt_bilateral_memory_use(width, height, sigma_s, sigma_r) / basebuffer;
-  tiling->maxbuf
-      = fmax(1.0f, (float)dt_bilateral_singlebuffer_size(width, height, sigma_s, sigma_r) / basebuffer);
+  tiling->maxbuf = fmax(1.0f, (float)dt_bilateral_singlebuffer_size(width, height, sigma_s, sigma_r) / basebuffer);
   tiling->overhead = 0;
   tiling->overlap = ceilf(4 * sigma_s);
   tiling->xalign = 1;
@@ -337,7 +334,7 @@ void init(dt_iop_module_t *module)
   module->params = calloc(1, sizeof(dt_iop_monochrome_params_t));
   module->default_params = calloc(1, sizeof(dt_iop_monochrome_params_t));
   module->default_enabled = 0;
-    module->priority = 637; // module order created by iop_dependencies.py, do not edit!
+  module->priority = 637; // module order created by iop_dependencies.py, do not edit!
   module->params_size = sizeof(dt_iop_monochrome_params_t);
   module->gui_data = NULL;
   dt_iop_monochrome_params_t tmp = (dt_iop_monochrome_params_t){ 0., 0., 2., 0. };
@@ -376,7 +373,7 @@ static gboolean dt_iop_monochrome_draw(GtkWidget *widget, cairo_t *crf, gpointer
     p->b = self->picked_color[2];
     float da = self->picked_color_max[1] - self->picked_color_min[1];
     float db = self->picked_color_max[2] - self->picked_color_min[2];
-    p->size = CLAMP((da + db)/128.0, .5, 3.0);
+    p->size = CLAMP((da + db) / 128.0, .5, 3.0);
     if(old_a != p->a || old_b != p->b || old_size != p->size)
       dt_dev_add_history_item(darktable.develop, self, TRUE);
   }
@@ -420,8 +417,7 @@ static gboolean dt_iop_monochrome_draw(GtkWidget *widget, cairo_t *crf, gpointer
       cmsDoTransform(g->xform, &Lab, rgb, 1);
       cairo_set_source_rgb(cr, rgb[0], rgb[1], rgb[2]);
       cairo_rectangle(cr, width * i / (float)cells, height * j / (float)cells,
-                      width / (float)cells - DT_PIXEL_APPLY_DPI(1),
-                      height / (float)cells - DT_PIXEL_APPLY_DPI(1));
+                      width / (float)cells - DT_PIXEL_APPLY_DPI(1), height / (float)cells - DT_PIXEL_APPLY_DPI(1));
       cairo_fill(cr);
     }
   cairo_set_antialias(cr, CAIRO_ANTIALIAS_DEFAULT);
@@ -459,14 +455,13 @@ static gboolean dt_iop_monochrome_motion_notify(GtkWidget *widget, GdkEventMotio
   }
   gint x, y;
 #if GTK_CHECK_VERSION(3, 20, 0)
-  gdk_window_get_device_position(event->window,
-      gdk_seat_get_pointer(gdk_display_get_default_seat(gtk_widget_get_display(widget))),
-      &x, &y, 0);
+  gdk_window_get_device_position(
+      event->window, gdk_seat_get_pointer(gdk_display_get_default_seat(gtk_widget_get_display(widget))), &x, &y, 0);
 #else
-  gdk_window_get_device_position(event->window,
-                                 gdk_device_manager_get_client_pointer(
-                                     gdk_display_get_device_manager(gdk_window_get_display(event->window))),
-                                 &x, &y, NULL);
+  gdk_window_get_device_position(
+      event->window,
+      gdk_device_manager_get_client_pointer(gdk_display_get_device_manager(gdk_window_get_display(event->window))),
+      &x, &y, NULL);
 #endif
   return TRUE;
 }
@@ -588,18 +583,17 @@ void gui_init(struct dt_iop_module_t *self)
   self->widget = gtk_box_new(GTK_ORIENTATION_VERTICAL, DT_BAUHAUS_SPACE);
   g->area = GTK_DRAWING_AREA(dtgtk_drawing_area_new_with_aspect_ratio(1.0));
   gtk_box_pack_start(GTK_BOX(self->widget), GTK_WIDGET(g->area), TRUE, TRUE, 0);
-  gtk_widget_set_tooltip_text(GTK_WIDGET(g->area), _("drag and scroll mouse wheel to adjust the virtual color filter"));
+  gtk_widget_set_tooltip_text(GTK_WIDGET(g->area),
+                              _("drag and scroll mouse wheel to adjust the virtual color filter"));
 
   gtk_widget_add_events(GTK_WIDGET(g->area), GDK_POINTER_MOTION_MASK | GDK_POINTER_MOTION_HINT_MASK
-                                             | GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK
-                                             | GDK_LEAVE_NOTIFY_MASK | GDK_SCROLL_MASK
-                                             | GDK_SMOOTH_SCROLL_MASK);
+                                                 | GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK
+                                                 | GDK_LEAVE_NOTIFY_MASK | GDK_SCROLL_MASK
+                                                 | GDK_SMOOTH_SCROLL_MASK);
   g_signal_connect(G_OBJECT(g->area), "draw", G_CALLBACK(dt_iop_monochrome_draw), self);
   g_signal_connect(G_OBJECT(g->area), "button-press-event", G_CALLBACK(dt_iop_monochrome_button_press), self);
-  g_signal_connect(G_OBJECT(g->area), "button-release-event", G_CALLBACK(dt_iop_monochrome_button_release),
-                   self);
-  g_signal_connect(G_OBJECT(g->area), "motion-notify-event", G_CALLBACK(dt_iop_monochrome_motion_notify),
-                   self);
+  g_signal_connect(G_OBJECT(g->area), "button-release-event", G_CALLBACK(dt_iop_monochrome_button_release), self);
+  g_signal_connect(G_OBJECT(g->area), "motion-notify-event", G_CALLBACK(dt_iop_monochrome_motion_notify), self);
   g_signal_connect(G_OBJECT(g->area), "leave-notify-event", G_CALLBACK(dt_iop_monochrome_leave_notify), self);
   g_signal_connect(G_OBJECT(g->area), "scroll-event", G_CALLBACK(dt_iop_monochrome_scrolled), self);
 

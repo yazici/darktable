@@ -20,8 +20,7 @@
 
 #include "develop/imageop.h"
 
-typedef void (*dt_guides_draw_callback)(cairo_t *cr, const float x, const float y,
-                                        const float w, const float h,
+typedef void (*dt_guides_draw_callback)(cairo_t *cr, const float x, const float y, const float w, const float h,
                                         const float zoom_scale, void *user_data);
 
 typedef GtkWidget *(*dt_guides_widget_callback)(dt_iop_module_t *self, void *user_data);
@@ -38,7 +37,8 @@ typedef struct dt_guides_t
 GList *dt_guides_init();
 void dt_guides_cleanup(GList *guides);
 
-void dt_guides_add_guide(const char *name, dt_guides_draw_callback draw, dt_guides_widget_callback widget, void *user_data, GDestroyNotify free);
+void dt_guides_add_guide(const char *name, dt_guides_draw_callback draw, dt_guides_widget_callback widget,
+                         void *user_data, GDestroyNotify free);
 
 // modelines: These editor modelines have been set for all relevant files by tools/update_modelines.sh
 // vim: shiftwidth=2 expandtab tabstop=2 cindent

@@ -38,19 +38,19 @@ typedef struct dt_histogram_roi_t
 void dt_histogram_helper_cs_RAW_uint16(const dt_dev_histogram_collection_params_t *histogram_params,
                                        const void *pixel, uint32_t *histogram, int j);
 
-typedef void((*dt_worker)(const dt_dev_histogram_collection_params_t *const histogram_params,
-                          const void *pixel, uint32_t *histogram, int j));
+typedef void((*dt_worker)(const dt_dev_histogram_collection_params_t *const histogram_params, const void *pixel,
+                          uint32_t *histogram, int j));
 
 void dt_histogram_worker(dt_dev_histogram_collection_params_t *const histogram_params,
-                         dt_dev_histogram_stats_t *histogram_stats, const void *const pixel,
-                         uint32_t **histogram, const dt_worker Worker);
+                         dt_dev_histogram_stats_t *histogram_stats, const void *const pixel, uint32_t **histogram,
+                         const dt_worker Worker);
 
 void dt_histogram_helper(dt_dev_histogram_collection_params_t *histogram_params,
                          dt_dev_histogram_stats_t *histogram_stats, dt_iop_colorspace_type_t cst,
                          const void *pixel, uint32_t **histogram);
 
-void dt_histogram_max_helper(const dt_dev_histogram_stats_t *const histogram_stats,
-                             dt_iop_colorspace_type_t cst, uint32_t **histogram, uint32_t *histogram_max);
+void dt_histogram_max_helper(const dt_dev_histogram_stats_t *const histogram_stats, dt_iop_colorspace_type_t cst,
+                             uint32_t **histogram, uint32_t *histogram_max);
 
 // modelines: These editor modelines have been set for all relevant files by tools/update_modelines.sh
 // vim: shiftwidth=2 expandtab tabstop=2 cindent

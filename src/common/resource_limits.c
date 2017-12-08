@@ -21,16 +21,16 @@
 #endif
 
 #include "common/resource_limits.h"
-#include <assert.h>       // for assert
-#include <errno.h>        // for errno
-#include <stdint.h>       // for uintmax_t
-#include <stdio.h>        // for fprintf, stderr
-#include <string.h>       // for strerror
+#include <assert.h> // for assert
+#include <errno.h>  // for errno
+#include <stdint.h> // for uintmax_t
+#include <stdio.h>  // for fprintf, stderr
+#include <string.h> // for strerror
 #ifdef _WIN32
 #include "win/rlimit.h"
 #else
 #include <sys/resource.h> // for rlimit, RLIMIT_STACK, getrlimit, setrlimit
-#endif //_WIN32
+#endif                    //_WIN32
 
 static void dt_set_rlimits_stack()
 {

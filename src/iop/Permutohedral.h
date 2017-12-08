@@ -296,8 +296,8 @@ public:
     // first rotate position into the (d+1)-dimensional hyperplane
     elevated[D] = -D * position[D - 1] * scaleFactor[D - 1];
     for(int i = D - 1; i > 0; i--)
-      elevated[i] = (elevated[i + 1] - i * position[i - 1] * scaleFactor[i - 1]
-                     + (i + 2) * position[i] * scaleFactor[i]);
+      elevated[i]
+          = (elevated[i + 1] - i * position[i - 1] * scaleFactor[i - 1] + (i + 2) * position[i] * scaleFactor[i]);
     elevated[0] = elevated[1] + 2 * position[0] * scaleFactor[0];
 
     // prepare to find the closest lattice points
@@ -520,7 +520,7 @@ private:
     int table;
     int offset;
     float weight;
-  } *replay;
+  } * replay;
 
   HashTablePermutohedral<D, VD> *hashTables;
 };

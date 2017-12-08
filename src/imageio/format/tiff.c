@@ -258,9 +258,8 @@ size_t params_size(dt_imageio_module_format_t *self)
   return sizeof(dt_imageio_tiff_t) - sizeof(TIFF *);
 }
 
-void *legacy_params(dt_imageio_module_format_t *self, const void *const old_params,
-                    const size_t old_params_size, const int old_version, const int new_version,
-                    size_t *new_size)
+void *legacy_params(dt_imageio_module_format_t *self, const void *const old_params, const size_t old_params_size,
+                    const int old_version, const int new_version, size_t *new_size)
 {
   if(old_version == 1 && new_version == 2)
   {

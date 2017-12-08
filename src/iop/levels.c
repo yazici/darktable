@@ -127,8 +127,8 @@ int flags()
   return IOP_FLAGS_SUPPORTS_BLENDING;
 }
 
-int legacy_params(dt_iop_module_t *self, const void *const old_params, const int old_version,
-                  void *new_params, const int new_version)
+int legacy_params(dt_iop_module_t *self, const void *const old_params, const int old_version, void *new_params,
+                  const int new_version)
 {
   if(old_version == 1 && new_version == 2)
   {
@@ -337,7 +337,8 @@ void process(dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const void *c
     }
   }
 
-  if(piece->pipe->mask_display & DT_DEV_PIXELPIPE_DISPLAY_MASK) dt_iop_alpha_copy(ivoid, ovoid, roi_out->width, roi_out->height);
+  if(piece->pipe->mask_display & DT_DEV_PIXELPIPE_DISPLAY_MASK)
+    dt_iop_alpha_copy(ivoid, ovoid, roi_out->width, roi_out->height);
 }
 
 #ifdef HAVE_OPENCL
@@ -508,7 +509,7 @@ void init(dt_iop_module_t *self)
   self->default_params = calloc(1, sizeof(dt_iop_levels_params_t));
   self->default_enabled = 0;
   self->request_histogram |= (DT_REQUEST_ON);
-    self->priority = 695; // module order created by iop_dependencies.py, do not edit!
+  self->priority = 695; // module order created by iop_dependencies.py, do not edit!
   self->params_size = sizeof(dt_iop_levels_params_t);
   self->gui_data = NULL;
 }
@@ -516,8 +517,7 @@ void init(dt_iop_module_t *self)
 void init_global(dt_iop_module_so_t *self)
 {
   const int program = 2; // basic.cl, from programs.conf
-  dt_iop_levels_global_data_t *gd
-      = (dt_iop_levels_global_data_t *)malloc(sizeof(dt_iop_levels_global_data_t));
+  dt_iop_levels_global_data_t *gd = (dt_iop_levels_global_data_t *)malloc(sizeof(dt_iop_levels_global_data_t));
   self->data = gd;
   gd->kernel_levels = dt_opencl_create_kernel(program, "levels");
 }
@@ -576,20 +576,20 @@ void gui_init(dt_iop_module_t *self)
   gtk_box_pack_start(GTK_BOX(self->widget), c->mode, TRUE, TRUE, 0);
 
   c->mode_stack = gtk_stack_new();
-  gtk_stack_set_homogeneous(GTK_STACK(c->mode_stack),FALSE);
+  gtk_stack_set_homogeneous(GTK_STACK(c->mode_stack), FALSE);
   gtk_box_pack_start(GTK_BOX(self->widget), c->mode_stack, TRUE, TRUE, 0);
 
   c->area = GTK_DRAWING_AREA(dtgtk_drawing_area_new_with_aspect_ratio(9.0 / 16.0));
   GtkWidget *vbox_manual = GTK_WIDGET(gtk_box_new(GTK_ORIENTATION_VERTICAL, 5));
   gtk_box_pack_start(GTK_BOX(vbox_manual), GTK_WIDGET(c->area), TRUE, TRUE, 0);
 
-  gtk_widget_set_tooltip_text(GTK_WIDGET(c->area),_("drag handles to set black, gray, and white points. "
-                                                    "operates on L channel."));
+  gtk_widget_set_tooltip_text(GTK_WIDGET(c->area), _("drag handles to set black, gray, and white points. "
+                                                     "operates on L channel."));
 
   gtk_widget_add_events(GTK_WIDGET(c->area), GDK_POINTER_MOTION_MASK | GDK_POINTER_MOTION_HINT_MASK
-                                             | GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK
-                                             | GDK_LEAVE_NOTIFY_MASK | GDK_SCROLL_MASK
-                                             | GDK_SMOOTH_SCROLL_MASK);
+                                                 | GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK
+                                                 | GDK_LEAVE_NOTIFY_MASK | GDK_SCROLL_MASK
+                                                 | GDK_SMOOTH_SCROLL_MASK);
   g_signal_connect(G_OBJECT(c->area), "draw", G_CALLBACK(dt_iop_levels_area_draw), self);
   g_signal_connect(G_OBJECT(c->area), "button-press-event", G_CALLBACK(dt_iop_levels_button_press), self);
   g_signal_connect(G_OBJECT(c->area), "button-release-event", G_CALLBACK(dt_iop_levels_button_release), self);
@@ -664,15 +664,14 @@ void gui_init(dt_iop_module_t *self)
   }
 
   g_signal_connect(G_OBJECT(c->mode), "value-changed", G_CALLBACK(dt_iop_levels_mode_callback), self);
-  g_signal_connect(G_OBJECT(c->percentile_black), "value-changed",
-                   G_CALLBACK(dt_iop_levels_percentiles_callback), self);
-  g_signal_connect(G_OBJECT(c->percentile_grey), "value-changed",
-                   G_CALLBACK(dt_iop_levels_percentiles_callback), self);
-  g_signal_connect(G_OBJECT(c->percentile_white), "value-changed",
-                   G_CALLBACK(dt_iop_levels_percentiles_callback), self);
+  g_signal_connect(G_OBJECT(c->percentile_black), "value-changed", G_CALLBACK(dt_iop_levels_percentiles_callback),
+                   self);
+  g_signal_connect(G_OBJECT(c->percentile_grey), "value-changed", G_CALLBACK(dt_iop_levels_percentiles_callback),
+                   self);
+  g_signal_connect(G_OBJECT(c->percentile_white), "value-changed", G_CALLBACK(dt_iop_levels_percentiles_callback),
+                   self);
 
-  g_signal_connect(G_OBJECT(autobutton), "clicked", G_CALLBACK(dt_iop_levels_autoadjust_callback),
-                   (gpointer)self);
+  g_signal_connect(G_OBJECT(autobutton), "clicked", G_CALLBACK(dt_iop_levels_autoadjust_callback), (gpointer)self);
   g_signal_connect(G_OBJECT(blackpick), "toggled", G_CALLBACK(dt_iop_levels_pick_black_callback), self);
   g_signal_connect(G_OBJECT(greypick), "toggled", G_CALLBACK(dt_iop_levels_pick_grey_callback), self);
   g_signal_connect(G_OBJECT(whitepick), "toggled", G_CALLBACK(dt_iop_levels_pick_white_callback), self);
@@ -768,8 +767,7 @@ static gboolean dt_iop_levels_area_draw(GtkWidget *widget, cairo_t *crf, gpointe
       c->pick_xy_positions[2][1] = self->color_picker_point[1];
     }
 
-    if(previous_color[0] != p->levels[0] || previous_color[1] != p->levels[1]
-       || previous_color[2] != p->levels[2])
+    if(previous_color[0] != p->levels[0] || previous_color[1] != p->levels[1] || previous_color[2] != p->levels[2])
     {
       dt_dev_add_history_item(darktable.develop, self, TRUE);
     }
@@ -971,14 +969,13 @@ static gboolean dt_iop_levels_motion_notify(GtkWidget *widget, GdkEventMotion *e
 
   gint x, y;
 #if GTK_CHECK_VERSION(3, 20, 0)
-  gdk_window_get_device_position(event->window,
-      gdk_seat_get_pointer(gdk_display_get_default_seat(gtk_widget_get_display(widget))),
-      &x, &y, 0);
+  gdk_window_get_device_position(
+      event->window, gdk_seat_get_pointer(gdk_display_get_default_seat(gtk_widget_get_display(widget))), &x, &y, 0);
 #else
-  gdk_window_get_device_position(event->window,
-                                 gdk_device_manager_get_client_pointer(
-                                     gdk_display_get_device_manager(gdk_window_get_display(event->window))),
-                                 &x, &y, NULL);
+  gdk_window_get_device_position(
+      event->window,
+      gdk_device_manager_get_client_pointer(gdk_display_get_device_manager(gdk_window_get_display(event->window))),
+      &x, &y, NULL);
 #endif
   return TRUE;
 }
@@ -1048,8 +1045,8 @@ static gboolean dt_iop_levels_scroll(GtkWidget *widget, GdkEventScroll *event, g
   return FALSE;
 }
 
-static void dt_iop_levels_pick_general_handler(GtkToggleButton *togglebutton, dt_iop_module_t *self,
-                                               double xpick, double ypick, dt_iop_levels_pick_t picklevel)
+static void dt_iop_levels_pick_general_handler(GtkToggleButton *togglebutton, dt_iop_module_t *self, double xpick,
+                                               double ypick, dt_iop_levels_pick_t picklevel)
 {
   dt_iop_levels_gui_data_t *c = (dt_iop_levels_gui_data_t *)self->gui_data;
 

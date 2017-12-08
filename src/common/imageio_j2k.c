@@ -249,8 +249,7 @@ dt_imageio_retval_t dt_imageio_open_j2k(dt_image_t *img, const char *filename, d
     }
     if(image->comps[i].prec > 16)
     {
-      fprintf(stderr, "[j2k_open] Error: precision %d is larger than 16 in `%s'\n", image->comps[1].prec,
-              filename);
+      fprintf(stderr, "[j2k_open] Error: precision %d is larger than 16 in `%s'\n", image->comps[1].prec, filename);
       ret = DT_IMAGEIO_FILE_CORRUPTED;
       goto end_of_the_world;
     }
@@ -679,15 +678,13 @@ static void color_sycc_to_rgb(opj_image_t *img)
   {
     sycc420_to_rgb(img);
   }
-  else if((img->comps[0].dx == 1) && (img->comps[1].dx == 2) && (img->comps[2].dx == 2)
-          && (img->comps[0].dy == 1) && (img->comps[1].dy == 1)
-          && (img->comps[2].dy == 1)) /* horizontal sub-sample only */
+  else if((img->comps[0].dx == 1) && (img->comps[1].dx == 2) && (img->comps[2].dx == 2) && (img->comps[0].dy == 1)
+          && (img->comps[1].dy == 1) && (img->comps[2].dy == 1)) /* horizontal sub-sample only */
   {
     sycc422_to_rgb(img);
   }
-  else if((img->comps[0].dx == 1) && (img->comps[1].dx == 1) && (img->comps[2].dx == 1)
-          && (img->comps[0].dy == 1) && (img->comps[1].dy == 1)
-          && (img->comps[2].dy == 1)) /* no sub-sample */
+  else if((img->comps[0].dx == 1) && (img->comps[1].dx == 1) && (img->comps[2].dx == 1) && (img->comps[0].dy == 1)
+          && (img->comps[1].dy == 1) && (img->comps[2].dy == 1)) /* no sub-sample */
   {
     sycc444_to_rgb(img);
   }

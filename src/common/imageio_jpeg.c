@@ -260,8 +260,7 @@ int dt_imageio_jpeg_decompress(dt_imageio_jpeg_t *jpg, uint8_t *out)
   return 0;
 }
 
-int dt_imageio_jpeg_compress(const uint8_t *in, uint8_t *out, const int width, const int height,
-                             const int quality)
+int dt_imageio_jpeg_compress(const uint8_t *in, uint8_t *out, const int width, const int height, const int quality)
 {
   struct dt_imageio_jpeg_error_mgr jerr;
   dt_imageio_jpeg_t jpg;
@@ -374,8 +373,7 @@ static void write_icc_profile(j_compress_ptr cinfo, const JOCTET *icc_data_ptr, 
 
 static boolean marker_is_icc(jpeg_saved_marker_ptr marker)
 {
-  return marker->marker == ICC_MARKER && marker->data_length >= ICC_OVERHEAD_LEN
-         &&
+  return marker->marker == ICC_MARKER && marker->data_length >= ICC_OVERHEAD_LEN &&
          /* verify the identifying string */
          GETJOCTET(marker->data[0]) == 0x49 && GETJOCTET(marker->data[1]) == 0x43
          && GETJOCTET(marker->data[2]) == 0x43 && GETJOCTET(marker->data[3]) == 0x5F
@@ -726,8 +724,7 @@ dt_imageio_retval_t dt_imageio_open_jpeg(dt_image_t *img, const char *filename, 
 {
   const char *ext = filename + strlen(filename);
   while(*ext != '.' && ext > filename) ext--;
-  if(strncmp(ext, ".jpg", 4) && strncmp(ext, ".JPG", 4) && strncmp(ext, ".jpeg", 5)
-     && strncmp(ext, ".JPEG", 5))
+  if(strncmp(ext, ".jpg", 4) && strncmp(ext, ".JPG", 4) && strncmp(ext, ".jpeg", 5) && strncmp(ext, ".JPEG", 5))
     return DT_IMAGEIO_FILE_CORRUPTED;
 
   if(!img->exif_inited) (void)dt_exif_read(img, filename);

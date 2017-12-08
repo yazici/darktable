@@ -95,7 +95,7 @@ const char *name(dt_lib_module_t *self)
 
 const char **views(dt_lib_module_t *self)
 {
-  static const char *v[] = {"map", NULL};
+  static const char *v[] = { "map", NULL };
   return v;
 }
 
@@ -129,8 +129,7 @@ void gui_init(dt_lib_module_t *self)
   dt_gui_key_accel_block_on_focus_connect(GTK_WIDGET(lib->search));
   gtk_box_pack_start(GTK_BOX(self->widget), GTK_WIDGET(lib->search), FALSE, FALSE, 0);
 
-  g_signal_connect(G_OBJECT(lib->search), "activate", G_CALLBACK(_lib_location_entry_activated),
-                   (gpointer)self);
+  g_signal_connect(G_OBJECT(lib->search), "activate", G_CALLBACK(_lib_location_entry_activated), (gpointer)self);
 
   /* add result vbox */
   lib->result = gtk_box_new(GTK_ORIENTATION_VERTICAL, DT_PIXEL_APPLY_DPI(10));
@@ -322,8 +321,8 @@ static gboolean _lib_location_search(gpointer user_data)
   _clear_markers(lib);
 
   /* build the query url */
-  query = dt_util_dstrcat(query, "http://nominatim.openstreetmap.org/search/%s?format=xml&limit=%d&polygon_text=1", text,
-                          LIMIT_RESULT);
+  query = dt_util_dstrcat(query, "http://nominatim.openstreetmap.org/search/%s?format=xml&limit=%d&polygon_text=1",
+                          text, LIMIT_RESULT);
   /* load url */
   curl = curl_easy_init();
   if(!curl) goto bail_out;
@@ -467,13 +466,11 @@ static void _lib_location_parser_start_element(GMarkupParseContext *cxt, const c
         place->bbox_lat1 = lat1;
         place->bbox_lon2 = lon2;
         place->bbox_lat2 = lat2;
-broken_bbox:
+      broken_bbox:
         ;
       }
       // only use the first 'geotext' entry
-      else if(show_outline &&
-              strcmp(*aname, "geotext") == 0 &&
-              place->marker_type == MAP_DISPLAY_NONE)
+      else if(show_outline && strcmp(*aname, "geotext") == 0 && place->marker_type == MAP_DISPLAY_NONE)
       {
         if(g_str_has_prefix(*avalue, "POINT"))
         {
@@ -491,10 +488,9 @@ broken_bbox:
         }
         else if(g_str_has_prefix(*avalue, "LINESTRING")
 #ifdef HAVE_OSMGPSMAP_110_OR_NEWER
-                || g_str_has_prefix(*avalue, "POLYGON")
-                || g_str_has_prefix(*avalue, "MULTIPOLYGON")
+                || g_str_has_prefix(*avalue, "POLYGON") || g_str_has_prefix(*avalue, "MULTIPOLYGON")
 #endif
-        )
+                    )
         {
           gboolean error = FALSE;
           const char *startptr = *avalue;
@@ -518,7 +514,7 @@ broken_bbox:
             p->lon = lon;
             p->lat = lat;
             place->marker_points = g_list_append(place->marker_points, p);
-            startptr = endptr+1;
+            startptr = endptr + 1;
             i++;
           }
 

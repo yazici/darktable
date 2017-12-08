@@ -37,48 +37,42 @@
 #include <CoreServices/CoreServices.h>
 #endif
 
-static const cmsCIEXYZ d65 = {0.95045471, 1.00000000, 1.08905029};
-static const cmsCIEXYZTRIPLE rec709_primaries_pre_quantized = {
-  {0.43603516, 0.22248840, 0.01391602},
-  {0.38511658, 0.71690369, 0.09706116},
-  {0.14305115, 0.06060791, 0.71392822}
-};
-static const cmsCIEXYZTRIPLE rec2020_primaries_prequantized = {
-  {0.67349243, 0.27903748, -0.00193787},
-  {0.16566467, 0.67535400, 0.02998352},
-  {0.12504578, 0.04560852, 0.79685974}
-};
-static const cmsCIEXYZTRIPLE adobe_primaries_prequantized = {
-  {0.60974121, 0.31111145, 0.01947021},
-  {0.20527649, 0.62567139, 0.06086731},
-  {0.14918518, 0.06321716, 0.74456787}
-};
+static const cmsCIEXYZ d65 = { 0.95045471, 1.00000000, 1.08905029 };
+static const cmsCIEXYZTRIPLE rec709_primaries_pre_quantized = { { 0.43603516, 0.22248840, 0.01391602 },
+                                                                { 0.38511658, 0.71690369, 0.09706116 },
+                                                                { 0.14305115, 0.06060791, 0.71392822 } };
+static const cmsCIEXYZTRIPLE rec2020_primaries_prequantized = { { 0.67349243, 0.27903748, -0.00193787 },
+                                                                { 0.16566467, 0.67535400, 0.02998352 },
+                                                                { 0.12504578, 0.04560852, 0.79685974 } };
+static const cmsCIEXYZTRIPLE adobe_primaries_prequantized = { { 0.60974121, 0.31111145, 0.01947021 },
+                                                              { 0.20527649, 0.62567139, 0.06086731 },
+                                                              { 0.14918518, 0.06321716, 0.74456787 } };
 
-#define generate_mat3inv_body(c_type, A, B)                                                                  \
-  int mat3inv_##c_type(c_type *const dst, const c_type *const src)                                           \
-  {                                                                                                          \
-                                                                                                             \
-    const c_type det = A(1, 1) * (A(3, 3) * A(2, 2) - A(3, 2) * A(2, 3))                                     \
-                       - A(2, 1) * (A(3, 3) * A(1, 2) - A(3, 2) * A(1, 3))                                   \
-                       + A(3, 1) * (A(2, 3) * A(1, 2) - A(2, 2) * A(1, 3));                                  \
-                                                                                                             \
-    const c_type epsilon = 1e-7f;                                                                            \
-    if(fabs(det) < epsilon) return 1;                                                                        \
-                                                                                                             \
-    const c_type invDet = 1.0 / det;                                                                         \
-                                                                                                             \
-    B(1, 1) = invDet * (A(3, 3) * A(2, 2) - A(3, 2) * A(2, 3));                                              \
-    B(1, 2) = -invDet * (A(3, 3) * A(1, 2) - A(3, 2) * A(1, 3));                                             \
-    B(1, 3) = invDet * (A(2, 3) * A(1, 2) - A(2, 2) * A(1, 3));                                              \
-                                                                                                             \
-    B(2, 1) = -invDet * (A(3, 3) * A(2, 1) - A(3, 1) * A(2, 3));                                             \
-    B(2, 2) = invDet * (A(3, 3) * A(1, 1) - A(3, 1) * A(1, 3));                                              \
-    B(2, 3) = -invDet * (A(2, 3) * A(1, 1) - A(2, 1) * A(1, 3));                                             \
-                                                                                                             \
-    B(3, 1) = invDet * (A(3, 2) * A(2, 1) - A(3, 1) * A(2, 2));                                              \
-    B(3, 2) = -invDet * (A(3, 2) * A(1, 1) - A(3, 1) * A(1, 2));                                             \
-    B(3, 3) = invDet * (A(2, 2) * A(1, 1) - A(2, 1) * A(1, 2));                                              \
-    return 0;                                                                                                \
+#define generate_mat3inv_body(c_type, A, B)                                                                       \
+  int mat3inv_##c_type(c_type *const dst, const c_type *const src)                                                \
+  {                                                                                                               \
+                                                                                                                  \
+    const c_type det = A(1, 1) * (A(3, 3) * A(2, 2) - A(3, 2) * A(2, 3))                                          \
+                       - A(2, 1) * (A(3, 3) * A(1, 2) - A(3, 2) * A(1, 3))                                        \
+                       + A(3, 1) * (A(2, 3) * A(1, 2) - A(2, 2) * A(1, 3));                                       \
+                                                                                                                  \
+    const c_type epsilon = 1e-7f;                                                                                 \
+    if(fabs(det) < epsilon) return 1;                                                                             \
+                                                                                                                  \
+    const c_type invDet = 1.0 / det;                                                                              \
+                                                                                                                  \
+    B(1, 1) = invDet * (A(3, 3) * A(2, 2) - A(3, 2) * A(2, 3));                                                   \
+    B(1, 2) = -invDet * (A(3, 3) * A(1, 2) - A(3, 2) * A(1, 3));                                                  \
+    B(1, 3) = invDet * (A(2, 3) * A(1, 2) - A(2, 2) * A(1, 3));                                                   \
+                                                                                                                  \
+    B(2, 1) = -invDet * (A(3, 3) * A(2, 1) - A(3, 1) * A(2, 3));                                                  \
+    B(2, 2) = invDet * (A(3, 3) * A(1, 1) - A(3, 1) * A(1, 3));                                                   \
+    B(2, 3) = -invDet * (A(2, 3) * A(1, 1) - A(2, 1) * A(1, 3));                                                  \
+                                                                                                                  \
+    B(3, 1) = invDet * (A(3, 2) * A(2, 1) - A(3, 1) * A(2, 2));                                                   \
+    B(3, 2) = -invDet * (A(3, 2) * A(1, 1) - A(3, 1) * A(1, 2));                                                  \
+    B(3, 3) = invDet * (A(2, 2) * A(1, 1) - A(2, 1) * A(1, 2));                                                   \
+    return 0;                                                                                                     \
   }
 
 #define A(y, x) src[(y - 1) * 3 + (x - 1)]
@@ -97,7 +91,7 @@ generate_mat3inv_body(double, A, B)
 #undef generate_mat3inv_body
 
 
-static void mat3mulv(float *dst, const float *const mat, const float *const v)
+    static void mat3mulv(float *dst, const float *const mat, const float *const v)
 {
   for(int k = 0; k < 3; k++)
   {
@@ -236,8 +230,8 @@ static cmsHPROFILE dt_colorspaces_create_lab_profile()
   return cmsCreateLab4Profile(cmsD50_xyY());
 }
 
-static cmsHPROFILE _create_lcms_profile(const char *desc, const char *dmdd,
-                                        const cmsCIEXYZTRIPLE *primaries, const cmsToneCurve *trc, gboolean v2)
+static cmsHPROFILE _create_lcms_profile(const char *desc, const char *dmdd, const cmsCIEXYZTRIPLE *primaries,
+                                        const cmsToneCurve *trc, gboolean v2)
 {
   cmsCIEXYZ black = { 0, 0, 0 };
 
@@ -245,8 +239,7 @@ static cmsHPROFILE _create_lcms_profile(const char *desc, const char *dmdd,
 
   if(!profile) return NULL;
 
-  if(v2)
-    cmsSetProfileVersion(profile, 2.1);
+  if(v2) cmsSetProfileVersion(profile, 2.1);
 
   cmsMLU *mlu0 = cmsMLUalloc(NULL, 1);
   cmsMLUsetASCII(mlu0, "en", "US", "Public Domain");
@@ -286,11 +279,11 @@ static cmsHPROFILE _create_lcms_profile(const char *desc, const char *dmdd,
 
 static cmsHPROFILE _colorspaces_create_srgb_profile(gboolean v2)
 {
-  cmsFloat64Number srgb_parameters[5] = { 2.4, 1.0 / 1.055,  0.055 / 1.055, 1.0 / 12.92, 0.04045 };
+  cmsFloat64Number srgb_parameters[5] = { 2.4, 1.0 / 1.055, 0.055 / 1.055, 1.0 / 12.92, 0.04045 };
   cmsToneCurve *transferFunction = cmsBuildParametricToneCurve(NULL, 4, srgb_parameters);
 
-  cmsHPROFILE profile = _create_lcms_profile("sRGB", "sRGB",
-                                             &rec709_primaries_pre_quantized, transferFunction, v2);
+  cmsHPROFILE profile
+      = _create_lcms_profile("sRGB", "sRGB", &rec709_primaries_pre_quantized, transferFunction, v2);
 
   cmsFreeToneCurve(transferFunction);
 
@@ -310,15 +303,12 @@ static cmsHPROFILE dt_colorspaces_create_srgb_profile_v4()
 static cmsHPROFILE dt_colorspaces_create_brg_profile()
 {
   cmsCIEXYZTRIPLE primaries_pre_quantized = {
-    rec709_primaries_pre_quantized.Blue,
-    rec709_primaries_pre_quantized.Red,
-    rec709_primaries_pre_quantized.Green,
+    rec709_primaries_pre_quantized.Blue, rec709_primaries_pre_quantized.Red, rec709_primaries_pre_quantized.Green,
   };
-  cmsFloat64Number srgb_parameters[5] = { 2.4, 1.0 / 1.055,  0.055 / 1.055, 1.0 / 12.92, 0.04045 };
+  cmsFloat64Number srgb_parameters[5] = { 2.4, 1.0 / 1.055, 0.055 / 1.055, 1.0 / 12.92, 0.04045 };
   cmsToneCurve *transferFunction = cmsBuildParametricToneCurve(NULL, 4, srgb_parameters);
 
-  cmsHPROFILE profile = _create_lcms_profile("BRG", "BRG",
-                                             &primaries_pre_quantized, transferFunction, TRUE);
+  cmsHPROFILE profile = _create_lcms_profile("BRG", "BRG", &primaries_pre_quantized, transferFunction, TRUE);
 
   cmsFreeToneCurve(transferFunction);
 
@@ -331,8 +321,8 @@ static cmsHPROFILE dt_colorspaces_create_adobergb_profile(void)
   // AdobeRGB's "2.2" gamma is technically defined as 2 + 51/256
   cmsToneCurve *transferFunction = cmsBuildGamma(NULL, 2.19921875);
 
-  cmsHPROFILE profile = _create_lcms_profile("Adobe RGB (compatible)", "Adobe RGB",
-                                             &adobe_primaries_prequantized, transferFunction, TRUE);
+  cmsHPROFILE profile = _create_lcms_profile("Adobe RGB (compatible)", "Adobe RGB", &adobe_primaries_prequantized,
+                                             transferFunction, TRUE);
 
   cmsFreeToneCurve(transferFunction);
 
@@ -406,9 +396,8 @@ int dt_colorspaces_get_darktable_matrix(const char *makermodel, float *matrix)
   mat3mulv(cone_src_rgb, lam_rigg, dn);
   mat3mulv(cone_dst_rgb, lam_rigg, d50);
 
-  const float cone[9]
-      = { cone_dst_rgb[0] / cone_src_rgb[0], 0.0f, 0.0f, 0.0f, cone_dst_rgb[1] / cone_src_rgb[1], 0.0f, 0.0f,
-          0.0f, cone_dst_rgb[2] / cone_src_rgb[2] };
+  const float cone[9] = { cone_dst_rgb[0] / cone_src_rgb[0], 0.0f, 0.0f, 0.0f, cone_dst_rgb[1] / cone_src_rgb[1],
+                          0.0f, 0.0f, 0.0f, cone_dst_rgb[2] / cone_src_rgb[2] };
 
   float tmp2[9];
   float bradford[9];
@@ -623,9 +612,7 @@ static cmsHPROFILE dt_colorspaces_create_linear_infrared_profile(void)
 {
   // linear rgb with r and b swapped:
   cmsCIEXYZTRIPLE primaries_pre_quantized = {
-    rec709_primaries_pre_quantized.Blue,
-    rec709_primaries_pre_quantized.Green,
-    rec709_primaries_pre_quantized.Red,
+    rec709_primaries_pre_quantized.Blue, rec709_primaries_pre_quantized.Green, rec709_primaries_pre_quantized.Red,
   };
   cmsToneCurve *transferFunction = build_linear_gamma();
 
@@ -678,7 +665,8 @@ const dt_colorspaces_color_profile_t *dt_colorspaces_get_output_profile(const in
   if(over_type != DT_COLORSPACE_NONE)
   {
     // return the profile specified in export
-    p = dt_colorspaces_get_profile(over_type, over_filename, DT_PROFILE_DIRECTION_OUT | DT_PROFILE_DIRECTION_DISPLAY);
+    p = dt_colorspaces_get_profile(over_type, over_filename,
+                                   DT_PROFILE_DIRECTION_OUT | DT_PROFILE_DIRECTION_DISPLAY);
   }
   else if(colorout && colorout->get_p)
   {
@@ -686,9 +674,9 @@ const dt_colorspaces_color_profile_t *dt_colorspaces_get_output_profile(const in
     // FIXME: does this work when using JPEG thumbs and the image was never opened?
     sqlite3_stmt *stmt;
     DT_DEBUG_SQLITE3_PREPARE_V2(
-      dt_database_get(darktable.db),
-      "SELECT op_params FROM main.history WHERE imgid=?1 AND operation='colorout' ORDER BY num DESC LIMIT 1", -1,
-      &stmt, NULL);
+        dt_database_get(darktable.db),
+        "SELECT op_params FROM main.history WHERE imgid=?1 AND operation='colorout' ORDER BY num DESC LIMIT 1", -1,
+        &stmt, NULL);
     DT_DEBUG_SQLITE3_BIND_INT(stmt, 1, imgid);
     if(sqlite3_step(stmt) == SQLITE_ROW)
     {
@@ -697,8 +685,8 @@ const dt_colorspaces_color_profile_t *dt_colorspaces_get_output_profile(const in
       dt_colorspaces_color_profile_type_t *type = colorout->get_p(params, "type");
       char *filename = colorout->get_p(params, "filename");
 
-      if(type && filename) p = dt_colorspaces_get_profile(*type, filename,
-                                                          DT_PROFILE_DIRECTION_OUT | DT_PROFILE_DIRECTION_DISPLAY);
+      if(type && filename)
+        p = dt_colorspaces_get_profile(*type, filename, DT_PROFILE_DIRECTION_OUT | DT_PROFILE_DIRECTION_DISPLAY);
     }
     sqlite3_finalize(stmt);
   }
@@ -943,28 +931,17 @@ void hsl2rgb(float rgb[3], float h, float s, float l)
   rgb[2] = hue2rgb(m1, m2, h - (1.0 / 3.0));
 }
 
-static const char *_profile_names[] =
-{
-  "", // 0th entry is a dummy for DT_COLORSPACE_FILE and not used
-  N_("sRGB"), // this is only used in error messages, no need for the (...) description
-  N_("Adobe RGB (compatible)"),
-  N_("linear Rec709 RGB"),
-  N_("linear Rec2020 RGB"),
-  N_("linear XYZ"),
-  N_("Lab"),
-  N_("linear infrared BGR"),
-  N_("system display profile"),
-  N_("embedded ICC profile"),
-  N_("embedded matrix"),
-  N_("standard color matrix"),
-  N_("enhanced color matrix"),
-  N_("vendor color matrix"),
-  N_("alternate color matrix")
-};
+static const char *_profile_names[]
+    = { "",         // 0th entry is a dummy for DT_COLORSPACE_FILE and not used
+        N_("sRGB"), // this is only used in error messages, no need for the (...) description
+        N_("Adobe RGB (compatible)"), N_("linear Rec709 RGB"), N_("linear Rec2020 RGB"), N_("linear XYZ"),
+        N_("Lab"), N_("linear infrared BGR"), N_("system display profile"), N_("embedded ICC profile"),
+        N_("embedded matrix"), N_("standard color matrix"), N_("enhanced color matrix"), N_("vendor color matrix"),
+        N_("alternate color matrix") };
 
 static dt_colorspaces_color_profile_t *_create_profile(dt_colorspaces_color_profile_type_t type,
-                                                       cmsHPROFILE profile, const char *name,
-                                                       int in_pos, int out_pos, int display_pos)
+                                                       cmsHPROFILE profile, const char *name, int in_pos,
+                                                       int out_pos, int display_pos)
 {
   dt_colorspaces_color_profile_t *prof;
   prof = (dt_colorspaces_color_profile_t *)calloc(1, sizeof(dt_colorspaces_color_profile_t));
@@ -986,28 +963,19 @@ static void _update_display_transforms(dt_colorspaces_t *self)
   if(self->transform_adobe_rgb_to_display) cmsDeleteTransform(self->transform_adobe_rgb_to_display);
   self->transform_adobe_rgb_to_display = NULL;
 
-  const dt_colorspaces_color_profile_t *display_dt_profile = _get_profile(self, self->display_type,
-                                                                          self->display_filename,
-                                                                          DT_PROFILE_DIRECTION_DISPLAY);
+  const dt_colorspaces_color_profile_t *display_dt_profile
+      = _get_profile(self, self->display_type, self->display_filename, DT_PROFILE_DIRECTION_DISPLAY);
   if(!display_dt_profile) return;
   cmsHPROFILE display_profile = display_dt_profile->profile;
   if(!display_profile) return;
 
-  self->transform_srgb_to_display = cmsCreateTransform(_get_profile(self, DT_COLORSPACE_SRGB, "",
-                                                                    DT_PROFILE_DIRECTION_DISPLAY)->profile,
-                                                       TYPE_RGBA_8,
-                                                       display_profile,
-                                                       TYPE_BGRA_8,
-                                                       self->display_intent,
-                                                       0);
+  self->transform_srgb_to_display
+      = cmsCreateTransform(_get_profile(self, DT_COLORSPACE_SRGB, "", DT_PROFILE_DIRECTION_DISPLAY)->profile,
+                           TYPE_RGBA_8, display_profile, TYPE_BGRA_8, self->display_intent, 0);
 
-  self->transform_adobe_rgb_to_display = cmsCreateTransform(_get_profile(self, DT_COLORSPACE_ADOBERGB, "",
-                                                                         DT_PROFILE_DIRECTION_DISPLAY)->profile,
-                                                            TYPE_RGBA_8,
-                                                            display_profile,
-                                                            TYPE_BGRA_8,
-                                                            self->display_intent,
-                                                            0);
+  self->transform_adobe_rgb_to_display
+      = cmsCreateTransform(_get_profile(self, DT_COLORSPACE_ADOBERGB, "", DT_PROFILE_DIRECTION_DISPLAY)->profile,
+                           TYPE_RGBA_8, display_profile, TYPE_BGRA_8, self->display_intent, 0);
 }
 
 // update cached transforms for color management of thumbnails
@@ -1034,8 +1002,7 @@ static void _update_display_profile(guchar *tmp_data, gsize size, char *name, si
       {
         if(p->profile) dt_colorspaces_cleanup_profile(p->profile);
         p->profile = profile;
-        if(name)
-          dt_colorspaces_get_profile_name(profile, "en", "US", name, name_size);
+        if(name) dt_colorspaces_get_profile_name(profile, "en", "US", name, name_size);
 
         // update cached transforms for color management of thumbnails
         dt_colorspaces_update_display_transforms();
@@ -1113,7 +1080,8 @@ static GList *load_profile_from_dir(const char *subdir)
         tmpprof = _ensure_rgb_profile(cmsOpenProfileFromMem(icc_content, end * sizeof(char)));
         if(tmpprof)
         {
-          dt_colorspaces_color_profile_t *prof = (dt_colorspaces_color_profile_t *)calloc(1, sizeof(dt_colorspaces_color_profile_t));
+          dt_colorspaces_color_profile_t *prof
+              = (dt_colorspaces_color_profile_t *)calloc(1, sizeof(dt_colorspaces_color_profile_t));
           dt_colorspaces_get_profile_name(tmpprof, lang, lang + 3, prof->name, sizeof(prof->name));
 
           g_strlcpy(prof->filename, d_name, sizeof(prof->filename));
@@ -1126,7 +1094,7 @@ static GList *load_profile_from_dir(const char *subdir)
           temp_profiles = g_list_append(temp_profiles, prof);
         }
 
-icc_loading_done:
+      icc_loading_done:
         if(fd) fclose(fd);
         free(icc_content);
       }
@@ -1147,62 +1115,51 @@ dt_colorspaces_t *dt_colorspaces_init()
 
   pthread_rwlock_init(&res->xprofile_lock, NULL);
 
-  int in_pos = -1,
-      out_pos = -1,
-      display_pos = -1;
+  int in_pos = -1, out_pos = -1, display_pos = -1;
 
-  // init the display profile with srgb so some stupid code that runs before the real profile could be fetched has something to work with
-  res->profiles = g_list_append(res->profiles, _create_profile(DT_COLORSPACE_DISPLAY, dt_colorspaces_create_srgb_profile(),
-                                                               _("system display profile"), -1, -1, ++display_pos));
+  // init the display profile with srgb so some stupid code that runs before the real profile could be fetched has
+  // something to work with
+  res->profiles
+      = g_list_append(res->profiles, _create_profile(DT_COLORSPACE_DISPLAY, dt_colorspaces_create_srgb_profile(),
+                                                     _("system display profile"), -1, -1, ++display_pos));
   // we want a v4 with parametric curve for input and a v2 with point trc for output
   // see http://ninedegreesbelow.com/photography/lcms-make-icc-profiles.html#profile-variants-and-versions
   // TODO: what about display?
-  res->profiles = g_list_append(res->profiles, _create_profile(DT_COLORSPACE_SRGB,
-                                                               dt_colorspaces_create_srgb_profile_v4(),
-                                                               _("sRGB (e.g. JPG)"),
-                                                               ++in_pos, -1, -1));
+  res->profiles
+      = g_list_append(res->profiles, _create_profile(DT_COLORSPACE_SRGB, dt_colorspaces_create_srgb_profile_v4(),
+                                                     _("sRGB (e.g. JPG)"), ++in_pos, -1, -1));
 
-  res->profiles = g_list_append(res->profiles, _create_profile(DT_COLORSPACE_SRGB,
-                                                               dt_colorspaces_create_srgb_profile(),
-                                                               _("sRGB (web-safe)"),
-                                                               -1, ++out_pos, ++display_pos));
+  res->profiles
+      = g_list_append(res->profiles, _create_profile(DT_COLORSPACE_SRGB, dt_colorspaces_create_srgb_profile(),
+                                                     _("sRGB (web-safe)"), -1, ++out_pos, ++display_pos));
 
-  res->profiles = g_list_append(res->profiles, _create_profile(DT_COLORSPACE_ADOBERGB,
-                                                               dt_colorspaces_create_adobergb_profile(),
-                                                               _("Adobe RGB (compatible)"),
-                                                               ++in_pos, ++out_pos, ++display_pos));
+  res->profiles = g_list_append(res->profiles,
+                                _create_profile(DT_COLORSPACE_ADOBERGB, dt_colorspaces_create_adobergb_profile(),
+                                                _("Adobe RGB (compatible)"), ++in_pos, ++out_pos, ++display_pos));
 
-  res->profiles = g_list_append(res->profiles, _create_profile(DT_COLORSPACE_LIN_REC709,
-                                                               dt_colorspaces_create_linear_rec709_rgb_profile(),
-                                                               _("linear Rec709 RGB"),
-                                                               ++in_pos, ++out_pos, ++display_pos));
+  res->profiles = g_list_append(
+      res->profiles, _create_profile(DT_COLORSPACE_LIN_REC709, dt_colorspaces_create_linear_rec709_rgb_profile(),
+                                     _("linear Rec709 RGB"), ++in_pos, ++out_pos, ++display_pos));
 
-  res->profiles = g_list_append(res->profiles, _create_profile(DT_COLORSPACE_LIN_REC2020,
-                                                               dt_colorspaces_create_linear_rec2020_rgb_profile(),
-                                                               _("linear Rec2020 RGB"),
-                                                               ++in_pos, ++out_pos, ++display_pos));
+  res->profiles = g_list_append(
+      res->profiles, _create_profile(DT_COLORSPACE_LIN_REC2020, dt_colorspaces_create_linear_rec2020_rgb_profile(),
+                                     _("linear Rec2020 RGB"), ++in_pos, ++out_pos, ++display_pos));
 
-  res->profiles = g_list_append(res->profiles, _create_profile(DT_COLORSPACE_XYZ,
-                                                               dt_colorspaces_create_xyz_profile(),
-                                                               _("linear XYZ"),
-                                                               ++in_pos,
-                                                               dt_conf_get_bool("allow_lab_output") ?  ++out_pos : -1, -1));
+  res->profiles = g_list_append(
+      res->profiles, _create_profile(DT_COLORSPACE_XYZ, dt_colorspaces_create_xyz_profile(), _("linear XYZ"),
+                                     ++in_pos, dt_conf_get_bool("allow_lab_output") ? ++out_pos : -1, -1));
 
-  res->profiles = g_list_append(res->profiles, _create_profile(DT_COLORSPACE_LAB,
-                                                               dt_colorspaces_create_lab_profile(),
-                                                               _("Lab"),
-                                                               ++in_pos,
-                                                               dt_conf_get_bool("allow_lab_output") ?  ++out_pos : -1, -1));
+  res->profiles = g_list_append(
+      res->profiles, _create_profile(DT_COLORSPACE_LAB, dt_colorspaces_create_lab_profile(), _("Lab"), ++in_pos,
+                                     dt_conf_get_bool("allow_lab_output") ? ++out_pos : -1, -1));
 
   res->profiles = g_list_append(res->profiles, _create_profile(DT_COLORSPACE_INFRARED,
                                                                dt_colorspaces_create_linear_infrared_profile(),
-                                                               _("linear infrared BGR"),
-                                                               ++in_pos, -1, -1));
+                                                               _("linear infrared BGR"), ++in_pos, -1, -1));
 
-  res->profiles = g_list_append(res->profiles, _create_profile(DT_COLORSPACE_BRG,
-                                                               dt_colorspaces_create_brg_profile(),
-                                                               _("BRG (for testing)"),
-                                                               ++in_pos, ++out_pos, ++display_pos));
+  res->profiles
+      = g_list_append(res->profiles, _create_profile(DT_COLORSPACE_BRG, dt_colorspaces_create_brg_profile(),
+                                                     _("BRG (for testing)"), ++in_pos, ++out_pos, ++display_pos));
 
   // temporary list of profiles to be added, we keep this separate to be able to sort it before adding
   GList *temp_profiles;
@@ -1239,12 +1196,12 @@ dt_colorspaces_t *dt_colorspaces_init()
   res->softproof_intent = dt_conf_get_int("ui_last/color/softproof_intent");
   res->mode = dt_conf_get_int("ui_last/color/mode");
   if((unsigned int)res->display_type >= DT_COLORSPACE_LAST
-    || (res->display_type == DT_COLORSPACE_FILE
-        && (!res->display_filename[0] || !g_file_test(res->display_filename, G_FILE_TEST_IS_REGULAR))))
+     || (res->display_type == DT_COLORSPACE_FILE
+         && (!res->display_filename[0] || !g_file_test(res->display_filename, G_FILE_TEST_IS_REGULAR))))
     res->display_type = DT_COLORSPACE_DISPLAY;
   if((unsigned int)res->softproof_type >= DT_COLORSPACE_LAST
-    || (res->softproof_type == DT_COLORSPACE_FILE
-        && (!res->softproof_filename[0] || !g_file_test(res->softproof_filename, G_FILE_TEST_IS_REGULAR))))
+     || (res->softproof_type == DT_COLORSPACE_FILE
+         && (!res->softproof_filename[0] || !g_file_test(res->softproof_filename, G_FILE_TEST_IS_REGULAR))))
     res->softproof_type = DT_COLORSPACE_SRGB;
   if((unsigned int)res->mode > DT_PROFILE_GAMUTCHECK) res->mode = DT_PROFILE_NORMAL;
 
@@ -1294,7 +1251,8 @@ const char *dt_colorspaces_get_name(dt_colorspaces_color_profile_type_t type, co
 }
 
 #ifdef USE_COLORDGTK
-static void dt_colorspaces_get_display_profile_colord_callback(GObject *source, GAsyncResult *res, gpointer user_data)
+static void dt_colorspaces_get_display_profile_colord_callback(GObject *source, GAsyncResult *res,
+                                                               gpointer user_data)
 {
   pthread_rwlock_wrlock(&darktable.color_profiles->xprofile_lock);
 
@@ -1319,12 +1277,12 @@ static void dt_colorspaces_get_display_profile_colord_callback(GObject *source, 
         gsize size;
         g_file_get_contents(filename, (gchar **)&tmp_data, &size, NULL);
         profile_changed = size > 0 && (darktable.color_profiles->xprofile_size != size
-                          || memcmp(darktable.color_profiles->xprofile_data, tmp_data, size) != 0);
+                                       || memcmp(darktable.color_profiles->xprofile_data, tmp_data, size) != 0);
         if(profile_changed)
         {
           _update_display_profile(tmp_data, size, NULL, 0);
-          dt_print(DT_DEBUG_CONTROL,
-                   "[color profile] colord gave us a new screen profile: '%s' (size: %zu)\n", filename, size);
+          dt_print(DT_DEBUG_CONTROL, "[color profile] colord gave us a new screen profile: '%s' (size: %zu)\n",
+                   filename, size);
         }
         else
         {
@@ -1513,10 +1471,10 @@ static const dt_colorspaces_color_profile_t *_get_profile(dt_colorspaces_t *self
   for(GList *iter = self->profiles; iter; iter = g_list_next(iter))
   {
     dt_colorspaces_color_profile_t *p = (dt_colorspaces_color_profile_t *)iter->data;
-    if(((direction & DT_PROFILE_DIRECTION_IN && p->in_pos > -1) ||
-        (direction & DT_PROFILE_DIRECTION_OUT && p->out_pos > -1) ||
-        (direction & DT_PROFILE_DIRECTION_DISPLAY && p->display_pos > -1)) &&
-       (p->type == type && (type != DT_COLORSPACE_FILE || !strcmp(p->filename, filename))))
+    if(((direction & DT_PROFILE_DIRECTION_IN && p->in_pos > -1)
+        || (direction & DT_PROFILE_DIRECTION_OUT && p->out_pos > -1)
+        || (direction & DT_PROFILE_DIRECTION_DISPLAY && p->display_pos > -1))
+       && (p->type == type && (type != DT_COLORSPACE_FILE || !strcmp(p->filename, filename))))
     {
       return p;
     }
@@ -1537,41 +1495,38 @@ static void dt_colorspaces_pseudoinverse(double (*in)[3], double (*out)[3], int 
 {
   double work[3][6], num;
 
-  for(int i = 0; i < 3; i++) {
-    for(int j = 0; j < 6; j++)
-      work[i][j] = j == i+3;
+  for(int i = 0; i < 3; i++)
+  {
+    for(int j = 0; j < 6; j++) work[i][j] = j == i + 3;
     for(int j = 0; j < 3; j++)
-      for(int k = 0; k < size; k++)
-        work[i][j] += in[k][i] * in[k][j];
+      for(int k = 0; k < size; k++) work[i][j] += in[k][i] * in[k][j];
   }
-  for(int i = 0; i < 3; i++) {
+  for(int i = 0; i < 3; i++)
+  {
     num = work[i][i];
-    for(int j = 0; j < 6; j++)
-      work[i][j] /= num;
-    for(int k = 0; k < 3; k++) {
-      if(k==i) continue;
+    for(int j = 0; j < 6; j++) work[i][j] /= num;
+    for(int k = 0; k < 3; k++)
+    {
+      if(k == i) continue;
       num = work[k][i];
-      for(int j = 0; j < 6; j++)
-        work[k][j] -= work[i][j] * num;
+      for(int j = 0; j < 6; j++) work[k][j] -= work[i][j] * num;
     }
   }
   for(int i = 0; i < size; i++)
     for(int j = 0; j < 3; j++)
     {
       out[i][j] = 0.0f;
-      for(int k = 0; k < 3; k++)
-        out[i][j] += work[j][k+3] * in[i][k];
+      for(int k = 0; k < 3; k++) out[i][j] += work[j][k + 3] * in[i][k];
     }
 }
 
-int dt_colorspaces_conversion_matrices_xyz(const char *name, float in_XYZ_to_CAM[9], double XYZ_to_CAM[4][3], double CAM_to_XYZ[3][4])
+int dt_colorspaces_conversion_matrices_xyz(const char *name, float in_XYZ_to_CAM[9], double XYZ_to_CAM[4][3],
+                                           double CAM_to_XYZ[3][4])
 {
   if(!isnan(in_XYZ_to_CAM[0]))
   {
-    for(int i = 0; i < 9; i++)
-        XYZ_to_CAM[i/3][i%3] = (double) in_XYZ_to_CAM[i];
-    for(int i = 0; i < 3; i++)
-      XYZ_to_CAM[3][i] = 0.0f;
+    for(int i = 0; i < 9; i++) XYZ_to_CAM[i / 3][i % 3] = (double)in_XYZ_to_CAM[i];
+    for(int i = 0; i < 3; i++) XYZ_to_CAM[3][i] = 0.0f;
   }
   else
   {
@@ -1579,37 +1534,34 @@ int dt_colorspaces_conversion_matrices_xyz(const char *name, float in_XYZ_to_CAM
     adobe_XYZ_to_CAM[0][0] = NAN;
 
     dt_dcraw_adobe_coeff(name, (float(*)[12])adobe_XYZ_to_CAM);
-    if(isnan(adobe_XYZ_to_CAM[0][0]))
-      return FALSE;
+    if(isnan(adobe_XYZ_to_CAM[0][0])) return FALSE;
 
     for(int i = 0; i < 4; i++)
-      for(int j = 0; j < 3; j++)
-        XYZ_to_CAM[i][j] = (double) adobe_XYZ_to_CAM[i][j];
+      for(int j = 0; j < 3; j++) XYZ_to_CAM[i][j] = (double)adobe_XYZ_to_CAM[i][j];
   }
 
   // Invert the matrix
   double inverse[4][3];
-  dt_colorspaces_pseudoinverse (XYZ_to_CAM, inverse, 4);
+  dt_colorspaces_pseudoinverse(XYZ_to_CAM, inverse, 4);
   for(int i = 0; i < 3; i++)
-    for(int j = 0; j < 4; j++)
-      CAM_to_XYZ[i][j] = inverse[j][i];
+    for(int j = 0; j < 4; j++) CAM_to_XYZ[i][j] = inverse[j][i];
 
   return TRUE;
 }
 
 // Converted from dcraw's cam_xyz_coeff()
-int dt_colorspaces_conversion_matrices_rgb(const char *name, double out_RGB_to_CAM[4][3], double out_CAM_to_RGB[3][4], double mul[4])
+int dt_colorspaces_conversion_matrices_rgb(const char *name, double out_RGB_to_CAM[4][3],
+                                           double out_CAM_to_RGB[3][4], double mul[4])
 {
   double RGB_to_CAM[4][3];
 
   float XYZ_to_CAM[4][3];
   XYZ_to_CAM[0][0] = NAN;
   dt_dcraw_adobe_coeff(name, (float(*)[12])XYZ_to_CAM);
-  if(isnan(XYZ_to_CAM[0][0]))
-    return FALSE;
+  if(isnan(XYZ_to_CAM[0][0])) return FALSE;
 
   const double RGB_to_XYZ[3][3] = {
-  // sRGB D65
+    // sRGB D65
     { 0.412453, 0.357580, 0.180423 },
     { 0.212671, 0.715160, 0.072169 },
     { 0.019334, 0.119193, 0.950227 },
@@ -1620,53 +1572,49 @@ int dt_colorspaces_conversion_matrices_rgb(const char *name, double out_RGB_to_C
     for(int j = 0; j < 3; j++)
     {
       RGB_to_CAM[i][j] = 0.0f;
-      for(int k = 0; k < 3; k++)
-        RGB_to_CAM[i][j] += XYZ_to_CAM[i][k] * RGB_to_XYZ[k][j];
+      for(int k = 0; k < 3; k++) RGB_to_CAM[i][j] += XYZ_to_CAM[i][k] * RGB_to_XYZ[k][j];
     }
 
   // Normalize cam_rgb so that cam_rgb * (1,1,1) is (1,1,1,1)
-  for(int i = 0; i < 4; i++) {
+  for(int i = 0; i < 4; i++)
+  {
     double num = 0.0f;
-    for(int j = 0; j < 3; j++)
-      num += RGB_to_CAM[i][j];
-    for(int j = 0; j < 3; j++)
-       RGB_to_CAM[i][j] /= num;
+    for(int j = 0; j < 3; j++) num += RGB_to_CAM[i][j];
+    for(int j = 0; j < 3; j++) RGB_to_CAM[i][j] /= num;
     if(mul) mul[i] = 1.0f / num;
   }
 
   if(out_RGB_to_CAM)
     for(int i = 0; i < 4; i++)
-      for(int j = 0; j < 3; j++)
-        out_RGB_to_CAM[i][j] = RGB_to_CAM[i][j];
+      for(int j = 0; j < 3; j++) out_RGB_to_CAM[i][j] = RGB_to_CAM[i][j];
 
   if(out_CAM_to_RGB)
   {
     // Invert the matrix
     double inverse[4][3];
-    dt_colorspaces_pseudoinverse (RGB_to_CAM, inverse, 4);
+    dt_colorspaces_pseudoinverse(RGB_to_CAM, inverse, 4);
     for(int i = 0; i < 3; i++)
-      for(int j = 0; j < 4; j++)
-        out_CAM_to_RGB[i][j] = inverse[j][i];
+      for(int j = 0; j < 4; j++) out_CAM_to_RGB[i][j] = inverse[j][i];
   }
 
   return TRUE;
 }
 
-void dt_colorspaces_cygm_apply_coeffs_to_rgb(float *out, const float *in, int num, double RGB_to_CAM[4][3], double CAM_to_RGB[3][4], float coeffs[4])
+void dt_colorspaces_cygm_apply_coeffs_to_rgb(float *out, const float *in, int num, double RGB_to_CAM[4][3],
+                                             double CAM_to_RGB[3][4], float coeffs[4])
 {
   // Create the CAM to RGB with applied WB matrix
   double CAM_to_RGB_WB[3][4];
-  for (int a=0; a<3; a++)
-    for (int b=0; b<4; b++)
-      CAM_to_RGB_WB[a][b] = CAM_to_RGB[a][b] * coeffs[b];
+  for(int a = 0; a < 3; a++)
+    for(int b = 0; b < 4; b++) CAM_to_RGB_WB[a][b] = CAM_to_RGB[a][b] * coeffs[b];
 
   // Create the RGB->RGB+WB matrix
   double RGB_to_RGB_WB[3][3];
-  for (int a=0; a<3; a++)
-    for (int b=0; b<3; b++) {
+  for(int a = 0; a < 3; a++)
+    for(int b = 0; b < 3; b++)
+    {
       RGB_to_RGB_WB[a][b] = 0.0f;
-      for (int c=0; c<4; c++)
-        RGB_to_RGB_WB[a][b] += CAM_to_RGB_WB[a][c] * RGB_to_CAM[c][b];
+      for(int c = 0; c < 4; c++) RGB_to_RGB_WB[a][b] += CAM_to_RGB_WB[a][c] * RGB_to_CAM[c][b];
     }
 
 #ifdef _OPENMP
@@ -1674,12 +1622,11 @@ void dt_colorspaces_cygm_apply_coeffs_to_rgb(float *out, const float *in, int nu
 #endif
   for(int i = 0; i < num; i++)
   {
-    const float *inpos = &in[i*4];
-    float *outpos = &out[i*4];
-    outpos[0]=outpos[1]=outpos[2] = 0.0f;
-    for (int a=0; a<3; a++)
-      for (int b=0; b<3; b++)
-        outpos[a] += RGB_to_RGB_WB[a][b] * inpos[b];
+    const float *inpos = &in[i * 4];
+    float *outpos = &out[i * 4];
+    outpos[0] = outpos[1] = outpos[2] = 0.0f;
+    for(int a = 0; a < 3; a++)
+      for(int b = 0; b < 3; b++) outpos[a] += RGB_to_RGB_WB[a][b] * inpos[b];
   }
 }
 
@@ -1690,13 +1637,11 @@ void dt_colorspaces_cygm_to_rgb(float *out, int num, double CAM_to_RGB[3][4])
 #endif
   for(int i = 0; i < num; i++)
   {
-    float *in = &out[i*4];
-    float o[3] = {0.0f,0.0f,0.0f};
+    float *in = &out[i * 4];
+    float o[3] = { 0.0f, 0.0f, 0.0f };
     for(int c = 0; c < 3; c++)
-      for(int k = 0; k < 4; k++)
-        o[c] += CAM_to_RGB[c][k] * in[k];
-    for(int c = 0; c < 3; c++)
-      in[c] = o[c];
+      for(int k = 0; k < 4; k++) o[c] += CAM_to_RGB[c][k] * in[k];
+    for(int c = 0; c < 3; c++) in[c] = o[c];
   }
 }
 
@@ -1707,13 +1652,11 @@ void dt_colorspaces_rgb_to_cygm(float *out, int num, double RGB_to_CAM[4][3])
 #endif
   for(int i = 0; i < num; i++)
   {
-    float *in = &out[i*3];
-    float o[4] = {0.0f,0.0f,0.0f,0.0f};
+    float *in = &out[i * 3];
+    float o[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
     for(int c = 0; c < 4; c++)
-      for(int k = 0; k < 3; k++)
-        o[c] += RGB_to_CAM[c][k] * in[k];
-    for(int c = 0; c < 4; c++)
-      in[c] = o[c];
+      for(int k = 0; k < 3; k++) o[c] += RGB_to_CAM[c][k] * in[k];
+    for(int c = 0; c < 4; c++) in[c] = o[c];
   }
 }
 

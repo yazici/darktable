@@ -49,7 +49,7 @@ const char *name(dt_lib_module_t *self)
 
 const char **views(dt_lib_module_t *self)
 {
-  static const char *v[] = {"lighttable", NULL};
+  static const char *v[] = { "lighttable", NULL };
   return v;
 }
 
@@ -134,7 +134,7 @@ static gboolean _lib_geotagging_parse_offset(const char *str, long int *seconds)
   {
     numbers[fields++] = 10 * (str[0] - '0') + (str[1] - '0');
     str += 2;
-//     len -= 2;
+    //     len -= 2;
   }
 
   // end
@@ -312,8 +312,8 @@ static void _lib_geotagging_calculate_offset_callback(GtkWidget *widget, dt_lib_
             gint minute;
             gint second;
 
-            if(sscanf(cimg->exif_datetime_taken, "%d:%d:%d %d:%d:%d", (int *)&year, (int *)&month,
-                      (int *)&day, (int *)&hour, (int *)&minute, (int *)&second) == 6)
+            if(sscanf(cimg->exif_datetime_taken, "%d:%d:%d %d:%d:%d", (int *)&year, (int *)&month, (int *)&day,
+                      (int *)&hour, (int *)&minute, (int *)&second) == 6)
             {
               // calculate the offset
               long int exif_seconds = hour * 60 * 60 + minute * 60 + second;
@@ -400,8 +400,8 @@ static void _lib_geotagging_show_offset_window(GtkWidget *widget, dt_lib_module_
 
   gtk_editable_select_region(GTK_EDITABLE(d->floating_window_entry), 0, -1);
   gtk_box_pack_start(GTK_BOX(vbox), d->floating_window_entry, TRUE, TRUE, 0);
-  g_signal_connect(d->floating_window_entry, "key-press-event",
-                   G_CALLBACK(_lib_geotagging_floating_key_press), self);
+  g_signal_connect(d->floating_window_entry, "key-press-event", G_CALLBACK(_lib_geotagging_floating_key_press),
+                   self);
 
   GtkWidget *hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
   GtkWidget *cancel_button = gtk_button_new_with_label(_("cancel"));
@@ -409,10 +409,8 @@ static void _lib_geotagging_show_offset_window(GtkWidget *widget, dt_lib_module_
 
   gtk_box_pack_start(GTK_BOX(hbox), cancel_button, TRUE, TRUE, 0);
   gtk_box_pack_start(GTK_BOX(hbox), ok_button, TRUE, TRUE, 0);
-  g_signal_connect_swapped(G_OBJECT(cancel_button), "clicked", G_CALLBACK(gtk_widget_destroy),
-                           d->floating_window);
-  g_signal_connect(G_OBJECT(ok_button), "clicked", G_CALLBACK(_lib_geotagging_calculate_offset_callback),
-                   self);
+  g_signal_connect_swapped(G_OBJECT(cancel_button), "clicked", G_CALLBACK(gtk_widget_destroy), d->floating_window);
+  g_signal_connect(G_OBJECT(ok_button), "clicked", G_CALLBACK(_lib_geotagging_calculate_offset_callback), self);
 
   gtk_box_pack_start(GTK_BOX(vbox), hbox, TRUE, TRUE, 0);
 
@@ -583,7 +581,8 @@ static GList *_lib_geotagging_get_timezones(void)
     // sometimes files are not separated by single tabs but multiple spaces, resulting in empty strings in tokens
     // so we have to look for the 3rd non-empty entry
     int n_found = -1, i;
-    for(i = 0; tokens[i] && n_found < 2; i++) if(*tokens[i]) n_found++;
+    for(i = 0; tokens[i] && n_found < 2; i++)
+      if(*tokens[i]) n_found++;
     if(n_found != 2)
     {
       g_strfreev(tokens);

@@ -87,8 +87,8 @@ int flags()
   return IOP_FLAGS_SUPPORTS_BLENDING | IOP_FLAGS_ALLOW_TILING | IOP_FLAGS_ONE_INSTANCE;
 }
 
-int legacy_params(dt_iop_module_t *self, const void *const old_params, const int old_version,
-                  void *new_params, const int new_version)
+int legacy_params(dt_iop_module_t *self, const void *const old_params, const int old_version, void *new_params,
+                  const int new_version)
 {
   if(old_version == 1 && new_version == 2)
   {
@@ -168,10 +168,14 @@ int process_cl(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, cl_m
     // xtrans sensor raws with LCH mode
     int blocksizex, blocksizey;
 
-    dt_opencl_local_buffer_t locopt
-      = (dt_opencl_local_buffer_t){ .xoffset = 2 * 2, .xfactor = 1, .yoffset = 2 * 2, .yfactor = 1,
-                                    .cellsize = sizeof(float), .overhead = 0,
-                                    .sizex = 1 << 8, .sizey = 1 << 8 };
+    dt_opencl_local_buffer_t locopt = (dt_opencl_local_buffer_t){.xoffset = 2 * 2,
+                                                                 .xfactor = 1,
+                                                                 .yoffset = 2 * 2,
+                                                                 .yfactor = 1,
+                                                                 .cellsize = sizeof(float),
+                                                                 .overhead = 0,
+                                                                 .sizex = 1 << 8,
+                                                                 .sizey = 1 << 8 };
 
     if(dt_opencl_local_buffer_opt(devid, gd->kernel_highlights_1f_lch_xtrans, &locopt))
     {
@@ -196,7 +200,7 @@ int process_cl(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, cl_m
     dt_opencl_set_kernel_arg(devid, gd->kernel_highlights_1f_lch_xtrans, 6, sizeof(int), (void *)&roi_out->y);
     dt_opencl_set_kernel_arg(devid, gd->kernel_highlights_1f_lch_xtrans, 7, sizeof(cl_mem), (void *)&dev_xtrans);
     dt_opencl_set_kernel_arg(devid, gd->kernel_highlights_1f_lch_xtrans, 8,
-                               (blocksizex + 4) * (blocksizey + 4) * sizeof(float), NULL);
+                             (blocksizex + 4) * (blocksizey + 4) * sizeof(float), NULL);
 
     err = dt_opencl_enqueue_kernel_2d_with_local(devid, gd->kernel_highlights_1f_lch_xtrans, sizes, local);
     if(err != CL_SUCCESS) goto error;
@@ -218,13 +222,12 @@ error:
 #endif
 
 void tiling_callback(struct dt_iop_module_t *self, struct dt_dev_pixelpipe_iop_t *piece,
-              const dt_iop_roi_t *roi_in, const dt_iop_roi_t *roi_out,
-              struct dt_develop_tiling_t *tiling)
+                     const dt_iop_roi_t *roi_in, const dt_iop_roi_t *roi_out, struct dt_develop_tiling_t *tiling)
 {
   dt_iop_highlights_data_t *d = (dt_iop_highlights_data_t *)piece->data;
   const uint32_t filters = piece->pipe->dsc.filters;
 
-  tiling->factor = 2.0f;  // in + out
+  tiling->factor = 2.0f; // in + out
   tiling->maxbuf = 1.0f;
   tiling->overhead = 0;
 
@@ -252,11 +255,8 @@ void tiling_callback(struct dt_iop_module_t *self, struct dt_dev_pixelpipe_iop_t
 }
 
 /* interpolate value for a pixel, ideal via ratio to nearby pixel */
-static inline float interp_pix_xtrans(const int ratio_next,
-                                      const ssize_t offset_next,
-                                      const float clip0, const float clip_next,
-                                      const float *const in,
-                                      const float *const ratios)
+static inline float interp_pix_xtrans(const int ratio_next, const ssize_t offset_next, const float clip0,
+                                      const float clip_next, const float *const in, const float *const ratios)
 {
   assert(ratio_next != 0);
   // it's OK to exceed clipping of current pixel's color based on a
@@ -272,7 +272,7 @@ static inline float interp_pix_xtrans(const int ratio_next,
   {
     // set this pixel in ratio to the next
     assert(ratio_next != 0);
-    if (ratio_next > 0)
+    if(ratio_next > 0)
       return fminf(in[offset_next] / ratios[ratio_next], clip_val);
     else
       return fminf(in[offset_next] * ratios[-ratio_next], clip_val);
@@ -280,12 +280,9 @@ static inline float interp_pix_xtrans(const int ratio_next,
 }
 
 static inline void interpolate_color_xtrans(const void *const ivoid, void *const ovoid,
-                                            const dt_iop_roi_t *const roi_in,
-                                            const dt_iop_roi_t *const roi_out,
-                                            int dim, int dir, int other,
-                                            const float *const clip,
-                                            const uint8_t (*const xtrans)[6],
-                                            const int pass)
+                                            const dt_iop_roi_t *const roi_in, const dt_iop_roi_t *const roi_out,
+                                            int dim, int dir, int other, const float *const clip,
+                                            const uint8_t (*const xtrans)[6], const int pass)
 {
   // In Bayer each row/col has only green/red or green/blue
   // transitions, hence can reconstruct color by single ratio per
@@ -298,11 +295,9 @@ static inline void interpolate_color_xtrans(const void *const ivoid, void *const
   // -> red is roff[2][0]. Returned value is an index into ratios. If
   // negative, then need to invert the ratio. Identity color
   // transitions aren't used.
-  const int roff[3][3] = {{ 0, -1, -2},
-                          { 1,  0, -3},
-                          { 2,  3,  0}};
+  const int roff[3][3] = { { 0, -1, -2 }, { 1, 0, -3 }, { 2, 3, 0 } };
   // record ratios of color transitions 0:unused, 1:RG, 2:RB, and 3:GB
-  float ratios[4] = {1.0f, 1.0f, 1.0f, 1.0f};
+  float ratios[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
 
   // passes are 0:+x, 1:-x, 2:+y, 3:-y
   // dims are 0:traverse a row, 1:traverse a column
@@ -361,13 +356,11 @@ static inline void interpolate_color_xtrans(const void *const ivoid, void *const
     {
       // ratio to next pixel if this & next are unclamped and not in
       // 2x2 green block
-      if ((f0 != f1) &&
-          (in[0] < clip0 && in[0] > 1e-5f) &&
-          (in[offs] < clip1 && in[offs] > 1e-5f))
+      if((f0 != f1) && (in[0] < clip0 && in[0] > 1e-5f) && (in[offs] < clip1 && in[offs] > 1e-5f))
       {
         const int r = roff[f0][f1];
         assert(r != 0);
-        if (r > 0)
+        if(r > 0)
           ratios[r] = (3.f * ratios[r] + (in[offs] / in[0])) / 4.f;
         else
           ratios[-r] = (3.f * ratios[-r] + (in[0] / in[offs])) / 4.f;
@@ -379,13 +372,11 @@ static inline void interpolate_color_xtrans(const void *const ivoid, void *const
         float add;
         if(f0 != f1)
           // next pixel is different color
-          add =
-            interp_pix_xtrans(roff[f0][f1], offs, clip0, clip1, in, ratios);
+          add = interp_pix_xtrans(roff[f0][f1], offs, clip0, clip1, in, ratios);
         else
           // at start of 2x2 green block, look diagonally
-          add = (fl != f0) ?
-            interp_pix_xtrans(roff[f0][fl], offl, clip0, clipl, in, ratios) :
-            interp_pix_xtrans(roff[f0][fr], offr, clip0, clipr, in, ratios);
+          add = (fl != f0) ? interp_pix_xtrans(roff[f0][fl], offl, clip0, clipl, in, ratios)
+                           : interp_pix_xtrans(roff[f0][fr], offr, clip0, clipr, in, ratios);
 
         if(pass == 0)
           out[0] = add;
@@ -405,9 +396,9 @@ static inline void interpolate_color_xtrans(const void *const ivoid, void *const
   }
 }
 
-static inline void interpolate_color(const void *const ivoid, void *const ovoid,
-                                     const dt_iop_roi_t *const roi_out, int dim, int dir, int other,
-                                     const float *clip, const uint32_t filters, const int pass)
+static inline void interpolate_color(const void *const ivoid, void *const ovoid, const dt_iop_roi_t *const roi_out,
+                                     int dim, int dir, int other, const float *clip, const uint32_t filters,
+                                     const int pass)
 {
   float ratio = 1.0f;
   float *in, *out;
@@ -620,7 +611,7 @@ static void process_lch_xtrans(dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *pi
                                void *const ovoid, const dt_iop_roi_t *const roi_in,
                                const dt_iop_roi_t *const roi_out, const float clip)
 {
-  const uint8_t(*const xtrans)[6] = (const uint8_t(*const)[6])piece->pipe->dsc.xtrans;
+  const uint8_t (*const xtrans)[6] = (const uint8_t (*const)[6])piece->pipe->dsc.xtrans;
 
 #ifdef _OPENMP
 #pragma omp parallel for schedule(dynamic) default(none)
@@ -698,16 +689,16 @@ static void process_lch_xtrans(dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *pi
             for(int ii = -1; ii <= 1; ii++)
             {
               const float val = in[(ssize_t)jj * roi_in->width + ii];
-              const int c = FCxtrans(j+jj, i+ii, roi_in, xtrans);
+              const int c = FCxtrans(j + jj, i + ii, roi_in, xtrans);
               mean[c] += val;
               cnt[c]++;
               RGBmax[c] = MAX(RGBmax[c], val);
             }
           }
 
-          const float Ro = MIN(mean[0]/cnt[0], clip);
-          const float Go = MIN(mean[1]/cnt[1], clip);
-          const float Bo = MIN(mean[2]/cnt[2], clip);
+          const float Ro = MIN(mean[0] / cnt[0], clip);
+          const float Go = MIN(mean[1] / cnt[1], clip);
+          const float Bo = MIN(mean[2] / cnt[2], clip);
 
           const float R = RGBmax[0];
           const float G = RGBmax[1];
@@ -822,8 +813,7 @@ static void process_clip_sse2(dt_dev_pixelpipe_iop_t *piece, const void *const i
 #endif
 
 static void process_clip(dt_dev_pixelpipe_iop_t *piece, const void *const ivoid, void *const ovoid,
-                         const dt_iop_roi_t *const roi_in, const dt_iop_roi_t *const roi_out,
-                         const float clip)
+                         const dt_iop_roi_t *const roi_in, const dt_iop_roi_t *const roi_out, const float clip)
 {
   if(darktable.codepath.OPENMP_SIMD) process_clip_plain(piece, ivoid, ovoid, roi_in, roi_out, clip);
 #if defined(__SSE__)
@@ -840,14 +830,14 @@ void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const 
   const uint32_t filters = piece->pipe->dsc.filters;
   dt_iop_highlights_data_t *data = (dt_iop_highlights_data_t *)piece->data;
 
-  const float clip
-      = data->clip * fminf(piece->pipe->dsc.processed_maximum[0],
-                           fminf(piece->pipe->dsc.processed_maximum[1], piece->pipe->dsc.processed_maximum[2]));
+  const float clip = data->clip
+                     * fminf(piece->pipe->dsc.processed_maximum[0],
+                             fminf(piece->pipe->dsc.processed_maximum[1], piece->pipe->dsc.processed_maximum[2]));
   // const int ch = piece->colors;
   if(!filters)
   {
     process_clip(piece, ivoid, ovoid, roi_in, roi_out, clip);
-    for(int k=0;k<3;k++)
+    for(int k = 0; k < 3; k++)
       piece->pipe->dsc.processed_maximum[k]
           = fminf(piece->pipe->dsc.processed_maximum[0],
                   fminf(piece->pipe->dsc.processed_maximum[1], piece->pipe->dsc.processed_maximum[2]));
@@ -864,7 +854,7 @@ void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const 
 
       if(filters == 9u)
       {
-        const uint8_t(*const xtrans)[6] = (const uint8_t(*const)[6])piece->pipe->dsc.xtrans;
+        const uint8_t (*const xtrans)[6] = (const uint8_t (*const)[6])piece->pipe->dsc.xtrans;
 #ifdef _OPENMP
 #pragma omp parallel for schedule(dynamic) default(none)
 #endif
@@ -922,7 +912,8 @@ void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const 
                         piece->pipe->dsc.processed_maximum[2]);
   for(int k = 0; k < 3; k++) piece->pipe->dsc.processed_maximum[k] = m;
 
-  if(piece->pipe->mask_display & DT_DEV_PIXELPIPE_DISPLAY_MASK) dt_iop_alpha_copy(ivoid, ovoid, roi_out->width, roi_out->height);
+  if(piece->pipe->mask_display & DT_DEV_PIXELPIPE_DISPLAY_MASK)
+    dt_iop_alpha_copy(ivoid, ovoid, roi_out->width, roi_out->height);
 }
 
 static void clip_callback(GtkWidget *slider, dt_iop_module_t *self)
@@ -1023,7 +1014,7 @@ void init(dt_iop_module_t *module)
   // module->data = malloc(sizeof(dt_iop_highlights_data_t));
   module->params = calloc(1, sizeof(dt_iop_highlights_params_t));
   module->default_params = calloc(1, sizeof(dt_iop_highlights_params_t));
-    module->priority = 57; // module order created by iop_dependencies.py, do not edit!
+  module->priority = 57; // module order created by iop_dependencies.py, do not edit!
   module->default_enabled = 1;
   module->params_size = sizeof(dt_iop_highlights_params_t);
   module->gui_data = NULL;

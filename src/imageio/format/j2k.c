@@ -71,8 +71,7 @@ typedef enum
 // borrowed from blender
 #define DOWNSAMPLE_FLOAT_TO_8BIT(_val) (_val) <= 0.0f ? 0 : ((_val) >= 1.0f ? 255 : (int)(255.0f * (_val)))
 #define DOWNSAMPLE_FLOAT_TO_12BIT(_val) (_val) <= 0.0f ? 0 : ((_val) >= 1.0f ? 4095 : (int)(4095.0f * (_val)))
-#define DOWNSAMPLE_FLOAT_TO_16BIT(_val)                                                                      \
-  (_val) <= 0.0f ? 0 : ((_val) >= 1.0f ? 65535 : (int)(65535.0f * (_val)))
+#define DOWNSAMPLE_FLOAT_TO_16BIT(_val) (_val) <= 0.0f ? 0 : ((_val) >= 1.0f ? 65535 : (int)(65535.0f * (_val)))
 
 DT_MODULE(2)
 
@@ -110,8 +109,7 @@ void init(dt_imageio_module_format_t *self)
   luaA_enum(darktable.lua_state.state, dt_imageio_j2k_format_t);
   luaA_enum_value_name(darktable.lua_state.state, dt_imageio_j2k_format_t, J2K_CFMT, "j2k");
   luaA_enum_value_name(darktable.lua_state.state, dt_imageio_j2k_format_t, JP2_CFMT, "jp2");
-  dt_lua_register_module_member(darktable.lua_state.state, self, dt_imageio_j2k_t, format,
-                                dt_imageio_j2k_format_t);
+  dt_lua_register_module_member(darktable.lua_state.state, self, dt_imageio_j2k_t, format, dt_imageio_j2k_format_t);
   dt_lua_register_module_member(darktable.lua_state.state, self, dt_imageio_j2k_t, quality, int);
   luaA_enum(darktable.lua_state.state, dt_imageio_j2k_preset_t);
   luaA_enum_value_name(darktable.lua_state.state, dt_imageio_j2k_preset_t, DT_J2K_PRESET_OFF, "off");
@@ -121,8 +119,7 @@ void init(dt_imageio_module_format_t *self)
                        "cinema2k_48");
   luaA_enum_value_name(darktable.lua_state.state, dt_imageio_j2k_preset_t, DT_J2K_PRESET_CINEMA4K_24,
                        "cinema4k_24");
-  dt_lua_register_module_member(darktable.lua_state.state, self, dt_imageio_j2k_t, preset,
-                                dt_imageio_j2k_preset_t);
+  dt_lua_register_module_member(darktable.lua_state.state, self, dt_imageio_j2k_t, preset, dt_imageio_j2k_preset_t);
 #endif
 }
 void cleanup(dt_imageio_module_format_t *self)
@@ -223,9 +220,8 @@ static void cinema_setup_encoder(opj_cparameters_t *parameters, opj_image_t *ima
       }
       if(!((image->comps[0].w == 2048) | (image->comps[0].h == 1080)))
       {
-        fprintf(stdout,
-                "Image coordinates %d x %d is not 2K compliant.\nJPEG Digital Cinema Profile-3 "
-                "(2K profile) compliance requires that at least one of coordinates match 2048 x 1080\n",
+        fprintf(stdout, "Image coordinates %d x %d is not 2K compliant.\nJPEG Digital Cinema Profile-3 "
+                        "(2K profile) compliance requires that at least one of coordinates match 2048 x 1080\n",
                 image->comps[0].w, image->comps[0].h);
         parameters->cp_rsiz = OPJ_STD_RSIZ;
       }
@@ -243,9 +239,8 @@ static void cinema_setup_encoder(opj_cparameters_t *parameters, opj_image_t *ima
       }
       if(!((image->comps[0].w == 4096) | (image->comps[0].h == 2160)))
       {
-        fprintf(stdout,
-                "Image coordinates %d x %d is not 4K compliant.\nJPEG Digital Cinema Profile-4"
-                "(4K profile) compliance requires that at least one of coordinates match 4096 x 2160\n",
+        fprintf(stdout, "Image coordinates %d x %d is not 4K compliant.\nJPEG Digital Cinema Profile-4"
+                        "(4K profile) compliance requires that at least one of coordinates match 4096 x 2160\n",
                 image->comps[0].w, image->comps[0].h);
         parameters->cp_rsiz = OPJ_STD_RSIZ;
       }
@@ -269,9 +264,8 @@ static void cinema_setup_encoder(opj_cparameters_t *parameters, opj_image_t *ima
         }
         else
         {
-          temp_rate
-              = ((float)(image->numcomps * image->comps[0].w * image->comps[0].h * image->comps[0].prec))
-                / (rates[i] * 8 * image->comps[0].dx * image->comps[0].dy);
+          temp_rate = ((float)(image->numcomps * image->comps[0].w * image->comps[0].h * image->comps[0].prec))
+                      / (rates[i] * 8 * image->comps[0].dx * image->comps[0].dy);
           if(temp_rate > OPJ_CINEMA_24_CS)
           {
             parameters->tcp_rates[i]
@@ -298,9 +292,8 @@ static void cinema_setup_encoder(opj_cparameters_t *parameters, opj_image_t *ima
         }
         else
         {
-          temp_rate
-              = ((float)(image->numcomps * image->comps[0].w * image->comps[0].h * image->comps[0].prec))
-                / (rates[i] * 8 * image->comps[0].dx * image->comps[0].dy);
+          temp_rate = ((float)(image->numcomps * image->comps[0].w * image->comps[0].h * image->comps[0].prec))
+                      / (rates[i] * 8 * image->comps[0].dx * image->comps[0].dy);
           if(temp_rate > OPJ_CINEMA_48_CS)
           {
             parameters->tcp_rates[0]
@@ -405,20 +398,17 @@ int write_image(dt_imageio_module_data_t *j2k_tmp, const char *filename, const v
       case 12:
         for(int i = 0; i < w * h; i++)
         {
-          for(int k = 0; k < numcomps; k++)
-            image->comps[k].data[i] = DOWNSAMPLE_FLOAT_TO_12BIT(in[i * 4 + k]);
+          for(int k = 0; k < numcomps; k++) image->comps[k].data[i] = DOWNSAMPLE_FLOAT_TO_12BIT(in[i * 4 + k]);
         }
         break;
       case 16:
         for(int i = 0; i < w * h; i++)
         {
-          for(int k = 0; k < numcomps; k++)
-            image->comps[k].data[i] = DOWNSAMPLE_FLOAT_TO_16BIT(in[i * 4 + k]);
+          for(int k = 0; k < numcomps; k++) image->comps[k].data[i] = DOWNSAMPLE_FLOAT_TO_16BIT(in[i * 4 + k]);
         }
         break;
       default:
-        fprintf(stderr, "Error: this shouldn't happen, there is no bit depth of %d for jpeg 2000 images.\n",
-                prec);
+        fprintf(stderr, "Error: this shouldn't happen, there is no bit depth of %d for jpeg 2000 images.\n", prec);
         free(rates);
         opj_image_destroy(image);
         return 1;
@@ -520,9 +510,8 @@ size_t params_size(dt_imageio_module_format_t *self)
   return sizeof(dt_imageio_j2k_t);
 }
 
-void *legacy_params(dt_imageio_module_format_t *self, const void *const old_params,
-                    const size_t old_params_size, const int old_version, const int new_version,
-                    size_t *new_size)
+void *legacy_params(dt_imageio_module_format_t *self, const void *const old_params, const size_t old_params_size,
+                    const int old_version, const int new_version, size_t *new_size)
 {
   if(old_version == 1 && new_version == 2)
   {

@@ -109,7 +109,7 @@ const char *name(dt_lib_module_t *self)
 
 const char **views(dt_lib_module_t *self)
 {
-  static const char *v[] = {"lighttable", NULL};
+  static const char *v[] = { "lighttable", NULL };
   return v;
 }
 
@@ -223,8 +223,7 @@ void _lib_import_ui_devices_update(dt_lib_module_t *self)
       }
       else
       {
-        snprintf(buffer, sizeof(buffer), _("device \"%s\" connected on port \"%s\"."), camera->model,
-                 camera->port);
+        snprintf(buffer, sizeof(buffer), _("device \"%s\" connected on port \"%s\"."), camera->model, camera->port);
         gtk_widget_set_tooltip_text(label, buffer);
       }
 
@@ -233,14 +232,13 @@ void _lib_import_ui_devices_update(dt_lib_module_t *self)
       GtkWidget *vbx = gtk_box_new(GTK_ORIENTATION_VERTICAL, 5);
       if(camera->can_import == TRUE)
       {
-        gtk_box_pack_start(GTK_BOX(vbx), (ib = gtk_button_new_with_label(_("import from camera"))), FALSE,
-                           FALSE, 0);
+        gtk_box_pack_start(GTK_BOX(vbx), (ib = gtk_button_new_with_label(_("import from camera"))), FALSE, FALSE,
+                           0);
         d->import_camera = GTK_BUTTON(ib);
       }
       if(camera->can_tether == TRUE)
       {
-        gtk_box_pack_start(GTK_BOX(vbx), (tb = gtk_button_new_with_label(_("tethered shoot"))), FALSE, FALSE,
-                           0);
+        gtk_box_pack_start(GTK_BOX(vbx), (tb = gtk_button_new_with_label(_("tethered shoot"))), FALSE, FALSE, 0);
         d->tethered_shoot = GTK_BUTTON(tb);
       }
 
@@ -307,11 +305,11 @@ static gboolean _camctl_camera_control_status_callback_gui_thread(gpointer user_
       GList *list, *child;
       list = child = gtk_container_get_children(GTK_CONTAINER(d->devices));
       if(child) do
-      {
-        if(!(GTK_IS_TOGGLE_BUTTON(child->data)
-          && gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(child->data)) == TRUE))
-          gtk_widget_set_sensitive(GTK_WIDGET(child->data), FALSE);
-      } while((child = g_list_next(child)));
+        {
+          if(!(GTK_IS_TOGGLE_BUTTON(child->data)
+               && gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(child->data)) == TRUE))
+            gtk_widget_set_sensitive(GTK_WIDGET(child->data), FALSE);
+        } while((child = g_list_next(child)));
       g_list_free(list);
     }
     break;
@@ -322,9 +320,9 @@ static gboolean _camctl_camera_control_status_callback_gui_thread(gpointer user_
       GList *list, *child;
       list = child = gtk_container_get_children(GTK_CONTAINER(d->devices));
       if(child) do
-      {
-        gtk_widget_set_sensitive(GTK_WIDGET(child->data), TRUE);
-      } while((child = g_list_next(child)));
+        {
+          gtk_widget_set_sensitive(GTK_WIDGET(child->data), TRUE);
+        } while((child = g_list_next(child)));
       g_list_free(list);
     }
     break;
@@ -399,13 +397,11 @@ static void _lib_import_presets_changed(GtkWidget *widget, dt_lib_import_metadat
 }
 
 #ifdef USE_LUA
-static void reset_child(GtkWidget* child, gpointer user_data)
+static void reset_child(GtkWidget *child, gpointer user_data)
 {
-  dt_lua_async_call_alien(dt_lua_widget_trigger_callback,
-      0,NULL,NULL,
-      LUA_ASYNC_TYPENAME,"lua_widget",child, // the GtkWidget is an alias for the lua_widget
-      LUA_ASYNC_TYPENAME,"const char*","reset",
-      LUA_ASYNC_DONE);
+  dt_lua_async_call_alien(dt_lua_widget_trigger_callback, 0, NULL, NULL, LUA_ASYNC_TYPENAME, "lua_widget",
+                          child, // the GtkWidget is an alias for the lua_widget
+                          LUA_ASYNC_TYPENAME, "const char*", "reset", LUA_ASYNC_DONE);
 }
 
 // remove the extra portion from the filechooser before destroying it
@@ -418,11 +414,11 @@ static void detach_lua_widgets(GtkWidget *extra_lua_widgets)
 
 static void _check_button_callback(GtkWidget *widget, gpointer data)
 {
-    dt_conf_set_bool("ui_last/import_ignore_jpegs",
-                     gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget)));
+  dt_conf_set_bool("ui_last/import_ignore_jpegs", gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget)));
 }
 
-static GtkWidget *_lib_import_get_extra_widget(dt_lib_module_t *self,dt_lib_import_metadata_t *data, gboolean import_folder)
+static GtkWidget *_lib_import_get_extra_widget(dt_lib_module_t *self, dt_lib_import_metadata_t *data,
+                                               gboolean import_folder)
 {
   // add extra lines to 'extra'. don't forget to destroy the widgets later.
   GtkWidget *expander = gtk_expander_new(_("import options"));
@@ -464,11 +460,9 @@ static GtkWidget *_lib_import_get_extra_widget(dt_lib_module_t *self,dt_lib_impo
     ignore_jpeg = gtk_check_button_new_with_label(_("ignore JPEG files"));
     gtk_widget_set_tooltip_text(ignore_jpeg, _("do not load files with an extension of .jpg or .jpeg. this "
                                                "can be useful when there are raw+JPEG in a directory."));
-    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(ignore_jpeg),
-                                 dt_conf_get_bool("ui_last/import_ignore_jpegs"));
+    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(ignore_jpeg), dt_conf_get_bool("ui_last/import_ignore_jpegs"));
     gtk_box_pack_start(GTK_BOX(extra), ignore_jpeg, FALSE, FALSE, 0);
-    g_signal_connect(G_OBJECT(ignore_jpeg), "clicked",
-                   G_CALLBACK(_check_button_callback), ignore_jpeg);
+    g_signal_connect(G_OBJECT(ignore_jpeg), "clicked", G_CALLBACK(_check_button_callback), ignore_jpeg);
   }
 
   // default metadata
@@ -494,13 +488,13 @@ static GtkWidget *_lib_import_get_extra_widget(dt_lib_module_t *self,dt_lib_impo
   grid = gtk_grid_new();
   gtk_grid_set_row_spacing(GTK_GRID(grid), DT_PIXEL_APPLY_DPI(5));
   gtk_grid_set_column_spacing(GTK_GRID(grid), DT_PIXEL_APPLY_DPI(10));
-  gtk_widget_set_margin_start(grid,  2 * (indicator_spacing + indicator_size));
+  gtk_widget_set_margin_start(grid, 2 * (indicator_spacing + indicator_size));
   gtk_box_pack_start(GTK_BOX(extra), grid, FALSE, FALSE, 0);
 
 #ifdef USE_LUA
   dt_lib_import_t *d = (dt_lib_import_t *)self->data;
-  gtk_box_pack_start(GTK_BOX(extra),d->extra_lua_widgets , FALSE, FALSE, 0);
-  gtk_container_foreach(GTK_CONTAINER(d->extra_lua_widgets),reset_child,NULL);
+  gtk_box_pack_start(GTK_BOX(extra), d->extra_lua_widgets, FALSE, FALSE, 0);
+  gtk_container_foreach(GTK_CONTAINER(d->extra_lua_widgets), reset_child, NULL);
 #endif
 
   creator = gtk_entry_new();
@@ -613,7 +607,8 @@ static GtkWidget *_lib_import_get_extra_widget(dt_lib_module_t *self,dt_lib_impo
   }
 
   g_signal_connect(apply_metadata, "toggled", G_CALLBACK(_lib_import_apply_metadata_toggled), grid);
-  // needed since the apply_metadata starts being turned off, and setting it to off doesn't emit the 'toggled' signal ...
+  // needed since the apply_metadata starts being turned off, and setting it to off doesn't emit the 'toggled'
+  // signal ...
   _lib_import_apply_metadata_toggled(apply_metadata, grid);
 
   g_signal_connect(presets, "changed", G_CALLBACK(_lib_import_presets_changed), data);
@@ -628,8 +623,7 @@ static void _lib_import_evaluate_extra_widget(dt_lib_import_metadata_t *data, gb
 {
   if(import_folder == TRUE)
   {
-    dt_conf_set_bool("ui_last/import_recursive",
-                     gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(data->recursive)));
+    dt_conf_set_bool("ui_last/import_recursive", gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(data->recursive)));
     dt_conf_set_bool("ui_last/import_ignore_jpegs",
                      gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(data->ignore_jpeg)));
   }
@@ -679,8 +673,8 @@ static void _lib_import_update_preview(GtkFileChooser *file_chooser, gpointer da
       // Scale the image to the correct size
       GdkPixbuf *tmp;
       GdkPixbufLoader *loader = gdk_pixbuf_loader_new();
-      if (!gdk_pixbuf_loader_write(loader, buffer, size, NULL)) goto cleanup;
-      if (!(tmp = gdk_pixbuf_loader_get_pixbuf(loader))) goto cleanup;
+      if(!gdk_pixbuf_loader_write(loader, buffer, size, NULL)) goto cleanup;
+      if(!(tmp = gdk_pixbuf_loader_get_pixbuf(loader))) goto cleanup;
       float ratio = 1.0 * gdk_pixbuf_get_height(tmp) / gdk_pixbuf_get_width(tmp);
       int width = 128, height = 128 * ratio;
       pixbuf = gdk_pixbuf_scale_simple(tmp, width, height, GDK_INTERP_BILINEAR);
@@ -749,11 +743,11 @@ static void _lib_import_update_preview(GtkFileChooser *file_chooser, gpointer da
 
 static void _lib_import_single_image_callback(GtkWidget *widget, gpointer user_data)
 {
-  dt_lib_module_t* self = (dt_lib_module_t*)user_data;
+  dt_lib_module_t *self = (dt_lib_module_t *)user_data;
   GtkWidget *win = dt_ui_main_window(darktable.gui->ui);
-  GtkWidget *filechooser = gtk_file_chooser_dialog_new(
-      _("import image"), GTK_WINDOW(win), GTK_FILE_CHOOSER_ACTION_OPEN, _("_cancel"), GTK_RESPONSE_CANCEL,
-      _("_open"), GTK_RESPONSE_ACCEPT, (char *)NULL);
+  GtkWidget *filechooser
+      = gtk_file_chooser_dialog_new(_("import image"), GTK_WINDOW(win), GTK_FILE_CHOOSER_ACTION_OPEN, _("_cancel"),
+                                    GTK_RESPONSE_CANCEL, _("_open"), GTK_RESPONSE_ACCEPT, (char *)NULL);
 #ifdef GDK_WINDOWING_QUARTZ
   dt_osx_disallow_fullscreen(filechooser);
 #endif
@@ -856,11 +850,11 @@ static void _lib_import_single_image_callback(GtkWidget *widget, gpointer user_d
 
 static void _lib_import_folder_callback(GtkWidget *widget, gpointer user_data)
 {
-  dt_lib_module_t* self= (dt_lib_module_t*) user_data;
+  dt_lib_module_t *self = (dt_lib_module_t *)user_data;
   GtkWidget *win = dt_ui_main_window(darktable.gui->ui);
   GtkWidget *filechooser = gtk_file_chooser_dialog_new(
-      _("import film"), GTK_WINDOW(win), GTK_FILE_CHOOSER_ACTION_SELECT_FOLDER, _("_cancel"),
-      GTK_RESPONSE_CANCEL, _("_open"), GTK_RESPONSE_ACCEPT, (char *)NULL);
+      _("import film"), GTK_WINDOW(win), GTK_FILE_CHOOSER_ACTION_SELECT_FOLDER, _("_cancel"), GTK_RESPONSE_CANCEL,
+      _("_open"), GTK_RESPONSE_ACCEPT, (char *)NULL);
 #ifdef GDK_WINDOWING_QUARTZ
   dt_osx_disallow_fullscreen(filechooser);
 #endif
@@ -946,9 +940,9 @@ static int lua_register_widget(lua_State *L)
   dt_lib_module_t *self = lua_touserdata(L, lua_upvalueindex(1));
   dt_lib_import_t *d = (dt_lib_import_t *)self->data;
   lua_widget widget;
-  luaA_to(L,lua_widget,&widget,1);
-  dt_lua_widget_bind(L,widget);
-  gtk_box_pack_start(GTK_BOX(d->extra_lua_widgets),widget->widget, TRUE, TRUE, 0);
+  luaA_to(L, lua_widget, &widget, 1);
+  dt_lua_widget_bind(L, widget);
+  gtk_box_pack_start(GTK_BOX(d->extra_lua_widgets), widget->widget, TRUE, TRUE, 0);
   return 0;
 }
 
@@ -957,8 +951,8 @@ void init(dt_lib_module_t *self)
 {
   lua_State *L = darktable.lua_state.state;
   int my_type = dt_lua_module_entry_get_type(L, "lib", self->plugin_name);
-  lua_pushlightuserdata(L,self);
-  lua_pushcclosure(L, lua_register_widget,1);
+  lua_pushlightuserdata(L, self);
+  lua_pushcclosure(L, lua_register_widget, 1);
   dt_lua_gtk_wrap(L);
   lua_pushcclosure(L, dt_lua_type_member_common, 1);
   dt_lua_type_register_const_type(L, my_type, "register_widget");
@@ -1012,12 +1006,11 @@ void gui_init(dt_lib_module_t *self)
   d->camctl_listener.control_status = _camctl_camera_control_status_callback;
   d->camctl_listener.camera_disconnected = _camctl_camera_disconnected_callback;
   dt_camctl_register_listener(darktable.camctl, &d->camctl_listener);
-  dt_control_signal_connect(darktable.signals, DT_SIGNAL_CAMERA_DETECTED, G_CALLBACK(_camera_detected),
-                            self);
+  dt_control_signal_connect(darktable.signals, DT_SIGNAL_CAMERA_DETECTED, G_CALLBACK(_camera_detected), self);
 #endif
 #ifdef USE_LUA
   /* initialize the lua area  and make sure it survives its parent's destruction*/
-  d->extra_lua_widgets = gtk_box_new(GTK_ORIENTATION_VERTICAL,5);
+  d->extra_lua_widgets = gtk_box_new(GTK_ORIENTATION_VERTICAL, 5);
   g_object_ref_sink(d->extra_lua_widgets);
 #endif
 }

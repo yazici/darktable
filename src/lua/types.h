@@ -40,8 +40,8 @@ typedef char *char_filename_length;
 typedef char *char_path_length;
 typedef const char *const_string; // string that has no push function
 typedef double protected_double;  // like double, but NAN is mapped to nil
-typedef double progress_double; // a double in [0.0,1.0] any value out of bound will be silently converted to
-                                // the bound both at push and pull time
+typedef double progress_double;   // a double in [0.0,1.0] any value out of bound will be silently converted to
+                                  // the bound both at push and pull time
 
 // Types added to the lua type system and useable externally
 typedef GtkOrientation dt_lua_orientation_t;
@@ -78,28 +78,27 @@ luaA_Type dt_lua_init_type_type(lua_State *L, luaA_Type type_id);
 /* MEMBER REGISTRATION FUNCTIONS */
 /*********************************/
 /// register a read-only member, the member function is poped from the stack
-#define dt_lua_type_register_const(L, type_name, name)                                                       \
+#define dt_lua_type_register_const(L, type_name, name)                                                            \
   dt_lua_type_register_const_type(L, luaA_type_find(L, #type_name), name)
 void dt_lua_type_register_const_type(lua_State *L, luaA_Type type_id, const char *name);
 
 /// register a read-write member, the member function is poped from the stack
-#define dt_lua_type_register(L, type_name, name)                                                             \
-  dt_lua_type_register_type(L, luaA_type_find(L, #type_name), name)
+#define dt_lua_type_register(L, type_name, name) dt_lua_type_register_type(L, luaA_type_find(L, #type_name), name)
 void dt_lua_type_register_type(lua_State *L, luaA_Type type_id, const char *name);
 
 /// register a function for all fields of luaautoc struct, the member function is poped from the stack
 /// detects red-only vs read-write automatically
-#define dt_lua_type_register_struct(L, type_name)                                                            \
+#define dt_lua_type_register_struct(L, type_name)                                                                 \
   dt_lua_type_register_struct_type(L, luaA_type_find(L, #type_name))
 void dt_lua_type_register_struct_type(lua_State *L, luaA_Type type_id);
 
 // register a function for number index
 // first push the len function (can be nil)
 // then push the member function
-#define dt_lua_type_register_number(L, type_name)                                                            \
+#define dt_lua_type_register_number(L, type_name)                                                                 \
   dt_lua_type_register_number_type(L, luaA_type_find(L, #type_name))
 void dt_lua_type_register_number_type(lua_State *L, luaA_Type type_id);
-#define dt_lua_type_register_number_const(L, type_name)                                                      \
+#define dt_lua_type_register_number_const(L, type_name)                                                           \
   dt_lua_type_register_number_const_type(L, luaA_type_find(L, #type_name))
 void dt_lua_type_register_number_const_type(lua_State *L, luaA_Type type_id);
 
@@ -107,7 +106,7 @@ void dt_lua_type_register_number_const_type(lua_State *L, luaA_Type type_id);
 /// the type will reuse all members and metafiels from the parent (unless it has its own)
 /// inheritence will be marked in __luaA_ParentMetatable
 /// THIS FUNCTION MUST BE CALLED AFTER PARENT WAS COMPLETELY DEFINED
-#define dt_lua_type_register_parent(L, type_name, parent_type_name)                                          \
+#define dt_lua_type_register_parent(L, type_name, parent_type_name)                                               \
   dt_lua_type_register_parent_type(L, luaA_type_find(L, #type_name), luaA_type_find(L, #parent_type_name))
 void dt_lua_type_register_parent_type(lua_State *L, luaA_Type type_id, luaA_Type parent_type_id);
 
@@ -136,12 +135,12 @@ luaA_Type dt_lua_init_int_type_type(lua_State *L, luaA_Type type_id);
 luaA_Type dt_lua_init_gpointer_type_type(lua_State *L, luaA_Type type_id);
 
 /**
-  * make a pointer an alias of another pointer. Both pointers will push the same lua object 
+  * make a pointer an alias of another pointer. Both pointers will push the same lua object
   * when pushed on the stack. The object contains the original pointer
   */
-#define dt_lua_type_gpointer_alias(L,type_name,pointer,alias) \
-  dt_lua_type_gpointer_alias_type(L,luaA_type(L,type_name),pointer,alias)
-void dt_lua_type_gpointer_alias_type(lua_State*L,luaA_Type type_id,void* pointer,void* alias);
+#define dt_lua_type_gpointer_alias(L, type_name, pointer, alias)                                                  \
+  dt_lua_type_gpointer_alias_type(L, luaA_type(L, type_name), pointer, alias)
+void dt_lua_type_gpointer_alias_type(lua_State *L, luaA_Type type_id, void *pointer, void *alias);
 
 
 /**
@@ -151,7 +150,7 @@ void dt_lua_type_gpointer_alias_type(lua_State*L,luaA_Type type_id,void* pointer
   * luaA_to will also raise an error
   * NOTE : if the object had aliases, the aliases will return NULL too.
   */
-void dt_lua_type_gpointer_drop(lua_State*L, void* pointer);
+void dt_lua_type_gpointer_drop(lua_State *L, void *pointer);
 
 /**
  * similar to dt_lua_init_type but creates a singleton type
@@ -175,8 +174,9 @@ luaA_Type dt_lua_init_wrapped_singleton(lua_State *L, lua_CFunction pusher, lua_
 gboolean dt_lua_isa_type(lua_State *L, int index, luaA_Type type_id);
 gboolean dt_lua_typeisa_type(lua_State *L, luaA_Type obj_type, luaA_Type type_id);
 
-#define dt_lua_type_setmetafield(L,type_name,name) dt_lua_type_setmetafield_type(L,luaA_type(L,type_name),name)
-void dt_lua_type_setmetafield_type(lua_State*L,luaA_Type type,const char* method_name);
+#define dt_lua_type_setmetafield(L, type_name, name)                                                              \
+  dt_lua_type_setmetafield_type(L, luaA_type(L, type_name), name)
+void dt_lua_type_setmetafield_type(lua_State *L, luaA_Type type, const char *method_name);
 
 int dt_lua_init_early_types(lua_State *L);
 

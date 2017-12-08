@@ -21,8 +21,8 @@
 #include <gtk/gtk.h>
 #include <lua/lua.h>
 
-GtkGrid* init_tab_lua(GtkWidget *dialog, GtkWidget *tab);
-void destroy_tab_lua( GtkGrid *grid);
+GtkGrid *init_tab_lua(GtkWidget *dialog, GtkWidget *tab);
+void destroy_tab_lua(GtkGrid *grid);
 
 int dt_lua_init_preferences(lua_State *L);
 

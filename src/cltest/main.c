@@ -28,14 +28,12 @@ int main(int argc, char *arg[])
 {
   int result = 1;
   // only used to force-init opencl, so we want these options:
-  char *m_arg[] = { "-d", "opencl", "--library", ":memory:"};
+  char *m_arg[] = { "-d", "opencl", "--library", ":memory:" };
   const int m_argc = sizeof(m_arg) / sizeof(m_arg[0]);
   char **argv = malloc(argc * sizeof(arg[0]) + sizeof(m_arg));
   if(!argv) goto end;
-  for(int i = 0; i < argc; i++)
-    argv[i] = arg[i];
-  for(int i = 0; i < m_argc; i++)
-    argv[argc + i] = m_arg[i];
+  for(int i = 0; i < argc; i++) argv[i] = arg[i];
+  for(int i = 0; i < m_argc; i++) argv[argc + i] = m_arg[i];
   argc += m_argc;
   if(dt_init(argc, argv, FALSE, FALSE, NULL)) goto end;
   dt_cleanup();

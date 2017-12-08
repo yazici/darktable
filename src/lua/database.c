@@ -167,8 +167,7 @@ static int database_numindex(lua_State *L)
   }
   sqlite3_stmt *stmt = NULL;
   char query[1024];
-  snprintf(query, sizeof(query), "SELECT id FROM main.images ORDER BY id LIMIT 1 OFFSET %d",
-           index - 1);
+  snprintf(query, sizeof(query), "SELECT id FROM main.images ORDER BY id LIMIT 1 OFFSET %d", index - 1);
   DT_DEBUG_SQLITE3_PREPARE_V2(dt_database_get(darktable.db), query, -1, &stmt, NULL);
   if(sqlite3_step(stmt) == SQLITE_ROW)
   {
@@ -197,24 +196,23 @@ static int collection_numindex(lua_State *L)
   {
     return luaL_error(L, "incorrect index in database");
   }
-  int imgid = dt_collection_get_nth(darktable.collection,index-1);
-  if (imgid >0)
+  int imgid = dt_collection_get_nth(darktable.collection, index - 1);
+  if(imgid > 0)
   {
     luaA_push(L, dt_lua_image_t, &imgid);
-  } else { 
+  }
+  else
+  {
     lua_pushnil(L);
   }
   return 1;
-
 }
 
 static void on_film_imported(gpointer instance, uint32_t id, gpointer user_data)
 {
-  dt_lua_async_call_alien(dt_lua_event_trigger_wrapper,
-      0,NULL,NULL,
-      LUA_ASYNC_TYPENAME,"const char*","post-import-film",
-      LUA_ASYNC_TYPENAME,"dt_lua_film_t",GINT_TO_POINTER(id),
-      LUA_ASYNC_DONE);
+  dt_lua_async_call_alien(dt_lua_event_trigger_wrapper, 0, NULL, NULL, LUA_ASYNC_TYPENAME, "const char*",
+                          "post-import-film", LUA_ASYNC_TYPENAME, "dt_lua_film_t", GINT_TO_POINTER(id),
+                          LUA_ASYNC_DONE);
 }
 
 int dt_lua_init_database(lua_State *L)
@@ -258,8 +256,7 @@ int dt_lua_init_database(lua_State *L)
   lua_pushcfunction(L, dt_lua_event_multiinstance_register);
   lua_pushcfunction(L, dt_lua_event_multiinstance_trigger);
   dt_lua_event_add(L, "post-import-film");
-  dt_control_signal_connect(darktable.signals, DT_SIGNAL_FILMROLLS_IMPORTED, G_CALLBACK(on_film_imported),
-                            NULL);
+  dt_control_signal_connect(darktable.signals, DT_SIGNAL_FILMROLLS_IMPORTED, G_CALLBACK(on_film_imported), NULL);
 
   lua_pushcfunction(L, dt_lua_event_multiinstance_register);
   lua_pushcfunction(L, dt_lua_event_multiinstance_trigger);

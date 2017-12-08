@@ -84,9 +84,8 @@ static inline int dt_pthread_mutex_destroy(dt_pthread_mutex_t *mutex)
 }
 
 #define dt_pthread_mutex_init(A, B) dt_pthread_mutex_init_with_caller(A, B, __FILE__, __LINE__, __FUNCTION__)
-static inline int dt_pthread_mutex_init_with_caller(dt_pthread_mutex_t *mutex,
-                                                    const pthread_mutexattr_t *attr, const char *file,
-                                                    const int line, const char *function)
+static inline int dt_pthread_mutex_init_with_caller(dt_pthread_mutex_t *mutex, const pthread_mutexattr_t *attr,
+                                                    const char *file, const int line, const char *function)
 {
   memset(mutex, 0x0, sizeof(dt_pthread_mutex_t));
   snprintf(mutex->name, sizeof(mutex->name), "%s:%d (%s)", file, line, function);
@@ -107,8 +106,8 @@ static inline int dt_pthread_mutex_init_with_caller(dt_pthread_mutex_t *mutex,
 }
 
 #define dt_pthread_mutex_lock(A) dt_pthread_mutex_lock_with_caller(A, __FILE__, __LINE__, __FUNCTION__)
-static inline int dt_pthread_mutex_lock_with_caller(dt_pthread_mutex_t *mutex, const char *file,
-                                                    const int line, const char *function)
+static inline int dt_pthread_mutex_lock_with_caller(dt_pthread_mutex_t *mutex, const char *file, const int line,
+                                                    const char *function)
 {
   const double t0 = dt_pthread_get_wtime();
   const int ret = pthread_mutex_lock(&(mutex->mutex));
@@ -134,8 +133,8 @@ static inline int dt_pthread_mutex_lock_with_caller(dt_pthread_mutex_t *mutex, c
 }
 
 #define dt_pthread_mutex_trylock(A) dt_pthread_mutex_trylock_with_caller(A, __FILE__, __LINE__, __FUNCTION__)
-static inline int dt_pthread_mutex_trylock_with_caller(dt_pthread_mutex_t *mutex, const char *file,
-                                                       const int line, const char *function)
+static inline int dt_pthread_mutex_trylock_with_caller(dt_pthread_mutex_t *mutex, const char *file, const int line,
+                                                       const char *function)
 {
   const double t0 = dt_pthread_get_wtime();
   const int ret = pthread_mutex_trylock(&(mutex->mutex));
@@ -162,8 +161,8 @@ static inline int dt_pthread_mutex_trylock_with_caller(dt_pthread_mutex_t *mutex
 }
 
 #define dt_pthread_mutex_unlock(A) dt_pthread_mutex_unlock_with_caller(A, __FILE__, __LINE__, __FUNCTION__)
-static inline int dt_pthread_mutex_unlock_with_caller(dt_pthread_mutex_t *mutex, const char *file,
-                                                      const int line, const char *function)
+static inline int dt_pthread_mutex_unlock_with_caller(dt_pthread_mutex_t *mutex, const char *file, const int line,
+                                                      const char *function)
 {
   const double t0 = dt_pthread_get_wtime();
   const double locked = t0 - mutex->time_locked;
@@ -200,8 +199,7 @@ static inline int dt_pthread_cond_wait(pthread_cond_t *cond, dt_pthread_mutex_t 
 }
 
 
-static inline int dt_pthread_rwlock_init(dt_pthread_rwlock_t *lock,
-    const pthread_rwlockattr_t *attr)
+static inline int dt_pthread_rwlock_init(dt_pthread_rwlock_t *lock, const pthread_rwlockattr_t *attr)
 {
   memset(lock, 0, sizeof(dt_pthread_rwlock_t));
   lock->cnt = 0;
@@ -244,8 +242,7 @@ static inline int dt_pthread_rwlock_rdlock_with_caller(dt_pthread_rwlock_t *rwlo
   assert(!res);
   assert(!(res && pthread_equal(rwlock->writer, pthread_self())));
   __sync_fetch_and_add(&(rwlock->cnt), 1);
-  if(!res)
-    snprintf(rwlock->name, sizeof(rwlock->name), "r:%s:%d", file, line);
+  if(!res) snprintf(rwlock->name, sizeof(rwlock->name), "r:%s:%d", file, line);
   return res;
 }
 #define dt_pthread_rwlock_wrlock(A) dt_pthread_rwlock_wrlock_with_caller(A, __FILE__, __LINE__)
@@ -336,10 +333,10 @@ static inline int dt_pthread_cond_wait(pthread_cond_t *cond, dt_pthread_mutex_t 
 #define dt_pthread_rwlock_tryrdlock pthread_rwlock_tryrdlock
 #define dt_pthread_rwlock_trywrlock pthread_rwlock_trywrlock
 
-#define dt_pthread_rwlock_rdlock_with_caller(A,B,C) pthread_rwlock_rdlock(A)
-#define dt_pthread_rwlock_wrlock_with_caller(A,B,C) pthread_rwlock_wrlock(A)
-#define dt_pthread_rwlock_tryrdlock_with_caller(A,B,C) pthread_rwlock_tryrdlock(A)
-#define dt_pthread_rwlock_trywrlock_with_caller(A,B,C) pthread_rwlock_trywrlock(A)
+#define dt_pthread_rwlock_rdlock_with_caller(A, B, C) pthread_rwlock_rdlock(A)
+#define dt_pthread_rwlock_wrlock_with_caller(A, B, C) pthread_rwlock_wrlock(A)
+#define dt_pthread_rwlock_tryrdlock_with_caller(A, B, C) pthread_rwlock_tryrdlock(A)
+#define dt_pthread_rwlock_trywrlock_with_caller(A, B, C) pthread_rwlock_trywrlock(A)
 
 #endif
 

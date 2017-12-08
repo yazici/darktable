@@ -38,7 +38,7 @@ static void dt_circle_get_distance(float x, int y, float as, dt_masks_form_gui_t
   if(!gpt) return;
 
   // we first check if we are inside the source form
-  if(dt_masks_point_in_form_exact(x,yf,gpt->source,1,gpt->source_count))
+  if(dt_masks_point_in_form_exact(x, yf, gpt->source, 1, gpt->source_count))
   {
     *inside_source = 1;
     *inside = 1;
@@ -46,13 +46,13 @@ static void dt_circle_get_distance(float x, int y, float as, dt_masks_form_gui_t
   }
 
   // we check if it's inside borders
-  if(!dt_masks_point_in_form_exact(x,yf,gpt->border,1,gpt->border_count)) return;
+  if(!dt_masks_point_in_form_exact(x, yf, gpt->border, 1, gpt->border_count)) return;
 
   *inside = 1;
   *near = 0;
 
   // and we check if it's inside form
-  *inside_border = !(dt_masks_point_in_form_near(x,yf,gpt->points,1,gpt->points_count,as,near));
+  *inside_border = !(dt_masks_point_in_form_near(x, yf, gpt->points, 1, gpt->points_count, as, near));
 }
 
 static int dt_circle_events_mouse_scrolled(struct dt_iop_module_t *module, float pzx, float pzy, int up,
@@ -118,10 +118,9 @@ static int dt_circle_events_mouse_scrolled(struct dt_iop_module_t *module, float
   return 0;
 }
 
-static int dt_circle_events_button_pressed(struct dt_iop_module_t *module, float pzx, float pzy,
-                                           double pressure, int which, int type, uint32_t state,
-                                           dt_masks_form_t *form, int parentid, dt_masks_form_gui_t *gui,
-                                           int index)
+static int dt_circle_events_button_pressed(struct dt_iop_module_t *module, float pzx, float pzy, double pressure,
+                                           int which, int type, uint32_t state, dt_masks_form_t *form,
+                                           int parentid, dt_masks_form_gui_t *gui, int index)
 {
   if(!gui) return 0;
   if(gui->source_selected && !gui->creation && gui->edit_mode == DT_MASKS_EDIT_FULL)
@@ -261,8 +260,7 @@ static int dt_circle_events_button_released(struct dt_iop_module_t *module, floa
         dt_masks_point_group_t *gpt = (dt_masks_point_group_t *)forms->data;
         if(gpt->formid == form->formid)
         {
-          darktable.develop->form_visible->points
-              = g_list_remove(darktable.develop->form_visible->points, gpt);
+          darktable.develop->form_visible->points = g_list_remove(darktable.develop->form_visible->points, gpt);
           free(gpt);
           break;
         }
@@ -340,8 +338,8 @@ static int dt_circle_events_button_released(struct dt_iop_module_t *module, floa
 }
 
 static int dt_circle_events_mouse_moved(struct dt_iop_module_t *module, float pzx, float pzy, double pressure,
-                                        int which, dt_masks_form_t *form, int parentid,
-                                        dt_masks_form_gui_t *gui, int index)
+                                        int which, dt_masks_form_t *form, int parentid, dt_masks_form_gui_t *gui,
+                                        int index)
 {
   if(gui->form_dragging || gui->source_dragging)
   {
@@ -358,8 +356,8 @@ static int dt_circle_events_mouse_moved(struct dt_iop_module_t *module, float pz
     float as = 0.005f / zoom_scale * darktable.develop->preview_pipe->backbuf_width;
     int in, inb, near, ins;
     dt_circle_get_distance(pzx * darktable.develop->preview_pipe->backbuf_width,
-                           pzy * darktable.develop->preview_pipe->backbuf_height, as, gui, index, &in, &inb,
-                           &near, &ins);
+                           pzy * darktable.develop->preview_pipe->backbuf_height, as, gui, index, &in, &inb, &near,
+                           &ins);
     if(ins)
     {
       gui->form_selected = TRUE;
@@ -494,11 +492,9 @@ static void dt_circle_events_post_expose(cairo_t *cr, float zoom_scale, dt_masks
       cairo_line_to(cr, arrowx, arrowy);                             // dest border
       // then draw to line for the arrow itself
       const float arrow_scale = 8.0;
-      cairo_move_to(cr, arrowx + arrow_scale * cos(cangle + (0.4)),
-                    arrowy + arrow_scale * sin(cangle + (0.4)));
+      cairo_move_to(cr, arrowx + arrow_scale * cos(cangle + (0.4)), arrowy + arrow_scale * sin(cangle + (0.4)));
       cairo_line_to(cr, arrowx, arrowy);
-      cairo_line_to(cr, arrowx + arrow_scale * cos(cangle - (0.4)),
-                    arrowy + arrow_scale * sin(cangle - (0.4)));
+      cairo_line_to(cr, arrowx + arrow_scale * cos(cangle - (0.4)), arrowy + arrow_scale * sin(cangle - (0.4)));
 
       cairo_set_dash(cr, dashed, 0, 0);
       if((gui->group_selected == index) && (gui->form_selected || gui->form_dragging))
@@ -572,8 +568,8 @@ static int dt_circle_get_points(dt_develop_t *dev, float x, float y, float radiu
   return 0;
 }
 
-static int dt_circle_get_source_area(dt_iop_module_t *module, dt_dev_pixelpipe_iop_t *piece,
-                                     dt_masks_form_t *form, int *width, int *height, int *posx, int *posy)
+static int dt_circle_get_source_area(dt_iop_module_t *module, dt_dev_pixelpipe_iop_t *piece, dt_masks_form_t *form,
+                                     int *width, int *height, int *posx, int *posy)
 {
   // we get the circle values
   dt_masks_point_circle_t *circle = (dt_masks_point_circle_t *)(g_list_first(form->points)->data);
@@ -708,8 +704,7 @@ static int dt_circle_get_mask(dt_iop_module_t *module, dt_dev_pixelpipe_iop_t *p
   }
 
   if(darktable.unmuted & DT_DEBUG_PERF)
-    dt_print(DT_DEBUG_MASKS, "[masks %s] circle transform took %0.04f sec\n", form->name,
-             dt_get_wtime() - start2);
+    dt_print(DT_DEBUG_MASKS, "[masks %s] circle transform took %0.04f sec\n", form->name, dt_get_wtime() - start2);
   start2 = dt_get_wtime();
 
   // we allocate the buffer
@@ -719,8 +714,7 @@ static int dt_circle_get_mask(dt_iop_module_t *module, dt_dev_pixelpipe_iop_t *p
   int wi = piece->pipe->iwidth, hi = piece->pipe->iheight;
   float center[2] = { circle->center[0] * wi, circle->center[1] * hi };
   float radius2 = circle->radius * MIN(wi, hi) * circle->radius * MIN(wi, hi);
-  float total2 = (circle->radius + circle->border) * MIN(wi, hi) * (circle->radius + circle->border)
-                 * MIN(wi, hi);
+  float total2 = (circle->radius + circle->border) * MIN(wi, hi) * (circle->radius + circle->border) * MIN(wi, hi);
   for(int i = 0; i < h; i++)
     for(int j = 0; j < w; j++)
     {
@@ -741,14 +735,14 @@ static int dt_circle_get_mask(dt_iop_module_t *module, dt_dev_pixelpipe_iop_t *p
 
   if(darktable.unmuted & DT_DEBUG_PERF)
     dt_print(DT_DEBUG_MASKS, "[masks %s] circle fill took %0.04f sec\n", form->name, dt_get_wtime() - start2);
-//   start2 = dt_get_wtime();
+  //   start2 = dt_get_wtime();
 
   return 1;
 }
 
 
-static int dt_circle_get_mask_roi(dt_iop_module_t *module, dt_dev_pixelpipe_iop_t *piece,
-                                  dt_masks_form_t *form, const dt_iop_roi_t *roi, float *buffer)
+static int dt_circle_get_mask_roi(dt_iop_module_t *module, dt_dev_pixelpipe_iop_t *piece, dt_masks_form_t *form,
+                                  const dt_iop_roi_t *roi, float *buffer)
 {
   double start2 = dt_get_wtime();
 
@@ -788,16 +782,14 @@ static int dt_circle_get_mask_roi(dt_iop_module_t *module, dt_dev_pixelpipe_iop_
   start2 = dt_get_wtime();
 
   // we back transform all these points
-  if(!dt_dev_distort_backtransform_plus(module->dev, piece->pipe, 0, module->priority, points,
-                                        (size_t)mw * mh))
+  if(!dt_dev_distort_backtransform_plus(module->dev, piece->pipe, 0, module->priority, points, (size_t)mw * mh))
   {
     free(points);
     return 0;
   }
 
   if(darktable.unmuted & DT_DEBUG_PERF)
-    dt_print(DT_DEBUG_MASKS, "[masks %s] circle transform took %0.04f sec\n", form->name,
-             dt_get_wtime() - start2);
+    dt_print(DT_DEBUG_MASKS, "[masks %s] circle transform took %0.04f sec\n", form->name, dt_get_wtime() - start2);
   start2 = dt_get_wtime();
 
   // we populate the buffer
@@ -862,7 +854,7 @@ static int dt_circle_get_mask_roi(dt_iop_module_t *module, dt_dev_pixelpipe_iop_
 
   if(darktable.unmuted & DT_DEBUG_PERF)
     dt_print(DT_DEBUG_MASKS, "[masks %s] circle fill took %0.04f sec\n", form->name, dt_get_wtime() - start2);
-//   start2 = dt_get_wtime();
+  //   start2 = dt_get_wtime();
 
   return 1;
 }

@@ -34,7 +34,7 @@
 #include <time.h>
 
 #ifdef _WIN32
-//MSVCRT does not have strptime implemented
+// MSVCRT does not have strptime implemented
 #include "win/strptime.h"
 #endif
 /*
@@ -107,8 +107,8 @@ static void _check_button_callback(GtkWidget *cb, gpointer user_data)
   else if(cb == cid->settings.general.date_override)
   {
     // Enable/disable the date entry widget
-    gtk_widget_set_sensitive(cid->settings.general.date_entry, gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(
-                                                                   cid->settings.general.date_override)));
+    gtk_widget_set_sensitive(cid->settings.general.date_entry,
+                             gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(cid->settings.general.date_override)));
   }
 }
 
@@ -208,9 +208,9 @@ static _camera_gconf_widget_t *_camera_import_gconf_widget(_camera_import_dialog
 
 static void _camera_import_dialog_new(_camera_import_dialog_t *data)
 {
-  data->dialog = gtk_dialog_new_with_buttons(_("import images from camera"), NULL, GTK_DIALOG_MODAL,
-                                             _("cancel"), GTK_RESPONSE_NONE, C_("camera import", "import"),
-                                             GTK_RESPONSE_ACCEPT, NULL);
+  data->dialog
+      = gtk_dialog_new_with_buttons(_("import images from camera"), NULL, GTK_DIALOG_MODAL, _("cancel"),
+                                    GTK_RESPONSE_NONE, C_("camera import", "import"), GTK_RESPONSE_ACCEPT, NULL);
 #ifdef GDK_WINDOWING_QUARTZ
   dt_osx_disallow_fullscreen(data->dialog);
 #endif
@@ -232,15 +232,13 @@ static void _camera_import_dialog_new(_camera_import_dialog_t *data)
   gtk_box_pack_start(GTK_BOX(data->import.page), data->import.info, FALSE, FALSE, 0);
 
   // jobcode
-  data->import.jobname
-      = _camera_import_gconf_widget(data, _("jobcode"), "plugins/capture/camera/import/jobcode");
+  data->import.jobname = _camera_import_gconf_widget(data, _("jobcode"), "plugins/capture/camera/import/jobcode");
   gtk_box_pack_start(GTK_BOX(data->import.page), GTK_WIDGET(data->import.jobname->widget), FALSE, FALSE, 0);
 
 
   // Create the treview with list model data store
   data->import.treeview = gtk_scrolled_window_new(NULL, NULL);
-  gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(data->import.treeview), GTK_POLICY_NEVER,
-                                 GTK_POLICY_ALWAYS);
+  gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(data->import.treeview), GTK_POLICY_NEVER, GTK_POLICY_ALWAYS);
 
   gtk_container_add(GTK_CONTAINER(data->import.treeview), gtk_tree_view_new());
   GtkTreeView *treeview = GTK_TREE_VIEW(gtk_bin_get_child(GTK_BIN(data->import.treeview)));
@@ -274,29 +272,31 @@ static void _camera_import_dialog_new(_camera_import_dialog_t *data)
 
   // ignoring of jpegs. hack while we don't handle raw+jpeg in the same directories.
   data->settings.general.ignore_jpeg = gtk_check_button_new_with_label(_("ignore JPEG files"));
-  gtk_widget_set_tooltip_text(data->settings.general.ignore_jpeg,
-               _("do not load files with an extension of .jpg or .jpeg. this can be useful when there are "
-                 "raw+JPEG in a directory."));
+  gtk_widget_set_tooltip_text(
+      data->settings.general.ignore_jpeg,
+      _("do not load files with an extension of .jpg or .jpeg. this can be useful when there are "
+        "raw+JPEG in a directory."));
   gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(data->settings.general.ignore_jpeg),
                                dt_conf_get_bool("ui_last/import_ignore_jpegs"));
   gtk_box_pack_start(GTK_BOX(data->settings.page), data->settings.general.ignore_jpeg, FALSE, FALSE, 0);
-  g_signal_connect(G_OBJECT(data->settings.general.ignore_jpeg), "clicked",
-                   G_CALLBACK(_check_button_callback), data);
+  g_signal_connect(G_OBJECT(data->settings.general.ignore_jpeg), "clicked", G_CALLBACK(_check_button_callback),
+                   data);
 
   GtkWidget *hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
   data->settings.general.date_override = gtk_check_button_new_with_label(_("override today's date"));
   gtk_box_pack_start(GTK_BOX(hbox), data->settings.general.date_override, FALSE, FALSE, 0);
-  gtk_widget_set_tooltip_text(data->settings.general.date_override,
-               _("check this, if you want to override the timestamp used when expanding variables:\n$(YEAR), "
-                 "$(MONTH), $(DAY),\n$(HOUR), $(MINUTE), $(SECONDS)"));
+  gtk_widget_set_tooltip_text(
+      data->settings.general.date_override,
+      _("check this, if you want to override the timestamp used when expanding variables:\n$(YEAR), "
+        "$(MONTH), $(DAY),\n$(HOUR), $(MINUTE), $(SECONDS)"));
 
   data->settings.general.date_entry = gtk_entry_new();
-  gtk_widget_set_sensitive(data->settings.general.date_entry, gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(
-                                                                  data->settings.general.date_override)));
+  gtk_widget_set_sensitive(data->settings.general.date_entry,
+                           gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(data->settings.general.date_override)));
   gtk_box_pack_start(GTK_BOX(hbox), data->settings.general.date_entry, TRUE, TRUE, 0);
 
-  g_signal_connect(G_OBJECT(data->settings.general.date_override), "clicked",
-                   G_CALLBACK(_check_button_callback), data);
+  g_signal_connect(G_OBJECT(data->settings.general.date_override), "clicked", G_CALLBACK(_check_button_callback),
+                   data);
 
   gtk_box_pack_start(GTK_BOX(data->settings.page), hbox, FALSE, FALSE, 0);
 
@@ -333,8 +333,8 @@ static gboolean _camera_storage_image_filename_gui_thread(gpointer user_data)
   return FALSE;
 }
 
-static int _camera_storage_image_filename(const dt_camera_t *camera, const char *filename,
-                                          CameraFile *preview, CameraFile *exif, void *user_data)
+static int _camera_storage_image_filename(const dt_camera_t *camera, const char *filename, CameraFile *preview,
+                                          CameraFile *exif, void *user_data)
 {
   _camera_import_dialog_t *data = (_camera_import_dialog_t *)user_data;
   const char *img;
@@ -395,8 +395,7 @@ static int _camera_storage_image_filename(const dt_camera_t *camera, const char 
   }
 
   // filename\n 1/60 f/2.8 24mm iso 160
-  params->file_info = g_strdup_printf("%s%c%s", filename, *exif_info ? '\n' : '\0',
-                                      *exif_info ? exif_info : "");
+  params->file_info = g_strdup_printf("%s%c%s", filename, *exif_info ? '\n' : '\0', *exif_info ? exif_info : "");
   params->thumb = thumb;
   params->store = data->store;
   g_main_context_invoke(NULL, _camera_storage_image_filename_gui_thread, params);

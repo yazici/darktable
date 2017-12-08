@@ -48,7 +48,7 @@ const char *name(dt_lib_module_t *self)
 
 const char **views(dt_lib_module_t *self)
 {
-  static const char *v[] = {"*", NULL};
+  static const char *v[] = { "*", NULL };
   return v;
 }
 
@@ -83,8 +83,7 @@ void gui_init(dt_lib_module_t *self)
     gtk_widget_set_tooltip_text(d->grouping_button, _("expand grouped images"));
   else
     gtk_widget_set_tooltip_text(d->grouping_button, _("collapse grouped images"));
-  g_signal_connect(G_OBJECT(d->grouping_button), "clicked", G_CALLBACK(_lib_filter_grouping_button_clicked),
-                   NULL);
+  g_signal_connect(G_OBJECT(d->grouping_button), "clicked", G_CALLBACK(_lib_filter_grouping_button_clicked), NULL);
   gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(d->grouping_button), darktable.gui->grouping);
 
   /* create the "show/hide overlays" button */
@@ -103,8 +102,7 @@ void gui_init(dt_lib_module_t *self)
   gtk_widget_set_size_request(d->preferences_button, DT_PIXEL_APPLY_DPI(18), DT_PIXEL_APPLY_DPI(18));
   gtk_box_pack_end(GTK_BOX(self->widget), d->preferences_button, FALSE, FALSE, 2);
   gtk_widget_set_tooltip_text(d->preferences_button, _("show global preferences"));
-  g_signal_connect(G_OBJECT(d->preferences_button), "clicked", G_CALLBACK(_lib_preferences_button_clicked),
-                   NULL);
+  g_signal_connect(G_OBJECT(d->preferences_button), "clicked", G_CALLBACK(_lib_preferences_button_clicked), NULL);
 }
 
 void gui_cleanup(dt_lib_module_t *self)
@@ -131,11 +129,9 @@ static void _lib_filter_grouping_button_clicked(GtkWidget *widget, gpointer user
   dt_collection_update_query(darktable.collection);
 
 #ifdef USE_LUA
-  dt_lua_async_call_alien(dt_lua_event_trigger_wrapper,
-      0,NULL,NULL,
-      LUA_ASYNC_TYPENAME,"const char*","global_toolbox-grouping_toggle",
-      LUA_ASYNC_TYPENAME,"bool",darktable.gui->grouping,
-      LUA_ASYNC_DONE);
+  dt_lua_async_call_alien(dt_lua_event_trigger_wrapper, 0, NULL, NULL, LUA_ASYNC_TYPENAME, "const char*",
+                          "global_toolbox-grouping_toggle", LUA_ASYNC_TYPENAME, "bool", darktable.gui->grouping,
+                          LUA_ASYNC_DONE);
 #endif // USE_LUA
 }
 
@@ -150,11 +146,9 @@ static void _lib_overlays_button_clicked(GtkWidget *widget, gpointer user_data)
   dt_control_signal_raise(darktable.signals, DT_SIGNAL_COLLECTION_CHANGED);
 
 #ifdef USE_LUA
-  dt_lua_async_call_alien(dt_lua_event_trigger_wrapper,
-      0,NULL,NULL,
-      LUA_ASYNC_TYPENAME,"const char*","global_toolbox-overlay_toggle",
-      LUA_ASYNC_TYPENAME,"bool",darktable.gui->show_overlays,
-      LUA_ASYNC_DONE);
+  dt_lua_async_call_alien(dt_lua_event_trigger_wrapper, 0, NULL, NULL, LUA_ASYNC_TYPENAME, "const char*",
+                          "global_toolbox-overlay_toggle", LUA_ASYNC_TYPENAME, "bool",
+                          darktable.gui->show_overlays, LUA_ASYNC_DONE);
 #endif // USE_LUA
 }
 

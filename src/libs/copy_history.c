@@ -56,7 +56,7 @@ const char *name(dt_lib_module_t *self)
 
 const char **views(dt_lib_module_t *self)
 {
-  static const char *v[] = {"lighttable", NULL};
+  static const char *v[] = { "lighttable", NULL };
   return v;
 }
 
@@ -74,8 +74,8 @@ static void load_button_clicked(GtkWidget *widget, dt_lib_module_t *self)
 {
   GtkWidget *win = dt_ui_main_window(darktable.gui->ui);
   GtkWidget *filechooser = gtk_file_chooser_dialog_new(
-      _("open sidecar file"), GTK_WINDOW(win), GTK_FILE_CHOOSER_ACTION_OPEN, _("_cancel"),
-      GTK_RESPONSE_CANCEL, _("_open"), GTK_RESPONSE_ACCEPT, (char *)NULL);
+      _("open sidecar file"), GTK_WINDOW(win), GTK_FILE_CHOOSER_ACTION_OPEN, _("_cancel"), GTK_RESPONSE_CANCEL,
+      _("_open"), GTK_RESPONSE_ACCEPT, (char *)NULL);
 #ifdef GDK_WINDOWING_QUARTZ
   dt_osx_disallow_fullscreen(filechooser);
 #endif
@@ -118,8 +118,8 @@ static int get_selected_image(void)
 
   /* get imageid for source if history past */
   sqlite3_stmt *stmt;
-  DT_DEBUG_SQLITE3_PREPARE_V2(dt_database_get(darktable.db), "SELECT imgid FROM main.selected_images",
-                              -1, &stmt, NULL);
+  DT_DEBUG_SQLITE3_PREPARE_V2(dt_database_get(darktable.db), "SELECT imgid FROM main.selected_images", -1, &stmt,
+                              NULL);
   if(sqlite3_step(stmt) == SQLITE_ROW)
   {
     /* copy history of first image in selection */
@@ -184,17 +184,18 @@ static void delete_button_clicked(GtkWidget *widget, gpointer user_data)
     const GtkWidget *win = dt_ui_main_window(darktable.gui->ui);
 
     int number;
-    if (dt_view_get_image_to_act_on() != -1)
+    if(dt_view_get_image_to_act_on() != -1)
       number = 1;
     else
       number = dt_collection_get_selected_count(darktable.collection);
 
-    if (number == 0) return;
+    if(number == 0) return;
 
     GtkWidget *dialog = gtk_message_dialog_new(
         GTK_WINDOW(win), GTK_DIALOG_DESTROY_WITH_PARENT, GTK_MESSAGE_QUESTION, GTK_BUTTONS_YES_NO,
         ngettext("do you really want to clear history of %d selected image?",
-                 "do you really want to clear history of %d selected images?", number), number);
+                 "do you really want to clear history of %d selected images?", number),
+        number);
 
     gtk_window_set_title(GTK_WINDOW(dialog), _("delete images' history?"));
     res = gtk_dialog_run(GTK_DIALOG(dialog));
@@ -260,7 +261,8 @@ int position()
   return 600;
 }
 
-#define ellipsize_button(button) gtk_label_set_ellipsize(GTK_LABEL(gtk_bin_get_child(GTK_BIN(button))), PANGO_ELLIPSIZE_END);
+#define ellipsize_button(button)                                                                                  \
+  gtk_label_set_ellipsize(GTK_LABEL(gtk_bin_get_child(GTK_BIN(button))), PANGO_ELLIPSIZE_END);
 void gui_init(dt_lib_module_t *self)
 {
   dt_lib_copy_history_t *d = (dt_lib_copy_history_t *)malloc(sizeof(dt_lib_copy_history_t));

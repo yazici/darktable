@@ -38,7 +38,11 @@
 // very fast, very approximate
 static inline float __attribute__((__unused__)) fasterlog(float x)
 {
-  union { float f; uint32_t i; } vx = { x };
+  union
+  {
+    float f;
+    uint32_t i;
+  } vx = { x };
   float y = vx.i;
   y *= 8.2629582881927490e-8f;
   return y - 87.989971088f;
@@ -55,14 +59,9 @@ static inline double thinplate_kernel(const double *x, const double *y)
   // return r * r * fasterlog(MAX(1e-8f, r));
 }
 
-static inline double compute_error(
-    const tonecurve_t *c,
-    const double **target,
-    const double *residual_L,
-    const double *residual_a,
-    const double *residual_b,
-    const int wd,
-    double *maxerr)
+static inline double compute_error(const tonecurve_t *c, const double **target, const double *residual_L,
+                                   const double *residual_a, const double *residual_b, const int wd,
+                                   double *maxerr)
 {
   // compute error:
   double err = 0.0;
@@ -78,8 +77,9 @@ static inline double compute_error(
     const double localerr = dt_colorspaces_deltaE_2000(Lab0, Lab1);
     err += localerr;
 #else
-    const double localerr = sqrt(residual_L[i] * residual_L[i] + residual_a[i] * residual_a[i] + residual_b[i] * residual_b[i]);
-    err += localerr/wd;
+    const double localerr
+        = sqrt(residual_L[i] * residual_L[i] + residual_a[i] * residual_a[i] + residual_b[i] * residual_b[i]);
+    err += localerr / wd;
 #endif
     merr = MAX(merr, localerr);
 
@@ -150,8 +150,8 @@ int thinplate_match(const tonecurve_t *curve, // tonecurve to apply after this (
                     int *permutation, // pointing to original order of points, to identify correct output coeff
                     double **coeff,   // output coefficient arrays for each dimension, ordered according to
                                       // permutation[dim]
-                    double *avgerr,           // average error
-                    double *maxerr)           // max error
+                    double *avgerr,   // average error
+                    double *maxerr)   // max error
 {
   if(avgerr) *avgerr = 0.0;
   if(maxerr) *maxerr = 0.0;
@@ -306,7 +306,7 @@ int thinplate_match(const tonecurve_t *curve, // tonecurve to apply after this (
           for(int i = 0; i < sparsity; i++)
             for(int j = 0; j < wd; j++) As[j * S + i] = A[j * wd + permutation[i]];
 
-          if(solve(As, w, v, b[ch], coeff[ch], wd, sparsity-1, S))
+          if(solve(As, w, v, b[ch], coeff[ch], wd, sparsity - 1, S))
           {
             free(r);
             free(b);
@@ -357,7 +357,7 @@ int thinplate_match(const tonecurve_t *curve, // tonecurve to apply after this (
         fprintf(stderr, "replacing %d <- %d\n", mincol, maxcol);
         // replace column
         permutation[mincol] = maxcol;
-        // reset norm[] of discarded column to something > 0
+// reset norm[] of discarded column to something > 0
 #ifdef EXACT
         norm[mincol] = 1.0;
 #else
@@ -372,7 +372,7 @@ int thinplate_match(const tonecurve_t *curve, // tonecurve to apply after this (
 #ifdef EXACT
     double err = 1. / maxdot;
 #else
-    const int sp = MIN(sparsity, S-1); // need to fix up for replacement
+    const int sp = MIN(sparsity, S - 1); // need to fix up for replacement
     // solve linear least squares for sparse c for every output channel:
     for(int ch = 0; ch < dim; ch++)
     {
@@ -408,15 +408,14 @@ int thinplate_match(const tonecurve_t *curve, // tonecurve to apply after this (
 #endif
     // residual is max CIE76 delta E now
     // everything < 2 is usually considired a very good approximation:
-    if(patches == S-4)
+    if(patches == S - 4)
     {
       if(avgerr) *avgerr = err;
       if(maxerr) *maxerr = merr;
       fprintf(stderr, "rank %d/%d avg DE %g max DE %g\n", sp + 1, patches, err, merr);
     }
-    if(s >= S && err >= olderr)
-      fprintf(stderr, "error increased!\n");
-      // return sparsity + 1;
+    if(s >= S && err >= olderr) fprintf(stderr, "error increased!\n");
+    // return sparsity + 1;
     // if(err < 2.0) return sparsity+1;
     olderr = err;
   }

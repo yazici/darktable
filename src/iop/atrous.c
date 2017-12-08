@@ -46,17 +46,17 @@ DT_MODULE_INTROSPECTION(1, dt_iop_atrous_params_t)
 #define MAX_NUM_SCALES 8 // 2*2^(i+1) + 1 = 1025px support for i = 8
 #define RES 64
 
-#define dt_atrous_show_upper_label(cr, text, layout, ink)                                                     \
-  pango_layout_set_text(layout, text, -1);                                                                   \
-  pango_layout_get_pixel_extents(layout, &ink, NULL);                                                        \
-  cairo_move_to(cr, .5 * (width - ink.width), (.08 * height) - ink.height);                                  \
+#define dt_atrous_show_upper_label(cr, text, layout, ink)                                                         \
+  pango_layout_set_text(layout, text, -1);                                                                        \
+  pango_layout_get_pixel_extents(layout, &ink, NULL);                                                             \
+  cairo_move_to(cr, .5 * (width - ink.width), (.08 * height) - ink.height);                                       \
   pango_cairo_show_layout(cr, layout);
 
 
-#define dt_atrous_show_lower_label(cr, text, layout, ink)                                                     \
-  pango_layout_set_text(layout, text, -1);                                                                   \
-  pango_layout_get_pixel_extents(layout, &ink, NULL);                                                        \
-  cairo_move_to(cr, .5 * (width - ink.width), (.98 * height) - ink.height);                                  \
+#define dt_atrous_show_lower_label(cr, text, layout, ink)                                                         \
+  pango_layout_set_text(layout, text, -1);                                                                        \
+  pango_layout_get_pixel_extents(layout, &ink, NULL);                                                             \
+  cairo_move_to(cr, .5 * (width - ink.width), (.98 * height) - ink.height);                                       \
   pango_cairo_show_layout(cr, layout);
 
 
@@ -137,9 +137,9 @@ void connect_key_accels(dt_iop_module_t *self)
 
 
 #define ALIGNED(a) __attribute__((aligned(a)))
-#define VEC4(a)                                                                                              \
-  {                                                                                                          \
-    (a), (a), (a), (a)                                                                                       \
+#define VEC4(a)                                                                                                   \
+  {                                                                                                               \
+    (a), (a), (a), (a)                                                                                            \
   }
 
 #if defined(__SSE2__)
@@ -192,121 +192,121 @@ static inline __m128 weight_sse2(const __m128 *c1, const __m128 *c2, const float
   __m128 square2 = _mm_shuffle_ps(square, square, _MM_SHUFFLE(3, 1, 2, 0)); // (?, d2, d3, d1)
   __m128 added = _mm_add_ps(square, square2);                               // (?, d2+d3, d2+d3, 2*d1)
   added = _mm_sub_ss(added, square);                                        // (?, d2+d3, d2+d3, d1)
-  __m128 sharpened = _mm_mul_ps(added, vsharpen);                   // (?, -s*(d2+d3), -s*(d2+d3), -s*d1)
-  __m128 exp = dt_fast_expf_sse2(sharpened);                        // (?, wc, wc, wl)
-  exp = _mm_castsi128_ps(_mm_slli_si128(_mm_castps_si128(exp), 4)); // (wc, wc, wl, 0)
-  exp = _mm_castsi128_ps(_mm_srli_si128(_mm_castps_si128(exp), 4)); // (0, wc, wc, wl)
-  exp = _mm_or_ps(exp, ooo1);                                       // (1, wc, wc, wl)
+  __m128 sharpened = _mm_mul_ps(added, vsharpen);                           // (?, -s*(d2+d3), -s*(d2+d3), -s*d1)
+  __m128 exp = dt_fast_expf_sse2(sharpened);                                // (?, wc, wc, wl)
+  exp = _mm_castsi128_ps(_mm_slli_si128(_mm_castps_si128(exp), 4));         // (wc, wc, wl, 0)
+  exp = _mm_castsi128_ps(_mm_srli_si128(_mm_castps_si128(exp), 4));         // (0, wc, wc, wl)
+  exp = _mm_or_ps(exp, ooo1);                                               // (1, wc, wc, wl)
   return exp;
 }
 #endif
 
-#define SUM_PIXEL_CONTRIBUTION_COMMON(ii, jj)                                                                \
-  do                                                                                                         \
-  {                                                                                                          \
-    const float f = filter[(ii)] * filter[(jj)];                                                             \
-    float wp[4] = { 0.0f, 0.0f, 0.0f, 0.0f };                                                                \
-    weight(px, px2, sharpen, wp);                                                                            \
-    float w[4] = { 0.0f, 0.0f, 0.0f, 0.0f };                                                                 \
-    for(int c = 0; c < 4; c++) w[c] = f * wp[c];                                                             \
-    float pd[4] = { 0.0f, 0.0f, 0.0f, 0.0f };                                                                \
-    for(int c = 0; c < 4; c++) pd[c] = w[c] * px2[c];                                                        \
-    for(int c = 0; c < 4; c++) sum[c] += pd[c];                                                              \
-    for(int c = 0; c < 4; c++) wgt[c] += w[c];                                                               \
+#define SUM_PIXEL_CONTRIBUTION_COMMON(ii, jj)                                                                     \
+  do                                                                                                              \
+  {                                                                                                               \
+    const float f = filter[(ii)] * filter[(jj)];                                                                  \
+    float wp[4] = { 0.0f, 0.0f, 0.0f, 0.0f };                                                                     \
+    weight(px, px2, sharpen, wp);                                                                                 \
+    float w[4] = { 0.0f, 0.0f, 0.0f, 0.0f };                                                                      \
+    for(int c = 0; c < 4; c++) w[c] = f * wp[c];                                                                  \
+    float pd[4] = { 0.0f, 0.0f, 0.0f, 0.0f };                                                                     \
+    for(int c = 0; c < 4; c++) pd[c] = w[c] * px2[c];                                                             \
+    for(int c = 0; c < 4; c++) sum[c] += pd[c];                                                                   \
+    for(int c = 0; c < 4; c++) wgt[c] += w[c];                                                                    \
   } while(0)
 
 #if defined(__SSE2__)
-#define SUM_PIXEL_CONTRIBUTION_COMMON_SSE2(ii, jj)                                                           \
-  do                                                                                                         \
-  {                                                                                                          \
-    const __m128 f = _mm_set1_ps(filter[(ii)] * filter[(jj)]);                                               \
-    const __m128 wp = weight_sse2(px, px2, sharpen);                                                         \
-    const __m128 w = _mm_mul_ps(f, wp);                                                                      \
-    const __m128 pd = _mm_mul_ps(w, *px2);                                                                   \
-    sum = _mm_add_ps(sum, pd);                                                                               \
-    wgt = _mm_add_ps(wgt, w);                                                                                \
+#define SUM_PIXEL_CONTRIBUTION_COMMON_SSE2(ii, jj)                                                                \
+  do                                                                                                              \
+  {                                                                                                               \
+    const __m128 f = _mm_set1_ps(filter[(ii)] * filter[(jj)]);                                                    \
+    const __m128 wp = weight_sse2(px, px2, sharpen);                                                              \
+    const __m128 w = _mm_mul_ps(f, wp);                                                                           \
+    const __m128 pd = _mm_mul_ps(w, *px2);                                                                        \
+    sum = _mm_add_ps(sum, pd);                                                                                    \
+    wgt = _mm_add_ps(wgt, w);                                                                                     \
   } while(0)
 #endif
 
-#define SUM_PIXEL_CONTRIBUTION_WITH_TEST(ii, jj)                                                             \
-  do                                                                                                         \
-  {                                                                                                          \
-    const int iii = (ii)-2;                                                                                  \
-    const int jjj = (jj)-2;                                                                                  \
-    int x = i + mult * iii;                                                                                  \
-    int y = j + mult * jjj;                                                                                  \
-                                                                                                             \
-    if(x < 0) x = 0;                                                                                         \
-    if(x >= width) x = width - 1;                                                                            \
-    if(y < 0) y = 0;                                                                                         \
-    if(y >= height) y = height - 1;                                                                          \
-                                                                                                             \
-    px2 = ((float *)in) + 4 * x + (size_t)4 * y * width;                                                     \
-                                                                                                             \
-    SUM_PIXEL_CONTRIBUTION_COMMON(ii, jj);                                                                   \
+#define SUM_PIXEL_CONTRIBUTION_WITH_TEST(ii, jj)                                                                  \
+  do                                                                                                              \
+  {                                                                                                               \
+    const int iii = (ii)-2;                                                                                       \
+    const int jjj = (jj)-2;                                                                                       \
+    int x = i + mult * iii;                                                                                       \
+    int y = j + mult * jjj;                                                                                       \
+                                                                                                                  \
+    if(x < 0) x = 0;                                                                                              \
+    if(x >= width) x = width - 1;                                                                                 \
+    if(y < 0) y = 0;                                                                                              \
+    if(y >= height) y = height - 1;                                                                               \
+                                                                                                                  \
+    px2 = ((float *)in) + 4 * x + (size_t)4 * y * width;                                                          \
+                                                                                                                  \
+    SUM_PIXEL_CONTRIBUTION_COMMON(ii, jj);                                                                        \
   } while(0)
 
 #if defined(__SSE2__)
-#define SUM_PIXEL_CONTRIBUTION_WITH_TEST_SSE2(ii, jj)                                                        \
-  do                                                                                                         \
-  {                                                                                                          \
-    const int iii = (ii)-2;                                                                                  \
-    const int jjj = (jj)-2;                                                                                  \
-    int x = i + mult * iii;                                                                                  \
-    int y = j + mult * jjj;                                                                                  \
-                                                                                                             \
-    if(x < 0) x = 0;                                                                                         \
-    if(x >= width) x = width - 1;                                                                            \
-    if(y < 0) y = 0;                                                                                         \
-    if(y >= height) y = height - 1;                                                                          \
-                                                                                                             \
-    px2 = ((__m128 *)in) + x + (size_t)y * width;                                                            \
-                                                                                                             \
-    SUM_PIXEL_CONTRIBUTION_COMMON_SSE2(ii, jj);                                                              \
+#define SUM_PIXEL_CONTRIBUTION_WITH_TEST_SSE2(ii, jj)                                                             \
+  do                                                                                                              \
+  {                                                                                                               \
+    const int iii = (ii)-2;                                                                                       \
+    const int jjj = (jj)-2;                                                                                       \
+    int x = i + mult * iii;                                                                                       \
+    int y = j + mult * jjj;                                                                                       \
+                                                                                                                  \
+    if(x < 0) x = 0;                                                                                              \
+    if(x >= width) x = width - 1;                                                                                 \
+    if(y < 0) y = 0;                                                                                              \
+    if(y >= height) y = height - 1;                                                                               \
+                                                                                                                  \
+    px2 = ((__m128 *)in) + x + (size_t)y * width;                                                                 \
+                                                                                                                  \
+    SUM_PIXEL_CONTRIBUTION_COMMON_SSE2(ii, jj);                                                                   \
   } while(0)
 #endif
 
-#define ROW_PROLOGUE                                                                                         \
-  const float *px = ((float *)in) + (size_t)4 * j * width;                                                   \
-  const float *px2;                                                                                          \
-  float *pdetail = detail + (size_t)4 * j * width;                                                           \
+#define ROW_PROLOGUE                                                                                              \
+  const float *px = ((float *)in) + (size_t)4 * j * width;                                                        \
+  const float *px2;                                                                                               \
+  float *pdetail = detail + (size_t)4 * j * width;                                                                \
   float *pcoarse = out + (size_t)4 * j * width;
 
 #if defined(__SSE2__)
-#define ROW_PROLOGUE_SSE                                                                                     \
-  const __m128 *px = ((__m128 *)in) + (size_t)j * width;                                                     \
-  const __m128 *px2;                                                                                         \
-  float *pdetail = detail + (size_t)4 * j * width;                                                           \
+#define ROW_PROLOGUE_SSE                                                                                          \
+  const __m128 *px = ((__m128 *)in) + (size_t)j * width;                                                          \
+  const __m128 *px2;                                                                                              \
+  float *pdetail = detail + (size_t)4 * j * width;                                                                \
   float *pcoarse = out + (size_t)4 * j * width;
 #endif
 
-#define SUM_PIXEL_PROLOGUE                                                                                   \
-  float sum[4] = { 0.0f, 0.0f, 0.0f, 0.0f };                                                                 \
+#define SUM_PIXEL_PROLOGUE                                                                                        \
+  float sum[4] = { 0.0f, 0.0f, 0.0f, 0.0f };                                                                      \
   float wgt[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 
 #if defined(__SSE2__)
-#define SUM_PIXEL_PROLOGUE_SSE                                                                               \
-  __m128 sum = _mm_setzero_ps();                                                                             \
+#define SUM_PIXEL_PROLOGUE_SSE                                                                                    \
+  __m128 sum = _mm_setzero_ps();                                                                                  \
   __m128 wgt = _mm_setzero_ps();
 #endif
 
-#define SUM_PIXEL_EPILOGUE                                                                                   \
-  for(int c = 0; c < 4; c++) sum[c] /= wgt[c];                                                               \
-                                                                                                             \
-  for(int c = 0; c < 4; c++) pdetail[c] = (px[c] - sum[c]);                                                  \
-  for(int c = 0; c < 4; c++) pcoarse[c] = sum[c];                                                            \
-  px += 4;                                                                                                   \
-  pdetail += 4;                                                                                              \
+#define SUM_PIXEL_EPILOGUE                                                                                        \
+  for(int c = 0; c < 4; c++) sum[c] /= wgt[c];                                                                    \
+                                                                                                                  \
+  for(int c = 0; c < 4; c++) pdetail[c] = (px[c] - sum[c]);                                                       \
+  for(int c = 0; c < 4; c++) pcoarse[c] = sum[c];                                                                 \
+  px += 4;                                                                                                        \
+  pdetail += 4;                                                                                                   \
   pcoarse += 4;
 
 #if defined(__SSE2__)
-#define SUM_PIXEL_EPILOGUE_SSE                                                                               \
-  sum = _mm_mul_ps(sum, _mm_rcp_ps(wgt));                                                                    \
-                                                                                                             \
-  _mm_stream_ps(pdetail, _mm_sub_ps(*px, sum));                                                              \
-  _mm_stream_ps(pcoarse, sum);                                                                               \
-  px++;                                                                                                      \
-  pdetail += 4;                                                                                              \
+#define SUM_PIXEL_EPILOGUE_SSE                                                                                    \
+  sum = _mm_mul_ps(sum, _mm_rcp_ps(wgt));                                                                         \
+                                                                                                                  \
+  _mm_stream_ps(pdetail, _mm_sub_ps(*px, sum));                                                                   \
+  _mm_stream_ps(pcoarse, sum);                                                                                    \
+  px++;                                                                                                           \
+  pdetail += 4;                                                                                                   \
   pcoarse += 4;
 #endif
 
@@ -549,8 +549,8 @@ typedef void((*eaw_synthesize_t)(float *const out, const float *const in, const 
                                  const float *thrsf, const float *boostf, const int32_t width,
                                  const int32_t height));
 
-static void eaw_synthesize(float *const out, const float *const in, const float *const detail,
-                           const float *thrsf, const float *boostf, const int32_t width, const int32_t height)
+static void eaw_synthesize(float *const out, const float *const in, const float *const detail, const float *thrsf,
+                           const float *boostf, const int32_t width, const int32_t height)
 {
   const float threshold[4] = { thrsf[0], thrsf[1], thrsf[2], thrsf[3] };
   const float boost[4] = { boostf[0], boostf[1], boostf[2], boostf[3] };
@@ -571,8 +571,7 @@ static void eaw_synthesize(float *const out, const float *const in, const float 
 
 #if defined(__SSE2__)
 static void eaw_synthesize_sse2(float *const out, const float *const in, const float *const detail,
-                                const float *thrsf, const float *boostf, const int32_t width,
-                                const int32_t height)
+                                const float *thrsf, const float *boostf, const int32_t width, const int32_t height)
 {
   const __m128 threshold = _mm_set_ps(thrsf[3], thrsf[2], thrsf[1], thrsf[0]);
   const __m128 boost = _mm_set_ps(boostf[3], boostf[2], boostf[1], boostf[0]);
@@ -590,8 +589,7 @@ static void eaw_synthesize_sse2(float *const out, const float *const in, const f
     {
       const __m128i maski = _mm_set1_epi32(0x80000000u);
       const __m128 *mask = (__m128 *)&maski;
-      const __m128 absamt
-          = _mm_max_ps(_mm_setzero_ps(), _mm_sub_ps(_mm_andnot_ps(*mask, *pdetail), threshold));
+      const __m128 absamt = _mm_max_ps(_mm_setzero_ps(), _mm_sub_ps(_mm_andnot_ps(*mask, *pdetail), threshold));
       const __m128 amount = _mm_or_ps(_mm_and_ps(*pdetail, *mask), absamt);
       _mm_stream_ps(pout, _mm_add_ps(*pin, _mm_mul_ps(boost, amount)));
       pdetail++;
@@ -639,9 +637,8 @@ static int get_scales(float (*thrs)[4], float (*boost)[4], float *sharp, const d
   // cut off too fine ones, if image is not detailed enough (due to roi_in->scale)
   const float scale = roi_in->scale / piece->iscale;
   // largest desired filter on input buffer (20% of input dim)
-  const float supp0
-      = MIN(2 * (2 << (MAX_NUM_SCALES - 1)) + 1,
-            MAX(piece->buf_in.height * piece->iscale, piece->buf_in.width * piece->iscale) * 0.2f);
+  const float supp0 = MIN(2 * (2 << (MAX_NUM_SCALES - 1)) + 1,
+                          MAX(piece->buf_in.height * piece->iscale, piece->buf_in.width * piece->iscale) * 0.2f);
   const float i0 = dt_log2f((supp0 - 1.0f) * .5f);
   int i = 0;
   for(; i < MAX_NUM_SCALES; i++)
@@ -883,21 +880,18 @@ int process_cl(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, cl_m
     dt_iop_nap(darktable.opencl->micro_nap);
   }
 
-  if(!darktable.opencl->async_pixelpipe || piece->pipe->type == DT_DEV_PIXELPIPE_EXPORT)
-    dt_opencl_finish(devid);
+  if(!darktable.opencl->async_pixelpipe || piece->pipe->type == DT_DEV_PIXELPIPE_EXPORT) dt_opencl_finish(devid);
 
   dt_opencl_release_mem_object(dev_filter);
   dt_opencl_release_mem_object(dev_tmp);
-  for(int k = 0; k < max_scale; k++)
-    dt_opencl_release_mem_object(dev_detail[k]);
+  for(int k = 0; k < max_scale; k++) dt_opencl_release_mem_object(dev_detail[k]);
   free(dev_detail);
   return TRUE;
 
 error:
   dt_opencl_release_mem_object(dev_filter);
   dt_opencl_release_mem_object(dev_tmp);
-  for(int k = 0; k < max_scale; k++)
-    dt_opencl_release_mem_object(dev_detail[k]);
+  for(int k = 0; k < max_scale; k++) dt_opencl_release_mem_object(dev_detail[k]);
   free(dev_detail);
   dt_print(DT_DEBUG_OPENCL, "[opencl_atrous] couldn't enqueue kernel! %d\n", err);
   return FALSE;
@@ -905,8 +899,7 @@ error:
 #endif
 
 void tiling_callback(struct dt_iop_module_t *self, struct dt_dev_pixelpipe_iop_t *piece,
-                     const dt_iop_roi_t *roi_in, const dt_iop_roi_t *roi_out,
-                     struct dt_develop_tiling_t *tiling)
+                     const dt_iop_roi_t *roi_in, const dt_iop_roi_t *roi_out, struct dt_develop_tiling_t *tiling)
 {
   dt_iop_atrous_data_t *d = (dt_iop_atrous_data_t *)piece->data;
   float thrs[MAX_NUM_SCALES][4];
@@ -929,7 +922,7 @@ void init(dt_iop_module_t *module)
   module->params = calloc(1, sizeof(dt_iop_atrous_params_t));
   module->default_params = calloc(1, sizeof(dt_iop_atrous_params_t));
   module->default_enabled = 0;
-    module->priority = 579; // module order created by iop_dependencies.py, do not edit!
+  module->priority = 579; // module order created by iop_dependencies.py, do not edit!
   module->params_size = sizeof(dt_iop_atrous_params_t);
   module->gui_data = NULL;
   dt_iop_atrous_params_t tmp;
@@ -948,8 +941,7 @@ void init(dt_iop_module_t *module)
 void init_global(dt_iop_module_so_t *module)
 {
   const int program = 1; // from programs.conf
-  dt_iop_atrous_global_data_t *gd
-      = (dt_iop_atrous_global_data_t *)malloc(sizeof(dt_iop_atrous_global_data_t));
+  dt_iop_atrous_global_data_t *gd = (dt_iop_atrous_global_data_t *)malloc(sizeof(dt_iop_atrous_global_data_t));
   module->data = gd;
   gd->kernel_decompose = dt_opencl_create_kernel(program, "eaw_decompose");
   gd->kernel_synthesize = dt_opencl_create_kernel(program, "eaw_synthesize");
@@ -1190,7 +1182,7 @@ static gboolean area_draw(GtkWidget *widget, cairo_t *crf, gpointer user_data)
   // clear bg, match color of the notebook tabs:
   GdkRGBA bright_bg_color, really_dark_bg_color;
   GtkStyleContext *context = gtk_widget_get_style_context(self->expander);
-  gboolean color_found = gtk_style_context_lookup_color (context, "selected_bg_color", &bright_bg_color);
+  gboolean color_found = gtk_style_context_lookup_color(context, "selected_bg_color", &bright_bg_color);
   if(!color_found)
   {
     bright_bg_color.red = 1.0;
@@ -1199,7 +1191,7 @@ static gboolean area_draw(GtkWidget *widget, cairo_t *crf, gpointer user_data)
     bright_bg_color.alpha = 1.0;
   }
 
-  color_found = gtk_style_context_lookup_color (context, "really_dark_bg_color", &really_dark_bg_color);
+  color_found = gtk_style_context_lookup_color(context, "really_dark_bg_color", &really_dark_bg_color);
   if(!color_found)
   {
     really_dark_bg_color.red = 1.0;
@@ -1257,7 +1249,8 @@ static gboolean area_draw(GtkWidget *widget, cairo_t *crf, gpointer user_data)
     cairo_save(cr);
     for(int k = 1; k < c->num_samples; k += 2)
     {
-      cairo_set_source_rgba(cr, really_dark_bg_color.red, really_dark_bg_color.green, really_dark_bg_color.blue, .3);
+      cairo_set_source_rgba(cr, really_dark_bg_color.red, really_dark_bg_color.green, really_dark_bg_color.blue,
+                            .3);
       cairo_move_to(cr, width * c->sample[k - 1], 0.0f);
       cairo_line_to(cr, width * c->sample[k - 1], -height);
       cairo_line_to(cr, width * c->sample[k], -height);
@@ -1325,8 +1318,7 @@ static gboolean area_draw(GtkWidget *widget, cairo_t *crf, gpointer user_data)
       for(int k = 0; k < BANDS; k++) dt_draw_curve_set_point(c->minmax_curve, k, p.x[ch2][k], p.y[ch2][k]);
       dt_draw_curve_calc_values(c->minmax_curve, 0.0, 1.0, RES, c->draw_xs, c->draw_ys);
       cairo_move_to(cr, width, -height * p.y[ch2][BANDS - 1]);
-      for(int k = RES - 2; k >= 0; k--)
-        cairo_line_to(cr, k * width / (float)(RES - 1), -height * c->draw_ys[k]);
+      for(int k = RES - 2; k >= 0; k--) cairo_line_to(cr, k * width / (float)(RES - 1), -height * c->draw_ys[k]);
     }
     else
       cairo_move_to(cr, 0, 0);
@@ -1368,8 +1360,7 @@ static gboolean area_draw(GtkWidget *widget, cairo_t *crf, gpointer user_data)
     // cairo_set_source_rgba(cr, .6, .6, .6, .5);
     cairo_move_to(cr, 0, -height * c->draw_min_ys[0]);
     for(int k = 1; k < RES; k++) cairo_line_to(cr, k * width / (float)(RES - 1), -height * c->draw_min_ys[k]);
-    for(int k = RES - 1; k >= 0; k--)
-      cairo_line_to(cr, k * width / (float)(RES - 1), -height * c->draw_max_ys[k]);
+    for(int k = RES - 1; k >= 0; k--) cairo_line_to(cr, k * width / (float)(RES - 1), -height * c->draw_max_ys[k]);
     cairo_close_path(cr);
     cairo_fill(cr);
     // draw mouse focus circle
@@ -1533,14 +1524,13 @@ static gboolean area_motion_notify(GtkWidget *widget, GdkEventMotion *event, gpo
   gtk_widget_queue_draw(widget);
   gint x, y;
 #if GTK_CHECK_VERSION(3, 20, 0)
-  gdk_window_get_device_position(event->window,
-      gdk_seat_get_pointer(gdk_display_get_default_seat(gtk_widget_get_display(widget))),
-      &x, &y, 0);
+  gdk_window_get_device_position(
+      event->window, gdk_seat_get_pointer(gdk_display_get_default_seat(gtk_widget_get_display(widget))), &x, &y, 0);
 #else
-  gdk_window_get_device_position(event->window,
-                                 gdk_device_manager_get_client_pointer(
-                                     gdk_display_get_device_manager(gdk_window_get_display(event->window))),
-                                 &x, &y, NULL);
+  gdk_window_get_device_position(
+      event->window,
+      gdk_device_manager_get_client_pointer(gdk_display_get_device_manager(gdk_window_get_display(event->window))),
+      &x, &y, NULL);
 #endif
   return TRUE;
 }
@@ -1572,8 +1562,7 @@ static gboolean area_button_press(GtkWidget *widget, GdkEventButton *event, gpoi
     GtkAllocation allocation;
     gtk_widget_get_allocation(widget, &allocation);
     int height = allocation.height - 2 * inset, width = allocation.width - 2 * inset;
-    c->mouse_pick
-        = dt_draw_curve_calc_value(c->minmax_curve, CLAMP(event->x - inset, 0, width) / (float)width);
+    c->mouse_pick = dt_draw_curve_calc_value(c->minmax_curve, CLAMP(event->x - inset, 0, width) / (float)width);
     c->mouse_pick -= 1.0 - CLAMP(event->y - inset, 0, height) / (float)height;
     c->dragging = 1;
     return TRUE;
@@ -1657,19 +1646,21 @@ void gui_init(struct dt_iop_module_t *self)
 
   c->channel_tabs = GTK_NOTEBOOK(gtk_notebook_new());
 
-  gtk_notebook_append_page(GTK_NOTEBOOK(c->channel_tabs),
-                           GTK_WIDGET(gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0)), gtk_label_new(_("luma")));
-  gtk_widget_set_tooltip_text(gtk_notebook_get_tab_label(c->channel_tabs, gtk_notebook_get_nth_page(c->channel_tabs, -1)),
-                              _("change lightness at each feature size"));
-  gtk_notebook_append_page(GTK_NOTEBOOK(c->channel_tabs),
-                           GTK_WIDGET(gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0)),
+  gtk_notebook_append_page(GTK_NOTEBOOK(c->channel_tabs), GTK_WIDGET(gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0)),
+                           gtk_label_new(_("luma")));
+  gtk_widget_set_tooltip_text(
+      gtk_notebook_get_tab_label(c->channel_tabs, gtk_notebook_get_nth_page(c->channel_tabs, -1)),
+      _("change lightness at each feature size"));
+  gtk_notebook_append_page(GTK_NOTEBOOK(c->channel_tabs), GTK_WIDGET(gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0)),
                            gtk_label_new(_("chroma")));
-  gtk_widget_set_tooltip_text(gtk_notebook_get_tab_label(c->channel_tabs, gtk_notebook_get_nth_page(c->channel_tabs, -1)),
-                              _("change color saturation at each feature size"));
-  gtk_notebook_append_page(GTK_NOTEBOOK(c->channel_tabs),
-                           GTK_WIDGET(gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0)), gtk_label_new(_("edges")));
-  gtk_widget_set_tooltip_text(gtk_notebook_get_tab_label(c->channel_tabs, gtk_notebook_get_nth_page(c->channel_tabs, -1)),
-                              _("change edge halos at each feature size\nonly changes results of luma and chroma tabs"));
+  gtk_widget_set_tooltip_text(
+      gtk_notebook_get_tab_label(c->channel_tabs, gtk_notebook_get_nth_page(c->channel_tabs, -1)),
+      _("change color saturation at each feature size"));
+  gtk_notebook_append_page(GTK_NOTEBOOK(c->channel_tabs), GTK_WIDGET(gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0)),
+                           gtk_label_new(_("edges")));
+  gtk_widget_set_tooltip_text(
+      gtk_notebook_get_tab_label(c->channel_tabs, gtk_notebook_get_nth_page(c->channel_tabs, -1)),
+      _("change edge halos at each feature size\nonly changes results of luma and chroma tabs"));
 
   gtk_widget_show_all(GTK_WIDGET(gtk_notebook_get_nth_page(c->channel_tabs, c->channel)));
   gtk_notebook_set_current_page(GTK_NOTEBOOK(c->channel_tabs), c->channel);
@@ -1683,9 +1674,9 @@ void gui_init(struct dt_iop_module_t *self)
   gtk_box_pack_start(GTK_BOX(vbox), GTK_WIDGET(c->area), TRUE, TRUE, 0);
 
   gtk_widget_add_events(GTK_WIDGET(c->area), GDK_POINTER_MOTION_MASK | GDK_POINTER_MOTION_HINT_MASK
-                                             | GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK
-                                             | GDK_LEAVE_NOTIFY_MASK | GDK_SCROLL_MASK
-                                             | GDK_SMOOTH_SCROLL_MASK);
+                                                 | GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK
+                                                 | GDK_LEAVE_NOTIFY_MASK | GDK_SCROLL_MASK
+                                                 | GDK_SMOOTH_SCROLL_MASK);
   g_signal_connect(G_OBJECT(c->area), "draw", G_CALLBACK(area_draw), self);
   g_signal_connect(G_OBJECT(c->area), "button-press-event", G_CALLBACK(area_button_press), self);
   g_signal_connect(G_OBJECT(c->area), "button-release-event", G_CALLBACK(area_button_release), self);

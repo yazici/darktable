@@ -80,15 +80,13 @@ void dt_control_init(dt_control_t *s)
 
 void dt_control_key_accelerators_on(struct dt_control_t *s)
 {
-  gtk_window_add_accel_group(GTK_WINDOW(dt_ui_main_window(darktable.gui->ui)),
-                             darktable.control->accelerators);
+  gtk_window_add_accel_group(GTK_WINDOW(dt_ui_main_window(darktable.gui->ui)), darktable.control->accelerators);
   if(!s->key_accelerators_on) s->key_accelerators_on = 1;
 }
 
 void dt_control_key_accelerators_off(struct dt_control_t *s)
 {
-  gtk_window_remove_accel_group(GTK_WINDOW(dt_ui_main_window(darktable.gui->ui)),
-                                darktable.control->accelerators);
+  gtk_window_remove_accel_group(GTK_WINDOW(dt_ui_main_window(darktable.gui->ui)), darktable.control->accelerators);
   s->key_accelerators_on = 0;
 }
 
@@ -148,7 +146,6 @@ void dt_control_shutdown(dt_control_t *s)
   for(k = 0; k < DT_CTL_WORKER_RESERVED; k++)
     // pthread_kill(s->thread_res[k], 9);
     pthread_join(s->thread_res[k], NULL);
-
 }
 
 void dt_control_cleanup(dt_control_t *s)
@@ -192,8 +189,8 @@ void *dt_control_expose(void *voidptr)
   GtkWidget *widget = dt_ui_center(darktable.gui->ui);
 #if GTK_CHECK_VERSION(3, 20, 0)
   gdk_window_get_device_position(gtk_widget_get_window(widget),
-      gdk_seat_get_pointer(gdk_display_get_default_seat(gtk_widget_get_display(widget))),
-      &pointerx, &pointery, NULL);
+                                 gdk_seat_get_pointer(gdk_display_get_default_seat(gtk_widget_get_display(widget))),
+                                 &pointerx, &pointery, NULL);
 #else
   GdkDevice *device
       = gdk_device_manager_get_client_pointer(gdk_display_get_device_manager(gtk_widget_get_display(widget)));
@@ -213,7 +210,7 @@ void *dt_control_expose(void *voidptr)
 
   GdkRGBA color;
   GtkStyleContext *context = gtk_widget_get_style_context(widget);
-  gboolean color_found = gtk_style_context_lookup_color (context, "bg_color", &color);
+  gboolean color_found = gtk_style_context_lookup_color(context, "bg_color", &color);
   if(!color_found)
   {
     color.red = 1.0;
@@ -227,7 +224,7 @@ void *dt_control_expose(void *voidptr)
   cairo_rectangle(cr, tb / 2., tb / 2., width - tb, height - tb);
   cairo_stroke(cr);
   cairo_set_line_width(cr, 1.5);
-  color_found = gtk_style_context_lookup_color (context, "really_dark_bg_color", &color);
+  color_found = gtk_style_context_lookup_color(context, "really_dark_bg_color", &color);
   if(!color_found)
   {
     color.red = 1.0;
@@ -245,8 +242,7 @@ void *dt_control_expose(void *voidptr)
   cairo_clip(cr);
   cairo_new_path(cr);
   // draw view
-  dt_view_manager_expose(darktable.view_manager, cr, width - 2 * tb, height - 2 * tb, pointerx - tb,
-                         pointery - tb);
+  dt_view_manager_expose(darktable.view_manager, cr, width - 2 * tb, height - 2 * tb, pointerx - tb, pointery - tb);
   cairo_restore(cr);
 
   // draw log message, if any
@@ -276,7 +272,7 @@ void *dt_control_expose(void *voidptr)
       cairo_line_to(cr, xc - wd, yc + rad);
       if(k == 0)
       {
-        color_found = gtk_style_context_lookup_color (context, "selected_bg_color", &color);
+        color_found = gtk_style_context_lookup_color(context, "selected_bg_color", &color);
         if(!color_found)
         {
           color.red = 1.0;
@@ -291,7 +287,7 @@ void *dt_control_expose(void *voidptr)
       cairo_stroke(cr);
       rad += .5f;
     }
-    color_found = gtk_style_context_lookup_color (context, "fg_color", &color);
+    color_found = gtk_style_context_lookup_color(context, "fg_color", &color);
     if(!color_found)
     {
       color.red = 1.0;
@@ -402,7 +398,7 @@ static void _dt_ctl_switch_mode_prepare()
 
 static gboolean _dt_ctl_switch_mode_to(gpointer user_data)
 {
-  const char *mode = (const char*)user_data;
+  const char *mode = (const char *)user_data;
   _dt_ctl_switch_mode_prepare();
   dt_view_manager_switch(darktable.view_manager, mode);
   return FALSE;
@@ -410,7 +406,7 @@ static gboolean _dt_ctl_switch_mode_to(gpointer user_data)
 
 static gboolean _dt_ctl_switch_mode_to_by_view(gpointer user_data)
 {
-  const dt_view_t *view = (const dt_view_t*)user_data;
+  const dt_view_t *view = (const dt_view_t *)user_data;
   _dt_ctl_switch_mode_prepare();
   dt_view_manager_switch_by_view(darktable.view_manager, view);
   return FALSE;
@@ -551,8 +547,7 @@ static gboolean _gtk_widget_queue_draw(gpointer user_data)
 
 void dt_control_queue_redraw_widget(GtkWidget *widget)
 {
-  if(dt_control_running())
-    g_main_context_invoke(NULL, _gtk_widget_queue_draw, widget);
+  if(dt_control_running()) g_main_context_invoke(NULL, _gtk_widget_queue_draw, widget);
 }
 
 

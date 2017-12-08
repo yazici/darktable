@@ -55,7 +55,8 @@ int dt_dev_pixelpipe_cache_init(dt_dev_pixelpipe_cache_t *cache, int entries, si
 #endif
       ASAN_POISON_MEMORY_REGION(cache->data[k], cache->size[k]);
     }
-    else cache->data[k] = 0;
+    else
+      cache->data[k] = 0;
     cache->hash[k] = -1;
     cache->used[k] = 0;
   }

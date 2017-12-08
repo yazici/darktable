@@ -27,13 +27,13 @@
 static inline void _gradient_point_transform(const float xref, const float yref, const float x, const float y,
                                              const float sinv, const float cosv, float *xnew, float *ynew)
 {
-  *xnew = xref + cosv * (x - xref) - sinv * (y - yref);
-  *ynew = yref + sinv * (x - xref) + cosv * (y - yref);
+  *xnew = xref + cosv *(x - xref) - sinv * (y - yref);
+  *ynew = yref + sinv *(x - xref) + cosv * (y - yref);
 }
 
 
-static void dt_gradient_get_distance(float x, float y, float as, dt_masks_form_gui_t *gui, int index,
-                                     int *inside, int *inside_border, int *near, int *inside_source)
+static void dt_gradient_get_distance(float x, float y, float as, dt_masks_form_gui_t *gui, int index, int *inside,
+                                     int *inside_border, int *near, int *inside_source)
 {
   if(!gui) return;
 
@@ -58,7 +58,8 @@ static void dt_gradient_get_distance(float x, float y, float as, dt_masks_form_g
   for(int i = 0; i < gpt->border_count; i++)
   {
     if((x - gpt->border[i * 2]) * (x - gpt->border[i * 2])
-       + (y - gpt->border[i * 2 + 1]) * (y - gpt->border[i * 2 + 1]) < as2)
+           + (y - gpt->border[i * 2 + 1]) * (y - gpt->border[i * 2 + 1])
+       < as2)
     {
       *inside_border = 1;
       return;
@@ -69,7 +70,8 @@ static void dt_gradient_get_distance(float x, float y, float as, dt_masks_form_g
   for(int i = 3; i < gpt->points_count; i++)
   {
     if((x - gpt->points[i * 2]) * (x - gpt->points[i * 2])
-       + (y - gpt->points[i * 2 + 1]) * (y - gpt->points[i * 2 + 1]) < as2)
+           + (y - gpt->points[i * 2 + 1]) * (y - gpt->points[i * 2 + 1])
+       < as2)
     {
       *inside = 1;
       return;
@@ -113,10 +115,9 @@ static int dt_gradient_events_mouse_scrolled(struct dt_iop_module_t *module, flo
   return 0;
 }
 
-static int dt_gradient_events_button_pressed(struct dt_iop_module_t *module, float pzx, float pzy,
-                                             double pressure, int which, int type, uint32_t state,
-                                             dt_masks_form_t *form, int parentid, dt_masks_form_gui_t *gui,
-                                             int index)
+static int dt_gradient_events_button_pressed(struct dt_iop_module_t *module, float pzx, float pzy, double pressure,
+                                             int which, int type, uint32_t state, dt_masks_form_t *form,
+                                             int parentid, dt_masks_form_gui_t *gui, int index)
 {
   if(!gui) return 0;
   if(!gui->creation && gui->edit_mode == DT_MASKS_EDIT_FULL)
@@ -145,8 +146,7 @@ static int dt_gradient_events_button_pressed(struct dt_iop_module_t *module, flo
   {
     dt_iop_module_t *crea_module = gui->creation_module;
     // we create the circle
-    dt_masks_point_gradient_t *gradient
-        = (dt_masks_point_gradient_t *)(malloc(sizeof(dt_masks_point_gradient_t)));
+    dt_masks_point_gradient_t *gradient = (dt_masks_point_gradient_t *)(malloc(sizeof(dt_masks_point_gradient_t)));
 
     // we change the offset value
     float wd = darktable.develop->preview_pipe->backbuf_width;
@@ -211,8 +211,7 @@ static int dt_gradient_events_button_released(struct dt_iop_module_t *module, fl
         dt_masks_point_group_t *gpt = (dt_masks_point_group_t *)forms->data;
         if(gpt->formid == form->formid)
         {
-          darktable.develop->form_visible->points
-              = g_list_remove(darktable.develop->form_visible->points, gpt);
+          darktable.develop->form_visible->points = g_list_remove(darktable.develop->form_visible->points, gpt);
           free(gpt);
           break;
         }
@@ -292,9 +291,9 @@ static int dt_gradient_events_button_released(struct dt_iop_module_t *module, fl
   return 0;
 }
 
-static int dt_gradient_events_mouse_moved(struct dt_iop_module_t *module, float pzx, float pzy,
-                                          double pressure, int which, dt_masks_form_t *form, int parentid,
-                                          dt_masks_form_gui_t *gui, int index)
+static int dt_gradient_events_mouse_moved(struct dt_iop_module_t *module, float pzx, float pzy, double pressure,
+                                          int which, dt_masks_form_t *form, int parentid, dt_masks_form_gui_t *gui,
+                                          int index)
 {
   if(gui->form_dragging || gui->form_rotating)
   {
@@ -316,16 +315,14 @@ static int dt_gradient_events_mouse_moved(struct dt_iop_module_t *module, float 
 
     dt_masks_form_gui_points_t *gpt = (dt_masks_form_gui_points_t *)g_list_nth_data(gui->points, index);
 
-    if(gpt
-       && (x - gpt->points[2]) * (x - gpt->points[2]) + (y - gpt->points[3]) * (y - gpt->points[3]) < as * as)
+    if(gpt && (x - gpt->points[2]) * (x - gpt->points[2]) + (y - gpt->points[3]) * (y - gpt->points[3]) < as * as)
     {
       gui->pivot_selected = TRUE;
       gui->form_selected = TRUE;
       gui->border_selected = FALSE;
     }
     else if(gpt
-            && (x - gpt->points[4]) * (x - gpt->points[4]) + (y - gpt->points[5]) * (y - gpt->points[5])
-               < as * as)
+            && (x - gpt->points[4]) * (x - gpt->points[4]) + (y - gpt->points[5]) * (y - gpt->points[5]) < as * as)
     {
       gui->pivot_selected = TRUE;
       gui->form_selected = TRUE;
@@ -395,8 +392,8 @@ static void dt_gradient_events_post_expose(cairo_t *cr, float zoom_scale, dt_mas
     cairo_move_to(cr, x, y);
     for(int i = 5; i < gpt->points_count; i++)
     {
-      _gradient_point_transform(xref, yref, gpt->points[i * 2] + dx, gpt->points[i * 2 + 1] + dy, sinv, cosv,
-                                &x, &y);
+      _gradient_point_transform(xref, yref, gpt->points[i * 2] + dx, gpt->points[i * 2 + 1] + dy, sinv, cosv, &x,
+                                &y);
       cairo_line_to(cr, x, y);
     }
     cairo_stroke_preserve(cr);
@@ -425,14 +422,14 @@ static void dt_gradient_events_post_expose(cairo_t *cr, float zoom_scale, dt_mas
         cairo_set_line_width(cr, 1.0 / zoom_scale);
       cairo_set_source_rgba(cr, .3, .3, .3, .8);
 
-      _gradient_point_transform(xref, yref, gpt->border[count * 2] + dx, gpt->border[count * 2 + 1] + dy,
-                                sinv, cosv, &x, &y);
+      _gradient_point_transform(xref, yref, gpt->border[count * 2] + dx, gpt->border[count * 2 + 1] + dy, sinv,
+                                cosv, &x, &y);
       cairo_move_to(cr, x, y);
       count++;
       for(; count < border_count && !isinf(border[count * 2]); count++)
       {
-        _gradient_point_transform(xref, yref, gpt->border[count * 2] + dx, gpt->border[count * 2 + 1] + dy,
-                                  sinv, cosv, &x, &y);
+        _gradient_point_transform(xref, yref, gpt->border[count * 2] + dx, gpt->border[count * 2 + 1] + dy, sinv,
+                                  cosv, &x, &y);
         cairo_line_to(cr, x, y);
       }
       cairo_stroke_preserve(cr);
@@ -788,8 +785,7 @@ static int dt_gradient_get_mask(dt_iop_module_t *module, dt_dev_pixelpipe_iop_t 
   if(!dt_gradient_get_area(module, piece, form, width, height, posx, posy)) return 0;
 
   if(darktable.unmuted & DT_DEBUG_PERF)
-    dt_print(DT_DEBUG_MASKS, "[masks %s] gradient area took %0.04f sec\n", form->name,
-             dt_get_wtime() - start2);
+    dt_print(DT_DEBUG_MASKS, "[masks %s] gradient area took %0.04f sec\n", form->name, dt_get_wtime() - start2);
   start2 = dt_get_wtime();
 
   // we get the gradient values
@@ -822,8 +818,7 @@ static int dt_gradient_get_mask(dt_iop_module_t *module, dt_dev_pixelpipe_iop_t 
     }
 
   if(darktable.unmuted & DT_DEBUG_PERF)
-    dt_print(DT_DEBUG_MASKS, "[masks %s] gradient draw took %0.04f sec\n", form->name,
-             dt_get_wtime() - start2);
+    dt_print(DT_DEBUG_MASKS, "[masks %s] gradient draw took %0.04f sec\n", form->name, dt_get_wtime() - start2);
   start2 = dt_get_wtime();
 
   // we backtransform all these points
@@ -906,16 +901,15 @@ static int dt_gradient_get_mask(dt_iop_module_t *module, dt_dev_pixelpipe_iop_t 
   free(points);
 
   if(darktable.unmuted & DT_DEBUG_PERF)
-    dt_print(DT_DEBUG_MASKS, "[masks %s] gradient fill took %0.04f sec\n", form->name,
-             dt_get_wtime() - start2);
-//   start2 = dt_get_wtime();
+    dt_print(DT_DEBUG_MASKS, "[masks %s] gradient fill took %0.04f sec\n", form->name, dt_get_wtime() - start2);
+  //   start2 = dt_get_wtime();
 
   return 1;
 }
 
 
-static int dt_gradient_get_mask_roi(dt_iop_module_t *module, dt_dev_pixelpipe_iop_t *piece,
-                                    dt_masks_form_t *form, const dt_iop_roi_t *roi, float *buffer)
+static int dt_gradient_get_mask_roi(dt_iop_module_t *module, dt_dev_pixelpipe_iop_t *piece, dt_masks_form_t *form,
+                                    const dt_iop_roi_t *roi, float *buffer)
 {
   double start2 = dt_get_wtime();
 
@@ -951,13 +945,11 @@ static int dt_gradient_get_mask_roi(dt_iop_module_t *module, dt_dev_pixelpipe_io
     }
 
   if(darktable.unmuted & DT_DEBUG_PERF)
-    dt_print(DT_DEBUG_MASKS, "[masks %s] gradient draw took %0.04f sec\n", form->name,
-             dt_get_wtime() - start2);
+    dt_print(DT_DEBUG_MASKS, "[masks %s] gradient draw took %0.04f sec\n", form->name, dt_get_wtime() - start2);
   start2 = dt_get_wtime();
 
   // we backtransform all these points
-  if(!dt_dev_distort_backtransform_plus(module->dev, piece->pipe, 0, module->priority, points,
-                                        (size_t)mw * mh))
+  if(!dt_dev_distort_backtransform_plus(module->dev, piece->pipe, 0, module->priority, points, (size_t)mw * mh))
   {
     free(points);
     return 0;
@@ -1030,9 +1022,8 @@ static int dt_gradient_get_mask_roi(dt_iop_module_t *module, dt_dev_pixelpipe_io
   free(points);
 
   if(darktable.unmuted & DT_DEBUG_PERF)
-    dt_print(DT_DEBUG_MASKS, "[masks %s] gradient fill took %0.04f sec\n", form->name,
-             dt_get_wtime() - start2);
-//   start2 = dt_get_wtime();
+    dt_print(DT_DEBUG_MASKS, "[masks %s] gradient fill took %0.04f sec\n", form->name, dt_get_wtime() - start2);
+  //   start2 = dt_get_wtime();
 
   return 1;
 }

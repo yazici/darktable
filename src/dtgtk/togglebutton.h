@@ -21,9 +21,9 @@
 #include "paint.h"
 #include <gtk/gtk.h>
 G_BEGIN_DECLS
-#define DTGTK_TOGGLEBUTTON(obj)                                                                              \
+#define DTGTK_TOGGLEBUTTON(obj)                                                                                   \
   G_TYPE_CHECK_INSTANCE_CAST(obj, dtgtk_togglebutton_get_type(), GtkDarktableToggleButton)
-#define DTGTK_TOGGLEBUTTON_CLASS(klass)                                                                      \
+#define DTGTK_TOGGLEBUTTON_CLASS(klass)                                                                           \
   G_TYPE_CHECK_CLASS_CAST(klass, dtgtk_togglebutton_get_type(), GtkDarktableToggleButtonClass)
 #define DTGTK_IS_TOGGLEBUTTON(obj) G_TYPE_CHECK_INSTANCE_TYPE(obj, dtgtk_togglebutton_get_type())
 #define DTGTK_IS_TOGGLEBUTTON_CLASS(klass) G_TYPE_CHECK_CLASS_TYPE(obj, dtgtk_togglebutton_get_type())
@@ -47,8 +47,7 @@ GType dtgtk_togglebutton_get_type(void);
 GtkWidget *dtgtk_togglebutton_new(DTGTKCairoPaintIconFunc paint, gint paintflag);
 
 /** Set the paint function and paint flags */
-void dtgtk_togglebutton_set_paint(GtkDarktableToggleButton *button, DTGTKCairoPaintIconFunc paint,
-                                  gint paintflags);
+void dtgtk_togglebutton_set_paint(GtkDarktableToggleButton *button, DTGTKCairoPaintIconFunc paint, gint paintflags);
 /** overwrite the foreground color, or NULL to reset it */
 void dtgtk_togglebutton_override_color(GtkDarktableToggleButton *button, GdkRGBA *color);
 /** overwrite the background color, or NULL to reset it */

@@ -80,8 +80,8 @@ const char *name()
   return _("denoise (non-local means)");
 }
 
-int legacy_params(dt_iop_module_t *self, const void *const old_params, const int old_version,
-                  void *new_params, const int new_version)
+int legacy_params(dt_iop_module_t *self, const void *const old_params, const int old_version, void *new_params,
+                  const int new_version)
 {
   if(old_version == 1 && new_version == 2)
   {
@@ -214,10 +214,14 @@ int process_cl(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, cl_m
   }
 
   int hblocksize;
-  dt_opencl_local_buffer_t hlocopt
-    = (dt_opencl_local_buffer_t){ .xoffset = 2 * P, .xfactor = 1, .yoffset = 0, .yfactor = 1,
-                                  .cellsize = sizeof(float), .overhead = 0,
-                                  .sizex = 1 << 16, .sizey = 1 };
+  dt_opencl_local_buffer_t hlocopt = (dt_opencl_local_buffer_t){.xoffset = 2 * P,
+                                                                .xfactor = 1,
+                                                                .yoffset = 0,
+                                                                .yfactor = 1,
+                                                                .cellsize = sizeof(float),
+                                                                .overhead = 0,
+                                                                .sizex = 1 << 16,
+                                                                .sizey = 1 };
 
   if(dt_opencl_local_buffer_opt(devid, gd->kernel_nlmeans_horiz, &hlocopt))
     hblocksize = hlocopt.sizex;
@@ -225,10 +229,14 @@ int process_cl(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, cl_m
     hblocksize = 1;
 
   int vblocksize;
-  dt_opencl_local_buffer_t vlocopt
-    = (dt_opencl_local_buffer_t){ .xoffset = 1, .xfactor = 1, .yoffset = 2 * P, .yfactor = 1,
-                                  .cellsize = sizeof(float), .overhead = 0,
-                                  .sizex = 1, .sizey = 1 << 16 };
+  dt_opencl_local_buffer_t vlocopt = (dt_opencl_local_buffer_t){.xoffset = 1,
+                                                                .xfactor = 1,
+                                                                .yoffset = 2 * P,
+                                                                .yfactor = 1,
+                                                                .cellsize = sizeof(float),
+                                                                .overhead = 0,
+                                                                .sizex = 1,
+                                                                .sizey = 1 << 16 };
 
   if(dt_opencl_local_buffer_opt(devid, gd->kernel_nlmeans_vert, &vlocopt))
     vblocksize = vlocopt.sizey;
@@ -350,8 +358,7 @@ error:
 
 
 void tiling_callback(struct dt_iop_module_t *self, struct dt_dev_pixelpipe_iop_t *piece,
-                     const dt_iop_roi_t *roi_in, const dt_iop_roi_t *roi_out,
-                     struct dt_develop_tiling_t *tiling)
+                     const dt_iop_roi_t *roi_in, const dt_iop_roi_t *roi_out, struct dt_develop_tiling_t *tiling)
 {
   dt_iop_nlmeans_params_t *d = (dt_iop_nlmeans_params_t *)piece->data;
   const int P = ceilf(d->radius * fmin(roi_in->scale, 2.0f) / fmax(piece->iscale, 1.0f)); // pixel filter size
@@ -507,7 +514,8 @@ void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const 
   // free shared tmp memory:
   dt_free_align(Sa);
 
-  if(piece->pipe->mask_display & DT_DEV_PIXELPIPE_DISPLAY_MASK) dt_iop_alpha_copy(ivoid, ovoid, roi_out->width, roi_out->height);
+  if(piece->pipe->mask_display & DT_DEV_PIXELPIPE_DISPLAY_MASK)
+    dt_iop_alpha_copy(ivoid, ovoid, roi_out->width, roi_out->height);
 }
 
 #if defined(__SSE__)
@@ -701,7 +709,8 @@ void process_sse2(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, c
   // free shared tmp memory:
   dt_free_align(Sa);
 
-  if(piece->pipe->mask_display & DT_DEV_PIXELPIPE_DISPLAY_MASK) dt_iop_alpha_copy(ivoid, ovoid, roi_out->width, roi_out->height);
+  if(piece->pipe->mask_display & DT_DEV_PIXELPIPE_DISPLAY_MASK)
+    dt_iop_alpha_copy(ivoid, ovoid, roi_out->width, roi_out->height);
 }
 #endif
 
@@ -722,7 +731,7 @@ void init(dt_iop_module_t *module)
   module->params = calloc(1, sizeof(dt_iop_nlmeans_params_t));
   module->default_params = calloc(1, sizeof(dt_iop_nlmeans_params_t));
   // about the first thing to do in Lab space:
-    module->priority = 536; // module order created by iop_dependencies.py, do not edit!
+  module->priority = 536; // module order created by iop_dependencies.py, do not edit!
   module->params_size = sizeof(dt_iop_nlmeans_params_t);
   module->gui_data = NULL;
   module->data = NULL;
@@ -737,8 +746,7 @@ void cleanup(dt_iop_module_t *module)
 void init_global(dt_iop_module_so_t *module)
 {
   const int program = 5; // nlmeans.cl, from programs.conf
-  dt_iop_nlmeans_global_data_t *gd
-      = (dt_iop_nlmeans_global_data_t *)malloc(sizeof(dt_iop_nlmeans_global_data_t));
+  dt_iop_nlmeans_global_data_t *gd = (dt_iop_nlmeans_global_data_t *)malloc(sizeof(dt_iop_nlmeans_global_data_t));
   module->data = gd;
   gd->kernel_nlmeans_init = dt_opencl_create_kernel(program, "nlmeans_init");
   gd->kernel_nlmeans_dist = dt_opencl_create_kernel(program, "nlmeans_dist");

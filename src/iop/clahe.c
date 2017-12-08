@@ -36,7 +36,7 @@
 
 #define CLIP(x) ((x < 0) ? 0.0 : (x > 1.0) ? 1.0 : x)
 
-#define ROUND_POSISTIVE(f) ((unsigned int)((f)+0.5))
+#define ROUND_POSISTIVE(f) ((unsigned int)((f) + 0.5))
 
 DT_MODULE(1)
 
@@ -292,7 +292,7 @@ void init(dt_iop_module_t *module)
   module->params = calloc(1, sizeof(dt_iop_rlce_params_t));
   module->default_params = calloc(1, sizeof(dt_iop_rlce_params_t));
   module->default_enabled = 0;
-    module->priority = 898; // module order created by iop_dependencies.py, do not edit!
+  module->priority = 898; // module order created by iop_dependencies.py, do not edit!
   module->params_size = sizeof(dt_iop_rlce_params_t);
   module->gui_data = NULL;
   dt_iop_rlce_params_t tmp = (dt_iop_rlce_params_t){ 64, 1.25 };
@@ -323,10 +323,8 @@ void gui_init(struct dt_iop_module_t *self)
   g->label2 = dtgtk_reset_label_new(_("amount"), self, &p->slope, sizeof(float));
   gtk_box_pack_start(GTK_BOX(g->vbox1), g->label2, TRUE, TRUE, 0);
 
-  g->scale1 = dt_bauhaus_slider_new_with_range(NULL, 0.0, 256.0, 1.0,
-                                               p->radius, 0);
-  g->scale2 = dt_bauhaus_slider_new_with_range(NULL, 1.0, 3.0, 0.05,
-                                               p->slope, 2);
+  g->scale1 = dt_bauhaus_slider_new_with_range(NULL, 0.0, 256.0, 1.0, p->radius, 0);
+  g->scale2 = dt_bauhaus_slider_new_with_range(NULL, 1.0, 3.0, 0.05, p->slope, 2);
   // dtgtk_slider_set_format_type(g->scale2,DARKTABLE_SLIDER_FORMAT_PERCENT);
 
   gtk_box_pack_start(GTK_BOX(g->vbox2), GTK_WIDGET(g->scale1), TRUE, TRUE, 0);

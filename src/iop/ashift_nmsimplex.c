@@ -99,7 +99,7 @@ static int simplex(double (*objfunc)(double[], void *params), double start[], in
   double *ve;    /* expansion - coordinates */
   double *vc;    /* contraction - coordinates */
   double *vm;    /* centroid - coordinates */
-  //double min;
+  // double min;
 
   double fsum, favg, s, cent;
 

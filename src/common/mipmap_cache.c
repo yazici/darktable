@@ -45,8 +45,8 @@
 
 #if !defined(_WIN32)
 #include <sys/statvfs.h>
-#else 
-//statvfs does not exist in Windows, providing implementation
+#else
+// statvfs does not exist in Windows, providing implementation
 #include "win/statvfs.h"
 #endif
 
@@ -62,20 +62,18 @@ typedef enum dt_mipmap_buffer_dsc_flags
 } dt_mipmap_buffer_dsc_flags;
 
 // the embedded Exif data to tag thumbnails as sRGB or AdobeRGB
-static const uint8_t dt_mipmap_cache_exif_data_srgb[] = {
-  0x45, 0x78, 0x69, 0x66, 0x00, 0x00, 0x49, 0x49, 0x2a, 0x00, 0x08, 0x00, 0x00, 0x00, 0x01, 0x00, 0x69,
-  0x87, 0x04, 0x00, 0x01, 0x00, 0x00, 0x00, 0x1a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00,
-  0x01, 0xa0, 0x03, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
-};
-static const uint8_t dt_mipmap_cache_exif_data_adobergb[] = {
-  0x45, 0x78, 0x69, 0x66, 0x00, 0x00, 0x49, 0x49, 0x2a, 0x00, 0x08, 0x00, 0x00, 0x00, 0x01, 0x00, 0x69,
-  0x87, 0x04, 0x00, 0x01, 0x00, 0x00, 0x00, 0x1a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00,
-  0x01, 0xa0, 0x03, 0x00, 0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
-};
-static const int dt_mipmap_cache_exif_data_srgb_length
-                      = sizeof(dt_mipmap_cache_exif_data_srgb) / sizeof(*dt_mipmap_cache_exif_data_srgb);
-static const int dt_mipmap_cache_exif_data_adobergb_length
-                      = sizeof(dt_mipmap_cache_exif_data_adobergb) / sizeof(*dt_mipmap_cache_exif_data_adobergb);
+static const uint8_t dt_mipmap_cache_exif_data_srgb[]
+    = { 0x45, 0x78, 0x69, 0x66, 0x00, 0x00, 0x49, 0x49, 0x2a, 0x00, 0x08, 0x00, 0x00, 0x00, 0x01, 0x00, 0x69,
+        0x87, 0x04, 0x00, 0x01, 0x00, 0x00, 0x00, 0x1a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00,
+        0x01, 0xa0, 0x03, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+static const uint8_t dt_mipmap_cache_exif_data_adobergb[]
+    = { 0x45, 0x78, 0x69, 0x66, 0x00, 0x00, 0x49, 0x49, 0x2a, 0x00, 0x08, 0x00, 0x00, 0x00, 0x01, 0x00, 0x69,
+        0x87, 0x04, 0x00, 0x01, 0x00, 0x00, 0x00, 0x1a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00,
+        0x01, 0xa0, 0x03, 0x00, 0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+static const int dt_mipmap_cache_exif_data_srgb_length = sizeof(dt_mipmap_cache_exif_data_srgb)
+                                                         / sizeof(*dt_mipmap_cache_exif_data_srgb);
+static const int dt_mipmap_cache_exif_data_adobergb_length = sizeof(dt_mipmap_cache_exif_data_adobergb)
+                                                             / sizeof(*dt_mipmap_cache_exif_data_adobergb);
 
 struct dt_mipmap_buffer_dsc
 {
@@ -362,7 +360,7 @@ void dt_mipmap_cache_allocate_dynamic(void *data, dt_cache_entry_t *entry)
     if(cache->cachedir[0] && dt_conf_get_bool("cache_disk_backend"))
     {
       // try and load from disk, if successful set flag
-      char filename[PATH_MAX] = {0};
+      char filename[PATH_MAX] = { 0 };
       snprintf(filename, sizeof(filename), "%s.d/%d/%d.jpg", cache->cachedir, mip, get_imgid(entry->key));
       FILE *f = g_fopen(filename, "rb");
       if(f)
@@ -381,10 +379,12 @@ void dt_mipmap_cache_allocate_dynamic(void *data, dt_cache_entry_t *entry)
         dt_imageio_jpeg_t jpg;
         if(dt_imageio_jpeg_decompress_header(blob, len, &jpg)
            || (jpg.width > cache->max_width[mip] || jpg.height > cache->max_height[mip])
-           || ((color_space = dt_imageio_jpeg_read_color_space(&jpg)) == DT_COLORSPACE_NONE) // pointless test to keep it in the if clause
+           || ((color_space = dt_imageio_jpeg_read_color_space(&jpg))
+               == DT_COLORSPACE_NONE) // pointless test to keep it in the if clause
            || dt_imageio_jpeg_decompress(&jpg, entry->data + sizeof(*dsc)))
         {
-          fprintf(stderr, "[mipmap_cache] failed to decompress thumbnail for image %d from `%s'!\n", get_imgid(entry->key), filename);
+          fprintf(stderr, "[mipmap_cache] failed to decompress thumbnail for image %d from `%s'!\n",
+                  get_imgid(entry->key), filename);
           goto read_error;
         }
         dsc->width = jpg.width;
@@ -394,7 +394,7 @@ void dt_mipmap_cache_allocate_dynamic(void *data, dt_cache_entry_t *entry)
         loaded_from_disk = 1;
         if(0)
         {
-read_error:
+        read_error:
           g_unlink(filename);
         }
         free(blob);
@@ -405,12 +405,15 @@ read_error:
 
   if(!loaded_from_disk)
     dsc->flags = DT_MIPMAP_BUFFER_DSC_FLAG_GENERATE;
-  else dsc->flags = 0;
+  else
+    dsc->flags = 0;
 
   // cost is just flat one for the buffer, as the buffers might have different sizes,
   // to make sure quota is meaningful.
-  if(mip >= DT_MIPMAP_F) entry->cost = 1;
-  else entry->cost = cache->buffer_size[mip];
+  if(mip >= DT_MIPMAP_F)
+    entry->cost = 1;
+  else
+    entry->cost = cache->buffer_size[mip];
 }
 
 static void dt_mipmap_cache_unlink_ondisk_thumbnail(void *data, uint32_t imgid, dt_mipmap_size_t mip)
@@ -445,7 +448,7 @@ void dt_mipmap_cache_deallocate_dynamic(void *data, dt_cache_entry_t *entry)
       else if(cache->cachedir[0] && dt_conf_get_bool("cache_disk_backend"))
       {
         // serialize to disk
-        char filename[PATH_MAX] = {0};
+        char filename[PATH_MAX] = { 0 };
         snprintf(filename, sizeof(filename), "%s.d/%d", cache->cachedir, mip);
         int mkd = g_mkdir_with_parents(filename, 0750);
         if(!mkd)
@@ -453,22 +456,24 @@ void dt_mipmap_cache_deallocate_dynamic(void *data, dt_cache_entry_t *entry)
           snprintf(filename, sizeof(filename), "%s.d/%d/%d.jpg", cache->cachedir, mip, get_imgid(entry->key));
           // Don't write existing files as both performance and quality (lossy jpg) suffer
           FILE *f = NULL;
-          if (!g_file_test(filename, G_FILE_TEST_EXISTS) && (f = g_fopen(filename, "wb")))
+          if(!g_file_test(filename, G_FILE_TEST_EXISTS) && (f = g_fopen(filename, "wb")))
           {
             // first check the disk isn't full
             struct statvfs vfsbuf;
-            if (!statvfs(filename, &vfsbuf))
+            if(!statvfs(filename, &vfsbuf))
             {
               int64_t free_mb = ((vfsbuf.f_frsize * vfsbuf.f_bavail) >> 20);
-              if (free_mb < 100)
+              if(free_mb < 100)
               {
-                fprintf(stderr, "Aborting image write as only %" PRId64 " MB free to write %s\n", free_mb, filename);
+                fprintf(stderr, "Aborting image write as only %" PRId64 " MB free to write %s\n", free_mb,
+                        filename);
                 goto write_error;
               }
             }
             else
             {
-              fprintf(stderr, "Aborting image write since couldn't determine free space available to write %s\n", filename);
+              fprintf(stderr, "Aborting image write since couldn't determine free space available to write %s\n",
+                      filename);
               goto write_error;
             }
 
@@ -485,9 +490,10 @@ void dt_mipmap_cache_deallocate_dynamic(void *data, dt_cache_entry_t *entry)
               exif = dt_mipmap_cache_exif_data_adobergb;
               exif_len = dt_mipmap_cache_exif_data_adobergb_length;
             }
-            if(dt_imageio_jpeg_write(filename, entry->data + sizeof(*dsc), dsc->width, dsc->height, MIN(100, MAX(10, cache_quality)), exif, exif_len))
+            if(dt_imageio_jpeg_write(filename, entry->data + sizeof(*dsc), dsc->width, dsc->height,
+                                     MIN(100, MAX(10, cache_quality)), exif, exif_len))
             {
-write_error:
+            write_error:
               g_unlink(filename);
             }
           }
@@ -522,28 +528,27 @@ void dt_mipmap_cache_init(dt_mipmap_cache_t *cache)
 
   // Fixed sizes for the thumbnail mip levels, selected for coverage of most screen sizes
   int32_t mipsizes[DT_MIPMAP_F][2] = {
-    {180,  110},  // mip0 - ~1/2 size previous one
-    {360,  225},  // mip1 - 1/2 size previous one
-    {720,  450},  // mip2 - 1/2 size previous one
-    {1440, 900},  // mip3 - covers 720p and 1366x768
-    {1920, 1200}, // mip4 - covers 1080p and 1600x1200
-    {2560, 1600}, // mip5 - covers 2560x1440
-    {4096, 2560}, // mip6 - covers 4K and UHD
-    {5120, 3200}, // mip7 - covers 5120x2880 panels
+    { 180, 110 },   // mip0 - ~1/2 size previous one
+    { 360, 225 },   // mip1 - 1/2 size previous one
+    { 720, 450 },   // mip2 - 1/2 size previous one
+    { 1440, 900 },  // mip3 - covers 720p and 1366x768
+    { 1920, 1200 }, // mip4 - covers 1080p and 1600x1200
+    { 2560, 1600 }, // mip5 - covers 2560x1440
+    { 4096, 2560 }, // mip6 - covers 4K and UHD
+    { 5120, 3200 }, // mip7 - covers 5120x2880 panels
   };
   // Set mipf to mip2 size as at most the user will be using an 8K screen and
   // have a preview that's ~4x smaller
   cache->max_width[DT_MIPMAP_F] = mipsizes[DT_MIPMAP_2][0];
   cache->max_height[DT_MIPMAP_F] = mipsizes[DT_MIPMAP_2][1];
-  for(int k = DT_MIPMAP_F-1; k >= 0; k--)
+  for(int k = DT_MIPMAP_F - 1; k >= 0; k--)
   {
-    cache->max_width[k]  = mipsizes[k][0];
+    cache->max_width[k] = mipsizes[k][0];
     cache->max_height[k] = mipsizes[k][1];
   }
-    // header + buffer
-  for(int k = DT_MIPMAP_F-1; k >= 0; k--)
-    cache->buffer_size[k] = sizeof(struct dt_mipmap_buffer_dsc)
-                                + cache->max_width[k] * cache->max_height[k] * 4;
+  // header + buffer
+  for(int k = DT_MIPMAP_F - 1; k >= 0; k--)
+    cache->buffer_size[k] = sizeof(struct dt_mipmap_buffer_dsc) + cache->max_width[k] * cache->max_height[k] * 4;
 
   // clear stats:
   cache->mip_thumbs.stats_requests = 0;
@@ -581,7 +586,7 @@ void dt_mipmap_cache_init(dt_mipmap_cache_t *cache)
   dt_cache_set_allocate_callback(&cache->mip_f.cache, dt_mipmap_cache_allocate_dynamic, cache);
   dt_cache_set_cleanup_callback(&cache->mip_f.cache, dt_mipmap_cache_deallocate_dynamic, cache);
   cache->buffer_size[DT_MIPMAP_F] = sizeof(struct dt_mipmap_buffer_dsc)
-                                        + 4 * sizeof(float) * cache->max_width[DT_MIPMAP_F]
+                                    + 4 * sizeof(float) * cache->max_width[DT_MIPMAP_F]
                                           * cache->max_height[DT_MIPMAP_F];
 }
 
@@ -594,15 +599,14 @@ void dt_mipmap_cache_cleanup(dt_mipmap_cache_t *cache)
 
 void dt_mipmap_cache_print(dt_mipmap_cache_t *cache)
 {
-  printf("[mipmap_cache] thumbs fill %.2f/%.2f MB (%.2f%%)\n",
-         cache->mip_thumbs.cache.cost / (1024.0 * 1024.0),
+  printf("[mipmap_cache] thumbs fill %.2f/%.2f MB (%.2f%%)\n", cache->mip_thumbs.cache.cost / (1024.0 * 1024.0),
          cache->mip_thumbs.cache.cost_quota / (1024.0 * 1024.0),
          100.0f * (float)cache->mip_thumbs.cache.cost / (float)cache->mip_thumbs.cache.cost_quota);
-  printf("[mipmap_cache] float fill %d/%d slots (%.2f%%)\n",
-         (uint32_t)cache->mip_f.cache.cost, (uint32_t)cache->mip_f.cache.cost_quota,
+  printf("[mipmap_cache] float fill %d/%d slots (%.2f%%)\n", (uint32_t)cache->mip_f.cache.cost,
+         (uint32_t)cache->mip_f.cache.cost_quota,
          100.0f * (float)cache->mip_f.cache.cost / (float)cache->mip_f.cache.cost_quota);
-  printf("[mipmap_cache] full  fill %d/%d slots (%.2f%%)\n",
-         (uint32_t)cache->mip_full.cache.cost, (uint32_t)cache->mip_full.cache.cost_quota,
+  printf("[mipmap_cache] full  fill %d/%d slots (%.2f%%)\n", (uint32_t)cache->mip_full.cache.cost,
+         (uint32_t)cache->mip_full.cache.cost_quota,
          100.0f * (float)cache->mip_full.cache.cost / (float)cache->mip_full.cache.cost_quota);
 
   uint64_t sum = 0;
@@ -658,15 +662,9 @@ static dt_mipmap_cache_one_t *_get_cache(dt_mipmap_cache_t *cache, const dt_mipm
   }
 }
 
-void dt_mipmap_cache_get_with_caller(
-    dt_mipmap_cache_t *cache,
-    dt_mipmap_buffer_t *buf,
-    const uint32_t imgid,
-    const dt_mipmap_size_t mip,
-    const dt_mipmap_get_flags_t flags,
-    const char mode,
-    const char *file,
-    int line)
+void dt_mipmap_cache_get_with_caller(dt_mipmap_cache_t *cache, dt_mipmap_buffer_t *buf, const uint32_t imgid,
+                                     const dt_mipmap_size_t mip, const dt_mipmap_get_flags_t flags,
+                                     const char mode, const char *file, int line)
 {
   const uint32_t key = get_key(imgid, mip);
   if(flags == DT_MIPMAP_TESTLOCK)
@@ -714,7 +712,7 @@ void dt_mipmap_cache_get_with_caller(
     if(!cache->cachedir[0]) return;
     if(mip > DT_MIPMAP_FULL || (int)mip < DT_MIPMAP_0)
       return; // remove the (int) once we no longer have to support gcc < 4.8 :/
-    char filename[PATH_MAX] = {0};
+    char filename[PATH_MAX] = { 0 };
     snprintf(filename, sizeof(filename), "%s.d/%d/%d.jpg", cache->cachedir, mip, key);
     // don't attempt to load if disk cache doesn't exist
     if(!g_file_test(filename, G_FILE_TEST_EXISTS)) return;
@@ -723,7 +721,7 @@ void dt_mipmap_cache_get_with_caller(
   else if(flags == DT_MIPMAP_BLOCKING)
   {
     // simple case: blocking get
-    dt_cache_entry_t *entry =  dt_cache_get_with_caller(&_get_cache(cache, mip)->cache, key, mode, file, line);
+    dt_cache_entry_t *entry = dt_cache_get_with_caller(&_get_cache(cache, mip)->cache, key, mode, file, line);
 
     ASAN_UNPOISON_MEMORY_REGION(entry->data, dt_mipmap_buffer_dsc_size);
 
@@ -857,7 +855,8 @@ void dt_mipmap_cache_get_with_caller(
       else if(mip == DT_MIPMAP_F)
         dead_image_f(buf);
       else
-        buf->buf = NULL; // full images with NULL buffer have to be handled, indicates `missing image', but still return locked slot
+        buf->buf = NULL; // full images with NULL buffer have to be handled, indicates `missing image', but still
+                         // return locked slot
     }
   }
   else if(flags == DT_MIPMAP_BEST_EFFORT)
@@ -882,9 +881,10 @@ void dt_mipmap_cache_get_with_caller(
         dt_mipmap_cache_get(cache, buf, imgid, mip, DT_MIPMAP_PREFETCH, 'r');
       }
     }
-    // couldn't find a smaller thumb, try larger ones only now (these will be slightly slower due to cairo rescaling):
-    dt_mipmap_size_t max_mip = (mip >= DT_MIPMAP_F) ? mip : DT_MIPMAP_F-1;
-    for(int k = mip+1; k <= max_mip; k++)
+    // couldn't find a smaller thumb, try larger ones only now (these will be slightly slower due to cairo
+    // rescaling):
+    dt_mipmap_size_t max_mip = (mip >= DT_MIPMAP_F) ? mip : DT_MIPMAP_F - 1;
+    for(int k = mip + 1; k <= max_mip; k++)
     {
       // already loaded?
       dt_mipmap_cache_get(cache, buf, imgid, k, DT_MIPMAP_TESTLOCK, 'r');
@@ -899,7 +899,7 @@ void dt_mipmap_cache_get_with_caller(
     // prefetch at least mip0, in case we have that in the disk caches:
     if(cache->cachedir[0])
     {
-      char filename[PATH_MAX] = {0};
+      char filename[PATH_MAX] = { 0 };
       snprintf(filename, sizeof(filename), "%s.d/%d/%d.jpg", cache->cachedir, mip, key);
       if(g_file_test(filename, G_FILE_TEST_EXISTS))
         dt_mipmap_cache_get(cache, 0, imgid, DT_MIPMAP_0, DT_MIPMAP_PREFETCH_DISK, 0);
@@ -914,7 +914,8 @@ void dt_mipmap_cache_get_with_caller(
   }
 }
 
-void dt_mipmap_cache_write_get_with_caller(dt_mipmap_cache_t *cache, dt_mipmap_buffer_t *buf, const uint32_t imgid, const int mip, const char *file, int line)
+void dt_mipmap_cache_write_get_with_caller(dt_mipmap_cache_t *cache, dt_mipmap_buffer_t *buf, const uint32_t imgid,
+                                           const int mip, const char *file, int line)
 {
   dt_mipmap_cache_get_with_caller(cache, buf, imgid, mip, DT_MIPMAP_BLOCKING, 'w', file, line);
 }
@@ -1186,13 +1187,12 @@ static void _init_8(uint8_t *buf, uint32_t *width, uint32_t *height, float *isca
 
   if(res)
   {
-    //try to generate mip from larger mip
+    // try to generate mip from larger mip
     for(dt_mipmap_size_t k = size + 1; k <= DT_MIPMAP_7; k++)
     {
       dt_mipmap_buffer_t tmp;
       dt_mipmap_cache_get(darktable.mipmap_cache, &tmp, imgid, k, DT_MIPMAP_TESTLOCK, 'r');
-      if(tmp.buf == NULL)
-        continue;
+      if(tmp.buf == NULL) continue;
       dt_print(DT_DEBUG_CACHE, "[_init_8] generate mip %d for %s from level %d\n", size, filename, k);
       *color_space = tmp.color_space;
       // downsample
@@ -1250,20 +1250,20 @@ static void _init_8(uint8_t *buf, uint32_t *width, uint32_t *height, float *isca
 
 dt_colorspaces_color_profile_type_t dt_mipmap_cache_get_colorspace()
 {
-  if(dt_conf_get_bool("cache_color_managed"))
-    return DT_COLORSPACE_ADOBERGB;
+  if(dt_conf_get_bool("cache_color_managed")) return DT_COLORSPACE_ADOBERGB;
   return DT_COLORSPACE_DISPLAY;
 }
 
-void dt_mipmap_cache_copy_thumbnails(const dt_mipmap_cache_t *cache, const uint32_t dst_imgid, const uint32_t src_imgid)
+void dt_mipmap_cache_copy_thumbnails(const dt_mipmap_cache_t *cache, const uint32_t dst_imgid,
+                                     const uint32_t src_imgid)
 {
   if(cache->cachedir[0] && dt_conf_get_bool("cache_disk_backend"))
   {
     for(dt_mipmap_size_t mip = DT_MIPMAP_0; mip < DT_MIPMAP_F; mip++)
     {
       // try and load from disk, if successful set flag
-      char srcpath[PATH_MAX] = {0};
-      char dstpath[PATH_MAX] = {0};
+      char srcpath[PATH_MAX] = { 0 };
+      char dstpath[PATH_MAX] = { 0 };
       snprintf(srcpath, sizeof(srcpath), "%s.d/%d/%d.jpg", cache->cachedir, mip, src_imgid);
       snprintf(dstpath, sizeof(dstpath), "%s.d/%d/%d.jpg", cache->cachedir, mip, dst_imgid);
       GFile *src = g_file_new_for_path(srcpath);

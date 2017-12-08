@@ -60,7 +60,8 @@ static void init_expansion(dt_variables_params_t *params, gboolean iterate)
   params->data->homedir = dt_loc_get_home_dir(NULL);
 
   if(g_get_user_special_dir(G_USER_DIRECTORY_PICTURES) == NULL)
-    params->data->pictures_folder = g_build_path(G_DIR_SEPARATOR_S, params->data->homedir, "Pictures", (char *)NULL);
+    params->data->pictures_folder
+        = g_build_path(G_DIR_SEPARATOR_S, params->data->homedir, "Pictures", (char *)NULL);
   else
     params->data->pictures_folder = g_strdup(g_get_user_special_dir(G_USER_DIRECTORY_PICTURES));
 
@@ -82,8 +83,9 @@ static void init_expansion(dt_variables_params_t *params, gboolean iterate)
   if(params->imgid)
   {
     const dt_image_t *img = dt_image_cache_get(darktable.image_cache, params->imgid, 'r');
-    if(sscanf(img->exif_datetime_taken, "%d:%d:%d %d:%d:%d", &params->data->exif_tm.tm_year, &params->data->exif_tm.tm_mon,
-      &params->data->exif_tm.tm_mday, &params->data->exif_tm.tm_hour, &params->data->exif_tm.tm_min, &params->data->exif_tm.tm_sec) == 6)
+    if(sscanf(img->exif_datetime_taken, "%d:%d:%d %d:%d:%d", &params->data->exif_tm.tm_year,
+              &params->data->exif_tm.tm_mon, &params->data->exif_tm.tm_mday, &params->data->exif_tm.tm_hour,
+              &params->data->exif_tm.tm_min, &params->data->exif_tm.tm_sec) == 6)
     {
       params->data->exif_tm.tm_year -= 1900;
       params->data->exif_tm.tm_mon--;
@@ -98,7 +100,8 @@ static void init_expansion(dt_variables_params_t *params, gboolean iterate)
 
     dt_image_cache_read_release(darktable.image_cache, img);
   }
-  else if (params->data->exif_time) {
+  else if(params->data->exif_time)
+  {
     localtime_r(&params->data->exif_time, &params->data->exif_tm);
     params->data->have_exif_tm = TRUE;
   }
@@ -174,13 +177,11 @@ static char *get_base_value(dt_variables_params_t *params, char **variable)
   else if(has_prefix(variable, "FILE_DIRECTORY"))
   {
     // undocumented : backward compatibility
-    if(params->filename)
-      result = g_path_get_dirname(params->filename);
+    if(params->filename) result = g_path_get_dirname(params->filename);
   }
   else if(has_prefix(variable, "FILE_FOLDER"))
   {
-    if(params->filename)
-      result = g_path_get_dirname(params->filename);
+    if(params->filename) result = g_path_get_dirname(params->filename);
   }
   else if(has_prefix(variable, "FILE_NAME"))
   {
@@ -351,7 +352,8 @@ static char *variable_get_value(dt_variables_params_t *params, char **variable)
         if(offset >= 0)
           start = g_utf8_offset_to_pointer(base_value, MIN(offset, base_value_utf8_length));
         else
-          start = g_utf8_offset_to_pointer(base_value + base_value_length, MAX(offset, -1 * base_value_utf8_length));
+          start
+              = g_utf8_offset_to_pointer(base_value + base_value_length, MAX(offset, -1 * base_value_utf8_length));
 
         // now find the end if there is a length provided
         char *end = base_value + base_value_length; // ... and until where
@@ -411,7 +413,8 @@ static char *variable_get_value(dt_variables_params_t *params, char **variable)
 
         $(var//Pattern/Replacement)
           Global replacement. All matches of Pattern, within var replaced with Replacement.
-          As above, if Replacement is omitted, then all occurrences of Pattern are replaced by nothing, that is, deleted.
+          As above, if Replacement is omitted, then all occurrences of Pattern are replaced by nothing, that is,
+        deleted.
 
         $(var/#Pattern/Replacement)
           If prefix of var matches Pattern, then substitute Replacement for Pattern.
@@ -509,7 +512,7 @@ static char *variable_get_value(dt_variables_params_t *params, char **variable)
         char *_base_value = NULL;
         if(operation == '^' && mode == '^')
         {
-          _base_value = g_utf8_strup (base_value, -1);
+          _base_value = g_utf8_strup(base_value, -1);
           (*variable)++;
         }
         else if(operation == ',' && mode == ',')
@@ -580,7 +583,6 @@ static char *expand(dt_variables_params_t *params, char **source, char extra_sto
       *result_iter = c;
       result_iter++;
       source_iter++;
-
     }
 
     // it seems we have a variable here

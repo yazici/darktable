@@ -68,8 +68,8 @@ static inline int dt_control_job_equal(_dt_job_t *j1, _dt_job_t *j2)
 {
   if(!j1 || !j2) return 0;
   if(j1->params_size != 0 && j1->params_size == j2->params_size)
-    return (j1->execute == j2->execute && j1->state_changed_cb == j2->state_changed_cb
-            && j1->queue == j2->queue && (memcmp(j1->params, j2->params, j1->params_size) == 0));
+    return (j1->execute == j2->execute && j1->state_changed_cb == j2->state_changed_cb && j1->queue == j2->queue
+            && (memcmp(j1->params, j2->params, j1->params_size) == 0));
   return (j1->execute == j2->execute && j1->state_changed_cb == j2->state_changed_cb && j1->queue == j2->queue
           && (g_strcmp0(j1->description, j2->description) == 0));
 }
@@ -78,7 +78,7 @@ static void dt_control_job_set_state(_dt_job_t *job, dt_job_state_t state)
 {
   if(!job) return;
   dt_pthread_mutex_lock(&job->state_mutex);
-  if(state >= DT_JOB_STATE_FINISHED  && job->state != DT_JOB_STATE_RUNNING && job->progress)
+  if(state >= DT_JOB_STATE_FINISHED && job->state != DT_JOB_STATE_RUNNING && job->progress)
   {
     dt_control_progress_destroy(darktable.control, job->progress);
     job->progress = NULL;
@@ -319,8 +319,7 @@ static int32_t dt_control_run_job(dt_control_t *control)
 
   /* change state to running */
   dt_pthread_mutex_lock(&job->wait_mutex);
-  if(dt_control_job_get_state(job) == DT_JOB_STATE_QUEUED)
-    dt_control_job_execute(job);
+  if(dt_control_job_get_state(job) == DT_JOB_STATE_QUEUED) dt_control_job_execute(job);
 
   dt_pthread_mutex_unlock(&job->wait_mutex);
 
@@ -466,9 +465,8 @@ int dt_control_add_job(dt_control_t *control, dt_job_queue_t queue_id, _dt_job_t
   else
   {
     // the rest are FIFOs
-    if(queue_id == DT_JOB_QUEUE_USER_BG ||
-       queue_id == DT_JOB_QUEUE_USER_EXPORT ||
-       queue_id == DT_JOB_QUEUE_SYSTEM_BG)
+    if(queue_id == DT_JOB_QUEUE_USER_BG || queue_id == DT_JOB_QUEUE_USER_EXPORT
+       || queue_id == DT_JOB_QUEUE_SYSTEM_BG)
       job->priority = 0;
     else
       job->priority = DT_CONTROL_FG_PRIORITY;
@@ -512,7 +510,7 @@ static void *dt_control_work_res(void *ptr)
   worker_thread_parameters_t *params = (worker_thread_parameters_t *)ptr;
   dt_control_t *s = params->self;
   threadid = params->threadid;
-  char name[16] = {0};
+  char name[16] = { 0 };
   snprintf(name, sizeof(name), "worker res %d", threadid);
   dt_pthread_setname(name);
   free(params);
@@ -557,7 +555,7 @@ static void *dt_control_work(void *ptr)
   worker_thread_parameters_t *params = (worker_thread_parameters_t *)ptr;
   dt_control_t *control = params->self;
   threadid = params->threadid;
-  char name[16] = {0};
+  char name[16] = { 0 };
   snprintf(name, sizeof(name), "worker %d", threadid);
   dt_pthread_setname(name);
   free(params);
@@ -582,8 +580,7 @@ void dt_control_job_add_progress(dt_job_t *job, const char *message, gboolean ca
 {
   if(!job) return;
   job->progress = dt_control_progress_create(darktable.control, TRUE, message);
-  if(cancellable)
-    dt_control_progress_attach_job(darktable.control, job->progress, job);
+  if(cancellable) dt_control_progress_attach_job(darktable.control, job->progress, job);
 }
 
 void dt_control_job_set_progress_message(dt_job_t *job, const char *message)

@@ -189,10 +189,9 @@ static __m128 _find_nearest_color_n_levels_rgb_sse2(float *val, const float f, c
   __m128 tmp = _mm_mul_ps(old, _mm_set1_ps(f));        // old * f
   __m128 itmp = _mm_cvtepi32_ps(_mm_cvtps_epi32(tmp)); // floor(tmp)
   __m128 new = _mm_mul_ps(
-      _mm_add_ps(itmp,
-                 _mm_and_ps(_mm_cmpgt_ps(_mm_sub_ps(tmp, itmp), // (tmp - itmp > 0.5f ? itmp + 1 : itmp) * rf
-                                         _mm_set1_ps(0.5f)),
-                            _mm_set1_ps(1.0f))),
+      _mm_add_ps(itmp, _mm_and_ps(_mm_cmpgt_ps(_mm_sub_ps(tmp, itmp), // (tmp - itmp > 0.5f ? itmp + 1 : itmp) * rf
+                                               _mm_set1_ps(0.5f)),
+                                  _mm_set1_ps(1.0f))),
       _mm_set1_ps(rf));
 
   _mm_store_ps(val, new);
@@ -212,8 +211,7 @@ static inline void _diffuse_error(float *val, const float *err, const float fact
 #if defined(__SSE__)
 static inline void _diffuse_error_sse(float *val, const __m128 err, const float factor)
 {
-  _mm_store_ps(val,
-               _mm_add_ps(_mm_load_ps(val), _mm_mul_ps(err, _mm_set1_ps(factor)))); // *val += err * factor
+  _mm_store_ps(val, _mm_add_ps(_mm_load_ps(val), _mm_mul_ps(err, _mm_set1_ps(factor)))); // *val += err * factor
 }
 #endif
 
@@ -230,8 +228,8 @@ static inline float clipnan(const float x)
 }
 
 static void process_floyd_steinberg(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece,
-                                    const void *const ivoid, void *const ovoid,
-                                    const dt_iop_roi_t *const roi_in, const dt_iop_roi_t *const roi_out)
+                                    const void *const ivoid, void *const ovoid, const dt_iop_roi_t *const roi_in,
+                                    const dt_iop_roi_t *const roi_out)
 {
   dt_iop_dither_data_t *data = (dt_iop_dither_data_t *)piece->data;
 
@@ -335,7 +333,8 @@ static void process_floyd_steinberg(struct dt_iop_module_t *self, dt_dev_pixelpi
       for(int i = 0; i < width; i++) nearest_color(out + ch * i, err, f, rf);
     }
 
-    if(piece->pipe->mask_display & DT_DEV_PIXELPIPE_DISPLAY_MASK) dt_iop_alpha_copy(ivoid, ovoid, roi_out->width, roi_out->height);
+    if(piece->pipe->mask_display & DT_DEV_PIXELPIPE_DISPLAY_MASK)
+      dt_iop_alpha_copy(ivoid, ovoid, roi_out->width, roi_out->height);
     return;
   }
 
@@ -391,7 +390,8 @@ static void process_floyd_steinberg(struct dt_iop_module_t *self, dt_dev_pixelpi
   } while(0);
 
   // copy alpha channel if needed
-  if(piece->pipe->mask_display & DT_DEV_PIXELPIPE_DISPLAY_MASK) dt_iop_alpha_copy(ivoid, ovoid, roi_out->width, roi_out->height);
+  if(piece->pipe->mask_display & DT_DEV_PIXELPIPE_DISPLAY_MASK)
+    dt_iop_alpha_copy(ivoid, ovoid, roi_out->width, roi_out->height);
 }
 
 #if defined(__SSE2__)
@@ -501,7 +501,8 @@ static void process_floyd_steinberg_sse2(struct dt_iop_module_t *self, dt_dev_pi
       for(int i = 0; i < width; i++) (void)nearest_color(out + ch * i, f, rf);
     }
 
-    if(piece->pipe->mask_display & DT_DEV_PIXELPIPE_DISPLAY_MASK) dt_iop_alpha_copy(ivoid, ovoid, roi_out->width, roi_out->height);
+    if(piece->pipe->mask_display & DT_DEV_PIXELPIPE_DISPLAY_MASK)
+      dt_iop_alpha_copy(ivoid, ovoid, roi_out->width, roi_out->height);
     return;
   }
 
@@ -557,7 +558,8 @@ static void process_floyd_steinberg_sse2(struct dt_iop_module_t *self, dt_dev_pi
   } while(0);
 
   // copy alpha channel if needed
-  if(piece->pipe->mask_display & DT_DEV_PIXELPIPE_DISPLAY_MASK) dt_iop_alpha_copy(ivoid, ovoid, roi_out->width, roi_out->height);
+  if(piece->pipe->mask_display & DT_DEV_PIXELPIPE_DISPLAY_MASK)
+    dt_iop_alpha_copy(ivoid, ovoid, roi_out->width, roi_out->height);
 }
 #endif
 
@@ -587,9 +589,8 @@ static float tpdf(unsigned int urandom)
 }
 
 
-static void process_random(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece,
-                           const void *const ivoid, void *const ovoid, const dt_iop_roi_t *const roi_in,
-                           const dt_iop_roi_t *const roi_out)
+static void process_random(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const void *const ivoid,
+                           void *const ovoid, const dt_iop_roi_t *const roi_in, const dt_iop_roi_t *const roi_out)
 {
   dt_iop_dither_data_t *data = (dt_iop_dither_data_t *)piece->data;
 

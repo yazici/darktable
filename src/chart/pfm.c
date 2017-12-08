@@ -81,7 +81,8 @@ float *read_pfm(const char *filename, int *wd, int *ht)
       for(size_t i = (size_t)width * height; i > 0; i--)
         for(int c = 0; c < 3; c++)
         {
-          union {
+          union
+          {
             float f;
             guint32 i;
           } v;
@@ -95,7 +96,8 @@ float *read_pfm(const char *filename, int *wd, int *ht)
     for(size_t j = 0; j < height; j++)
       for(size_t i = 0; i < width; i++)
       {
-        union {
+        union
+        {
           float f;
           guint32 i;
         } v;

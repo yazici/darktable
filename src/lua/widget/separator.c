@@ -19,36 +19,36 @@
 #include "lua/types.h"
 #include "lua/widget/common.h"
 
-static dt_lua_widget_type_t separator_type = {
-  .name = "separator",
-  .gui_init = NULL,
-  .gui_cleanup = NULL,
-  .alloc_size = sizeof(dt_lua_widget_t),
-  .parent= &widget_type
+static dt_lua_widget_type_t separator_type = {.name = "separator",
+                                              .gui_init = NULL,
+                                              .gui_cleanup = NULL,
+                                              .alloc_size = sizeof(dt_lua_widget_t),
+                                              .parent = &widget_type
 
 };
 
 static int orientation_member(lua_State *L)
 {
   lua_separator separator;
-  luaA_to(L,lua_separator,&separator,1);
+  luaA_to(L, lua_separator, &separator, 1);
   dt_lua_orientation_t orientation;
-  if(lua_gettop(L) > 2) {
-    luaA_to(L,dt_lua_orientation_t,&orientation,3);
-    gtk_orientable_set_orientation(GTK_ORIENTABLE(separator->widget),orientation);
+  if(lua_gettop(L) > 2)
+  {
+    luaA_to(L, dt_lua_orientation_t, &orientation, 3);
+    gtk_orientable_set_orientation(GTK_ORIENTABLE(separator->widget), orientation);
     return 0;
   }
   orientation = gtk_orientable_get_orientation(GTK_ORIENTABLE(separator->widget));
-  luaA_push(L,dt_lua_orientation_t,&orientation);
+  luaA_push(L, dt_lua_orientation_t, &orientation);
   return 1;
 }
 
 
-int dt_lua_init_widget_separator(lua_State* L)
+int dt_lua_init_widget_separator(lua_State *L)
 {
-  dt_lua_init_widget_type(L,&separator_type,lua_separator,GTK_TYPE_SEPARATOR);
+  dt_lua_init_widget_type(L, &separator_type, lua_separator, GTK_TYPE_SEPARATOR);
 
-  lua_pushcfunction(L,orientation_member);
+  lua_pushcfunction(L, orientation_member);
   dt_lua_gtk_wrap(L);
   dt_lua_type_register(L, lua_separator, "orientation");
   return 0;

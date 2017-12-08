@@ -47,9 +47,9 @@ static const gchar introspection_xml[] = "<node>"
 
 
 #ifdef USE_LUA
-static void dbus_lua_call_finished(lua_State* L,int result,void* data)
+static void dbus_lua_call_finished(lua_State *L, int result, void *data)
 {
-  GDBusMethodInvocation *invocation = (GDBusMethodInvocation*)data;
+  GDBusMethodInvocation *invocation = (GDBusMethodInvocation *)data;
   if(result == LUA_OK)
   {
     if(lua_isnil(L, -1))
@@ -66,7 +66,7 @@ static void dbus_lua_call_finished(lua_State* L,int result,void* data)
   {
     const char *msg = luaL_checkstring(L, -1);
     g_dbus_method_invocation_return_dbus_error(invocation, "org.darktable.Error.LuaError", msg);
-    dt_lua_check_print_error(L,result);
+    dt_lua_check_print_error(L, result);
   }
 }
 #endif
@@ -92,7 +92,7 @@ static void _handle_method_call(GDBusConnection *connection, const gchar *sender
   {
     const gchar *command;
     g_variant_get(parameters, "(&s)", &command);
-    dt_lua_async_call_string(command, 1,dbus_lua_call_finished,invocation);
+    dt_lua_async_call_string(command, 1, dbus_lua_call_finished, invocation);
     // we don't finish the invocation, the async task will do this for us
   }
 #endif
@@ -100,9 +100,9 @@ static void _handle_method_call(GDBusConnection *connection, const gchar *sender
 
 // TODO: expose the conf? partly? completely?
 
-static GVariant *_handle_get_property(GDBusConnection *connection, const gchar *sender,
-                                      const gchar *object_path, const gchar *interface_name,
-                                      const gchar *property_name, GError **error, gpointer user_data)
+static GVariant *_handle_get_property(GDBusConnection *connection, const gchar *sender, const gchar *object_path,
+                                      const gchar *interface_name, const gchar *property_name, GError **error,
+                                      gpointer user_data)
 {
   GVariant *ret;
 
@@ -151,15 +151,13 @@ static void _on_bus_acquired(GDBusConnection *connection, const gchar *name, gpo
 {
   dt_dbus_t *dbus = (dt_dbus_t *)user_data;
 
-  dbus->registration_id
-      = g_dbus_connection_register_object(connection, "/darktable", dbus->introspection_data->interfaces[0],
-                                          &interface_vtable, dbus, /* user_data */
-                                          NULL,                    /* user_data_free_func */
-                                          NULL);                   /* GError** */
+  dbus->registration_id = g_dbus_connection_register_object(
+      connection, "/darktable", dbus->introspection_data->interfaces[0], &interface_vtable, dbus, /* user_data */
+      NULL,  /* user_data_free_func */
+      NULL); /* GError** */
 
   if(dbus->registration_id == 0)
-    dbus->connected
-        = 0; // technically we are connected, but we are not exporting anything. or something like that
+    dbus->connected = 0; // technically we are connected, but we are not exporting anything. or something like that
 }
 
 static void _on_name_acquired(GDBusConnection *connection, const gchar *name, gpointer user_data)
@@ -185,8 +183,8 @@ struct dt_dbus_t *dt_dbus_init()
 
   dbus->owner_id = g_bus_own_name(G_BUS_TYPE_SESSION,
                                   "org.darktable.service", // FIXME
-                                  G_BUS_NAME_OWNER_FLAGS_NONE, _on_bus_acquired, _on_name_acquired,
-                                  _on_name_lost, dbus, NULL);
+                                  G_BUS_NAME_OWNER_FLAGS_NONE, _on_bus_acquired, _on_name_acquired, _on_name_lost,
+                                  dbus, NULL);
 
   dbus->dbus_connection = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
   g_object_set(G_OBJECT(dbus->dbus_connection), "exit-on-close", FALSE, (gchar *)0);

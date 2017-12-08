@@ -121,8 +121,7 @@ static gint sort_monitor_list(gconstpointer a, gconstpointer b)
   monitor_t *monitor_a = (monitor_t *)a;
   monitor_t *monitor_b = (monitor_t *)b;
 
-  if(monitor_a->screen != monitor_b->screen)
-    return monitor_a->screen - monitor_b->screen;
+  if(monitor_a->screen != monitor_b->screen) return monitor_a->screen - monitor_b->screen;
 
   if(monitor_a->is_primary) return -1;
   if(monitor_b->is_primary) return 1;
@@ -167,8 +166,9 @@ int main(int argc __attribute__((unused)), char *arg[] __attribute__((unused)))
     {
       if((pp = g_strstr_len(pp, -1, ".")) == NULL)
         g_strlcat(disp_name, ".0", sizeof(disp_name));
-      else  {
-        if (pp[1] == '\0')
+      else
+      {
+        if(pp[1] == '\0')
           g_strlcat(disp_name, "0", sizeof(disp_name));
         else
         {
@@ -205,8 +205,7 @@ int main(int argc __attribute__((unused)), char *arg[] __attribute__((unused)))
       for(int crtc = 0; crtc < rsrc->ncrtc; crtc++)
       {
         XRRCrtcInfo *crtc_info = XRRGetCrtcInfo(display, rsrc, rsrc->crtcs[crtc]);
-        if(!crtc_info)
-          continue;
+        if(!crtc_info) continue;
 
         if(crtc_info->mode != None && crtc_info->noutput > 0)
         {
@@ -223,7 +222,7 @@ int main(int argc __attribute__((unused)), char *arg[] __attribute__((unused)))
         XRRFreeCrtcInfo(crtc_info);
       }
     }
-    if (primary_id == -1)
+    if(primary_id == -1)
       printf("couldn't locate primary CRTC!\n");
     else
     {
@@ -306,7 +305,7 @@ int main(int argc __attribute__((unused)), char *arg[] __attribute__((unused)))
         monitor->name = g_strdup(output_info->name);
         monitor_list = g_list_append(monitor_list, monitor);
 
-end:
+      end:
         XRRFreeCrtcInfo(crtc_info);
         XRRFreeOutputInfo(output_info);
       }
@@ -408,11 +407,9 @@ end:
       message = "the X atom seems to be missing";
       any_unprofiled_monitor = TRUE;
     }
-#else // HAVE_COLORD
-    char *colord_filename = monitor->colord_filename ? monitor->colord_filename : "(none)",
-         *colord_description;
-    if(monitor->colord_filename == NULL
-       || g_file_test(monitor->colord_filename, G_FILE_TEST_IS_REGULAR) == FALSE)
+#else  // HAVE_COLORD
+    char *colord_filename = monitor->colord_filename ? monitor->colord_filename : "(none)", *colord_description;
+    if(monitor->colord_filename == NULL || g_file_test(monitor->colord_filename, G_FILE_TEST_IS_REGULAR) == FALSE)
     {
       colord_description = g_strdup("(file not found)");
       if(monitor->x_atom_length > 0)
@@ -431,8 +428,8 @@ end:
       unsigned char *tmp_data = NULL;
       size_t size = 0;
       g_file_get_contents(monitor->colord_filename, (gchar **)&tmp_data, &size, NULL);
-      gboolean profiles_equal = (size == monitor->x_atom_length
-                                 && (size == 0 || memcmp(monitor->x_atom_data, tmp_data, size) == 0));
+      gboolean profiles_equal
+          = (size == monitor->x_atom_length && (size == 0 || memcmp(monitor->x_atom_data, tmp_data, size) == 0));
       if(!profiles_equal) any_profile_mismatch = TRUE;
       if(size == 0 && monitor->x_atom_length == 0) any_unprofiled_monitor = TRUE;
       message = profiles_equal ? "the X atom and colord returned the same profile"
@@ -457,7 +454,6 @@ end:
 #ifdef HAVE_COLORD
     g_free(colord_description);
 #endif
-
   }
 
 

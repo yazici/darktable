@@ -163,7 +163,8 @@ void process(dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const void *c
     }
   }
 
-  if(piece->pipe->mask_display & DT_DEV_PIXELPIPE_DISPLAY_MASK) dt_iop_alpha_copy(ivoid, ovoid, roi_out->width, roi_out->height);
+  if(piece->pipe->mask_display & DT_DEV_PIXELPIPE_DISPLAY_MASK)
+    dt_iop_alpha_copy(ivoid, ovoid, roi_out->width, roi_out->height);
 }
 
 static void linear_callback(GtkWidget *slider, gpointer user_data)
@@ -244,10 +245,10 @@ void commit_params(dt_iop_module_t *self, dt_iop_params_t *p1, dt_dev_pixelpipe_
 
   // now the extrapolation stuff:
   const float x[4] = { 0.7f, 0.8f, 0.9f, 1.0f };
-  const float y[4] = { d->table[CLAMP((int)(x[0] * 0x10000ul), 0, 0xffff)],
-                       d->table[CLAMP((int)(x[1] * 0x10000ul), 0, 0xffff)],
-                       d->table[CLAMP((int)(x[2] * 0x10000ul), 0, 0xffff)],
-                       d->table[CLAMP((int)(x[3] * 0x10000ul), 0, 0xffff)] };
+  const float y[4]
+      = { d->table[CLAMP((int)(x[0] * 0x10000ul), 0, 0xffff)], d->table[CLAMP((int)(x[1] * 0x10000ul), 0, 0xffff)],
+          d->table[CLAMP((int)(x[2] * 0x10000ul), 0, 0xffff)],
+          d->table[CLAMP((int)(x[3] * 0x10000ul), 0, 0xffff)] };
   dt_iop_estimate_exp(x, y, 4, d->unbounded_coeffs);
 }
 
@@ -277,7 +278,7 @@ void init(dt_iop_module_t *module)
   module->params = calloc(1, sizeof(dt_iop_profilegamma_params_t));
   module->default_params = calloc(1, sizeof(dt_iop_profilegamma_params_t));
   module->default_enabled = 0;
-    module->priority = 333; // module order created by iop_dependencies.py, do not edit!
+  module->priority = 333; // module order created by iop_dependencies.py, do not edit!
   module->params_size = sizeof(dt_iop_profilegamma_params_t);
   module->gui_data = NULL;
   dt_iop_profilegamma_params_t tmp = (dt_iop_profilegamma_params_t){ 0.1, 0.45 };

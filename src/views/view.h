@@ -46,7 +46,7 @@
     control which view the module should be available in also
     which placement in the panels the module have.
 */
-typedef enum 
+typedef enum
 {
   DT_VIEW_LIGHTTABLE = 1,
   DT_VIEW_DARKROOM = 2,
@@ -61,12 +61,12 @@ typedef enum
 typedef enum dt_view_flags_t
 {
   VIEW_FLAGS_NONE = 0,
-  VIEW_FLAGS_HIDDEN = 1 << 0,       // Hide the view from userinterface
+  VIEW_FLAGS_HIDDEN = 1 << 0, // Hide the view from userinterface
 } dt_view_flags_t;
 
-#define DT_VIEW_ALL                                                                              \
-  (DT_VIEW_LIGHTTABLE | DT_VIEW_DARKROOM | DT_VIEW_TETHERING | DT_VIEW_MAP | DT_VIEW_SLIDESHOW | \
-   DT_VIEW_PRINT | DT_VIEW_KNIGHT)
+#define DT_VIEW_ALL                                                                                               \
+  (DT_VIEW_LIGHTTABLE | DT_VIEW_DARKROOM | DT_VIEW_TETHERING | DT_VIEW_MAP | DT_VIEW_SLIDESHOW | DT_VIEW_PRINT    \
+   | DT_VIEW_KNIGHT)
 
 /**
  * main dt view module (as lighttable or darkroom)
@@ -95,9 +95,9 @@ typedef struct dt_view_t
   void (*expose)(struct dt_view_t *self, cairo_t *cr, int32_t width, int32_t height, int32_t pointerx,
                  int32_t pointery);         // expose the module (gtk callback)
   int (*try_enter)(struct dt_view_t *self); // test if enter can succeed.
-  void (*enter)(struct dt_view_t *self); // mode entered, this module got focus. return non-null on failure.
-  void (*leave)(struct dt_view_t *self); // mode left (is called after the new try_enter has succeded).
-  void (*reset)(struct dt_view_t *self); // reset default appearance
+  void (*enter)(struct dt_view_t *self);    // mode entered, this module got focus. return non-null on failure.
+  void (*leave)(struct dt_view_t *self);    // mode left (is called after the new try_enter has succeded).
+  void (*reset)(struct dt_view_t *self);    // reset default appearance
 
   // event callbacks:
   void (*mouse_enter)(struct dt_view_t *self);
@@ -138,19 +138,14 @@ int32_t dt_view_get_image_to_act_on();
 
 /** expose an image, set image over flags. return != 0 if thumbnail wasn't loaded yet. */
 int dt_view_image_expose(dt_view_image_over_t *image_over, uint32_t index, cairo_t *cr, int32_t width,
-                         int32_t height, int32_t zoom, int32_t px, int32_t py, gboolean full_preview, gboolean image_only);
+                         int32_t height, int32_t zoom, int32_t px, int32_t py, gboolean full_preview,
+                         gboolean image_only);
 
 /* expose only the image imgid at position (offsetx,offsety) into the cairo surface occupying width/height pixels.
    this routine does not output any meta-data as the version above.
  */
-void
-dt_view_image_only_expose(
-  uint32_t imgid,
-  cairo_t *cr,
-  int32_t width,
-  int32_t height,
-  int32_t offsetx,
-  int32_t offsety);
+void dt_view_image_only_expose(uint32_t imgid, cairo_t *cr, int32_t width, int32_t height, int32_t offsetx,
+                               int32_t offsety);
 
 
 /** Set the selection bit to a given value for the specified image */
@@ -198,7 +193,7 @@ typedef struct dt_view_manager_t
     struct
     {
       struct dt_lib_module_t *module;
-      void (*add)(struct dt_lib_module_t *, GtkWidget *, dt_view_type_flags_t );
+      void (*add)(struct dt_lib_module_t *, GtkWidget *, dt_view_type_flags_t);
     } view_toolbox;
 
     /* module toolbox proxy object */
@@ -274,7 +269,7 @@ typedef struct dt_view_manager_t
     } map;
 #endif
 
-    /* map view proxy object */
+/* map view proxy object */
 #ifdef HAVE_PRINT
     struct
     {
@@ -297,8 +292,8 @@ const char *dt_view_manager_name(dt_view_manager_t *vm);
 int dt_view_manager_switch(dt_view_manager_t *vm, const char *view_name);
 int dt_view_manager_switch_by_view(dt_view_manager_t *vm, const dt_view_t *new_view);
 /** expose current module. */
-void dt_view_manager_expose(dt_view_manager_t *vm, cairo_t *cr, int32_t width, int32_t height,
-                            int32_t pointerx, int32_t pointery);
+void dt_view_manager_expose(dt_view_manager_t *vm, cairo_t *cr, int32_t width, int32_t height, int32_t pointerx,
+                            int32_t pointery);
 /** reset current view. */
 void dt_view_manager_reset(dt_view_manager_t *vm);
 /** get current view of the view manager. */
@@ -308,8 +303,8 @@ void dt_view_manager_mouse_enter(dt_view_manager_t *vm);
 void dt_view_manager_mouse_leave(dt_view_manager_t *vm);
 void dt_view_manager_mouse_moved(dt_view_manager_t *vm, double x, double y, double pressure, int which);
 int dt_view_manager_button_released(dt_view_manager_t *vm, double x, double y, int which, uint32_t state);
-int dt_view_manager_button_pressed(dt_view_manager_t *vm, double x, double y, double pressure, int which,
-                                   int type, uint32_t state);
+int dt_view_manager_button_pressed(dt_view_manager_t *vm, double x, double y, double pressure, int which, int type,
+                                   uint32_t state);
 int dt_view_manager_key_pressed(dt_view_manager_t *vm, guint key, guint state);
 int dt_view_manager_key_released(dt_view_manager_t *vm, guint key, guint state);
 void dt_view_manager_configure(dt_view_manager_t *vm, int width, int height);
@@ -375,7 +370,8 @@ void dt_view_filmstrip_prefetch();
  */
 #ifdef HAVE_MAP
 void dt_view_map_center_on_location(const dt_view_manager_t *vm, gdouble lon, gdouble lat, gdouble zoom);
-void dt_view_map_center_on_bbox(const dt_view_manager_t *vm, gdouble lon1, gdouble lat1, gdouble lon2, gdouble lat2);
+void dt_view_map_center_on_bbox(const dt_view_manager_t *vm, gdouble lon1, gdouble lat1, gdouble lon2,
+                                gdouble lat2);
 void dt_view_map_show_osd(const dt_view_manager_t *vm, gboolean enabled);
 void dt_view_map_set_map_source(const dt_view_manager_t *vm, OsmGpsMapSource_t map_source);
 GObject *dt_view_map_add_marker(const dt_view_manager_t *vm, dt_geo_map_display_t type, GList *points);

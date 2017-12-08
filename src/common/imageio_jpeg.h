@@ -48,8 +48,7 @@ int dt_imageio_jpeg_decompress_header(const void *in, size_t length, dt_imageio_
 int dt_imageio_jpeg_decompress(dt_imageio_jpeg_t *jpg, uint8_t *out);
 /** compresses in to out buffer with given quality (0..100). out buffer must be large enough. returns actual
  * data length. */
-int dt_imageio_jpeg_compress(const uint8_t *in, uint8_t *out, const int width, const int height,
-                             const int quality);
+int dt_imageio_jpeg_compress(const uint8_t *in, uint8_t *out, const int width, const int height, const int quality);
 
 /** write jpeg to file, with exif if not NULL. */
 int dt_imageio_jpeg_write(const char *filename, const uint8_t *in, const int width, const int height,
@@ -64,7 +63,8 @@ int dt_imageio_jpeg_read_header(const char *filename, dt_imageio_jpeg_t *jpg);
 int dt_imageio_jpeg_read(dt_imageio_jpeg_t *jpg, uint8_t *out);
 /** reads the color profile attached to the jpeg, closes file. */
 int dt_imageio_jpeg_read_profile(dt_imageio_jpeg_t *jpg, uint8_t **out);
-/** return the color space of the image, this only distinguishs between sRGB, AdobeRGB and unknown. used for mipmaps */
+/** return the color space of the image, this only distinguishs between sRGB, AdobeRGB and unknown. used for
+ * mipmaps */
 dt_colorspaces_color_profile_type_t dt_imageio_jpeg_read_color_space(dt_imageio_jpeg_t *jpg);
 
 /** utility function to read and open jpeg from imagio.c */

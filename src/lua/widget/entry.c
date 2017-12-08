@@ -19,25 +19,23 @@
 #include "lua/types.h"
 #include "lua/widget/common.h"
 
-static void entry_init(lua_State* L);
-static void entry_cleanup(lua_State* L,lua_widget widget);
-static dt_lua_widget_type_t entry_type = {
-  .name = "entry",
-  .gui_init = entry_init,
-  .gui_cleanup = entry_cleanup,
-  .alloc_size = sizeof(dt_lua_widget_t),
-  .parent= &widget_type
-};
+static void entry_init(lua_State *L);
+static void entry_cleanup(lua_State *L, lua_widget widget);
+static dt_lua_widget_type_t entry_type = {.name = "entry",
+                                          .gui_init = entry_init,
+                                          .gui_cleanup = entry_cleanup,
+                                          .alloc_size = sizeof(dt_lua_widget_t),
+                                          .parent = &widget_type };
 
 
-static void entry_init(lua_State* L)
+static void entry_init(lua_State *L)
 {
   lua_entry entry;
-  luaA_to(L,lua_entry,&entry,1);
+  luaA_to(L, lua_entry, &entry, 1);
   dt_gui_key_accel_block_on_focus_connect(GTK_WIDGET(entry->widget));
 }
 
-static void entry_cleanup(lua_State* L,lua_widget widget)
+static void entry_cleanup(lua_State *L, lua_widget widget)
 {
   dt_gui_key_accel_block_on_focus_disconnect(widget->widget);
 }
@@ -46,54 +44,58 @@ static void entry_cleanup(lua_State* L,lua_widget widget)
 static int text_member(lua_State *L)
 {
   lua_entry entry;
-  luaA_to(L,lua_entry,&entry,1);
-  if(lua_gettop(L) > 2) {
-    const char * text = luaL_checkstring(L,3);
-    gtk_entry_set_text(GTK_ENTRY(entry->widget),text);
+  luaA_to(L, lua_entry, &entry, 1);
+  if(lua_gettop(L) > 2)
+  {
+    const char *text = luaL_checkstring(L, 3);
+    gtk_entry_set_text(GTK_ENTRY(entry->widget), text);
     return 0;
   }
-  lua_pushstring(L,gtk_entry_get_text(GTK_ENTRY(entry->widget)));
+  lua_pushstring(L, gtk_entry_get_text(GTK_ENTRY(entry->widget)));
   return 1;
 }
 
 static int is_password_member(lua_State *L)
 {
   lua_entry entry;
-  luaA_to(L,lua_entry,&entry,1);
-  if(lua_gettop(L) > 2) {
-    const gboolean visibility = lua_toboolean(L,3);
-    gtk_entry_set_visibility(GTK_ENTRY(entry->widget),visibility);
+  luaA_to(L, lua_entry, &entry, 1);
+  if(lua_gettop(L) > 2)
+  {
+    const gboolean visibility = lua_toboolean(L, 3);
+    gtk_entry_set_visibility(GTK_ENTRY(entry->widget), visibility);
     return 0;
   }
-  lua_pushboolean(L,gtk_entry_get_visibility(GTK_ENTRY(entry->widget)));
+  lua_pushboolean(L, gtk_entry_get_visibility(GTK_ENTRY(entry->widget)));
   return 1;
 }
 
 static int placeholder_member(lua_State *L)
 {
   lua_entry entry;
-  luaA_to(L,lua_entry,&entry,1);
-  if(lua_gettop(L) > 2) {
-    const char * placeholder = luaL_checkstring(L,3);
-    gtk_entry_set_placeholder_text(GTK_ENTRY(entry->widget),placeholder);
+  luaA_to(L, lua_entry, &entry, 1);
+  if(lua_gettop(L) > 2)
+  {
+    const char *placeholder = luaL_checkstring(L, 3);
+    gtk_entry_set_placeholder_text(GTK_ENTRY(entry->widget), placeholder);
     return 0;
   }
-  lua_pushstring(L,gtk_entry_get_placeholder_text(GTK_ENTRY(entry->widget)));
+  lua_pushstring(L, gtk_entry_get_placeholder_text(GTK_ENTRY(entry->widget)));
   return 1;
 }
 
 static int editable_member(lua_State *L)
 {
   lua_entry entry;
-  luaA_to(L,lua_entry,&entry,1);
+  luaA_to(L, lua_entry, &entry, 1);
   gboolean editable;
-  if(lua_gettop(L) > 2) {
-    editable = lua_toboolean(L,3);
+  if(lua_gettop(L) > 2)
+  {
+    editable = lua_toboolean(L, 3);
     g_object_set(G_OBJECT(entry->widget), "editable", editable, (gchar *)0);
     return 0;
   }
-  g_object_get(G_OBJECT(entry->widget),"editable",&editable,NULL);
-  lua_pushboolean(L,editable);
+  g_object_get(G_OBJECT(entry->widget), "editable", &editable, NULL);
+  lua_pushboolean(L, editable);
   return 1;
 }
 
@@ -108,27 +110,27 @@ static int tostring_member(lua_State *L)
   return 1;
 }
 
-int dt_lua_init_widget_entry(lua_State* L)
+int dt_lua_init_widget_entry(lua_State *L)
 {
-  dt_lua_init_widget_type(L,&entry_type,lua_entry,GTK_TYPE_ENTRY);
+  dt_lua_init_widget_type(L, &entry_type, lua_entry, GTK_TYPE_ENTRY);
 
   lua_pushcfunction(L, tostring_member);
   dt_lua_gtk_wrap(L);
   dt_lua_type_setmetafield(L, lua_entry, "__tostring");
 
-  lua_pushcfunction(L,text_member);
+  lua_pushcfunction(L, text_member);
   dt_lua_gtk_wrap(L);
   dt_lua_type_register(L, lua_entry, "text");
 
-  lua_pushcfunction(L,is_password_member);
+  lua_pushcfunction(L, is_password_member);
   dt_lua_gtk_wrap(L);
   dt_lua_type_register(L, lua_entry, "is_password");
 
-  lua_pushcfunction(L,placeholder_member);
+  lua_pushcfunction(L, placeholder_member);
   dt_lua_gtk_wrap(L);
   dt_lua_type_register(L, lua_entry, "placeholder");
 
-  lua_pushcfunction(L,editable_member);
+  lua_pushcfunction(L, editable_member);
   dt_lua_gtk_wrap(L);
   dt_lua_type_register(L, lua_entry, "editable");
 

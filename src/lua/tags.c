@@ -148,7 +148,7 @@ static int tag_delete(lua_State *L)
 {
   dt_lua_tag_t tagid;
   luaA_to(L, dt_lua_tag_t, &tagid, -1);
-  
+
   GList *tagged_images = NULL;
   sqlite3_stmt *stmt;
   DT_DEBUG_SQLITE3_PREPARE_V2(dt_database_get(darktable.db), "SELECT imgid FROM main.tagged_images WHERE tagid=?1",
@@ -268,7 +268,7 @@ int dt_lua_init_tags(lua_State *L)
   lua_pushcclosure(L, dt_lua_type_member_common, 1);
   dt_lua_type_register_const(L, dt_lua_tag_t, "detach");
   lua_pushcfunction(L, tag_tostring);
-  dt_lua_type_setmetafield(L,dt_lua_tag_t,"__tostring");
+  dt_lua_type_setmetafield(L, dt_lua_tag_t, "__tostring");
 
   /* tags */
   dt_lua_push_darktable_lib(L);

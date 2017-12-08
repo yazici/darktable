@@ -28,10 +28,7 @@
 
 // this implements a concurrent LRU cache
 
-void dt_cache_init(
-    dt_cache_t *cache,
-    size_t entry_size,
-    size_t cost_quota)
+void dt_cache_init(dt_cache_t *cache, size_t entry_size, size_t cost_quota)
 {
   cache->cost = 0;
   cache->lru = 0;
@@ -79,17 +76,15 @@ int32_t dt_cache_contains(dt_cache_t *cache, const uint32_t key)
   return result;
 }
 
-int dt_cache_for_all(
-    dt_cache_t *cache,
-    int (*process)(const uint32_t key, const void *data, void *user_data),
-    void *user_data)
+int dt_cache_for_all(dt_cache_t *cache, int (*process)(const uint32_t key, const void *data, void *user_data),
+                     void *user_data)
 {
   dt_pthread_mutex_lock(&cache->lock);
   GHashTableIter iter;
   gpointer key, value;
 
-  g_hash_table_iter_init (&iter, cache->hashtable);
-  while (g_hash_table_iter_next (&iter, &key, &value))
+  g_hash_table_iter_init(&iter, cache->hashtable);
+  while(g_hash_table_iter_next(&iter, &key, &value))
   {
     dt_cache_entry_t *entry = (dt_cache_entry_t *)value;
     const int err = process(GPOINTER_TO_INT(key), entry->data, user_data);
@@ -112,14 +107,15 @@ dt_cache_entry_t *dt_cache_testget(dt_cache_t *cache, const uint32_t key, char m
   int result;
   double start = dt_get_wtime();
   dt_pthread_mutex_lock(&cache->lock);
-  res = g_hash_table_lookup_extended(
-      cache->hashtable, GINT_TO_POINTER(key), &orig_key, &value);
+  res = g_hash_table_lookup_extended(cache->hashtable, GINT_TO_POINTER(key), &orig_key, &value);
   if(res)
   {
     dt_cache_entry_t *entry = (dt_cache_entry_t *)value;
     // lock the cache entry
-    if(mode == 'w') result = dt_pthread_rwlock_trywrlock(&entry->lock);
-    else            result = dt_pthread_rwlock_tryrdlock(&entry->lock);
+    if(mode == 'w')
+      result = dt_pthread_rwlock_trywrlock(&entry->lock);
+    else
+      result = dt_pthread_rwlock_tryrdlock(&entry->lock);
     if(result)
     { // need to give up mutex so other threads have a chance to get in between and
       // free the lock we're trying to acquire:
@@ -131,8 +127,7 @@ dt_cache_entry_t *dt_cache_testget(dt_cache_t *cache, const uint32_t key, char m
     cache->lru = g_list_concat(cache->lru, entry->link);
     dt_pthread_mutex_unlock(&cache->lock);
     double end = dt_get_wtime();
-    if(end - start > 0.1)
-      fprintf(stderr, "try+ wait time %.06fs mode %c \n", end - start, mode);
+    if(end - start > 0.1) fprintf(stderr, "try+ wait time %.06fs mode %c \n", end - start, mode);
 
     if(mode == 'w')
     {
@@ -146,15 +141,15 @@ dt_cache_entry_t *dt_cache_testget(dt_cache_t *cache, const uint32_t key, char m
   }
   dt_pthread_mutex_unlock(&cache->lock);
   double end = dt_get_wtime();
-  if(end - start > 0.1)
-    fprintf(stderr, "try- wait time %.06fs\n", end - start);
+  if(end - start > 0.1) fprintf(stderr, "try- wait time %.06fs\n", end - start);
   return 0;
 }
 
 // if found, the data void* is returned. if not, it is set to be
 // the given *data and a new hash table entry is created, which can be
 // found using the given key later on.
-dt_cache_entry_t *dt_cache_get_with_caller(dt_cache_t *cache, const uint32_t key, char mode, const char *file, int line)
+dt_cache_entry_t *dt_cache_get_with_caller(dt_cache_t *cache, const uint32_t key, char mode, const char *file,
+                                           int line)
 {
   gpointer orig_key, value;
   gboolean res;
@@ -162,13 +157,14 @@ dt_cache_entry_t *dt_cache_get_with_caller(dt_cache_t *cache, const uint32_t key
   double start = dt_get_wtime();
 restart:
   dt_pthread_mutex_lock(&cache->lock);
-  res = g_hash_table_lookup_extended(
-      cache->hashtable, GINT_TO_POINTER(key), &orig_key, &value);
+  res = g_hash_table_lookup_extended(cache->hashtable, GINT_TO_POINTER(key), &orig_key, &value);
   if(res)
   { // yay, found. read lock and pass on.
     dt_cache_entry_t *entry = (dt_cache_entry_t *)value;
-    if(mode == 'w') result = dt_pthread_rwlock_trywrlock_with_caller(&entry->lock, file, line);
-    else            result = dt_pthread_rwlock_tryrdlock_with_caller(&entry->lock, file, line);
+    if(mode == 'w')
+      result = dt_pthread_rwlock_trywrlock_with_caller(&entry->lock, file, line);
+    else
+      result = dt_pthread_rwlock_tryrdlock_with_caller(&entry->lock, file, line);
     if(result)
     { // need to give up mutex so other threads have a chance to get in between and
       // free the lock we're trying to acquire:
@@ -241,8 +237,10 @@ restart:
   const int write = ((mode == 'w') || cache->allocate);
 
   // write lock in case the caller requests it:
-  if(write) dt_pthread_rwlock_wrlock_with_caller(&entry->lock, file, line);
-  else      dt_pthread_rwlock_rdlock_with_caller(&entry->lock, file, line);
+  if(write)
+    dt_pthread_rwlock_wrlock_with_caller(&entry->lock, file, line);
+  else
+    dt_pthread_rwlock_rdlock_with_caller(&entry->lock, file, line);
 
   cache->cost += entry->cost;
 
@@ -251,8 +249,7 @@ restart:
 
   dt_pthread_mutex_unlock(&cache->lock);
   double end = dt_get_wtime();
-  if(end - start > 0.1)
-    fprintf(stderr, "wait time %.06fs\n", end - start);
+  if(end - start > 0.1) fprintf(stderr, "wait time %.06fs\n", end - start);
 
   // WARNING: do *NOT* unpoison here. it must be done by the caller!
 
@@ -268,8 +265,7 @@ int dt_cache_remove(dt_cache_t *cache, const uint32_t key)
 restart:
   dt_pthread_mutex_lock(&cache->lock);
 
-  res = g_hash_table_lookup_extended(
-      cache->hashtable, GINT_TO_POINTER(key), &orig_key, &value);
+  res = g_hash_table_lookup_extended(cache->hashtable, GINT_TO_POINTER(key), &orig_key, &value);
   entry = (dt_cache_entry_t *)value;
   if(!res)
   { // not found in cache, not deleting.
@@ -365,7 +361,7 @@ void dt_cache_gc(dt_cache_t *cache, const float fill_ratio)
 void dt_cache_release_with_caller(dt_cache_t *cache, dt_cache_entry_t *entry, const char *file, int line)
 {
 #if((__has_feature(address_sanitizer) || defined(__SANITIZE_ADDRESS__)) && 1)
-  // yes, this is *HIGHLY* unportable and is accessing implementation details.
+// yes, this is *HIGHLY* unportable and is accessing implementation details.
 #ifdef _DEBUG
   if(entry->lock.lock.__data.__nr_readers <= 1)
 #else

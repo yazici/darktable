@@ -33,7 +33,7 @@ DT_MODULE(1)
 #define MAX_ALIEN_SHOTS 3 // max shots in the air from the big alien block. mystery goes extra
 #define N_ALIENS_X 11     // number of aliens in the block in x direction
 #define N_ALIENS_Y 5      // number of aliens in the block in y direction
-#define ALIEN_DEATH_TIME                                                                                     \
+#define ALIEN_DEATH_TIME                                                                                          \
   (0.3 * 1000.0 / LOOP_SPEED)     // number frames to show explosions + freeze alien movement on hit
 #define ALIEN_SHOT_PROBABILITY 20 // rand() % ALIEN_SHOT_PROBABILITY == 0 is the test
 
@@ -345,8 +345,8 @@ uint32_t flags()
 }
 
 // turn a monochrome pixel buffer into a cairo pattern for later usage
-static inline cairo_pattern_t *_new_sprite(const uint8_t *data, const int width, const int height,
-                                           int *_stride, GList **bufs, GList **surfaces, GList **patterns)
+static inline cairo_pattern_t *_new_sprite(const uint8_t *data, const int width, const int height, int *_stride,
+                                           GList **bufs, GList **surfaces, GList **patterns)
 {
   const int32_t stride = cairo_format_stride_for_width(CAIRO_FORMAT_A8, width);
   uint8_t *buf = (uint8_t *)malloc(stride * height);
@@ -421,8 +421,8 @@ void init(dt_view_t *self)
         = _new_sprite(alien[i], ALIEN_WIDTH, ALIEN_HEIGHT, NULL, &(d->bufs), &(d->surfaces), &(d->patterns));
   // player
   for(int i = 0; i < 3; i++)
-    d->player_sprite[i] = _new_sprite(player[i], PLAYER_WIDTH, PLAYER_HEIGHT, NULL, &(d->bufs),
-                                      &(d->surfaces), &(d->patterns));
+    d->player_sprite[i]
+        = _new_sprite(player[i], PLAYER_WIDTH, PLAYER_HEIGHT, NULL, &(d->bufs), &(d->surfaces), &(d->patterns));
   // mystery ship
   d->mystery_sprite = _new_sprite(mystery_ship, MYSTERY_SHIP_WIDTH, MYSTERY_SHIP_HEIGHT, NULL, &(d->bufs),
                                   &(d->surfaces), &(d->patterns));
@@ -576,10 +576,10 @@ static gboolean _hit_bunker(dt_knight_t *d, const dt_knight_shot_t *shot)
           {
             // destroy it!
             _destroy_bunker(d, i, pixel_x, pixel_y);
-            const float _x
-                = bunker_x + pixel_x * BUNKER_TARGET_WIDTH / BUNKER_WIDTH - 0.5 * EXPLOSION_TARGET_WIDTH;
-            const float _y
-                = BUNKER_Y + pixel_y * BUNKER_TARGET_HEIGHT / BUNKER_HEIGHT - 0.5 * EXPLOSION_TARGET_HEIGHT;
+            const float _x = bunker_x + pixel_x * BUNKER_TARGET_WIDTH / BUNKER_WIDTH
+                             - 0.5 * EXPLOSION_TARGET_WIDTH;
+            const float _y = BUNKER_Y + pixel_y * BUNKER_TARGET_HEIGHT / BUNKER_HEIGHT
+                             - 0.5 * EXPLOSION_TARGET_HEIGHT;
             dt_knight_explosion_t *explosion
                 = _new_explosion(_x, _y, ALIEN_DEATH_TIME, d->explosion_sprite[EXPLOSION_SHOT]);
             d->explosions = g_list_append(d->explosions, explosion);
@@ -671,8 +671,7 @@ static gboolean _event_loop_game(dt_knight_t *d)
 
   // handle movement in the event loop to not be affected by X's keyboard repeat rates and delay
   if(!d->total_freeze)
-    d->player_x
-        = CLAMP(d->player_x + d->move * PLAYER_TARGET_WIDTH * STEP_SIZE, 0.0, 1.0 - PLAYER_TARGET_WIDTH);
+    d->player_x = CLAMP(d->player_x + d->move * PLAYER_TARGET_WIDTH * STEP_SIZE, 0.0, 1.0 - PLAYER_TARGET_WIDTH);
 
   // spawn a mystery ship roughly every 25 seconds
   d->time_until_mystery_ship--;
@@ -709,8 +708,7 @@ static gboolean _event_loop_game(dt_knight_t *d)
               d->n_alien_shots++;
               d->alien_shots[s].active = TRUE;
               d->alien_shots[s].x = d->aliens[i].x + 0.5 * ALIEN_TARGET_WIDTH;
-              d->alien_shots[s].y = d->alien_shots[s].start
-                  = d->aliens[i].y + ALIEN_TARGET_HEIGHT + SHOT_LENGTH;
+              d->alien_shots[s].y = d->alien_shots[s].start = d->aliens[i].y + ALIEN_TARGET_HEIGHT + SHOT_LENGTH;
               d->alien_shots[s].direction = -1.0;
               goto alien_shots_fired;
             }
@@ -750,8 +748,7 @@ static gboolean _event_loop_game(dt_knight_t *d)
     {
       dt_knight_alien_t *alien = &d->aliens[i];
       if(!alien->alive) continue;
-      if(d->player_shot.x >= alien->x - half_gap
-         && d->player_shot.x <= alien->x + ALIEN_TARGET_WIDTH + half_gap
+      if(d->player_shot.x >= alien->x - half_gap && d->player_shot.x <= alien->x + ALIEN_TARGET_WIDTH + half_gap
          && d->player_shot.y >= alien->y - SHOT_LENGTH && d->player_shot.y <= alien->y + ALIEN_TARGET_HEIGHT)
       {
         // we hit an alien
@@ -774,8 +771,8 @@ static gboolean _event_loop_game(dt_knight_t *d)
       // we hit the top of the board
       d->player_shot.active = FALSE;
       dt_knight_explosion_t *explosion
-          = _new_explosion(d->player_shot.x - 0.5 * EXPLOSION_TARGET_WIDTH, 2.5 * LETTER_HEIGHT,
-                           ALIEN_DEATH_TIME, d->explosion_sprite[EXPLOSION_TOP]);
+          = _new_explosion(d->player_shot.x - 0.5 * EXPLOSION_TARGET_WIDTH, 2.5 * LETTER_HEIGHT, ALIEN_DEATH_TIME,
+                           d->explosion_sprite[EXPLOSION_TOP]);
       d->explosions = g_list_append(d->explosions, explosion);
     }
     else if(d->player_shot.x >= d->mystery_ship_x
@@ -810,9 +807,8 @@ static gboolean _event_loop_game(dt_knight_t *d)
 
     shot->y += SHOT_LENGTH;
 
-    if(shot->x >= d->player_x - 0.2 * PLAYER_TARGET_WIDTH
-       && shot->x <= d->player_x + 1.2 * PLAYER_TARGET_WIDTH && shot->y >= PLAYER_Y
-       && shot->y <= PLAYER_Y + PLAYER_TARGET_HEIGHT + SHOT_LENGTH)
+    if(shot->x >= d->player_x - 0.2 * PLAYER_TARGET_WIDTH && shot->x <= d->player_x + 1.2 * PLAYER_TARGET_WIDTH
+       && shot->y >= PLAYER_Y && shot->y <= PLAYER_Y + PLAYER_TARGET_HEIGHT + SHOT_LENGTH)
     {
       // we hit the player. he is immune when the alien was directly above him!
       if(shot->start <= PLAYER_Y - ALIEN_TARGET_HEIGHT && !was_hit)
@@ -833,8 +829,8 @@ static gboolean _event_loop_game(dt_knight_t *d)
       d->n_alien_shots--;
       if(rand() % 2 == 0) d->player_shot.active = FALSE;
       dt_knight_explosion_t *explosion
-          = _new_explosion(d->player_shot.x - 0.5 * EXPLOSION_TARGET_WIDTH, d->player_shot.y,
-                           ALIEN_DEATH_TIME, d->explosion_sprite[EXPLOSION_SHOT]);
+          = _new_explosion(d->player_shot.x - 0.5 * EXPLOSION_TARGET_WIDTH, d->player_shot.y, ALIEN_DEATH_TIME,
+                           d->explosion_sprite[EXPLOSION_SHOT]);
       d->explosions = g_list_append(d->explosions, explosion);
     }
     else if(_hit_bunker(d, shot))
@@ -1020,8 +1016,7 @@ static void _show_text(cairo_t *cr, cairo_pattern_t **letters, const char *text,
   cairo_translate(cr, x, y);
   if(justify == 'c')
   {
-    const float justify_offset
-        = (-1 * (int)(l / 2.0 + 0.5) * LETTER_SPACING + LETTER_SPACING - LETTER_WIDTH) * w;
+    const float justify_offset = (-1 * (int)(l / 2.0 + 0.5) * LETTER_SPACING + LETTER_SPACING - LETTER_WIDTH) * w;
     cairo_translate(cr, justify_offset, 0);
   }
   else if(justify == 'r')
@@ -1058,8 +1053,8 @@ static void _show_score_2(dt_knight_t *d, cairo_t *cr, int32_t w, int32_t h)
 {
   char text[64];
   snprintf(text, sizeof(text), "%04d", d->score_2);
-  _show_text(cr, d->letters, text, (1.0 - (LETTER_WIDTH + LETTER_SPACING * 2)) * w, 2 * LETTER_HEIGHT * w, w,
-             h, 'r');
+  _show_text(cr, d->letters, text, (1.0 - (LETTER_WIDTH + LETTER_SPACING * 2)) * w, 2 * LETTER_HEIGHT * w, w, h,
+             'r');
 }
 
 static void _show_high_score(dt_knight_t *d, cairo_t *cr, int32_t w, int32_t h)
@@ -1073,8 +1068,8 @@ static void _show_credit(dt_knight_t *d, cairo_t *cr, int32_t w, int32_t h)
 {
   char text[64];
   snprintf(text, sizeof(text), "CREDIT %02d", d->credit);
-  _show_text(cr, d->letters, text, (1.0 - LETTER_WIDTH - LETTER_SPACING) * w, h - (2 * LETTER_HEIGHT) * w, w,
-             h, 'r');
+  _show_text(cr, d->letters, text, (1.0 - LETTER_WIDTH - LETTER_SPACING) * w, h - (2 * LETTER_HEIGHT) * w, w, h,
+             'r');
 }
 
 static void _show_lifes(dt_knight_t *d, cairo_t *cr, int32_t w, int32_t h)

@@ -45,10 +45,8 @@ typedef struct dt_lib_histogram_t
 } dt_lib_histogram_t;
 
 static gboolean _lib_histogram_draw_callback(GtkWidget *widget, cairo_t *cr, gpointer user_data);
-static gboolean _lib_histogram_motion_notify_callback(GtkWidget *widget, GdkEventMotion *event,
-                                                      gpointer user_data);
-static gboolean _lib_histogram_button_press_callback(GtkWidget *widget, GdkEventButton *event,
-                                                     gpointer user_data);
+static gboolean _lib_histogram_motion_notify_callback(GtkWidget *widget, GdkEventMotion *event, gpointer user_data);
+static gboolean _lib_histogram_button_press_callback(GtkWidget *widget, GdkEventButton *event, gpointer user_data);
 static gboolean _lib_histogram_button_release_callback(GtkWidget *widget, GdkEventButton *event,
                                                        gpointer user_data);
 static gboolean _lib_histogram_scroll_callback(GtkWidget *widget, GdkEventScroll *event, gpointer user_data);
@@ -64,7 +62,7 @@ const char *name(dt_lib_module_t *self)
 
 const char **views(dt_lib_module_t *self)
 {
-  static const char *v[] = {"darkroom", "tethering", NULL};
+  static const char *v[] = { "darkroom", "tethering", NULL };
   return v;
 }
 
@@ -127,23 +125,23 @@ void gui_init(dt_lib_module_t *self)
   self->widget = gtk_drawing_area_new();
 
   gtk_widget_add_events(self->widget, GDK_LEAVE_NOTIFY_MASK | GDK_ENTER_NOTIFY_MASK | GDK_POINTER_MOTION_MASK
-                                      | GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK |
-                                      //                         GDK_STRUCTURE_MASK |
-                                      GDK_SCROLL_MASK | GDK_SMOOTH_SCROLL_MASK);
+                                          | GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK |
+                                          //                         GDK_STRUCTURE_MASK |
+                                          GDK_SCROLL_MASK | GDK_SMOOTH_SCROLL_MASK);
 
   /* connect callbacks */
   gtk_widget_set_tooltip_text(self->widget, _("drag to change exposure,\ndoubleclick resets"));
   g_signal_connect(G_OBJECT(self->widget), "draw", G_CALLBACK(_lib_histogram_draw_callback), self);
-  g_signal_connect(G_OBJECT(self->widget), "button-press-event",
-                   G_CALLBACK(_lib_histogram_button_press_callback), self);
+  g_signal_connect(G_OBJECT(self->widget), "button-press-event", G_CALLBACK(_lib_histogram_button_press_callback),
+                   self);
   g_signal_connect(G_OBJECT(self->widget), "button-release-event",
                    G_CALLBACK(_lib_histogram_button_release_callback), self);
   g_signal_connect(G_OBJECT(self->widget), "motion-notify-event",
                    G_CALLBACK(_lib_histogram_motion_notify_callback), self);
-  g_signal_connect(G_OBJECT(self->widget), "leave-notify-event",
-                   G_CALLBACK(_lib_histogram_leave_notify_callback), self);
-  g_signal_connect(G_OBJECT(self->widget), "enter-notify-event",
-                   G_CALLBACK(_lib_histogram_enter_notify_callback), self);
+  g_signal_connect(G_OBJECT(self->widget), "leave-notify-event", G_CALLBACK(_lib_histogram_leave_notify_callback),
+                   self);
+  g_signal_connect(G_OBJECT(self->widget), "enter-notify-event", G_CALLBACK(_lib_histogram_enter_notify_callback),
+                   self);
   g_signal_connect(G_OBJECT(self->widget), "scroll-event", G_CALLBACK(_lib_histogram_scroll_callback), self);
   //   g_signal_connect (G_OBJECT (self->widget), "configure-event",
   //                     G_CALLBACK (_lib_histogram_configure_callback), self);
@@ -234,14 +232,14 @@ static void _draw_mode_toggle(cairo_t *cr, float x, float y, float width, float 
       cairo_save(cr);
       cairo_scale(cr, 1, -1);
       cairo_translate(cr, 0, -height);
-      cairo_rectangle(cr, 1.5 * border + (width - 3.0 * border) * 0.2, 1.5 * border,
-                      (width - 3.0 * border) * 0.6, height - 3.0 * border);
+      cairo_rectangle(cr, 1.5 * border + (width - 3.0 * border) * 0.2, 1.5 * border, (width - 3.0 * border) * 0.6,
+                      height - 3.0 * border);
       cairo_set_source(cr, pattern);
       cairo_fill(cr);
       cairo_restore(cr);
 
-      cairo_rectangle(cr, 1.5 * border + (width - 3.0 * border) * 0.7, 1.5 * border,
-                      (width - 3.0 * border) * 0.3, height - 3.0 * border);
+      cairo_rectangle(cr, 1.5 * border + (width - 3.0 * border) * 0.7, 1.5 * border, (width - 3.0 * border) * 0.3,
+                      height - 3.0 * border);
       cairo_set_source(cr, pattern);
       cairo_fill(cr);
 
@@ -448,8 +446,7 @@ static gboolean _lib_histogram_draw_callback(GtkWidget *widget, cairo_t *crf, gp
   return TRUE;
 }
 
-static gboolean _lib_histogram_motion_notify_callback(GtkWidget *widget, GdkEventMotion *event,
-                                                      gpointer user_data)
+static gboolean _lib_histogram_motion_notify_callback(GtkWidget *widget, GdkEventMotion *event, gpointer user_data)
 {
   dt_lib_module_t *self = (dt_lib_module_t *)user_data;
   dt_lib_histogram_t *d = (dt_lib_histogram_t *)self->data;
@@ -502,18 +499,20 @@ static gboolean _lib_histogram_motion_notify_callback(GtkWidget *widget, GdkEven
     else if(x > d->red_x && x < d->red_x + d->color_w && y > d->button_y && y < d->button_y + d->button_h)
     {
       d->highlight = 4;
-      gtk_widget_set_tooltip_text(widget, d->red ? _("click to hide red channel") : _("click to show red channel"));
+      gtk_widget_set_tooltip_text(widget,
+                                  d->red ? _("click to hide red channel") : _("click to show red channel"));
     }
     else if(x > d->green_x && x < d->green_x + d->color_w && y > d->button_y && y < d->button_y + d->button_h)
     {
       d->highlight = 5;
-      gtk_widget_set_tooltip_text(widget, d->red ? _("click to hide green channel")
-                                                 : _("click to show green channel"));
+      gtk_widget_set_tooltip_text(widget,
+                                  d->red ? _("click to hide green channel") : _("click to show green channel"));
     }
     else if(x > d->blue_x && x < d->blue_x + d->color_w && y > d->button_y && y < d->button_y + d->button_h)
     {
       d->highlight = 6;
-      gtk_widget_set_tooltip_text(widget, d->red ? _("click to hide blue channel") : _("click to show blue channel"));
+      gtk_widget_set_tooltip_text(widget,
+                                  d->red ? _("click to hide blue channel") : _("click to show blue channel"));
     }
     else if(pos < 0.2)
     {
@@ -529,22 +528,20 @@ static gboolean _lib_histogram_motion_notify_callback(GtkWidget *widget, GdkEven
   }
   gint x, y; // notify gtk for motion_hint.
 #if GTK_CHECK_VERSION(3, 20, 0)
-  gdk_window_get_device_position(gtk_widget_get_window(widget),
-      gdk_seat_get_pointer(gdk_display_get_default_seat(
-          gdk_window_get_display(event->window))),
-      &x, &y, 0);
+  gdk_window_get_device_position(
+      gtk_widget_get_window(widget),
+      gdk_seat_get_pointer(gdk_display_get_default_seat(gdk_window_get_display(event->window))), &x, &y, 0);
 #else
-  gdk_window_get_device_position(event->window,
-                                 gdk_device_manager_get_client_pointer(
-                                     gdk_display_get_device_manager(gdk_window_get_display(event->window))),
-                                 &x, &y, NULL);
+  gdk_window_get_device_position(
+      event->window,
+      gdk_device_manager_get_client_pointer(gdk_display_get_device_manager(gdk_window_get_display(event->window))),
+      &x, &y, NULL);
 #endif
 
   return TRUE;
 }
 
-static gboolean _lib_histogram_button_press_callback(GtkWidget *widget, GdkEventButton *event,
-                                                     gpointer user_data)
+static gboolean _lib_histogram_button_press_callback(GtkWidget *widget, GdkEventButton *event, gpointer user_data)
 {
   dt_lib_module_t *self = (dt_lib_module_t *)user_data;
   dt_lib_histogram_t *d = (dt_lib_histogram_t *)self->data;
@@ -622,8 +619,7 @@ static gboolean _lib_histogram_scroll_callback(GtkWidget *widget, GdkEventScroll
   return TRUE;
 }
 
-static gboolean _lib_histogram_button_release_callback(GtkWidget *widget, GdkEventButton *event,
-                                                       gpointer user_data)
+static gboolean _lib_histogram_button_release_callback(GtkWidget *widget, GdkEventButton *event, gpointer user_data)
 {
   dt_lib_module_t *self = (dt_lib_module_t *)user_data;
   dt_lib_histogram_t *d = (dt_lib_histogram_t *)self->data;
@@ -631,15 +627,13 @@ static gboolean _lib_histogram_button_release_callback(GtkWidget *widget, GdkEve
   return TRUE;
 }
 
-static gboolean _lib_histogram_enter_notify_callback(GtkWidget *widget, GdkEventCrossing *event,
-                                                     gpointer user_data)
+static gboolean _lib_histogram_enter_notify_callback(GtkWidget *widget, GdkEventCrossing *event, gpointer user_data)
 {
   dt_control_change_cursor(GDK_HAND1);
   return TRUE;
 }
 
-static gboolean _lib_histogram_leave_notify_callback(GtkWidget *widget, GdkEventCrossing *event,
-                                                     gpointer user_data)
+static gboolean _lib_histogram_leave_notify_callback(GtkWidget *widget, GdkEventCrossing *event, gpointer user_data)
 {
   dt_lib_module_t *self = (dt_lib_module_t *)user_data;
   dt_lib_histogram_t *d = (dt_lib_histogram_t *)self->data;

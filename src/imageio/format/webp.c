@@ -67,20 +67,19 @@ typedef struct dt_imageio_webp_gui_data_t
   GtkWidget *hint;
 } dt_imageio_webp_gui_data_t;
 
-static const char *const EncoderError[] = {
-  "ok", "out_of_memory: out of memory allocating objects",
-  "bitstream_out_of_memory: out of memory re-allocating byte buffer",
-  "null_parameter: null parameter passed to function", "invalid_configuration: configuration is invalid",
-  "bad_dimension: bad picture dimension. maximum width and height "
-  "allowed is 16383 pixels.",
-  "partition0_overflow: partition #0 is too big to fit 512k.\n"
-  "to reduce the size of this partition, try using less segments "
-  "with the -segments option, and eventually reduce the number of "
-  "header bits using -partition_limit. more details are available "
-  "in the manual (`man cwebp`)",
-  "partition_overflow: partition is too big to fit 16M", "bad_write: picture writer returned an i/o error",
-  "file_too_big: file would be too big to fit in 4G", "user_abort: encoding abort requested by user"
-};
+static const char *const EncoderError[]
+    = { "ok", "out_of_memory: out of memory allocating objects",
+        "bitstream_out_of_memory: out of memory re-allocating byte buffer",
+        "null_parameter: null parameter passed to function", "invalid_configuration: configuration is invalid",
+        "bad_dimension: bad picture dimension. maximum width and height "
+        "allowed is 16383 pixels.",
+        "partition0_overflow: partition #0 is too big to fit 512k.\n"
+        "to reduce the size of this partition, try using less segments "
+        "with the -segments option, and eventually reduce the number of "
+        "header bits using -partition_limit. more details are available "
+        "in the manual (`man cwebp`)",
+        "partition_overflow: partition is too big to fit 16M", "bad_write: picture writer returned an i/o error",
+        "file_too_big: file would be too big to fit in 4G", "user_abort: encoding abort requested by user" };
 
 void init(dt_imageio_module_format_t *self)
 {
@@ -108,8 +107,8 @@ static int FileWriter(const uint8_t *data, size_t data_size, const WebPPicture *
   return data_size ? (fwrite(data, data_size, 1, out) == 1) : 1;
 }
 
-int write_image(dt_imageio_module_data_t *webp, const char *filename, const void *in_tmp, void *exif,
-                int exif_len, int imgid, int num, int total)
+int write_image(dt_imageio_module_data_t *webp, const char *filename, const void *in_tmp, void *exif, int exif_len,
+                int imgid, int num, int total)
 {
   dt_imageio_webp_t *webp_data = (dt_imageio_webp_t *)webp;
   FILE *out = g_fopen(filename, "wb");
@@ -180,9 +179,8 @@ size_t params_size(dt_imageio_module_format_t *self)
   return sizeof(dt_imageio_webp_t);
 }
 
-void *legacy_params(dt_imageio_module_format_t *self, const void *const old_params,
-                    const size_t old_params_size, const int old_version, const int new_version,
-                    size_t *new_size)
+void *legacy_params(dt_imageio_module_format_t *self, const void *const old_params, const size_t old_params_size,
+                    const int old_version, const int new_version, size_t *new_size)
 {
   if(old_version == 1 && new_version == 2)
   {
@@ -316,11 +314,10 @@ void gui_init(dt_imageio_module_format_t *self)
 
   gui->hint = dt_bauhaus_combobox_new(NULL);
   dt_bauhaus_widget_set_label(gui->hint, NULL, _("image hint"));
-  gtk_widget_set_tooltip_text(gui->hint,
-               _("image characteristics hint for the underlying encoder.\n"
-               "picture : digital picture, like portrait, inner shot\n"
-               "photo   : outdoor photograph, with natural lighting\n"
-               "graphic : discrete tone image (graph, map-tile etc)"));
+  gtk_widget_set_tooltip_text(gui->hint, _("image characteristics hint for the underlying encoder.\n"
+                                           "picture : digital picture, like portrait, inner shot\n"
+                                           "photo   : outdoor photograph, with natural lighting\n"
+                                           "graphic : discrete tone image (graph, map-tile etc)"));
   dt_bauhaus_combobox_add(gui->hint, _("default"));
   dt_bauhaus_combobox_add(gui->hint, _("picture"));
   dt_bauhaus_combobox_add(gui->hint, _("photo"));

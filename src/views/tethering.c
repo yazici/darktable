@@ -104,7 +104,7 @@ static void _view_capture_filmstrip_activate_callback(gpointer instance, gpointe
 }
 
 static gboolean film_strip_key_accel(GtkAccelGroup *accel_group, GObject *acceleratable, guint keyval,
-                              GdkModifierType modifier, gpointer data)
+                                     GdkModifierType modifier, gpointer data)
 {
   dt_lib_module_t *m = darktable.view_manager->proxy.filmstrip.module;
   gboolean vs = dt_lib_is_visible(m);
@@ -164,7 +164,7 @@ void configure(dt_view_t *self, int wd, int ht)
 #define MARGIN DT_PIXEL_APPLY_DPI(20)
 #define BAR_HEIGHT DT_PIXEL_APPLY_DPI(18) /* see libs/camera.c */
 static void _expose_tethered_mode(dt_view_t *self, cairo_t *cr, int32_t width, int32_t height, int32_t pointerx,
-                           int32_t pointery)
+                                  int32_t pointery)
 {
   dt_capture_t *lib = (dt_capture_t *)self->data;
   dt_camera_t *cam = (dt_camera_t *)darktable.camctl->active_camera;
@@ -203,14 +203,13 @@ static void _expose_tethered_mode(dt_view_t *self, cairo_t *cr, int32_t width, i
   else if(lib->image_id >= 0) // First of all draw image if availble
   {
     cairo_translate(cr, MARGIN, MARGIN);
-    dt_view_image_expose(&(lib->image_over), lib->image_id, cr, width - (MARGIN * 2.0f),
-                         height - (MARGIN * 2.0f), 1, pointerx, pointery, FALSE, FALSE);
+    dt_view_image_expose(&(lib->image_over), lib->image_id, cr, width - (MARGIN * 2.0f), height - (MARGIN * 2.0f),
+                         1, pointerx, pointery, FALSE, FALSE);
   }
 }
 
 
-void expose(dt_view_t *self, cairo_t *cri, int32_t width, int32_t height, int32_t pointerx,
-            int32_t pointery)
+void expose(dt_view_t *self, cairo_t *cri, int32_t width, int32_t height, int32_t pointerx, int32_t pointery)
 {
   cairo_set_source_rgb(cri, .2, .2, .2);
   cairo_rectangle(cri, 0, 0, width, height);

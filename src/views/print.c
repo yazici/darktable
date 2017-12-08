@@ -43,11 +43,9 @@ typedef struct dt_print_t
   int32_t image_id;
   int32_t iwidth, iheight;
   dt_print_info_t *pinfo;
-}
-dt_print_t;
+} dt_print_t;
 
-const char
-*name(dt_view_t *self)
+const char *name(dt_view_t *self)
 {
   return C_("view", "print");
 }
@@ -64,13 +62,12 @@ static void _print_mipmaps_updated_signal_callback(gpointer instance, gpointer u
 
 static void _set_orientation(dt_print_t *prt)
 {
-  if (prt->image_id <= 0)
-    return;
+  if(prt->image_id <= 0) return;
 
   dt_mipmap_buffer_t buf;
   dt_mipmap_cache_get(darktable.mipmap_cache, &buf, prt->image_id, DT_MIPMAP_3, DT_MIPMAP_BEST_EFFORT, 'r');
 
-  if (buf.width > buf.height)
+  if(buf.width > buf.height)
     prt->pinfo->page.landscape = TRUE;
   else
     prt->pinfo->page.landscape = FALSE;
@@ -98,11 +95,11 @@ static void _film_strip_activated(const int imgid, void *data)
   dt_control_queue_redraw();
 }
 
-static void _view_print_filmstrip_activate_callback(gpointer instance,gpointer user_data)
+static void _view_print_filmstrip_activate_callback(gpointer instance, gpointer user_data)
 {
   int32_t imgid = 0;
-  if ((imgid=dt_view_filmstrip_get_activated_imgid(darktable.view_manager))>0)
-    _film_strip_activated(imgid,user_data);
+  if((imgid = dt_view_filmstrip_get_activated_imgid(darktable.view_manager)) > 0)
+    _film_strip_activated(imgid, user_data);
 }
 
 static void _view_print_settings(const dt_view_t *view, dt_print_info_t *pinfo)
@@ -113,8 +110,7 @@ static void _view_print_settings(const dt_view_t *view, dt_print_info_t *pinfo)
   dt_control_queue_redraw();
 }
 
-void
-init(dt_view_t *self)
+void init(dt_view_t *self)
 {
   self->data = malloc(sizeof(dt_print_t));
   dt_print_t *prt = (dt_print_t *)self->data;
@@ -135,24 +131,21 @@ void cleanup(dt_view_t *self)
   free(prt);
 }
 
-static void expose_print_page(dt_view_t *self, cairo_t *cr, int32_t width, int32_t height, int32_t pointerx, int32_t pointery)
+static void expose_print_page(dt_view_t *self, cairo_t *cr, int32_t width, int32_t height, int32_t pointerx,
+                              int32_t pointery)
 {
   dt_print_t *prt = (dt_print_t *)self->data;
-  int32_t px=0, py=0, pwidth=0, pheight=0;
-  int32_t ax=0, ay=0, awidth=0, aheight=0;
-  int32_t ix=0, iy=0, iwidth=0, iheight=0;
-  int32_t iwpix=0, ihpix=0;
+  int32_t px = 0, py = 0, pwidth = 0, pheight = 0;
+  int32_t ax = 0, ay = 0, awidth = 0, aheight = 0;
+  int32_t ix = 0, iy = 0, iwidth = 0, iheight = 0;
+  int32_t iwpix = 0, ihpix = 0;
 
-  if (prt->pinfo == NULL)
-    return;
+  if(prt->pinfo == NULL) return;
 
-  dt_get_print_layout (prt->image_id, prt->pinfo, width, height,
-                       &iwpix, &ihpix,
-                       &px, &py, &pwidth, &pheight,
-                       &ax, &ay, &awidth, &aheight,
-                       &ix, &iy, &iwidth, &iheight);
+  dt_get_print_layout(prt->image_id, prt->pinfo, width, height, &iwpix, &ihpix, &px, &py, &pwidth, &pheight, &ax,
+                      &ay, &awidth, &aheight, &ix, &iy, &iwidth, &iheight);
   // page w/h
-  double pg_width  = prt->pinfo->paper.width;
+  double pg_width = prt->pinfo->paper.width;
   double pg_height = prt->pinfo->paper.height;
 
   // non-printable
@@ -162,18 +155,18 @@ static void expose_print_page(dt_view_t *self, cairo_t *cr, int32_t width, int32
   double np_bottom = prt->pinfo->printer.hw_margin_bottom;
 
   // handle the landscape mode if needed
-  if (prt->pinfo->page.landscape)
+  if(prt->pinfo->page.landscape)
   {
     double tmp = pg_width;
     pg_width = pg_height;
     pg_height = tmp;
 
     // rotate the non-printable margins
-    tmp       = np_top;
-    np_top    = np_right;
-    np_right  = np_bottom;
+    tmp = np_top;
+    np_top = np_right;
+    np_right = np_bottom;
     np_bottom = np_left;
-    np_left   = tmp;
+    np_left = tmp;
   }
 
   const int32_t pright = px + pwidth;
@@ -181,12 +174,12 @@ static void expose_print_page(dt_view_t *self, cairo_t *cr, int32_t width, int32
 
   // x page -> x display
   // (x / pg_width) * p_width + p_x
-  cairo_set_source_rgb (cr, 0.9, 0.9, 0.9);
-  cairo_rectangle (cr, px, py, pwidth, pheight);
-  cairo_fill (cr);
+  cairo_set_source_rgb(cr, 0.9, 0.9, 0.9);
+  cairo_rectangle(cr, px, py, pwidth, pheight);
+  cairo_fill(cr);
 
   // display non-printable area
-  cairo_set_source_rgb (cr, 0.1, 0.1, 0.1);
+  cairo_set_source_rgb(cr, 0.1, 0.1, 0.1);
 
   const int np1x = px + (np_left / pg_width) * pwidth;
   const int np1y = py + (np_top / pg_height) * pheight;
@@ -194,53 +187,57 @@ static void expose_print_page(dt_view_t *self, cairo_t *cr, int32_t width, int32
   const int np2y = pbottom - (np_bottom / pg_height) * pheight;
 
   // top-left
-  cairo_move_to (cr, np1x-10, np1y);
-  cairo_line_to (cr, np1x, np1y); cairo_line_to (cr, np1x, np1y-10);
-  cairo_stroke (cr);
+  cairo_move_to(cr, np1x - 10, np1y);
+  cairo_line_to(cr, np1x, np1y);
+  cairo_line_to(cr, np1x, np1y - 10);
+  cairo_stroke(cr);
 
   // top-right
   // npy = p_y + (np_top / pg_height) * p_height;
-  cairo_move_to (cr, np2x+10, np1y);
-  cairo_line_to (cr, np2x, np1y); cairo_line_to (cr, np2x, np1y-10);
-  cairo_stroke (cr);
+  cairo_move_to(cr, np2x + 10, np1y);
+  cairo_line_to(cr, np2x, np1y);
+  cairo_line_to(cr, np2x, np1y - 10);
+  cairo_stroke(cr);
 
   // bottom-left
-  cairo_move_to (cr, np1x-10, np2y);
-  cairo_line_to (cr, np1x, np2y); cairo_line_to (cr, np1x, np2y+10);
-  cairo_stroke (cr);
+  cairo_move_to(cr, np1x - 10, np2y);
+  cairo_line_to(cr, np1x, np2y);
+  cairo_line_to(cr, np1x, np2y + 10);
+  cairo_stroke(cr);
 
   // bottom-right
-  cairo_move_to (cr, np2x+10, np2y);
-  cairo_line_to (cr, np2x, np2y); cairo_line_to (cr, np2x, np2y+10);
-  cairo_stroke (cr);
+  cairo_move_to(cr, np2x + 10, np2y);
+  cairo_line_to(cr, np2x, np2y);
+  cairo_line_to(cr, np2x, np2y + 10);
+  cairo_stroke(cr);
 
-  // clip to this area to ensure that the image won't be larger, this is needed when using negative margin to enlarge the print
+  // clip to this area to ensure that the image won't be larger, this is needed when using negative margin to
+  // enlarge the print
 
-  cairo_rectangle (cr, np1x, np1y, np2x-np1x, np2y-np1y);
+  cairo_rectangle(cr, np1x, np1y, np2x - np1x, np2y - np1y);
   cairo_clip(cr);
 
-  cairo_set_source_rgb (cr, 0.77, 0.77, 0.77);
-  cairo_rectangle (cr, ax, ay, awidth, aheight);
-  cairo_fill (cr);
+  cairo_set_source_rgb(cr, 0.77, 0.77, 0.77);
+  cairo_rectangle(cr, ax, ay, awidth, aheight);
+  cairo_fill(cr);
 
   dt_view_image_only_expose(prt->image_id, cr, iwidth, iheight, ix, iy);
 }
 
 void expose(dt_view_t *self, cairo_t *cri, int32_t width_i, int32_t height_i, int32_t pointerx, int32_t pointery)
 {
-  const dt_print_t *prt=(dt_print_t*)self->data;
+  const dt_print_t *prt = (dt_print_t *)self->data;
 
   // clear the current surface
-  cairo_set_source_rgb (cri, 0.1, 0.1, 0.1);
+  cairo_set_source_rgb(cri, 0.1, 0.1, 0.1);
   cairo_paint(cri);
 
-  if (prt->image_id > 0)
-    expose_print_page (self, cri, width_i, height_i, pointerx, pointery);
+  if(prt->image_id > 0) expose_print_page(self, cri, width_i, height_i, pointerx, pointery);
 }
 
 int try_enter(dt_view_t *self)
 {
-  dt_print_t *prt=(dt_print_t*)self->data;
+  dt_print_t *prt = (dt_print_t *)self->data;
 
   //  now check that there is at least one selected image
 
@@ -294,7 +291,7 @@ int try_enter(dt_view_t *self)
 
 void enter(dt_view_t *self)
 {
-  dt_print_t *prt=(dt_print_t*)self->data;
+  dt_print_t *prt = (dt_print_t *)self->data;
 
   /* scroll filmstrip to the first selected image */
   GList *selected_images = dt_collection_get_selected(darktable.collection, 1);
@@ -309,13 +306,10 @@ void enter(dt_view_t *self)
   _set_orientation(prt);
 
   dt_control_signal_connect(darktable.signals, DT_SIGNAL_DEVELOP_MIPMAP_UPDATED,
-                            G_CALLBACK(_print_mipmaps_updated_signal_callback),
-                            (gpointer)self);
+                            G_CALLBACK(_print_mipmaps_updated_signal_callback), (gpointer)self);
 
-  dt_control_signal_connect(darktable.signals,
-                            DT_SIGNAL_VIEWMANAGER_FILMSTRIP_ACTIVATE,
-                            G_CALLBACK(_view_print_filmstrip_activate_callback),
-                            self);
+  dt_control_signal_connect(darktable.signals, DT_SIGNAL_VIEWMANAGER_FILMSTRIP_ACTIVATE,
+                            G_CALLBACK(_view_print_filmstrip_activate_callback), self);
 
   gtk_widget_grab_focus(dt_ui_center(darktable.gui->ui));
 
@@ -333,8 +327,7 @@ void leave(dt_view_t *self)
                                (gpointer)self);
 
   /* disconnect from filmstrip image activate */
-  dt_control_signal_disconnect(darktable.signals,
-                               G_CALLBACK(_view_print_filmstrip_activate_callback),
+  dt_control_signal_disconnect(darktable.signals, G_CALLBACK(_view_print_filmstrip_activate_callback),
                                (gpointer)self);
 }
 

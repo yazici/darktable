@@ -109,18 +109,18 @@ void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const 
   const int ch = piece->colors;
 
   // these are RGB values!
-  const float lift[3] = { 2.0 - (d->lift[CHANNEL_RED] * d->lift[CHANNEL_FACTOR]),
-                          2.0 - (d->lift[CHANNEL_GREEN] * d->lift[CHANNEL_FACTOR]),
-                          2.0 - (d->lift[CHANNEL_BLUE] * d->lift[CHANNEL_FACTOR]) },
-              gamma[3] = { d->gamma[CHANNEL_RED] * d->gamma[CHANNEL_FACTOR],
-                           d->gamma[CHANNEL_GREEN] * d->gamma[CHANNEL_FACTOR],
-                           d->gamma[CHANNEL_BLUE] * d->gamma[CHANNEL_FACTOR] },
-              gamma_inv[3] = { (gamma[0] != 0.0) ? 1.0 / gamma[0] : 1000000.0,
-                               (gamma[1] != 0.0) ? 1.0 / gamma[1] : 1000000.0,
-                               (gamma[2] != 0.0) ? 1.0 / gamma[2] : 1000000.0 },
-              gain[3] = { d->gain[CHANNEL_RED] * d->gain[CHANNEL_FACTOR],
-                          d->gain[CHANNEL_GREEN] * d->gain[CHANNEL_FACTOR],
-                          d->gain[CHANNEL_BLUE] * d->gain[CHANNEL_FACTOR] };
+  const float lift[3]
+      = { 2.0 - (d->lift[CHANNEL_RED] * d->lift[CHANNEL_FACTOR]),
+          2.0 - (d->lift[CHANNEL_GREEN] * d->lift[CHANNEL_FACTOR]),
+          2.0 - (d->lift[CHANNEL_BLUE] * d->lift[CHANNEL_FACTOR]) },
+      gamma[3]
+      = { d->gamma[CHANNEL_RED] * d->gamma[CHANNEL_FACTOR], d->gamma[CHANNEL_GREEN] * d->gamma[CHANNEL_FACTOR],
+          d->gamma[CHANNEL_BLUE] * d->gamma[CHANNEL_FACTOR] },
+      gamma_inv[3]
+      = { (gamma[0] != 0.0) ? 1.0 / gamma[0] : 1000000.0, (gamma[1] != 0.0) ? 1.0 / gamma[1] : 1000000.0,
+          (gamma[2] != 0.0) ? 1.0 / gamma[2] : 1000000.0 },
+      gain[3] = { d->gain[CHANNEL_RED] * d->gain[CHANNEL_FACTOR], d->gain[CHANNEL_GREEN] * d->gain[CHANNEL_FACTOR],
+                  d->gain[CHANNEL_BLUE] * d->gain[CHANNEL_FACTOR] };
 
 #ifdef _OPENMP
 #pragma omp parallel for default(none) schedule(static)
@@ -163,7 +163,7 @@ void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const 
 
 #if defined(__SSE__)
 void process_sse2(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const void *const ivoid,
-             void *const ovoid, const dt_iop_roi_t *const roi_in, const dt_iop_roi_t *const roi_out)
+                  void *const ovoid, const dt_iop_roi_t *const roi_in, const dt_iop_roi_t *const roi_out)
 {
   dt_iop_colorbalance_data_t *d = (dt_iop_colorbalance_data_t *)piece->data;
   const int ch = piece->colors;
@@ -171,20 +171,16 @@ void process_sse2(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, c
   // these are RGB values!
   const __m128 lift = _mm_setr_ps(2.0 - (d->lift[CHANNEL_RED] * d->lift[CHANNEL_FACTOR]),
                                   2.0 - (d->lift[CHANNEL_GREEN] * d->lift[CHANNEL_FACTOR]),
-                                  2.0 - (d->lift[CHANNEL_BLUE] * d->lift[CHANNEL_FACTOR]),
-                                  0.0f);
+                                  2.0 - (d->lift[CHANNEL_BLUE] * d->lift[CHANNEL_FACTOR]), 0.0f);
   const __m128 gamma = _mm_setr_ps(d->gamma[CHANNEL_RED] * d->gamma[CHANNEL_FACTOR],
                                    d->gamma[CHANNEL_GREEN] * d->gamma[CHANNEL_FACTOR],
-                                   d->gamma[CHANNEL_BLUE] * d->gamma[CHANNEL_FACTOR],
-                                   0.0f);
-  const __m128 gamma_inv = _mm_setr_ps((gamma[0] != 0.0) ? 1.0 / gamma[0] : 1000000.0,
-                                       (gamma[1] != 0.0) ? 1.0 / gamma[1] : 1000000.0,
-                                       (gamma[2] != 0.0) ? 1.0 / gamma[2] : 1000000.0,
-                                       0.0f);
+                                   d->gamma[CHANNEL_BLUE] * d->gamma[CHANNEL_FACTOR], 0.0f);
+  const __m128 gamma_inv
+      = _mm_setr_ps((gamma[0] != 0.0) ? 1.0 / gamma[0] : 1000000.0, (gamma[1] != 0.0) ? 1.0 / gamma[1] : 1000000.0,
+                    (gamma[2] != 0.0) ? 1.0 / gamma[2] : 1000000.0, 0.0f);
   const __m128 gain = _mm_setr_ps(d->gain[CHANNEL_RED] * d->gain[CHANNEL_FACTOR],
                                   d->gain[CHANNEL_GREEN] * d->gain[CHANNEL_FACTOR],
-                                  d->gain[CHANNEL_BLUE] * d->gain[CHANNEL_FACTOR],
-                                  0.0f);
+                                  d->gain[CHANNEL_BLUE] * d->gain[CHANNEL_FACTOR], 0.0f);
 
 #ifdef _OPENMP
 #pragma omp parallel for default(none) schedule(static)
@@ -204,7 +200,7 @@ void process_sse2(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, c
 
       // do the calculation in RGB space
       __m128 one = _mm_set1_ps(1.0);
-      __m128 tmp = _mm_mul_ps(_mm_add_ps(_mm_mul_ps(_mm_sub_ps(rgb, one), lift),one), gain);
+      __m128 tmp = _mm_mul_ps(_mm_add_ps(_mm_mul_ps(_mm_sub_ps(rgb, one), lift), one), gain);
       tmp = _mm_max_ps(tmp, _mm_setzero_ps());
       rgb = _mm_pow_ps(tmp, gamma_inv);
 
@@ -217,7 +213,8 @@ void process_sse2(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, c
     }
   }
 
-  if(piece->pipe->mask_display & DT_DEV_PIXELPIPE_DISPLAY_MASK) dt_iop_alpha_copy(ivoid, ovoid, roi_out->width, roi_out->height);
+  if(piece->pipe->mask_display & DT_DEV_PIXELPIPE_DISPLAY_MASK)
+    dt_iop_alpha_copy(ivoid, ovoid, roi_out->width, roi_out->height);
 }
 #endif
 
@@ -233,18 +230,18 @@ int process_cl(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, cl_m
   const int width = roi_in->width;
   const int height = roi_in->height;
 
-  const float lift[4] = { 2.0f - (d->lift[CHANNEL_RED] * d->lift[CHANNEL_FACTOR]),
-                          2.0f - (d->lift[CHANNEL_GREEN] * d->lift[CHANNEL_FACTOR]),
-                          2.0f - (d->lift[CHANNEL_BLUE] * d->lift[CHANNEL_FACTOR]), 0.0f },
-              gamma[4] = { d->gamma[CHANNEL_RED] * d->gamma[CHANNEL_FACTOR],
-                           d->gamma[CHANNEL_GREEN] * d->gamma[CHANNEL_FACTOR],
-                           d->gamma[CHANNEL_BLUE] * d->gamma[CHANNEL_FACTOR], 0.0f },
-              gamma_inv[4] = { (gamma[0] != 0.0f) ? 1.0f / gamma[0] : 1000000.0f,
-                               (gamma[1] != 0.0f) ? 1.0f / gamma[1] : 1000000.0f,
-                               (gamma[2] != 0.0f) ? 1.0f / gamma[2] : 1000000.0f, 0.0f },
-              gain[4] = { d->gain[CHANNEL_RED] * d->gain[CHANNEL_FACTOR],
-                          d->gain[CHANNEL_GREEN] * d->gain[CHANNEL_FACTOR],
-                          d->gain[CHANNEL_BLUE] * d->gain[CHANNEL_FACTOR], 0.0f };
+  const float lift[4]
+      = { 2.0f - (d->lift[CHANNEL_RED] * d->lift[CHANNEL_FACTOR]),
+          2.0f - (d->lift[CHANNEL_GREEN] * d->lift[CHANNEL_FACTOR]),
+          2.0f - (d->lift[CHANNEL_BLUE] * d->lift[CHANNEL_FACTOR]), 0.0f },
+      gamma[4]
+      = { d->gamma[CHANNEL_RED] * d->gamma[CHANNEL_FACTOR], d->gamma[CHANNEL_GREEN] * d->gamma[CHANNEL_FACTOR],
+          d->gamma[CHANNEL_BLUE] * d->gamma[CHANNEL_FACTOR], 0.0f },
+      gamma_inv[4]
+      = { (gamma[0] != 0.0f) ? 1.0f / gamma[0] : 1000000.0f, (gamma[1] != 0.0f) ? 1.0f / gamma[1] : 1000000.0f,
+          (gamma[2] != 0.0f) ? 1.0f / gamma[2] : 1000000.0f, 0.0f },
+      gain[4] = { d->gain[CHANNEL_RED] * d->gain[CHANNEL_FACTOR], d->gain[CHANNEL_GREEN] * d->gain[CHANNEL_FACTOR],
+                  d->gain[CHANNEL_BLUE] * d->gain[CHANNEL_FACTOR], 0.0f };
 
 
   size_t sizes[] = { ROUNDUPWD(width), ROUNDUPHT(height), 1 };
@@ -271,7 +268,7 @@ void init(dt_iop_module_t *module)
   module->params = calloc(1, sizeof(dt_iop_colorbalance_params_t));
   module->default_params = calloc(1, sizeof(dt_iop_colorbalance_params_t));
   module->default_enabled = 0;
-    module->priority = 449; // module order created by iop_dependencies.py, do not edit!
+  module->priority = 449; // module order created by iop_dependencies.py, do not edit!
   module->params_size = sizeof(dt_iop_colorbalance_params_t);
   module->gui_data = NULL;
   dt_iop_colorbalance_params_t tmp = (dt_iop_colorbalance_params_t){ { 1.0f, 1.0f, 1.0f, 1.0f },
@@ -605,20 +602,21 @@ void gui_init(dt_iop_module_t *self)
 #endif
 
 
-#define ADD_FACTOR(which) \
-  g->which##_factor = dt_bauhaus_slider_new_with_range(self, -1.0, 1.0, 0.005, p->which[CHANNEL_FACTOR] - 1.0f, 3);\
-  dt_bauhaus_slider_set_stop(g->which##_factor, 0.0, 0.0, 0.0, 0.0);\
-  dt_bauhaus_slider_set_stop(g->which##_factor, 1.0, 1.0, 1.0, 1.0);\
-  gtk_widget_set_tooltip_text(g->which##_factor, _("factor of " #which));\
-  dt_bauhaus_widget_set_label(g->which##_factor, _(#which), _("factor"));\
-  g_signal_connect(G_OBJECT(g->which##_factor), "value-changed", G_CALLBACK(which##_factor_callback), self);\
+#define ADD_FACTOR(which)                                                                                         \
+  g->which##_factor                                                                                               \
+      = dt_bauhaus_slider_new_with_range(self, -1.0, 1.0, 0.005, p->which[CHANNEL_FACTOR] - 1.0f, 3);             \
+  dt_bauhaus_slider_set_stop(g->which##_factor, 0.0, 0.0, 0.0, 0.0);                                              \
+  dt_bauhaus_slider_set_stop(g->which##_factor, 1.0, 1.0, 1.0, 1.0);                                              \
+  gtk_widget_set_tooltip_text(g->which##_factor, _("factor of " #which));                                         \
+  dt_bauhaus_widget_set_label(g->which##_factor, _(#which), _("factor"));                                         \
+  g_signal_connect(G_OBJECT(g->which##_factor), "value-changed", G_CALLBACK(which##_factor_callback), self);      \
   gtk_box_pack_start(GTK_BOX(self->widget), g->which##_factor, TRUE, TRUE, 0);
 
-#define ADD_CHANNEL(which, c, n, N) \
-  g->which##_##c = dt_bauhaus_slider_new_with_range(self, -1.0, 1.0, 0.005, p->which[CHANNEL_##N] - 1.0f, 3);\
-  gtk_widget_set_tooltip_text(g->which##_##c, _("factor of " #n " for " #which));\
-  dt_bauhaus_widget_set_label(g->which##_##c, _(#which), _(#n));\
-  g_signal_connect(G_OBJECT(g->which##_##c), "value-changed", G_CALLBACK(which##_##n##_callback), self);\
+#define ADD_CHANNEL(which, c, n, N)                                                                               \
+  g->which##_##c = dt_bauhaus_slider_new_with_range(self, -1.0, 1.0, 0.005, p->which[CHANNEL_##N] - 1.0f, 3);     \
+  gtk_widget_set_tooltip_text(g->which##_##c, _("factor of " #n " for " #which));                                 \
+  dt_bauhaus_widget_set_label(g->which##_##c, _(#which), _(#n));                                                  \
+  g_signal_connect(G_OBJECT(g->which##_##c), "value-changed", G_CALLBACK(which##_##n##_callback), self);          \
   gtk_box_pack_start(GTK_BOX(self->widget), g->which##_##c, TRUE, TRUE, 0);
 
   /* lift */

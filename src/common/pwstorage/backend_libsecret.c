@@ -45,8 +45,7 @@ static const SecretSchema *secret_darktable_get_schema(void)
     "org.darktable.Password",
     SECRET_SCHEMA_NONE,
     {
-      { "slot", SECRET_SCHEMA_ATTRIBUTE_STRING }, { "magic", SECRET_SCHEMA_ATTRIBUTE_STRING }, { "NULL", 0 },
-    }
+     { "slot", SECRET_SCHEMA_ATTRIBUTE_STRING }, { "magic", SECRET_SCHEMA_ATTRIBUTE_STRING }, { "NULL", 0 }, }
   };
 
   return &darktable_schema;
@@ -71,8 +70,7 @@ const backend_libsecret_context_t *dt_pwstorage_libsecret_new()
     return NULL;
   }
 
-  if(secret_service)
-    g_object_unref(secret_service);
+  if(secret_service) g_object_unref(secret_service);
 
   return context;
 }
@@ -105,15 +103,8 @@ gboolean dt_pwstorage_libsecret_set(const backend_libsecret_context_t *context, 
     return FALSE;
   }
 
-  gboolean res = secret_password_store_sync(SECRET_SCHEMA_DARKTABLE,
-                                            SECRET_COLLECTION_DARKTABLE,
-                                            label,
-                                            secret_value,
-                                            NULL,
-                                            &error,
-                                            "slot", slot,
-                                            "magic", PACKAGE_NAME,
-                                            NULL);
+  gboolean res = secret_password_store_sync(SECRET_SCHEMA_DARKTABLE, SECRET_COLLECTION_DARKTABLE, label,
+                                            secret_value, NULL, &error, "slot", slot, "magic", PACKAGE_NAME, NULL);
   if(!res)
   {
     fprintf(stderr, "[pwstorage_libsecret] error storing password: %s\n", error->message);
@@ -137,12 +128,8 @@ GHashTable *dt_pwstorage_libsecret_get(const backend_libsecret_context_t *contex
     goto error;
   }
 
-  secret_value = secret_password_lookup_sync(SECRET_SCHEMA_DARKTABLE,
-                                             NULL,
-                                             &error,
-                                             "slot", slot,
-                                             "magic", PACKAGE_NAME,
-                                             NULL);
+  secret_value = secret_password_lookup_sync(SECRET_SCHEMA_DARKTABLE, NULL, &error, "slot", slot, "magic",
+                                             PACKAGE_NAME, NULL);
   if(error)
   {
     fprintf(stderr, "[pwstorage_libsecret] error retrieving password: %s\n", error->message);

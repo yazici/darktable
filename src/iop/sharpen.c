@@ -87,8 +87,7 @@ void init_presets(dt_iop_module_so_t *self)
 {
   dt_iop_sharpen_params_t tmp = (dt_iop_sharpen_params_t){ 2.0, 0.5, 0.5 };
   // add the preset.
-  dt_gui_presets_add_generic(_("sharpen"), self->op, self->version(), &tmp, sizeof(dt_iop_sharpen_params_t),
-                             1);
+  dt_gui_presets_add_generic(_("sharpen"), self->op, self->version(), &tmp, sizeof(dt_iop_sharpen_params_t), 1);
   // restrict to raw images
   dt_gui_presets_update_ldr(_("sharpen"), self->op, self->version(), FOR_RAW);
   // make it auto-apply for matching images:
@@ -159,10 +158,14 @@ int process_cl(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, cl_m
   for(int l = -rad; l <= rad; l++) m[l] /= weight;
 
   int hblocksize;
-  dt_opencl_local_buffer_t hlocopt
-    = (dt_opencl_local_buffer_t){ .xoffset = 2 * rad, .xfactor = 1, .yoffset = 0, .yfactor = 1,
-                                  .cellsize = sizeof(float), .overhead = 0,
-                                  .sizex = 1 << 16, .sizey = 1 };
+  dt_opencl_local_buffer_t hlocopt = (dt_opencl_local_buffer_t){.xoffset = 2 * rad,
+                                                                .xfactor = 1,
+                                                                .yoffset = 0,
+                                                                .yfactor = 1,
+                                                                .cellsize = sizeof(float),
+                                                                .overhead = 0,
+                                                                .sizex = 1 << 16,
+                                                                .sizey = 1 };
 
   if(dt_opencl_local_buffer_opt(devid, gd->kernel_sharpen_hblur, &hlocopt))
     hblocksize = hlocopt.sizex;
@@ -170,10 +173,14 @@ int process_cl(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, cl_m
     hblocksize = 1;
 
   int vblocksize;
-  dt_opencl_local_buffer_t vlocopt
-    = (dt_opencl_local_buffer_t){ .xoffset = 1, .xfactor = 1, .yoffset = 2 * rad, .yfactor = 1,
-                                  .cellsize = sizeof(float), .overhead = 0,
-                                  .sizex = 1, .sizey = 1 << 16 };
+  dt_opencl_local_buffer_t vlocopt = (dt_opencl_local_buffer_t){.xoffset = 1,
+                                                                .xfactor = 1,
+                                                                .yoffset = 2 * rad,
+                                                                .yfactor = 1,
+                                                                .cellsize = sizeof(float),
+                                                                .overhead = 0,
+                                                                .sizex = 1,
+                                                                .sizey = 1 << 16 };
 
   if(dt_opencl_local_buffer_opt(devid, gd->kernel_sharpen_vblur, &vlocopt))
     vblocksize = vlocopt.sizey;
@@ -259,8 +266,7 @@ error:
 
 
 void tiling_callback(struct dt_iop_module_t *self, struct dt_dev_pixelpipe_iop_t *piece,
-                     const dt_iop_roi_t *roi_in, const dt_iop_roi_t *roi_out,
-                     struct dt_develop_tiling_t *tiling)
+                     const dt_iop_roi_t *roi_in, const dt_iop_roi_t *roi_out, struct dt_develop_tiling_t *tiling)
 {
   dt_iop_sharpen_data_t *d = (dt_iop_sharpen_data_t *)piece->data;
   const int rad = MIN(MAXR, ceilf(d->radius * roi_in->scale / piece->iscale));
@@ -409,11 +415,11 @@ void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const 
 
   // fill unsharpened border
   for(int j = 0; j < rad; j++)
-    memcpy(((float *)ovoid) + (size_t)ch * j * roi_out->width,
-           ((float *)ivoid) + (size_t)ch * j * roi_in->width, (size_t)ch * sizeof(float) * roi_out->width);
+    memcpy(((float *)ovoid) + (size_t)ch * j * roi_out->width, ((float *)ivoid) + (size_t)ch * j * roi_in->width,
+           (size_t)ch * sizeof(float) * roi_out->width);
   for(int j = roi_out->height - rad; j < roi_out->height; j++)
-    memcpy(((float *)ovoid) + (size_t)ch * j * roi_out->width,
-           ((float *)ivoid) + (size_t)ch * j * roi_in->width, (size_t)ch * sizeof(float) * roi_out->width);
+    memcpy(((float *)ovoid) + (size_t)ch * j * roi_out->width, ((float *)ivoid) + (size_t)ch * j * roi_in->width,
+           (size_t)ch * sizeof(float) * roi_out->width);
 
   dt_free_align(tmp);
 
@@ -454,7 +460,8 @@ void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const 
     }
   }
 
-  if(piece->pipe->mask_display & DT_DEV_PIXELPIPE_DISPLAY_MASK) dt_iop_alpha_copy(ivoid, ovoid, roi_out->width, roi_out->height);
+  if(piece->pipe->mask_display & DT_DEV_PIXELPIPE_DISPLAY_MASK)
+    dt_iop_alpha_copy(ivoid, ovoid, roi_out->width, roi_out->height);
 }
 
 #if defined(__SSE__)
@@ -517,8 +524,8 @@ void process_sse2(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, c
 
       for(int k = 0; k < wd4 * 4; k += 4, inp += 4 * ch)
       {
-        msum = _mm_add_ps(
-            msum, _mm_mul_ps(_mm_load_ps(mat + k), _mm_set_ps(inp[3 * ch], inp[2 * ch], inp[ch], inp[0])));
+        msum = _mm_add_ps(msum,
+                          _mm_mul_ps(_mm_load_ps(mat + k), _mm_set_ps(inp[3 * ch], inp[2 * ch], inp[ch], inp[0])));
       }
       _mm_store_ps(sum, msum);
       *out = sum[0] + sum[1] + sum[2] + sum[3];
@@ -561,8 +568,8 @@ void process_sse2(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, c
 
       for(int k = 0; k < wd4 * 4; k += 4, inp += step * 4)
       {
-        msum = _mm_add_ps(msum, _mm_mul_ps(_mm_load_ps(mat + k),
-                                           _mm_set_ps(inp[3 * step], inp[2 * step], inp[step], inp[0])));
+        msum = _mm_add_ps(
+            msum, _mm_mul_ps(_mm_load_ps(mat + k), _mm_set_ps(inp[3 * step], inp[2 * step], inp[step], inp[0])));
       }
       _mm_store_ps(sum, msum);
       *out = sum[0] + sum[1] + sum[2] + sum[3];
@@ -597,11 +604,11 @@ void process_sse2(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, c
 
   // fill unsharpened border
   for(int j = 0; j < rad; j++)
-    memcpy(((float *)ovoid) + (size_t)ch * j * roi_out->width,
-           ((float *)ivoid) + (size_t)ch * j * roi_in->width, (size_t)ch * sizeof(float) * roi_out->width);
+    memcpy(((float *)ovoid) + (size_t)ch * j * roi_out->width, ((float *)ivoid) + (size_t)ch * j * roi_in->width,
+           (size_t)ch * sizeof(float) * roi_out->width);
   for(int j = roi_out->height - rad; j < roi_out->height; j++)
-    memcpy(((float *)ovoid) + (size_t)ch * j * roi_out->width,
-           ((float *)ivoid) + (size_t)ch * j * roi_in->width, (size_t)ch * sizeof(float) * roi_out->width);
+    memcpy(((float *)ovoid) + (size_t)ch * j * roi_out->width, ((float *)ivoid) + (size_t)ch * j * roi_in->width,
+           (size_t)ch * sizeof(float) * roi_out->width);
 
   dt_free_align(tmp);
 
@@ -642,7 +649,8 @@ void process_sse2(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, c
     }
   }
 
-  if(piece->pipe->mask_display & DT_DEV_PIXELPIPE_DISPLAY_MASK) dt_iop_alpha_copy(ivoid, ovoid, roi_out->width, roi_out->height);
+  if(piece->pipe->mask_display & DT_DEV_PIXELPIPE_DISPLAY_MASK)
+    dt_iop_alpha_copy(ivoid, ovoid, roi_out->width, roi_out->height);
 }
 #endif
 
@@ -713,7 +721,7 @@ void init(dt_iop_module_t *module)
   module->params = calloc(1, sizeof(dt_iop_sharpen_params_t));
   module->default_params = calloc(1, sizeof(dt_iop_sharpen_params_t));
   module->default_enabled = 0;
-    module->priority = 739; // module order created by iop_dependencies.py, do not edit!
+  module->priority = 739; // module order created by iop_dependencies.py, do not edit!
   module->params_size = sizeof(dt_iop_sharpen_params_t);
   module->gui_data = NULL;
   dt_iop_sharpen_params_t tmp = (dt_iop_sharpen_params_t){ 2.0, 0.5, 0.5 };
@@ -724,8 +732,7 @@ void init(dt_iop_module_t *module)
 void init_global(dt_iop_module_so_t *module)
 {
   const int program = 7; // sharpen.cl, from programs.conf
-  dt_iop_sharpen_global_data_t *gd
-      = (dt_iop_sharpen_global_data_t *)malloc(sizeof(dt_iop_sharpen_global_data_t));
+  dt_iop_sharpen_global_data_t *gd = (dt_iop_sharpen_global_data_t *)malloc(sizeof(dt_iop_sharpen_global_data_t));
   module->data = gd;
   gd->kernel_sharpen_hblur = dt_opencl_create_kernel(program, "sharpen_hblur");
   gd->kernel_sharpen_vblur = dt_opencl_create_kernel(program, "sharpen_vblur");

@@ -121,24 +121,30 @@ typedef struct dt_imageio_pdf_t
 #ifdef USE_LUA
 static int orientation_member(lua_State *L)
 {
-  dt_imageio_pdf_t *d = (dt_imageio_pdf_t *)lua_touserdata(L,1);
+  dt_imageio_pdf_t *d = (dt_imageio_pdf_t *)lua_touserdata(L, 1);
   dt_lua_orientation_t orientation;
   if(lua_gettop(L) != 3)
   {
-    if(d->params.orientation == ORIENTATION_LANDSCAPE) {
+    if(d->params.orientation == ORIENTATION_LANDSCAPE)
+    {
       orientation = GTK_ORIENTATION_HORIZONTAL;
-    } else {
+    }
+    else
+    {
       orientation = GTK_ORIENTATION_VERTICAL;
     }
-    luaA_push(L,dt_lua_orientation_t,&orientation);
+    luaA_push(L, dt_lua_orientation_t, &orientation);
     return 1;
   }
   else
   {
-    luaA_to(L,dt_lua_orientation_t,&orientation,3);
-    if(orientation == GTK_ORIENTATION_HORIZONTAL) {
+    luaA_to(L, dt_lua_orientation_t, &orientation, 3);
+    if(orientation == GTK_ORIENTATION_HORIZONTAL)
+    {
       d->params.orientation = ORIENTATION_LANDSCAPE;
-    } else {
+    }
+    else
+    {
       d->params.orientation = ORIENTATION_PORTRAIT;
     }
     return 0;
@@ -148,7 +154,7 @@ static int orientation_member(lua_State *L)
 
 void init(dt_imageio_module_format_t *self)
 {
-  lua_State* L = darktable.lua_state.state ;
+  lua_State *L = darktable.lua_state.state;
 
   luaA_enum(L, _pdf_pages_t);
   luaA_enum_value_name(L, _pdf_pages_t, PAGES_ALL, "all");
@@ -164,22 +170,27 @@ void init(dt_imageio_module_format_t *self)
   luaA_enum_value_name(L, dt_pdf_stream_encoder_t, DT_PDF_STREAM_ENCODER_ASCII_HEX, "uncompressed");
   luaA_enum_value_name(L, dt_pdf_stream_encoder_t, DT_PDF_STREAM_ENCODER_FLATE, "deflate");
 
-  dt_lua_register_module_member_indirect(L, self, dt_imageio_pdf_t, params,dt_imageio_pdf_params_t,title, char_128);
-  dt_lua_register_module_member_indirect(L, self, dt_imageio_pdf_t, params,dt_imageio_pdf_params_t,size, char_64);
-  dt_lua_register_module_member_indirect(L, self, dt_imageio_pdf_t, params,dt_imageio_pdf_params_t,border, char_64);
-  dt_lua_register_module_member_indirect(L, self, dt_imageio_pdf_t, params,dt_imageio_pdf_params_t,dpi, float);
-  dt_lua_register_module_member_indirect(L, self, dt_imageio_pdf_t, params,dt_imageio_pdf_params_t,rotate, bool);
-  dt_lua_register_module_member_indirect(L, self, dt_imageio_pdf_t, params,dt_imageio_pdf_params_t,pages, _pdf_pages_t);
-  dt_lua_register_module_member_indirect(L, self, dt_imageio_pdf_t, params,dt_imageio_pdf_params_t,icc, bool);
-  dt_lua_register_module_member_indirect(L, self, dt_imageio_pdf_t, params,dt_imageio_pdf_params_t,mode, _pdf_mode_t);
-  dt_lua_register_module_member_indirect(L, self, dt_imageio_pdf_t, params,dt_imageio_pdf_params_t,compression, dt_pdf_stream_encoder_t);
+  dt_lua_register_module_member_indirect(L, self, dt_imageio_pdf_t, params, dt_imageio_pdf_params_t, title,
+                                         char_128);
+  dt_lua_register_module_member_indirect(L, self, dt_imageio_pdf_t, params, dt_imageio_pdf_params_t, size, char_64);
+  dt_lua_register_module_member_indirect(L, self, dt_imageio_pdf_t, params, dt_imageio_pdf_params_t, border,
+                                         char_64);
+  dt_lua_register_module_member_indirect(L, self, dt_imageio_pdf_t, params, dt_imageio_pdf_params_t, dpi, float);
+  dt_lua_register_module_member_indirect(L, self, dt_imageio_pdf_t, params, dt_imageio_pdf_params_t, rotate, bool);
+  dt_lua_register_module_member_indirect(L, self, dt_imageio_pdf_t, params, dt_imageio_pdf_params_t, pages,
+                                         _pdf_pages_t);
+  dt_lua_register_module_member_indirect(L, self, dt_imageio_pdf_t, params, dt_imageio_pdf_params_t, icc, bool);
+  dt_lua_register_module_member_indirect(L, self, dt_imageio_pdf_t, params, dt_imageio_pdf_params_t, mode,
+                                         _pdf_mode_t);
+  dt_lua_register_module_member_indirect(L, self, dt_imageio_pdf_t, params, dt_imageio_pdf_params_t, compression,
+                                         dt_pdf_stream_encoder_t);
 
 
 
   lua_pushcfunction(L, orientation_member);
   dt_lua_type_register_type(L, self->parameter_lua_type, "orientation");
 }
-#else // USE_LUA
+#else  // USE_LUA
 void init(dt_imageio_module_format_t *self)
 {
   // we need an empty init, even when compiled without Lua
@@ -205,7 +216,7 @@ static int _paper_size(dt_imageio_pdf_params_t *d, float *page_width, float *pag
   {
     fprintf(stderr, "[imageio_format_pdf] invalid border size: `%s'! using 0\n", d->border);
     dt_control_log(_("invalid border size, using 0"));
-//     return 1;
+    //     return 1;
     border = 0.0;
   }
 
@@ -230,8 +241,8 @@ static int _paper_size(dt_imageio_pdf_params_t *d, float *page_width, float *pag
 }
 
 
-int write_image(dt_imageio_module_data_t *data, const char *filename, const void *in, void *exif,
-                int exif_len, int imgid, int num, int total)
+int write_image(dt_imageio_module_data_t *data, const char *filename, const void *in, void *exif, int exif_len,
+                int imgid, int num, int total)
 {
   dt_imageio_pdf_t *d = (dt_imageio_pdf_t *)data;
 
@@ -241,8 +252,7 @@ int write_image(dt_imageio_module_data_t *data, const char *filename, const void
     float page_width, page_height, page_border;
     float page_dpi = d->params.dpi;
 
-    if(_paper_size(&d->params, &page_width, &page_height, &page_border))
-      return 1;
+    if(_paper_size(&d->params, &page_width, &page_height, &page_border)) return 1;
 
     unsigned int compression = d->params.compression;
     compression = MIN(compression, DT_PDF_STREAM_ENCODER_FLATE);
@@ -313,8 +323,7 @@ int write_image(dt_imageio_module_data_t *data, const char *filename, const void
       uint8_t *out_ptr = (uint8_t *)image_data;
       for(int y = 0; y < data->height; y++)
       {
-        for(int x = 0; x < data->width; x++, in_ptr += 4, out_ptr += 3)
-          memcpy(out_ptr, in_ptr, 3);
+        for(int x = 0; x < data->width; x++, in_ptr += 4, out_ptr += 3) memcpy(out_ptr, in_ptr, 3);
       }
     }
     else
@@ -326,14 +335,14 @@ int write_image(dt_imageio_module_data_t *data, const char *filename, const void
       {
         for(int x = 0; x < data->width; x++, in_ptr += 4, out_ptr += 3)
         {
-          for(int c = 0; c < 3; c++)
-            out_ptr[c] = (0xff00 & (in_ptr[c] << 8)) | (in_ptr[c] >> 8);
+          for(int c = 0; c < 3; c++) out_ptr[c] = (0xff00 & (in_ptr[c] << 8)) | (in_ptr[c] >> 8);
         }
       }
     }
   }
 
-  dt_pdf_image_t *image = dt_pdf_add_image(d->pdf, image_data, d->params.parent.width, d->params.parent.height, d->params.bpp, icc_id, d->page_border);
+  dt_pdf_image_t *image = dt_pdf_add_image(d->pdf, image_data, d->params.parent.width, d->params.parent.height,
+                                           d->params.bpp, icc_id, d->page_border);
 
   free(image_data);
 
@@ -414,7 +423,8 @@ int flags(dt_imageio_module_data_t *data)
   return FORMAT_FLAGS_NO_TMPFILE;
 }
 
-int dimension(struct dt_imageio_module_format_t *self, dt_imageio_module_data_t *data, uint32_t *width, uint32_t *height)
+int dimension(struct dt_imageio_module_format_t *self, dt_imageio_module_data_t *data, uint32_t *width,
+              uint32_t *height)
 {
   if(data)
   {
@@ -423,14 +433,12 @@ int dimension(struct dt_imageio_module_format_t *self, dt_imageio_module_data_t 
     float page_width, page_height, page_border;
     float page_dpi = d->params.dpi;
 
-    if(_paper_size(&d->params, &page_width, &page_height, &page_border))
-      return 1;
+    if(_paper_size(&d->params, &page_width, &page_height, &page_border)) return 1;
 
     *width = dt_pdf_point_to_pixel(page_width - 2 * page_border, page_dpi) + 0.5;
     *height = dt_pdf_point_to_pixel(page_height - 2 * page_border, page_dpi) + 0.5;
 
-    if(d->params.rotate)
-      *width = *height = MAX(*width, *height);
+    if(d->params.rotate) *width = *height = MAX(*width, *height);
   }
   return 0;
 }
@@ -455,7 +463,7 @@ static void _set_paper_size(dt_imageio_module_format_t *self, const char *text)
 
   while(labels)
   {
-    const char *l = (char*)labels->data;
+    const char *l = (char *)labels->data;
     if((pos < dt_pdf_paper_sizes_n && !strcasecmp(text, dt_pdf_paper_sizes[pos].name)) || !strcasecmp(text, l))
       break;
     pos++;
@@ -497,7 +505,6 @@ static void _set_paper_size(dt_imageio_module_format_t *self, const char *text)
   }
 
   g_signal_handlers_unblock_by_func(d->size, size_toggle_callback, self);
-
 }
 
 static void title_changed_callback(GtkWidget *widget, gpointer user_data)
@@ -515,8 +522,8 @@ static void size_toggle_callback(GtkWidget *widget, gpointer user_data)
   unsigned int pos = dt_bauhaus_combobox_get(widget);
   if(pos < dt_pdf_paper_sizes_n)
     _set_paper_size(user_data, dt_pdf_paper_sizes[pos].name); // has to be untranslated
-    else
-      _set_paper_size(user_data, dt_bauhaus_combobox_get_text(widget));
+  else
+    _set_paper_size(user_data, dt_bauhaus_combobox_get_text(widget));
 }
 
 static void orientation_toggle_callback(GtkWidget *widget, gpointer user_data)
@@ -553,8 +560,7 @@ static void bpp_toggle_callback(GtkWidget *widget, gpointer user_data)
 {
   const int sel = dt_bauhaus_combobox_get(widget);
   // we don't allow typing in that dropdown so -1 shouldn't happen, but coverity doesn't know that
-  if(sel >= 0)
-    dt_conf_set_int("plugins/imageio/format/pdf/bpp", _pdf_bpp[sel].bpp);
+  if(sel >= 0) dt_conf_set_int("plugins/imageio/format/pdf/bpp", _pdf_bpp[sel].bpp);
 }
 
 static void compression_toggle_callback(GtkWidget *widget, gpointer user_data)
@@ -600,8 +606,7 @@ void gui_init(dt_imageio_module_format_t *self)
   d->size = dt_bauhaus_combobox_new(NULL);
   dt_bauhaus_combobox_set_editable(d->size, 1);
   dt_bauhaus_widget_set_label(d->size, NULL, _("paper size"));
-  for(int i = 0; dt_pdf_paper_sizes[i].name; i++)
-    dt_bauhaus_combobox_add(d->size, _(dt_pdf_paper_sizes[i].name));
+  for(int i = 0; dt_pdf_paper_sizes[i].name; i++) dt_bauhaus_combobox_add(d->size, _(dt_pdf_paper_sizes[i].name));
   gtk_grid_attach(grid, GTK_WIDGET(d->size), 0, ++line, 2, 1);
   g_signal_connect(G_OBJECT(d->size), "value-changed", G_CALLBACK(size_toggle_callback), self);
   gtk_widget_set_tooltip_text(d->size, _("paper size of the pdf\neither one from the list or "
@@ -677,8 +682,8 @@ void gui_init(dt_imageio_module_format_t *self)
   dt_bauhaus_combobox_add(d->pages, _("all"));
   dt_bauhaus_combobox_add(d->pages, _("single images"));
   dt_bauhaus_combobox_add(d->pages, _("contact sheet"));
-//   gtk_grid_attach(grid, GTK_WIDGET(d->pages), 0, ++line, 2, 1);
-//   g_signal_connect(G_OBJECT(d->pages), "value-changed", G_CALLBACK(pages_toggle_callback), self);
+  //   gtk_grid_attach(grid, GTK_WIDGET(d->pages), 0, ++line, 2, 1);
+  //   g_signal_connect(G_OBJECT(d->pages), "value-changed", G_CALLBACK(pages_toggle_callback), self);
   gtk_widget_set_tooltip_text(d->pages, _("what pages should be added to the pdf"));
   dt_bauhaus_combobox_set(d->pages, dt_conf_get_int("plugins/imageio/format/pdf/pages"));
   gtk_widget_set_sensitive(d->pages, FALSE); // TODO
@@ -804,8 +809,7 @@ void free_params(dt_imageio_module_format_t *self, dt_imageio_module_data_t *par
 {
   dt_imageio_pdf_t *d = (dt_imageio_pdf_t *)params;
 
-  if(d->pdf)
-    dt_pdf_finish(d->pdf, NULL, 0);
+  if(d->pdf) dt_pdf_finish(d->pdf, NULL, 0);
 
   g_list_free_full(d->images, free);
 
@@ -833,8 +837,7 @@ int set_params(dt_imageio_module_format_t *self, const void *params, const int s
 
   for(int i = 0; _pdf_bpp[i].name; i++)
   {
-    if(_pdf_bpp[i].bpp == d->params.bpp)
-      dt_bauhaus_combobox_set(g->bpp, i);
+    if(_pdf_bpp[i].bpp == d->params.bpp) dt_bauhaus_combobox_set(g->bpp, i);
   }
 
   gtk_entry_set_text(g->title, d->params.title);

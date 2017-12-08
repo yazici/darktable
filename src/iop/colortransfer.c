@@ -139,8 +139,7 @@ static void capture_histogram(const float *col, const dt_iop_roi_t *roi, int *hi
 
   // accumulated start distribution of G1 G2
   for(int k = 1; k < HISTN; k++) hist[k] += hist[k - 1];
-  for(int k = 0; k < HISTN; k++)
-    hist[k] = (int)CLAMP(hist[k] * (HISTN / (float)hist[HISTN - 1]), 0, HISTN - 1);
+  for(int k = 0; k < HISTN; k++) hist[k] = (int)CLAMP(hist[k] * (HISTN / (float)hist[HISTN - 1]), 0, HISTN - 1);
   // for(int i=0;i<100;i++) printf("#[%d] %d \n", i, hist[(int)CLAMP(HISTN*i/100.0, 0, HISTN-1)]);
 }
 
@@ -241,8 +240,8 @@ static void kmeans(const float *col, const dt_iop_roi_t *const roi, const int n,
   const int nit = 10;                                 // number of iterations
   const int samples = roi->width * roi->height * 0.2; // samples: only a fraction of the buffer.
 
-  float(*const mean)[2] = malloc(2 * n * sizeof(float));
-  float(*const var)[2] = malloc(2 * n * sizeof(float));
+  float (*const mean)[2] = malloc(2 * n * sizeof(float));
+  float (*const var)[2] = malloc(2 * n * sizeof(float));
   int *const cnt = malloc(n * sizeof(int));
 
   // init n clusters for a, b channels at random
@@ -371,8 +370,8 @@ void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const 
     }
 
     // cluster input buffer
-    float(*const mean)[2] = malloc(2 * data->n * sizeof(float));
-    float(*const var)[2] = malloc(2 * data->n * sizeof(float));
+    float (*const mean)[2] = malloc(2 * data->n * sizeof(float));
+    float (*const var)[2] = malloc(2 * data->n * sizeof(float));
 
     kmeans(in, roi_in, data->n, mean, var);
 
@@ -403,10 +402,10 @@ void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const 
         out[j + 1] = out[j + 2] = 0.0f;
         for(int c = 0; c < data->n; c++)
         {
-          out[j + 1] += weight[c] * ((Lab[1] - mean[c][0]) * data->var[mapio[c]][0] / var[c][0]
-                                     + data->mean[mapio[c]][0]);
-          out[j + 2] += weight[c] * ((Lab[2] - mean[c][1]) * data->var[mapio[c]][1] / var[c][1]
-                                     + data->mean[mapio[c]][1]);
+          out[j + 1] += weight[c]
+                        * ((Lab[1] - mean[c][0]) * data->var[mapio[c]][0] / var[c][0] + data->mean[mapio[c]][0]);
+          out[j + 2] += weight[c]
+                        * ((Lab[2] - mean[c][1]) * data->var[mapio[c]][1] / var[c][1] + data->mean[mapio[c]][1]);
         }
 #endif
         out[j + 3] = in[j + 3];
@@ -559,7 +558,7 @@ void init(dt_iop_module_t *module)
   module->params = calloc(1, sizeof(dt_iop_colortransfer_params_t));
   module->default_params = calloc(1, sizeof(dt_iop_colortransfer_params_t));
   module->default_enabled = 0;
-    module->priority = 492; // module order created by iop_dependencies.py, do not edit!
+  module->priority = 492; // module order created by iop_dependencies.py, do not edit!
   module->params_size = sizeof(dt_iop_colortransfer_params_t);
   module->gui_data = NULL;
   dt_iop_colortransfer_params_t tmp;

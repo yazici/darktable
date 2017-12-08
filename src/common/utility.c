@@ -23,18 +23,18 @@
 #include "gui/gtk.h"
 
 /* getpwnam_r availibility check */
-#if defined __APPLE__ || defined _POSIX_C_SOURCE >= 1 || defined _XOPEN_SOURCE || defined _BSD_SOURCE        \
-    || defined _SVID_SOURCE || defined _POSIX_SOURCE || defined __DragonFly__ || defined __FreeBSD__         \
+#if defined __APPLE__ || defined _POSIX_C_SOURCE >= 1 || defined _XOPEN_SOURCE || defined _BSD_SOURCE             \
+    || defined _SVID_SOURCE || defined _POSIX_SOURCE || defined __DragonFly__ || defined __FreeBSD__              \
     || defined __NetBSD__ || defined __OpenBSD__
-  #include <pwd.h>
-  #include <sys/types.h>
-  #include <unistd.h>
+#include <pwd.h>
+#include <sys/types.h>
+#include <unistd.h>
 #endif
 
 #ifdef _WIN32
-  #include <Windows.h>
-  #include <WinBase.h>
-  #include <FileAPI.h>
+#include <Windows.h>
+#include <WinBase.h>
+#include <FileAPI.h>
 #endif
 
 #include <math.h>
@@ -43,7 +43,7 @@
 #include <sys/stat.h>
 
 #ifdef HAVE_CONFIG_H
-  #include <config.h>
+#include <config.h>
 #endif
 
 #include <librsvg/rsvg.h>
@@ -328,22 +328,22 @@ gchar *dt_util_foo_to_utf8(const char *string)
 }
 
 // get easter sunday (in the western world)
-static void easter(int Y, int* month, int *day)
+static void easter(int Y, int *month, int *day)
 {
-  int a  = Y % 19;
-  int b  = Y / 100;
-  int c  = Y % 100;
-  int d  = b / 4;
-  int e  = b % 4;
-  int f  = (b + 8) / 25;
-  int g  = (b - f + 1) / 3;
-  int h  = (19*a + b - d - g + 15) % 30;
-  int i  = c / 4;
-  int k  = c % 4;
-  int L  = (32 + 2*e + 2*i - h - k) % 7;
-  int m  = (a + 11*h + 22*L) / 451;
-  *month = (h + L - 7*m + 114) / 31;
-  *day   = ((h + L - 7*m + 114) % 31) + 1;
+  int a = Y % 19;
+  int b = Y / 100;
+  int c = Y % 100;
+  int d = b / 4;
+  int e = b % 4;
+  int f = (b + 8) / 25;
+  int g = (b - f + 1) / 3;
+  int h = (19 * a + b - d - g + 15) % 30;
+  int i = c / 4;
+  int k = c % 4;
+  int L = (32 + 2 * e + 2 * i - h - k) % 7;
+  int m = (a + 11 * h + 22 * L) / 451;
+  *month = (h + L - 7 * m + 114) / 31;
+  *day = ((h + L - 7 * m + 114) % 31) + 1;
 }
 
 // days are in [1..31], months are in [0..11], see "man localtime"
@@ -355,8 +355,7 @@ dt_logo_season_t dt_util_get_logo_season(void)
   localtime_r(&now, &lt);
 
   // Halloween is active on 31.10. and 01.11.
-  if((lt.tm_mon == 9 && lt.tm_mday == 31) || (lt.tm_mon == 10 && lt.tm_mday == 1))
-    return DT_LOGO_SEASON_HALLOWEEN;
+  if((lt.tm_mon == 9 && lt.tm_mday == 31) || (lt.tm_mon == 10 && lt.tm_mday == 1)) return DT_LOGO_SEASON_HALLOWEEN;
 
   // Xmas is active from 24.12. until the end of the year
   if(lt.tm_mon == 11 && lt.tm_mday >= 24) return DT_LOGO_SEASON_XMAS;
@@ -364,7 +363,7 @@ dt_logo_season_t dt_util_get_logo_season(void)
   // Easter is active from 2 days before Easter Sunday until 1 day after
   {
     struct tm easter_sunday = lt;
-    easter(lt.tm_year+1900, &easter_sunday.tm_mon, &easter_sunday.tm_mday);
+    easter(lt.tm_year + 1900, &easter_sunday.tm_mon, &easter_sunday.tm_mday);
     easter_sunday.tm_mon--;
     easter_sunday.tm_hour = easter_sunday.tm_min = easter_sunday.tm_sec = 0;
     easter_sunday.tm_isdst = -1;
@@ -402,17 +401,16 @@ cairo_surface_t *dt_util_get_logo(float size)
 
     float svg_size = MAX(dimension.width, dimension.height);
     float factor = size > 0.0 ? size / svg_size : -1.0 * size;
-    float final_width = dimension.width * factor * ppd,
-          final_height = dimension.height * factor * ppd;
+    float final_width = dimension.width * factor * ppd, final_height = dimension.height * factor * ppd;
     int stride = cairo_format_stride_for_width(CAIRO_FORMAT_ARGB32, final_width);
 
     guint8 *image_buffer = (guint8 *)calloc(stride * final_height, sizeof(guint8));
     if(darktable.gui)
       surface = dt_cairo_image_surface_create_for_data(image_buffer, CAIRO_FORMAT_ARGB32, final_width,
-                                                      final_height, stride);
-    else // during startup we don't know ppd yet and darktable.gui isn't initialized yet.
-      surface = cairo_image_surface_create_for_data(image_buffer, CAIRO_FORMAT_ARGB32, final_width,
                                                        final_height, stride);
+    else // during startup we don't know ppd yet and darktable.gui isn't initialized yet.
+      surface = cairo_image_surface_create_for_data(image_buffer, CAIRO_FORMAT_ARGB32, final_width, final_height,
+                                                    stride);
     if(cairo_surface_status(surface) != CAIRO_STATUS_SUCCESS)
     {
       fprintf(stderr, "warning: can't load darktable logo from SVG file `%s'\n", dtlogo);
@@ -447,10 +445,10 @@ cairo_surface_t *dt_util_get_logo(float size)
 // Copyright (C) 2013 John Stowers <john.stowers@gmail.com>
 /* these can be overwritten with versions that support
  *   localization */
-#define OSD_COORDINATES_CHR_N  "N"
-#define OSD_COORDINATES_CHR_S  "S"
-#define OSD_COORDINATES_CHR_E  "E"
-#define OSD_COORDINATES_CHR_W  "W"
+#define OSD_COORDINATES_CHR_N "N"
+#define OSD_COORDINATES_CHR_S "S"
+#define OSD_COORDINATES_CHR_E "E"
+#define OSD_COORDINATES_CHR_W "W"
 
 static const char *OSD_ELEVATION_ASL = N_("above sea level");
 static const char *OSD_ELEVATION_BSL = N_("below sea level");
@@ -471,7 +469,7 @@ gchar *dt_util_latitude_str(float latitude)
 
   fractional = modff(latitude, &integral);
 
-  return g_strdup_printf("%s %02d° %06.3f'", c, (int)integral, fractional*60.0);
+  return g_strdup_printf("%s %02d° %06.3f'", c, (int)integral, fractional * 60.0);
 }
 
 gchar *dt_util_longitude_str(float longitude)
@@ -489,7 +487,7 @@ gchar *dt_util_longitude_str(float longitude)
 
   fractional = modff(longitude, &integral);
 
-  return g_strdup_printf("%s %03d° %06.3f'", c, (int)integral, fractional*60.0);
+  return g_strdup_printf("%s %03d° %06.3f'", c, (int)integral, fractional * 60.0);
 }
 
 gchar *dt_util_elevation_str(float elevation)
@@ -559,37 +557,34 @@ gchar *dt_util_normalize_path(const gchar *_input)
   }
 
 #ifdef _WIN32
-  // on Windows filenames are case insensitive, so we can end up with an arbitrary number of different spellings for the same file.
+  // on Windows filenames are case insensitive, so we can end up with an arbitrary number of different spellings
+  // for the same file.
   // another problem is that path separators can either be / or \ leading to even more problems.
 
   // TODO:
-  // this only handles filenames in the old <drive letter>:\path\to\file form, not the \\?\UNC\ form and not some others like \Device\...
+  // this only handles filenames in the old <drive letter>:\path\to\file form, not the \\?\UNC\ form and not some
+  // others like \Device\...
 
   // the Windows api expects wide chars and not utf8 :(
   wchar_t *wfilename = g_utf8_to_utf16(filename, -1, NULL, NULL, NULL);
   g_free(filename);
-  if(!wfilename)
-    return NULL;
+  if(!wfilename) return NULL;
 
-  wchar_t LongPath[MAX_PATH] = {0};
+  wchar_t LongPath[MAX_PATH] = { 0 };
   DWORD size = GetLongPathNameW(wfilename, LongPath, MAX_PATH);
   g_free(wfilename);
-  if(size == 0 || size > MAX_PATH)
-    return NULL;
+  if(size == 0 || size > MAX_PATH) return NULL;
 
   // back to utf8!
   filename = g_utf16_to_utf8(LongPath, -1, NULL, NULL, NULL);
-  if(!filename)
-    return NULL;
+  if(!filename) return NULL;
 
   GFile *gfile = g_file_new_for_path(filename);
   g_free(filename);
-  if(!gfile)
-    return NULL;
+  if(!gfile) return NULL;
   filename = g_file_get_path(gfile);
   g_object_unref(gfile);
-  if(!filename)
-    return NULL;
+  if(!filename) return NULL;
 
   char drive_letter = g_ascii_toupper(filename[0]);
   if(drive_letter < 'A' || drive_letter > 'Z' || filename[1] != ':')

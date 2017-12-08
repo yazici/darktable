@@ -60,28 +60,28 @@ dt_imageio_retval_t dt_imageio_open_ldr(dt_image_t *img, const char *filename, d
 // try all the options in sequence
 dt_imageio_retval_t dt_imageio_open(dt_image_t *img, const char *filename, dt_mipmap_buffer_t *buf);
 // tries to open the files not opened by the other routines using GraphicsMagick (if supported)
-dt_imageio_retval_t dt_imageio_open_exotic(dt_image_t *img, const char *filename,
-                                           dt_mipmap_buffer_t *buf);
+dt_imageio_retval_t dt_imageio_open_exotic(dt_image_t *img, const char *filename, dt_mipmap_buffer_t *buf);
 
 struct dt_imageio_module_format_t;
 struct dt_imageio_module_data_t;
 int dt_imageio_export(const uint32_t imgid, const char *filename, struct dt_imageio_module_format_t *format,
-                      struct dt_imageio_module_data_t *format_params, const gboolean high_quality, const gboolean upscale,
-                      const gboolean copy_metadata, dt_colorspaces_color_profile_type_t icc_type,
-                      const gchar *icc_filename, dt_iop_color_intent_t icc_intent, dt_imageio_module_storage_t *storage,
+                      struct dt_imageio_module_data_t *format_params, const gboolean high_quality,
+                      const gboolean upscale, const gboolean copy_metadata,
+                      dt_colorspaces_color_profile_type_t icc_type, const gchar *icc_filename,
+                      dt_iop_color_intent_t icc_intent, dt_imageio_module_storage_t *storage,
                       dt_imageio_module_data_t *storage_params, int num, int total);
 
 int dt_imageio_export_with_flags(const uint32_t imgid, const char *filename,
                                  struct dt_imageio_module_format_t *format,
                                  struct dt_imageio_module_data_t *format_params, const int32_t ignore_exif,
-                                 const int32_t display_byteorder, const gboolean high_quality, const gboolean upscale,
-                                 const int32_t thumbnail_export, const char *filter, const gboolean copy_metadata,
-                                 dt_colorspaces_color_profile_type_t icc_type, const gchar *icc_filename,
-                                 dt_iop_color_intent_t icc_intent, dt_imageio_module_storage_t *storage,
-                                 dt_imageio_module_data_t *storage_params, int num, int total);
+                                 const int32_t display_byteorder, const gboolean high_quality,
+                                 const gboolean upscale, const int32_t thumbnail_export, const char *filter,
+                                 const gboolean copy_metadata, dt_colorspaces_color_profile_type_t icc_type,
+                                 const gchar *icc_filename, dt_iop_color_intent_t icc_intent,
+                                 dt_imageio_module_storage_t *storage, dt_imageio_module_data_t *storage_params,
+                                 int num, int total);
 
-size_t dt_imageio_write_pos(int i, int j, int wd, int ht, float fwd, float fht,
-                            dt_image_orientation_t orientation);
+size_t dt_imageio_write_pos(int i, int j, int wd, int ht, float fwd, float fht, dt_image_orientation_t orientation);
 
 // general, efficient buffer flipping function using memcopies
 void dt_imageio_flip_buffers(char *out, const char *in,
@@ -89,14 +89,12 @@ void dt_imageio_flip_buffers(char *out, const char *in,
                              const int wd, const int ht, const int fwd, const int fht, const int stride,
                              const dt_image_orientation_t orientation);
 
-void dt_imageio_flip_buffers_ui16_to_float(float *out, const uint16_t *in, const float black,
-                                           const float white, const int ch, const int wd, const int ht,
-                                           const int fwd, const int fht, const int stride,
-                                           const dt_image_orientation_t orientation);
+void dt_imageio_flip_buffers_ui16_to_float(float *out, const uint16_t *in, const float black, const float white,
+                                           const int ch, const int wd, const int ht, const int fwd, const int fht,
+                                           const int stride, const dt_image_orientation_t orientation);
 void dt_imageio_flip_buffers_ui8_to_float(float *out, const uint8_t *in, const float black, const float white,
-                                          const int ch, const int wd, const int ht, const int fwd,
-                                          const int fht, const int stride,
-                                          const dt_image_orientation_t orientation);
+                                          const int ch, const int wd, const int ht, const int fwd, const int fht,
+                                          const int stride, const dt_image_orientation_t orientation);
 
 // allocate buffer and return 0 on success along with largest jpg thumbnail from raw.
 int dt_imageio_large_thumbnail(const char *filename, uint8_t **buffer, int32_t *width, int32_t *height,

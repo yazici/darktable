@@ -36,9 +36,9 @@
 typedef enum dt_lib_live_view_flip_t
 {
   FLAG_FLIP_NONE = 0,
-  FLAG_FLIP_HORIZONTAL = 1<<0,
-  FLAG_FLIP_VERTICAL = 1<<1,
-  FLAG_FLIP_BOTH = FLAG_FLIP_HORIZONTAL|FLAG_FLIP_VERTICAL
+  FLAG_FLIP_HORIZONTAL = 1 << 0,
+  FLAG_FLIP_VERTICAL = 1 << 1,
+  FLAG_FLIP_BOTH = FLAG_FLIP_HORIZONTAL | FLAG_FLIP_VERTICAL
 } dt_lib_live_view_flip_t;
 
 typedef enum dt_lib_live_view_overlay_t
@@ -50,16 +50,16 @@ typedef enum dt_lib_live_view_overlay_t
 
 #define HANDLE_SIZE 0.02
 
-static const cairo_operator_t _overlay_modes[] = {
-  CAIRO_OPERATOR_OVER, CAIRO_OPERATOR_XOR, CAIRO_OPERATOR_ADD, CAIRO_OPERATOR_SATURATE
+static const cairo_operator_t _overlay_modes[]
+    = { CAIRO_OPERATOR_OVER, CAIRO_OPERATOR_XOR, CAIRO_OPERATOR_ADD, CAIRO_OPERATOR_SATURATE
 #if(CAIRO_VERSION >= CAIRO_VERSION_ENCODE(1, 10, 0))
-  ,
-  CAIRO_OPERATOR_MULTIPLY, CAIRO_OPERATOR_SCREEN, CAIRO_OPERATOR_OVERLAY, CAIRO_OPERATOR_DARKEN,
-  CAIRO_OPERATOR_LIGHTEN, CAIRO_OPERATOR_COLOR_DODGE, CAIRO_OPERATOR_COLOR_BURN, CAIRO_OPERATOR_HARD_LIGHT,
-  CAIRO_OPERATOR_SOFT_LIGHT, CAIRO_OPERATOR_DIFFERENCE, CAIRO_OPERATOR_EXCLUSION, CAIRO_OPERATOR_HSL_HUE,
-  CAIRO_OPERATOR_HSL_SATURATION, CAIRO_OPERATOR_HSL_COLOR, CAIRO_OPERATOR_HSL_LUMINOSITY
+        ,
+        CAIRO_OPERATOR_MULTIPLY, CAIRO_OPERATOR_SCREEN, CAIRO_OPERATOR_OVERLAY, CAIRO_OPERATOR_DARKEN,
+        CAIRO_OPERATOR_LIGHTEN, CAIRO_OPERATOR_COLOR_DODGE, CAIRO_OPERATOR_COLOR_BURN, CAIRO_OPERATOR_HARD_LIGHT,
+        CAIRO_OPERATOR_SOFT_LIGHT, CAIRO_OPERATOR_DIFFERENCE, CAIRO_OPERATOR_EXCLUSION, CAIRO_OPERATOR_HSL_HUE,
+        CAIRO_OPERATOR_HSL_SATURATION, CAIRO_OPERATOR_HSL_COLOR, CAIRO_OPERATOR_HSL_LUMINOSITY
 #endif
-};
+    };
 
 DT_MODULE(1)
 
@@ -142,7 +142,7 @@ const char *name(dt_lib_module_t *self)
 
 const char **views(dt_lib_module_t *self)
 {
-  static const char *v[] = {"tethering", NULL};
+  static const char *v[] = { "tethering", NULL };
   return v;
 }
 
@@ -278,10 +278,10 @@ void gui_init(dt_lib_module_t *self)
   lib->live_view_zoom = dtgtk_button_new(
       dtgtk_cairo_paint_zoom, CPF_STYLE_FLAT | CPF_DO_NOT_USE_BORDER); // TODO: see _zoom_live_view_clicked
   lib->rotate_ccw = dtgtk_button_new(dtgtk_cairo_paint_refresh, CPF_STYLE_FLAT | CPF_DO_NOT_USE_BORDER);
-  lib->rotate_cw = dtgtk_button_new(dtgtk_cairo_paint_refresh,
-                                    CPF_STYLE_FLAT | CPF_DO_NOT_USE_BORDER | CPF_DIRECTION_UP);
-  lib->flip = dtgtk_togglebutton_new(dtgtk_cairo_paint_flip,
-                                     CPF_STYLE_FLAT | CPF_DO_NOT_USE_BORDER | CPF_DIRECTION_UP);
+  lib->rotate_cw
+      = dtgtk_button_new(dtgtk_cairo_paint_refresh, CPF_STYLE_FLAT | CPF_DO_NOT_USE_BORDER | CPF_DIRECTION_UP);
+  lib->flip
+      = dtgtk_togglebutton_new(dtgtk_cairo_paint_flip, CPF_STYLE_FLAT | CPF_DO_NOT_USE_BORDER | CPF_DIRECTION_UP);
 
   gtk_box_pack_start(GTK_BOX(box), lib->live_view, TRUE, TRUE, 0);
   gtk_box_pack_start(GTK_BOX(box), lib->live_view_zoom, TRUE, TRUE, 0);
@@ -307,10 +307,10 @@ void gui_init(dt_lib_module_t *self)
   lib->focus_in_big = dtgtk_button_new(dtgtk_cairo_paint_solid_triangle,
                                        CPF_STYLE_FLAT | CPF_DO_NOT_USE_BORDER | CPF_DIRECTION_LEFT);
   lib->focus_in_small
-      = dtgtk_button_new(dtgtk_cairo_paint_arrow, CPF_STYLE_FLAT | CPF_DO_NOT_USE_BORDER
-                                                  | CPF_DIRECTION_LEFT); // TODO icon not centered
+      = dtgtk_button_new(dtgtk_cairo_paint_arrow,
+                         CPF_STYLE_FLAT | CPF_DO_NOT_USE_BORDER | CPF_DIRECTION_LEFT); // TODO icon not centered
   lib->focus_out_small = dtgtk_button_new(dtgtk_cairo_paint_arrow, CPF_STYLE_FLAT | CPF_DO_NOT_USE_BORDER
-                                                                   | CPF_DIRECTION_RIGHT); // TODO same here
+                                                                       | CPF_DIRECTION_RIGHT); // TODO same here
   lib->focus_out_big = dtgtk_button_new(dtgtk_cairo_paint_solid_triangle,
                                         CPF_STYLE_FLAT | CPF_DO_NOT_USE_BORDER | CPF_DIRECTION_RIGHT);
 
@@ -325,17 +325,14 @@ void gui_init(dt_lib_module_t *self)
   gtk_widget_set_tooltip_text(lib->focus_out_big, _("move focus point out (big steps)"));
 
   // Near 3
-  g_signal_connect(G_OBJECT(lib->focus_in_big), "clicked", G_CALLBACK(_focus_button_clicked),
-                   GINT_TO_POINTER(2));
+  g_signal_connect(G_OBJECT(lib->focus_in_big), "clicked", G_CALLBACK(_focus_button_clicked), GINT_TO_POINTER(2));
   // Near 1
-  g_signal_connect(G_OBJECT(lib->focus_in_small), "clicked", G_CALLBACK(_focus_button_clicked),
-                   GINT_TO_POINTER(0));
+  g_signal_connect(G_OBJECT(lib->focus_in_small), "clicked", G_CALLBACK(_focus_button_clicked), GINT_TO_POINTER(0));
   // Far 1
   g_signal_connect(G_OBJECT(lib->focus_out_small), "clicked", G_CALLBACK(_focus_button_clicked),
                    GINT_TO_POINTER(4));
   // Far 3
-  g_signal_connect(G_OBJECT(lib->focus_out_big), "clicked", G_CALLBACK(_focus_button_clicked),
-                   GINT_TO_POINTER(6));
+  g_signal_connect(G_OBJECT(lib->focus_out_big), "clicked", G_CALLBACK(_focus_button_clicked), GINT_TO_POINTER(6));
 
   // Guides
   lib->guide_selector = dt_bauhaus_combobox_new(NULL);
@@ -436,8 +433,7 @@ void gui_init(dt_lib_module_t *self)
   dt_bauhaus_combobox_add(lib->overlay_splitline, _("on"));
   gtk_widget_set_tooltip_text(lib->overlay_splitline, _("only draw part of the overlay"));
   dt_bauhaus_combobox_set(lib->overlay_splitline, dt_conf_get_int("plugins/lighttable/live_view/splitline"));
-  g_signal_connect(G_OBJECT(lib->overlay_splitline), "value-changed", G_CALLBACK(_overlay_splitline_changed),
-                   lib);
+  g_signal_connect(G_OBJECT(lib->overlay_splitline), "value-changed", G_CALLBACK(_overlay_splitline_changed), lib);
   gtk_box_pack_start(GTK_BOX(self->widget), lib->overlay_splitline, TRUE, TRUE, 0);
 
   gtk_widget_set_visible(GTK_WIDGET(lib->overlay_mode), FALSE);
@@ -462,7 +458,7 @@ void gui_cleanup(dt_lib_module_t *self)
   self->data = NULL;
 }
 
-void view_enter(struct dt_lib_module_t *self,struct dt_view_t *old_view,struct dt_view_t *new_view)
+void view_enter(struct dt_lib_module_t *self, struct dt_view_t *old_view, struct dt_view_t *new_view)
 {
   // disable buttons that won't work with this camera
   // TODO: initialize tethering mode outside of libs/camera.s so we can use darktable.camctl->active_camera
@@ -539,8 +535,7 @@ void gui_post_expose(dt_lib_module_t *self, cairo_t *cr, int32_t width, int32_t 
     if(buf.buf)
     {
       const int32_t stride = cairo_format_stride_for_width(CAIRO_FORMAT_RGB24, buf.width);
-      surface = cairo_image_surface_create_for_data(buf.buf, CAIRO_FORMAT_RGB24, buf.width,
-                                                    buf.height, stride);
+      surface = cairo_image_surface_create_for_data(buf.buf, CAIRO_FORMAT_RGB24, buf.width, buf.height, stride);
       if(zoom == 1)
       {
         scale = fminf(fminf(w, pw) / (float)buf.width, fminf(h, ph) / (float)buf.height);
@@ -750,8 +745,7 @@ int button_pressed(struct dt_lib_module_t *self, double x, double y, double pres
     double sl_x = lib->overlay_x0 + lib->splitline_x * width;
     double sl_y = lib->overlay_y0 + lib->splitline_y * height;
 
-    gboolean mouse_over_control = (lib->splitline_rotation % 2 == 0) ? (fabs(sl_x - x) < 5)
-                                                                     : (fabs(sl_y - y) < 5);
+    gboolean mouse_over_control = (lib->splitline_rotation % 2 == 0) ? (fabs(sl_x - x) < 5) : (fabs(sl_y - y) < 5);
 
     /* do the split rotating */
     if(which == 1 && fabs(sl_x - x) < 7 && fabs(sl_y - y) < 7)

@@ -51,9 +51,8 @@ const char *name(const struct dt_imageio_module_storage_t *self)
   return _("send as email");
 }
 
-void *legacy_params(dt_imageio_module_storage_t *self, const void *const old_params,
-                    const size_t old_params_size, const int old_version, const int new_version,
-                    size_t *new_size)
+void *legacy_params(dt_imageio_module_storage_t *self, const void *const old_params, const size_t old_params_size,
+                    const int old_version, const int new_version, size_t *new_size)
 {
   if(old_version == 1 && new_version == 2)
   {
@@ -74,7 +73,8 @@ void *legacy_params(dt_imageio_module_storage_t *self, const void *const old_par
   return NULL;
 }
 
-int recommended_dimension(struct dt_imageio_module_storage_t *self, dt_imageio_module_data_t *data, uint32_t *width, uint32_t *height)
+int recommended_dimension(struct dt_imageio_module_storage_t *self, dt_imageio_module_data_t *data,
+                          uint32_t *width, uint32_t *height)
 {
   *width = 1536;
   *height = 1536;
@@ -128,8 +128,8 @@ int store(dt_imageio_module_storage_t *self, dt_imageio_module_data_t *sdata, co
 
   attachment->file = g_build_filename(tmpdir, dirname, (char *)NULL);
 
-  if(dt_imageio_export(imgid, attachment->file, format, fdata, high_quality, upscale, FALSE, icc_type, icc_filename,
-                       icc_intent, self, sdata, num, total) != 0)
+  if(dt_imageio_export(imgid, attachment->file, format, fdata, high_quality, upscale, FALSE, icc_type,
+                       icc_filename, icc_intent, self, sdata, num, total) != 0)
   {
     fprintf(stderr, "[imageio_storage_email] could not export to file: `%s'!\n", attachment->file);
     dt_control_log(_("could not export to file `%s'!"), attachment->file);
@@ -141,8 +141,8 @@ int store(dt_imageio_module_storage_t *self, dt_imageio_module_data_t *sdata, co
 
   char *trunc = attachment->file + strlen(attachment->file) - 32;
   if(trunc < attachment->file) trunc = attachment->file;
-  dt_control_log(ngettext("%d/%d exported to `%s%s'", "%d/%d exported to `%s%s'", num),
-                 num, total, trunc != filename ? ".." : "", trunc);
+  dt_control_log(ngettext("%d/%d exported to `%s%s'", "%d/%d exported to `%s%s'", num), num, total,
+                 trunc != filename ? ".." : "", trunc);
 
 #ifdef _OPENMP // store can be called in parallel, so synch access to shared memory
 #pragma omp critical

@@ -35,7 +35,7 @@ typedef struct dt_lib_navigation_t
 {
   int dragging;
   int zoom_w, zoom_h;
-  unsigned char* buffer;
+  unsigned char *buffer;
   int wd;
   int ht;
   int timestamp;
@@ -48,8 +48,7 @@ static gboolean _lib_navigation_draw_callback(GtkWidget *widget, cairo_t *crf, g
 static gboolean _lib_navigation_motion_notify_callback(GtkWidget *widget, GdkEventMotion *event,
                                                        gpointer user_data);
 /* button press callback */
-static gboolean _lib_navigation_button_press_callback(GtkWidget *widget, GdkEventButton *event,
-                                                      gpointer user_data);
+static gboolean _lib_navigation_button_press_callback(GtkWidget *widget, GdkEventButton *event, gpointer user_data);
 /* button release callback */
 static gboolean _lib_navigation_button_release_callback(GtkWidget *widget, GdkEventButton *event,
                                                         gpointer user_data);
@@ -67,7 +66,7 @@ const char *name(dt_lib_module_t *self)
 
 const char **views(dt_lib_module_t *self)
 {
-  static const char *v[] = {"darkroom", NULL};
+  static const char *v[] = { "darkroom", NULL };
   return v;
 }
 
@@ -106,21 +105,20 @@ void gui_init(dt_lib_module_t *self)
 
   /* create drawingarea */
   self->widget = gtk_drawing_area_new();
-  gtk_widget_set_events(self->widget, GDK_EXPOSURE_MASK | GDK_POINTER_MOTION_MASK
-                                      | GDK_POINTER_MOTION_HINT_MASK | GDK_BUTTON_PRESS_MASK
-                                      | GDK_BUTTON_RELEASE_MASK | GDK_STRUCTURE_MASK);
+  gtk_widget_set_events(self->widget, GDK_EXPOSURE_MASK | GDK_POINTER_MOTION_MASK | GDK_POINTER_MOTION_HINT_MASK
+                                          | GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK | GDK_STRUCTURE_MASK);
 
   /* connect callbacks */
   gtk_widget_set_app_paintable(self->widget, TRUE);
   g_signal_connect(G_OBJECT(self->widget), "draw", G_CALLBACK(_lib_navigation_draw_callback), self);
-  g_signal_connect(G_OBJECT(self->widget), "button-press-event",
-                   G_CALLBACK(_lib_navigation_button_press_callback), self);
+  g_signal_connect(G_OBJECT(self->widget), "button-press-event", G_CALLBACK(_lib_navigation_button_press_callback),
+                   self);
   g_signal_connect(G_OBJECT(self->widget), "button-release-event",
                    G_CALLBACK(_lib_navigation_button_release_callback), self);
   g_signal_connect(G_OBJECT(self->widget), "motion-notify-event",
                    G_CALLBACK(_lib_navigation_motion_notify_callback), self);
-  g_signal_connect(G_OBJECT(self->widget), "leave-notify-event",
-                   G_CALLBACK(_lib_navigation_leave_notify_callback), self);
+  g_signal_connect(G_OBJECT(self->widget), "leave-notify-event", G_CALLBACK(_lib_navigation_leave_notify_callback),
+                   self);
 
   /* set size of navigation draw area */
   int panel_width = dt_conf_get_int("panel_width");
@@ -202,8 +200,7 @@ static gboolean _lib_navigation_draw_callback(GtkWidget *widget, cairo_t *crf, g
     const float scale = fminf(width / (float)wd, height / (float)ht);
 
     const int stride = cairo_format_stride_for_width(CAIRO_FORMAT_RGB24, wd);
-    cairo_surface_t *surface
-        = cairo_image_surface_create_for_data(d->buffer, CAIRO_FORMAT_RGB24, wd, ht, stride);
+    cairo_surface_t *surface = cairo_image_surface_create_for_data(d->buffer, CAIRO_FORMAT_RGB24, wd, ht, stride);
     cairo_translate(cr, width / 2.0, height / 2.0f);
     cairo_scale(cr, scale, scale);
     cairo_translate(cr, -.5f * wd, -.5f * ht);
@@ -272,7 +269,7 @@ static gboolean _lib_navigation_draw_callback(GtkWidget *widget, cairo_t *crf, g
       h = d->zoom_h = ink.height;
       w = d->zoom_w = ink.width;
 
-      cairo_move_to(cr, width - w - h * 1.1 - ink.x, - fontsize);
+      cairo_move_to(cr, width - w - h * 1.1 - ink.x, -fontsize);
 
       cairo_save(cr);
       cairo_set_line_width(cr, DT_PIXEL_APPLY_DPI(2.0));
@@ -290,7 +287,6 @@ static gboolean _lib_navigation_draw_callback(GtkWidget *widget, cairo_t *crf, g
       gdk_rgba_free(color);
       pango_font_description_free(desc);
       g_object_unref(layout);
-
     }
     else
     {
@@ -378,11 +374,9 @@ void _lib_navigation_set_position(dt_lib_module_t *self, double x, double y, int
     int iwd, iht;
     dt_dev_get_processed_size(dev, &iwd, &iht);
     zoom_x = fmaxf(
-        -.5,
-        fminf(((x - inset) / width - .5f) / (iwd * fminf(wd / (float)iwd, ht / (float)iht) / (float)wd), .5));
+        -.5, fminf(((x - inset) / width - .5f) / (iwd * fminf(wd / (float)iwd, ht / (float)iht) / (float)wd), .5));
     zoom_y = fmaxf(
-        -.5, fminf(((y - inset) / height - .5f) / (iht * fminf(wd / (float)iwd, ht / (float)iht) / (float)ht),
-                   .5));
+        -.5, fminf(((y - inset) / height - .5f) / (iht * fminf(wd / (float)iwd, ht / (float)iht) / (float)ht), .5));
     dt_dev_check_zoom_bounds(darktable.develop, &zoom_x, &zoom_y, zoom, closeup, NULL, NULL);
     dt_control_set_dev_zoom_x(zoom_x);
     dt_control_set_dev_zoom_y(zoom_y);
@@ -396,8 +390,7 @@ void _lib_navigation_set_position(dt_lib_module_t *self, double x, double y, int
   }
 }
 
-static gboolean _lib_navigation_motion_notify_callback(GtkWidget *widget, GdkEventMotion *event,
-                                                       gpointer user_data)
+static gboolean _lib_navigation_motion_notify_callback(GtkWidget *widget, GdkEventMotion *event, gpointer user_data)
 {
   dt_lib_module_t *self = (dt_lib_module_t *)user_data;
   GtkAllocation allocation;
@@ -405,15 +398,14 @@ static gboolean _lib_navigation_motion_notify_callback(GtkWidget *widget, GdkEve
   _lib_navigation_set_position(self, event->x, event->y, allocation.width, allocation.height);
   gint x, y; // notify gtk for motion_hint.
 #if GTK_CHECK_VERSION(3, 20, 0)
-  gdk_window_get_device_position(event->window,
-      gdk_seat_get_pointer(gdk_display_get_default_seat(
-          gdk_window_get_display(event->window))),
-      &x, &y, 0);
+  gdk_window_get_device_position(
+      event->window, gdk_seat_get_pointer(gdk_display_get_default_seat(gdk_window_get_display(event->window))), &x,
+      &y, 0);
 #else
-  gdk_window_get_device_position(event->window,
-                                 gdk_device_manager_get_client_pointer(
-                                     gdk_display_get_device_manager(gdk_window_get_display(event->window))),
-                                 &x, &y, NULL);
+  gdk_window_get_device_position(
+      event->window,
+      gdk_device_manager_get_client_pointer(gdk_display_get_device_manager(gdk_window_get_display(event->window))),
+      &x, &y, NULL);
 #endif
   return TRUE;
 }
@@ -482,8 +474,7 @@ static void _zoom_preset_2(GtkButton *button, gpointer user_data)
   _zoom_preset_change(3);
 }
 
-static gboolean _lib_navigation_button_press_callback(GtkWidget *widget, GdkEventButton *event,
-                                                      gpointer user_data)
+static gboolean _lib_navigation_button_press_callback(GtkWidget *widget, GdkEventButton *event, gpointer user_data)
 {
   dt_lib_module_t *self = (dt_lib_module_t *)user_data;
   dt_lib_navigation_t *d = (dt_lib_navigation_t *)self->data;
@@ -492,8 +483,7 @@ static gboolean _lib_navigation_button_press_callback(GtkWidget *widget, GdkEven
   gtk_widget_get_allocation(widget, &allocation);
   int w = allocation.width;
   int h = allocation.height;
-  if(event->x >= w - DT_NAVIGATION_INSET - d->zoom_h - d->zoom_w
-     && event->y >= h - DT_NAVIGATION_INSET - d->zoom_h)
+  if(event->x >= w - DT_NAVIGATION_INSET - d->zoom_h - d->zoom_w && event->y >= h - DT_NAVIGATION_INSET - d->zoom_h)
   {
     // we show the zoom menu
     GtkMenuShell *menu = GTK_MENU_SHELL(gtk_menu_new());

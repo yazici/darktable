@@ -21,7 +21,7 @@
 
 #ifndef __SSE2__
 
-#if !defined _XOPEN_SOURCE && !defined(__DragonFly__) && !defined(__FreeBSD__) && !defined(__NetBSD__)       \
+#if !defined _XOPEN_SOURCE && !defined(__DragonFly__) && !defined(__FreeBSD__) && !defined(__NetBSD__)            \
     && !defined(__OpenBSD__) && !defined(__WIN32__)
 #define _XOPEN_SOURCE
 #endif
@@ -203,37 +203,37 @@ static inline float dt_points_get()
 #define PARITY4 0x13c9e684U
 
 
-#define ALTI_SL1                                                                                             \
-  {                                                                                                          \
-    SL1, SL1, SL1, SL1                                                                                       \
+#define ALTI_SL1                                                                                                  \
+  {                                                                                                               \
+    SL1, SL1, SL1, SL1                                                                                            \
   }
-#define ALTI_SR1                                                                                             \
-  {                                                                                                          \
-    SR1, SR1, SR1, SR1                                                                                       \
+#define ALTI_SR1                                                                                                  \
+  {                                                                                                               \
+    SR1, SR1, SR1, SR1                                                                                            \
   }
-#define ALTI_MSK                                                                                             \
-  {                                                                                                          \
-    MSK1, MSK2, MSK3, MSK4                                                                                   \
+#define ALTI_MSK                                                                                                  \
+  {                                                                                                               \
+    MSK1, MSK2, MSK3, MSK4                                                                                        \
   }
-#define ALTI_MSK64                                                                                           \
-  {                                                                                                          \
-    MSK2, MSK1, MSK4, MSK3                                                                                   \
+#define ALTI_MSK64                                                                                                \
+  {                                                                                                               \
+    MSK2, MSK1, MSK4, MSK3                                                                                        \
   }
-#define ALTI_SL2_PERM                                                                                        \
-  {                                                                                                          \
-    1, 2, 3, 23, 5, 6, 7, 0, 9, 10, 11, 4, 13, 14, 15, 8                                                     \
+#define ALTI_SL2_PERM                                                                                             \
+  {                                                                                                               \
+    1, 2, 3, 23, 5, 6, 7, 0, 9, 10, 11, 4, 13, 14, 15, 8                                                          \
   }
-#define ALTI_SL2_PERM64                                                                                      \
-  {                                                                                                          \
-    1, 2, 3, 4, 5, 6, 7, 31, 9, 10, 11, 12, 13, 14, 15, 0                                                    \
+#define ALTI_SL2_PERM64                                                                                           \
+  {                                                                                                               \
+    1, 2, 3, 4, 5, 6, 7, 31, 9, 10, 11, 12, 13, 14, 15, 0                                                         \
   }
-#define ALTI_SR2_PERM                                                                                        \
-  {                                                                                                          \
-    7, 0, 1, 2, 11, 4, 5, 6, 15, 8, 9, 10, 17, 12, 13, 14                                                    \
+#define ALTI_SR2_PERM                                                                                             \
+  {                                                                                                               \
+    7, 0, 1, 2, 11, 4, 5, 6, 15, 8, 9, 10, 17, 12, 13, 14                                                         \
   }
-#define ALTI_SR2_PERM64                                                                                      \
-  {                                                                                                          \
-    15, 0, 1, 2, 3, 4, 5, 6, 17, 8, 9, 10, 11, 12, 13, 14                                                    \
+#define ALTI_SR2_PERM64                                                                                           \
+  {                                                                                                               \
+    15, 0, 1, 2, 3, 4, 5, 6, 17, 8, 9, 10, 11, 12, 13, 14                                                         \
   }
 #define IDSTR "SFMT-19937:122-18-1-11-1:dfffffef-ddfecb7f-bffaffff-bffffff6"
 
@@ -454,8 +454,7 @@ inline static double genrand_res53_mix(struct sfmt_state_t *s)
 #ifndef SFMT_SSE2_H
 #define SFMT_SSE2_H
 
-PRE_ALWAYS static __m128i mm_recursion(__m128i *a, __m128i *b, __m128i c, __m128i d,
-                                       __m128i mask) ALWAYSINLINE;
+PRE_ALWAYS static __m128i mm_recursion(__m128i *a, __m128i *b, __m128i c, __m128i d, __m128i mask) ALWAYSINLINE;
 
 /**
  * This function represents the recursion formula.
@@ -1088,8 +1087,7 @@ void init_by_array(sfmt_state_t *s, uint32_t *init_key, int key_length)
   count--;
   for(i = 1, j = 0; (j < count) && (j < key_length); j++)
   {
-    r = func1(s->psfmt32[idxof(i)] ^ s->psfmt32[idxof((i + mid) % N32)]
-              ^ s->psfmt32[idxof((i + N32 - 1) % N32)]);
+    r = func1(s->psfmt32[idxof(i)] ^ s->psfmt32[idxof((i + mid) % N32)] ^ s->psfmt32[idxof((i + N32 - 1) % N32)]);
     s->psfmt32[idxof((i + mid) % N32)] += r;
     r += init_key[j] + i;
     s->psfmt32[idxof((i + mid + lag) % N32)] += r;
@@ -1098,8 +1096,7 @@ void init_by_array(sfmt_state_t *s, uint32_t *init_key, int key_length)
   }
   for(; j < count; j++)
   {
-    r = func1(s->psfmt32[idxof(i)] ^ s->psfmt32[idxof((i + mid) % N32)]
-              ^ s->psfmt32[idxof((i + N32 - 1) % N32)]);
+    r = func1(s->psfmt32[idxof(i)] ^ s->psfmt32[idxof((i + mid) % N32)] ^ s->psfmt32[idxof((i + N32 - 1) % N32)]);
     s->psfmt32[idxof((i + mid) % N32)] += r;
     r += i;
     s->psfmt32[idxof((i + mid + lag) % N32)] += r;
@@ -1108,8 +1105,7 @@ void init_by_array(sfmt_state_t *s, uint32_t *init_key, int key_length)
   }
   for(j = 0; j < N32; j++)
   {
-    r = func2(s->psfmt32[idxof(i)] + s->psfmt32[idxof((i + mid) % N32)]
-              + s->psfmt32[idxof((i + N32 - 1) % N32)]);
+    r = func2(s->psfmt32[idxof(i)] + s->psfmt32[idxof((i + mid) % N32)] + s->psfmt32[idxof((i + N32 - 1) % N32)]);
     s->psfmt32[idxof((i + mid) % N32)] ^= r;
     r -= i;
     s->psfmt32[idxof((i + mid + lag) % N32)] ^= r;

@@ -225,7 +225,8 @@ void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const 
     outp[2] = inp[2];
   }
 
-  if(piece->pipe->mask_display & DT_DEV_PIXELPIPE_DISPLAY_MASK) dt_iop_alpha_copy(ivoid, ovoid, roi_out->width, roi_out->height);
+  if(piece->pipe->mask_display & DT_DEV_PIXELPIPE_DISPLAY_MASK)
+    dt_iop_alpha_copy(ivoid, ovoid, roi_out->width, roi_out->height);
 
   free(blurlightness);
 }
@@ -265,10 +266,14 @@ int process_cl(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, cl_m
   const float scale = 1.0f / exp2f(-1.0f * (fmin(100.0f, d->strength + 1.0f) / 100.0f));
 
   int hblocksize;
-  dt_opencl_local_buffer_t hlocopt
-    = (dt_opencl_local_buffer_t){ .xoffset = 2 * radius, .xfactor = 1, .yoffset = 0, .yfactor = 1,
-                                  .cellsize = sizeof(float), .overhead = 0,
-                                  .sizex = 1 << 16, .sizey = 1 };
+  dt_opencl_local_buffer_t hlocopt = (dt_opencl_local_buffer_t){.xoffset = 2 * radius,
+                                                                .xfactor = 1,
+                                                                .yoffset = 0,
+                                                                .yfactor = 1,
+                                                                .cellsize = sizeof(float),
+                                                                .overhead = 0,
+                                                                .sizex = 1 << 16,
+                                                                .sizey = 1 };
 
   if(dt_opencl_local_buffer_opt(devid, gd->kernel_bloom_hblur, &hlocopt))
     hblocksize = hlocopt.sizex;
@@ -276,10 +281,14 @@ int process_cl(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, cl_m
     hblocksize = 1;
 
   int vblocksize;
-  dt_opencl_local_buffer_t vlocopt
-    = (dt_opencl_local_buffer_t){ .xoffset = 1, .xfactor = 1, .yoffset = 2 * radius, .yfactor = 1,
-                                  .cellsize = sizeof(float), .overhead = 0,
-                                  .sizex = 1, .sizey = 1 << 16 };
+  dt_opencl_local_buffer_t vlocopt = (dt_opencl_local_buffer_t){.xoffset = 1,
+                                                                .xfactor = 1,
+                                                                .yoffset = 2 * radius,
+                                                                .yfactor = 1,
+                                                                .cellsize = sizeof(float),
+                                                                .overhead = 0,
+                                                                .sizex = 1,
+                                                                .sizey = 1 << 16 };
 
   if(dt_opencl_local_buffer_opt(devid, gd->kernel_bloom_vblur, &vlocopt))
     vblocksize = vlocopt.sizey;
@@ -330,8 +339,7 @@ int process_cl(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, cl_m
       dt_opencl_set_kernel_arg(devid, gd->kernel_bloom_hblur, 3, sizeof(int), (void *)&width);
       dt_opencl_set_kernel_arg(devid, gd->kernel_bloom_hblur, 4, sizeof(int), (void *)&height);
       dt_opencl_set_kernel_arg(devid, gd->kernel_bloom_hblur, 5, sizeof(int), (void *)&hblocksize);
-      dt_opencl_set_kernel_arg(devid, gd->kernel_bloom_hblur, 6, (hblocksize + 2 * radius) * sizeof(float),
-                               NULL);
+      dt_opencl_set_kernel_arg(devid, gd->kernel_bloom_hblur, 6, (hblocksize + 2 * radius) * sizeof(float), NULL);
       err = dt_opencl_enqueue_kernel_2d_with_local(devid, gd->kernel_bloom_hblur, sizes, local);
       if(err != CL_SUCCESS) goto error;
 
@@ -350,8 +358,7 @@ int process_cl(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, cl_m
       dt_opencl_set_kernel_arg(devid, gd->kernel_bloom_vblur, 3, sizeof(int), (void *)&width);
       dt_opencl_set_kernel_arg(devid, gd->kernel_bloom_vblur, 4, sizeof(int), (void *)&height);
       dt_opencl_set_kernel_arg(devid, gd->kernel_bloom_vblur, 5, sizeof(int), (void *)&vblocksize);
-      dt_opencl_set_kernel_arg(devid, gd->kernel_bloom_vblur, 6, (vblocksize + 2 * radius) * sizeof(float),
-                               NULL);
+      dt_opencl_set_kernel_arg(devid, gd->kernel_bloom_vblur, 6, (vblocksize + 2 * radius) * sizeof(float), NULL);
       err = dt_opencl_enqueue_kernel_2d_with_local(devid, gd->kernel_bloom_vblur, sizes, local);
       if(err != CL_SUCCESS) goto error;
     }
@@ -368,21 +375,18 @@ int process_cl(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, cl_m
   err = dt_opencl_enqueue_kernel_2d(devid, gd->kernel_bloom_mix, sizes);
   if(err != CL_SUCCESS) goto error;
 
-  for(int i = 0; i < NUM_BUCKETS; i++)
-    dt_opencl_release_mem_object(dev_tmp[i]);
+  for(int i = 0; i < NUM_BUCKETS; i++) dt_opencl_release_mem_object(dev_tmp[i]);
   return TRUE;
 
 error:
-  for(int i = 0; i < NUM_BUCKETS; i++)
-    dt_opencl_release_mem_object(dev_tmp[i]);
+  for(int i = 0; i < NUM_BUCKETS; i++) dt_opencl_release_mem_object(dev_tmp[i]);
   dt_print(DT_DEBUG_OPENCL, "[opencl_bloom] couldn't enqueue kernel! %d\n", err);
   return FALSE;
 }
 #endif
 
 void tiling_callback(struct dt_iop_module_t *self, struct dt_dev_pixelpipe_iop_t *piece,
-                     const dt_iop_roi_t *roi_in, const dt_iop_roi_t *roi_out,
-                     struct dt_develop_tiling_t *tiling)
+                     const dt_iop_roi_t *roi_in, const dt_iop_roi_t *roi_out, struct dt_develop_tiling_t *tiling)
 {
   const dt_iop_bloom_data_t *d = (dt_iop_bloom_data_t *)piece->data;
 
@@ -486,7 +490,7 @@ void init(dt_iop_module_t *module)
   module->params = calloc(1, sizeof(dt_iop_bloom_params_t));
   module->default_params = calloc(1, sizeof(dt_iop_bloom_params_t));
   module->default_enabled = 0;
-    module->priority = 521; // module order created by iop_dependencies.py, do not edit!
+  module->priority = 521; // module order created by iop_dependencies.py, do not edit!
   module->params_size = sizeof(dt_iop_bloom_params_t);
   module->gui_data = NULL;
   dt_iop_bloom_params_t tmp = (dt_iop_bloom_params_t){ 20, 90, 25 };

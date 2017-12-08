@@ -89,8 +89,8 @@ typedef struct dt_iop_temperature_global_data_t
   int kernel_whitebalance_1f_xtrans;
 } dt_iop_temperature_global_data_t;
 
-int legacy_params(dt_iop_module_t *self, const void *const old_params, const int old_version,
-                  void *new_params, const int new_version)
+int legacy_params(dt_iop_module_t *self, const void *const old_params, const int old_version, void *new_params,
+                  const int new_version)
 {
   if(old_version == 2 && new_version == 3)
   {
@@ -129,31 +129,17 @@ static int ignore_missing_wb(dt_image_t *img)
 {
   // Ignore files that end with "-hdr.dng" since these are broken files we
   // generated without any proper WB tagged
-  if(g_str_has_suffix(img->filename,"-hdr.dng"))
-    return TRUE;
+  if(g_str_has_suffix(img->filename, "-hdr.dng")) return TRUE;
 
   static const char *const ignored_cameras[] = {
-    "Canon PowerShot A610",
-    "Canon PowerShot S3 IS",
-    "Canon PowerShot A620",
-    "Canon PowerShot A720 IS",
-    "Canon PowerShot A630",
-    "Canon PowerShot A640",
-    "Canon PowerShot A650",
-    "Canon PowerShot SX110 IS",
-    "Mamiya ZD",
-    "Canon EOS D2000C",
-    "Kodak EOS DCS 1",
-    "Kodak DCS560C",
-    "Kodak DCS460D",
-    "Nikon E5700",
-    "Sony DSC-F828",
-    "GITUP GIT2",
+    "Canon PowerShot A610", "Canon PowerShot S3 IS", "Canon PowerShot A620", "Canon PowerShot A720 IS",
+    "Canon PowerShot A630", "Canon PowerShot A640", "Canon PowerShot A650", "Canon PowerShot SX110 IS",
+    "Mamiya ZD", "Canon EOS D2000C", "Kodak EOS DCS 1", "Kodak DCS560C", "Kodak DCS460D", "Nikon E5700",
+    "Sony DSC-F828", "GITUP GIT2",
   };
 
-  for(int i=0; i < sizeof(ignored_cameras)/sizeof(ignored_cameras[1]); i++)
-    if(!strcmp(img->camera_makermodel, ignored_cameras[i]))
-      return TRUE;
+  for(int i = 0; i < sizeof(ignored_cameras) / sizeof(ignored_cameras[1]); i++)
+    if(!strcmp(img->camera_makermodel, ignored_cameras[i])) return TRUE;
 
   return FALSE;
 }
@@ -295,9 +281,8 @@ static double spd_daylight(unsigned long int wavelength, double TempK)
                m1 = (-1.3515 - 1.7703 * WhitePoint.x + 5.9114 * WhitePoint.y) / M,
                m2 = (0.0300 - 31.4424 * WhitePoint.x + 30.0717 * WhitePoint.y) / M;
 
-  const unsigned long int j
-      = ((wavelength - cie_daylight_components[0].wavelength)
-         / (cie_daylight_components[1].wavelength - cie_daylight_components[0].wavelength));
+  const unsigned long int j = ((wavelength - cie_daylight_components[0].wavelength)
+                               / (cie_daylight_components[1].wavelength - cie_daylight_components[0].wavelength));
 
   return (cie_daylight_components[j].S[0] + m1 * cie_daylight_components[j].S[1]
           + m2 * cie_daylight_components[j].S[2]);
@@ -447,7 +432,7 @@ void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const 
              void *const ovoid, const dt_iop_roi_t *const roi_in, const dt_iop_roi_t *const roi_out)
 {
   const uint32_t filters = piece->pipe->dsc.filters;
-  const uint8_t(*const xtrans)[6] = (const uint8_t(*const)[6])piece->pipe->dsc.xtrans;
+  const uint8_t (*const xtrans)[6] = (const uint8_t (*const)[6])piece->pipe->dsc.xtrans;
   const dt_iop_temperature_data_t *const d = (dt_iop_temperature_data_t *)piece->data;
 
   const float *const in = (const float *const)ivoid;
@@ -497,7 +482,8 @@ void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const 
       }
     }
 
-    if(piece->pipe->mask_display & DT_DEV_PIXELPIPE_DISPLAY_MASK) dt_iop_alpha_copy(ivoid, ovoid, roi_out->width, roi_out->height);
+    if(piece->pipe->mask_display & DT_DEV_PIXELPIPE_DISPLAY_MASK)
+      dt_iop_alpha_copy(ivoid, ovoid, roi_out->width, roi_out->height);
   }
 
   piece->pipe->dsc.temperature.enabled = 1;
@@ -513,7 +499,7 @@ void process_sse2(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, c
                   void *const ovoid, const dt_iop_roi_t *const roi_in, const dt_iop_roi_t *const roi_out)
 {
   const uint32_t filters = piece->pipe->dsc.filters;
-  const uint8_t(*const xtrans)[6] = (const uint8_t(*const)[6])piece->pipe->dsc.xtrans;
+  const uint8_t (*const xtrans)[6] = (const uint8_t (*const)[6])piece->pipe->dsc.xtrans;
   dt_iop_temperature_data_t *d = (dt_iop_temperature_data_t *)piece->data;
   if(filters == 9u)
   { // xtrans float mosaiced
@@ -616,7 +602,8 @@ void process_sse2(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, c
     }
     _mm_sfence();
 
-    if(piece->pipe->mask_display & DT_DEV_PIXELPIPE_DISPLAY_MASK) dt_iop_alpha_copy(ivoid, ovoid, roi_out->width, roi_out->height);
+    if(piece->pipe->mask_display & DT_DEV_PIXELPIPE_DISPLAY_MASK)
+      dt_iop_alpha_copy(ivoid, ovoid, roi_out->width, roi_out->height);
   }
 
   piece->pipe->dsc.temperature.enabled = 1;
@@ -762,7 +749,7 @@ void gui_update(struct dt_iop_module_t *self)
     for(int i = 0; i < wb_preset_count; i++)
     {
       if(g->preset_cnt >= 50) break;
-      if(!strcmp(wb_preset[i].make, self->dev->image_storage.camera_maker) 
+      if(!strcmp(wb_preset[i].make, self->dev->image_storage.camera_maker)
          && !strcmp(wb_preset[i].model, self->dev->image_storage.camera_model))
       {
         if(!wb_name || strcmp(wb_name, wb_preset[i].name))
@@ -799,10 +786,10 @@ void gui_update(struct dt_iop_module_t *self)
     for(int j = DT_IOP_NUM_OF_STD_TEMP_PRESETS; !found && (j < g->preset_cnt); j++)
     {
       // look through all variants of this preset, with different tuning
-      for(int i = g->preset_num[j]; !found && (i < wb_preset_count) 
-                                    && !strcmp(wb_preset[i].make, self->dev->image_storage.camera_maker)
-                                    && !strcmp(wb_preset[i].model, self->dev->image_storage.camera_model)
-                                    && !strcmp(wb_preset[i].name, wb_preset[g->preset_num[j]].name);
+      for(int i = g->preset_num[j];
+          !found && (i < wb_preset_count) && !strcmp(wb_preset[i].make, self->dev->image_storage.camera_maker)
+              && !strcmp(wb_preset[i].model, self->dev->image_storage.camera_model)
+              && !strcmp(wb_preset[i].name, wb_preset[g->preset_num[j]].name);
           i++)
       {
         float coeffs[3];
@@ -882,7 +869,7 @@ static int calculate_bogus_daylight_wb(dt_iop_module_t *module, double bwb[4])
   }
 
   double mul[4];
-  if (dt_colorspaces_conversion_matrices_rgb(module->dev->image_storage.camera_makermodel, NULL, NULL, mul))
+  if(dt_colorspaces_conversion_matrices_rgb(module->dev->image_storage.camera_makermodel, NULL, NULL, mul))
   {
     // normalize green:
     bwb[0] = mul[0] / mul[1];
@@ -920,8 +907,8 @@ static void prepare_matrices(dt_iop_module_t *module)
   }
 
   char *camera = module->dev->image_storage.camera_makermodel;
-  if (!dt_colorspaces_conversion_matrices_xyz(camera, module->dev->image_storage.d65_color_matrix,
-                                                      g->XYZ_to_CAM, g->CAM_to_XYZ))
+  if(!dt_colorspaces_conversion_matrices_xyz(camera, module->dev->image_storage.d65_color_matrix, g->XYZ_to_CAM,
+                                             g->CAM_to_XYZ))
   {
     fprintf(stderr, "[temperature] `%s' color matrix not found for image\n", camera);
     dt_control_log(_("`%s' color matrix not found for image"), camera);
@@ -930,8 +917,7 @@ static void prepare_matrices(dt_iop_module_t *module)
 
 void reload_defaults(dt_iop_module_t *module)
 {
-  dt_iop_temperature_params_t tmp
-      = (dt_iop_temperature_params_t){.coeffs = { 1.0, 1.0, 1.0, 1.0 } };
+  dt_iop_temperature_params_t tmp = (dt_iop_temperature_params_t){.coeffs = { 1.0, 1.0, 1.0, 1.0 } };
 
   // we might be called from presets update infrastructure => there is no image
   if(!module->dev) goto end;
@@ -1048,7 +1034,7 @@ gui:
       // we're normalizing that to be D65
       for(int i = 0; i < wb_preset_count; i++)
       {
-        if(!strcmp(wb_preset[i].make, module->dev->image_storage.camera_maker) 
+        if(!strcmp(wb_preset[i].make, module->dev->image_storage.camera_maker)
            && !strcmp(wb_preset[i].model, module->dev->image_storage.camera_model)
            && !strcmp(wb_preset[i].name, Daylight) && wb_preset[i].tuning == 0)
         {
@@ -1091,7 +1077,7 @@ void init(dt_iop_module_t *module)
 {
   module->params = calloc(1, sizeof(dt_iop_temperature_params_t));
   module->default_params = calloc(1, sizeof(dt_iop_temperature_params_t));
-    module->priority = 43; // module order created by iop_dependencies.py, do not edit!
+  module->priority = 43; // module order created by iop_dependencies.py, do not edit!
   module->params_size = sizeof(dt_iop_temperature_params_t);
   module->gui_data = NULL;
 }
@@ -1248,18 +1234,17 @@ static void apply_preset(dt_iop_module_t *self)
       self->request_color_pick = DT_REQUEST_COLORPICK_MODULE;
 
       /* set the area sample size*/
-      if(self->request_color_pick != DT_REQUEST_COLORPICK_OFF)
-        dt_lib_colorpicker_set_area(darktable.lib, 0.99);
+      if(self->request_color_pick != DT_REQUEST_COLORPICK_OFF) dt_lib_colorpicker_set_area(darktable.lib, 0.99);
 
       break;
     default: // camera WB presets
     {
       gboolean found = FALSE;
       // look through all variants of this preset, with different tuning
-      for(int i = g->preset_num[pos]; (i < wb_preset_count) 
-                                      && !strcmp(wb_preset[i].make, self->dev->image_storage.camera_maker)
-                                      && !strcmp(wb_preset[i].model, self->dev->image_storage.camera_model)
-                                      && !strcmp(wb_preset[i].name, wb_preset[g->preset_num[pos]].name);
+      for(int i = g->preset_num[pos];
+          (i < wb_preset_count) && !strcmp(wb_preset[i].make, self->dev->image_storage.camera_maker)
+              && !strcmp(wb_preset[i].model, self->dev->image_storage.camera_model)
+              && !strcmp(wb_preset[i].name, wb_preset[g->preset_num[pos]].name);
           i++)
       {
         if(wb_preset[i].tuning == tune)
@@ -1367,10 +1352,9 @@ void gui_init(struct dt_iop_module_t *self)
   g_signal_connect(G_OBJECT(self->widget), "draw", G_CALLBACK(draw), self);
 
   for(int k = 0; k < 4; k++) g->daylight_wb[k] = 1.0;
-  g->scale_tint
-      = dt_bauhaus_slider_new_with_range(self, DT_IOP_LOWEST_TINT, DT_IOP_HIGHEST_TINT, .01, 1.0, 3);
-  g->scale_k = dt_bauhaus_slider_new_with_range(self, DT_IOP_LOWEST_TEMPERATURE, DT_IOP_HIGHEST_TEMPERATURE,
-                                                10., 5000.0, 0);
+  g->scale_tint = dt_bauhaus_slider_new_with_range(self, DT_IOP_LOWEST_TINT, DT_IOP_HIGHEST_TINT, .01, 1.0, 3);
+  g->scale_k = dt_bauhaus_slider_new_with_range(self, DT_IOP_LOWEST_TEMPERATURE, DT_IOP_HIGHEST_TEMPERATURE, 10.,
+                                                5000.0, 0);
 
   g->coeff_widgets = gtk_box_new(GTK_ORIENTATION_VERTICAL, DT_BAUHAUS_SPACE);
   g->scale_r = dt_bauhaus_slider_new_with_range(self, 0.0, 8.0, .001, p->coeffs[0], 3);
@@ -1379,13 +1363,14 @@ void gui_init(struct dt_iop_module_t *self)
   g->scale_g2 = dt_bauhaus_slider_new_with_range(self, 0.0, 8.0, .001, p->coeffs[3], 3);
 
   // reflect actual black body colors for the temperature slider
-  const double temp_step = (double)(DT_IOP_HIGHEST_TEMPERATURE - DT_IOP_LOWEST_TEMPERATURE) / (DT_BAUHAUS_SLIDER_MAX_STOPS - 1.0);
+  const double temp_step = (double)(DT_IOP_HIGHEST_TEMPERATURE - DT_IOP_LOWEST_TEMPERATURE)
+                           / (DT_BAUHAUS_SLIDER_MAX_STOPS - 1.0);
   for(int i = 0; i < DT_BAUHAUS_SLIDER_MAX_STOPS; i++)
   {
     const float stop = i / (DT_BAUHAUS_SLIDER_MAX_STOPS - 1.0);
     const double K = DT_IOP_LOWEST_TEMPERATURE + i * temp_step;
     cmsCIEXYZ cmsXYZ = temperature_to_XYZ(K);
-    float sRGB[3], XYZ[3] = {cmsXYZ.X, cmsXYZ.Y, cmsXYZ.Z};
+    float sRGB[3], XYZ[3] = { cmsXYZ.X, cmsXYZ.Y, cmsXYZ.Z };
     dt_XYZ_to_sRGB_clipped(XYZ, sRGB);
     dt_bauhaus_slider_set_stop(g->scale_k, stop, sRGB[0], sRGB[1], sRGB[2]);
   }

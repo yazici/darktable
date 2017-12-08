@@ -71,9 +71,9 @@ typedef struct dt_lib_collect_t
 
 typedef struct dt_lib_collect_params_rule_t
 {
-    uint32_t item : 16;
-    uint32_t mode : 16;
-    char string[PARAM_STRING_SIZE];
+  uint32_t item : 16;
+  uint32_t mode : 16;
+  char string[PARAM_STRING_SIZE];
 } dt_lib_collect_params_rule_t;
 
 typedef struct dt_lib_collect_params_t
@@ -105,7 +105,7 @@ typedef struct _image_t
 static void _lib_collect_gui_update(dt_lib_module_t *self);
 static void _lib_folders_update_collection(const gchar *filmroll);
 static void entry_insert_text(GtkWidget *entry, gchar *new_text, gint new_length, gpointer *position,
-                          dt_lib_collect_rule_t *d);
+                              dt_lib_collect_rule_t *d);
 static void entry_changed(GtkEntry *entry, dt_lib_collect_rule_t *dr);
 static void row_activated(GtkTreeView *view, GtkTreePath *path, GtkTreeViewColumn *col, dt_lib_collect_t *d);
 
@@ -205,7 +205,7 @@ int set_params(dt_lib_module_t *self, const void *params, int size)
 
 const char **views(dt_lib_module_t *self)
 {
-  static const char *v[] = {"lighttable", "map", "print", NULL};
+  static const char *v[] = { "lighttable", "map", "print", NULL };
   return v;
 }
 
@@ -229,16 +229,15 @@ static void view_popup_menu_onSearchFilmroll(GtkWidget *menuitem, gpointer userd
 
   model = gtk_tree_view_get_model(treeview);
   selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(treeview));
-  if (!gtk_tree_selection_get_selected(selection, &model, &iter))
-    return;
+  if(!gtk_tree_selection_get_selected(selection, &model, &iter)) return;
 
   child = iter;
   gtk_tree_model_iter_parent(model, &iter, &child);
   gtk_tree_model_get(model, &child, DT_LIB_COLLECT_COL_PATH, &tree_path, -1);
 
-  filechooser = gtk_file_chooser_dialog_new(
-    _("search filmroll"), GTK_WINDOW(win), GTK_FILE_CHOOSER_ACTION_SELECT_FOLDER, _("_cancel"),
-    GTK_RESPONSE_CANCEL, _("_open"), GTK_RESPONSE_ACCEPT, (char *)NULL);
+  filechooser = gtk_file_chooser_dialog_new(_("search filmroll"), GTK_WINDOW(win),
+                                            GTK_FILE_CHOOSER_ACTION_SELECT_FOLDER, _("_cancel"),
+                                            GTK_RESPONSE_CANCEL, _("_open"), GTK_RESPONSE_ACCEPT, (char *)NULL);
 #ifdef GDK_WINDOWING_QUARTZ
   dt_osx_disallow_fullscreen(filechooser);
 #endif
@@ -339,7 +338,7 @@ static void view_popup_menu_onRemove(GtkWidget *menuitem, gpointer userdata)
   /* Get info about the filmroll (or parent) selected */
   model = gtk_tree_view_get_model(treeview);
   selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(treeview));
-  if (gtk_tree_selection_get_selected(selection, &model, &iter))
+  if(gtk_tree_selection_get_selected(selection, &model, &iter))
   {
     gtk_tree_model_get(model, &iter, DT_LIB_COLLECT_COL_PATH, &filmroll_path, -1);
 
@@ -351,7 +350,7 @@ static void view_popup_menu_onRemove(GtkWidget *menuitem, gpointer userdata)
                             filmroll_path);
     DT_DEBUG_SQLITE3_EXEC(dt_database_get(darktable.db), fullq, NULL, NULL, NULL);
 
-    if (dt_control_remove_images())
+    if(dt_control_remove_images())
     {
       gtk_tree_model_filter_convert_iter_to_child_iter(GTK_TREE_MODEL_FILTER(model), &model_iter, &iter);
       gtk_tree_store_remove(GTK_TREE_STORE(gtk_tree_model_filter_get_model(GTK_TREE_MODEL_FILTER(model))),
@@ -401,8 +400,8 @@ static gboolean view_onButtonPressed(GtkWidget *treeview, GdkEventButton *event,
       GtkTreePath *path;
 
       /* Get tree path for row that was clicked */
-      if(gtk_tree_view_get_path_at_pos(GTK_TREE_VIEW(treeview), (gint)event->x, (gint)event->y, &path, NULL,
-                                       NULL, NULL))
+      if(gtk_tree_view_get_path_at_pos(GTK_TREE_VIEW(treeview), (gint)event->x, (gint)event->y, &path, NULL, NULL,
+                                       NULL))
       {
         gtk_tree_selection_unselect_all(selection);
         gtk_tree_selection_select_path(selection, path);
@@ -487,16 +486,16 @@ static gboolean tree_expand(GtkTreeModel *model, GtkTreePath *path, GtkTreeIter 
     gtk_tree_view_expand_to_path(d->view, path);
   }
 
-  if(strlen(needle)==0)
+  if(strlen(needle) == 0)
   {
-    //nothing to do, we keep the tree collapsed
+    // nothing to do, we keep the tree collapsed
   }
   else if(strcmp(haystack, needle) == 0)
   {
     gtk_tree_view_expand_to_path(d->view, path);
     gtk_tree_selection_select_path(gtk_tree_view_get_selection(d->view), path);
   }
-  else if(startwildcard && g_strrstr(haystack, needle+1) != NULL)
+  else if(startwildcard && g_strrstr(haystack, needle + 1) != NULL)
   {
     gtk_tree_view_expand_to_path(d->view, path);
   }
@@ -726,9 +725,8 @@ static GtkTreeModel *_create_filtered_model(GtkTreeModel *model, dt_lib_collect_
 
     if(level > 0)
     {
-      if(level > 0 &&
-         gtk_tree_model_iter_n_children(model, &iter) == 0 &&
-         gtk_tree_model_iter_parent(model, &child, &iter))
+      if(level > 0 && gtk_tree_model_iter_n_children(model, &iter) == 0
+         && gtk_tree_model_iter_parent(model, &child, &iter))
       {
         path = gtk_tree_model_get_path(model, &child);
       }
@@ -765,7 +763,7 @@ static char **split_path(const char *path)
 
 #ifdef _WIN32
 
-  if(! (g_ascii_isalpha(tokens[0][0]) && tokens[0][strlen(tokens[0]) - 1] == ':') )
+  if(!(g_ascii_isalpha(tokens[0][0]) && tokens[0][strlen(tokens[0]) - 1] == ':'))
   {
     g_strfreev(tokens);
     tokens = NULL;
@@ -779,8 +777,7 @@ static char **split_path(const char *path)
   unsigned int size = g_strv_length(tokens);
 
   result = malloc(size * sizeof(char *));
-  for(unsigned int i = 0; i < size; i++)
-    result[i] = tokens[i + 1];
+  for(unsigned int i = 0; i < size; i++) result[i] = tokens[i + 1];
 
   g_free(tokens[0]);
   g_free(tokens);
@@ -819,8 +816,9 @@ static void tree_view(dt_lib_collect_rule_t *dr)
     gtk_widget_hide(GTK_WIDGET(d->sw2));
 
     /* query construction */
-    const char *query = folders ? "SELECT DISTINCT folder, id FROM main.film_rolls ORDER BY UPPER(folder) DESC" :
-                        tags ? "SELECT DISTINCT name, id FROM data.tags ORDER BY UPPER(name) DESC" : NULL;
+    const char *query = folders
+                            ? "SELECT DISTINCT folder, id FROM main.film_rolls ORDER BY UPPER(folder) DESC"
+                            : tags ? "SELECT DISTINCT name, id FROM data.tags ORDER BY UPPER(name) DESC" : NULL;
 
     DT_DEBUG_SQLITE3_PREPARE_V2(dt_database_get(darktable.db), query, -1, &stmt, NULL);
 
@@ -839,15 +837,14 @@ static void tree_view(dt_lib_collect_rule_t *dr)
         if(!uncategorized.stamp)
         {
           gtk_tree_store_insert(GTK_TREE_STORE(model), &uncategorized, NULL, 0);
-          gtk_tree_store_set(GTK_TREE_STORE(model), &uncategorized, DT_LIB_COLLECT_COL_TEXT,
-                             _(UNCATEGORIZED_TAG), DT_LIB_COLLECT_COL_PATH, "", DT_LIB_COLLECT_COL_VISIBLE,
-                             TRUE, -1);
+          gtk_tree_store_set(GTK_TREE_STORE(model), &uncategorized, DT_LIB_COLLECT_COL_TEXT, _(UNCATEGORIZED_TAG),
+                             DT_LIB_COLLECT_COL_PATH, "", DT_LIB_COLLECT_COL_VISIBLE, TRUE, -1);
         }
 
         /* adding an uncategorized tag */
         gtk_tree_store_insert(GTK_TREE_STORE(model), &temp, &uncategorized, 0);
-        gtk_tree_store_set(GTK_TREE_STORE(model), &temp, DT_LIB_COLLECT_COL_TEXT, name,
-                           DT_LIB_COLLECT_COL_PATH, name, DT_LIB_COLLECT_COL_VISIBLE, TRUE, -1);
+        gtk_tree_store_set(GTK_TREE_STORE(model), &temp, DT_LIB_COLLECT_COL_TEXT, name, DT_LIB_COLLECT_COL_PATH,
+                           name, DT_LIB_COLLECT_COL_VISIBLE, TRUE, -1);
       }
       else
       {
@@ -860,7 +857,7 @@ static void tree_view(dt_lib_collect_rule_t *dr)
         if(tokens != NULL)
         {
           // find the number of common parts at the beginning of tokens and last_tokens
-          GtkTreeIter parent = {0};
+          GtkTreeIter parent = { 0 };
           int tokens_length = string_array_length(tokens);
           int common_length = 0;
           if(last_tokens)
@@ -889,8 +886,7 @@ static void tree_view(dt_lib_collect_rule_t *dr)
 #ifndef _WIN32
           if(folders) pth = g_strdup("/");
 #endif
-          for(int i = 0; i < common_length; i++)
-            pth = dt_util_dstrcat(pth, format_separator, tokens[i]);
+          for(int i = 0; i < common_length; i++) pth = dt_util_dstrcat(pth, format_separator, tokens[i]);
 
           for(char **token = &tokens[common_length]; *token; token++)
           {
@@ -975,7 +971,8 @@ static void list_view(dt_lib_collect_rule_t *dr)
 
     switch(property)
     {
-      case DT_COLLECTION_PROP_CAMERA:; // camera
+      case DT_COLLECTION_PROP_CAMERA:
+        ; // camera
         GList *makermodels = NULL;
         dt_collection_get_makermodel("", &makermodels, NULL);
         GList *element = makermodels;
@@ -984,9 +981,9 @@ static void list_view(dt_lib_collect_rule_t *dr)
         {
           gchar *value = (gchar *)element->data;
           gtk_list_store_append(GTK_LIST_STORE(model), &iter);
-          gtk_list_store_set(GTK_LIST_STORE(model), &iter, DT_LIB_COLLECT_COL_TEXT, value,
-                             DT_LIB_COLLECT_COL_ID, index, DT_LIB_COLLECT_COL_TOOLTIP, value,
-                             DT_LIB_COLLECT_COL_PATH, value, DT_LIB_COLLECT_COL_VISIBLE, TRUE, -1);
+          gtk_list_store_set(GTK_LIST_STORE(model), &iter, DT_LIB_COLLECT_COL_TEXT, value, DT_LIB_COLLECT_COL_ID,
+                             index, DT_LIB_COLLECT_COL_TOOLTIP, value, DT_LIB_COLLECT_COL_PATH, value,
+                             DT_LIB_COLLECT_COL_VISIBLE, TRUE, -1);
           g_free(value);
           index++;
           element = element->next;
@@ -1018,9 +1015,9 @@ static void list_view(dt_lib_collect_rule_t *dr)
 
       case DT_COLLECTION_PROP_COLORLABEL: // colorlabels
         gtk_list_store_append(GTK_LIST_STORE(model), &iter);
-        gtk_list_store_set(GTK_LIST_STORE(model), &iter, DT_LIB_COLLECT_COL_TEXT, _("red"),
-                           DT_LIB_COLLECT_COL_ID, 0, DT_LIB_COLLECT_COL_TOOLTIP, _("red"),
-                           DT_LIB_COLLECT_COL_VISIBLE, TRUE, DT_LIB_COLLECT_COL_PATH, _("red"), -1);
+        gtk_list_store_set(GTK_LIST_STORE(model), &iter, DT_LIB_COLLECT_COL_TEXT, _("red"), DT_LIB_COLLECT_COL_ID,
+                           0, DT_LIB_COLLECT_COL_TOOLTIP, _("red"), DT_LIB_COLLECT_COL_VISIBLE, TRUE,
+                           DT_LIB_COLLECT_COL_PATH, _("red"), -1);
         gtk_list_store_append(GTK_LIST_STORE(model), &iter);
         gtk_list_store_set(GTK_LIST_STORE(model), &iter, DT_LIB_COLLECT_COL_TEXT, _("yellow"),
                            DT_LIB_COLLECT_COL_ID, 1, DT_LIB_COLLECT_COL_TOOLTIP, _("yellow"),
@@ -1030,9 +1027,9 @@ static void list_view(dt_lib_collect_rule_t *dr)
                            DT_LIB_COLLECT_COL_ID, 2, DT_LIB_COLLECT_COL_TOOLTIP, _("green"),
                            DT_LIB_COLLECT_COL_VISIBLE, TRUE, DT_LIB_COLLECT_COL_PATH, _("green"), -1);
         gtk_list_store_append(GTK_LIST_STORE(model), &iter);
-        gtk_list_store_set(GTK_LIST_STORE(model), &iter, DT_LIB_COLLECT_COL_TEXT, _("blue"),
-                           DT_LIB_COLLECT_COL_ID, 3, DT_LIB_COLLECT_COL_TOOLTIP, _("blue"),
-                           DT_LIB_COLLECT_COL_VISIBLE, TRUE, DT_LIB_COLLECT_COL_PATH, _("blue"), -1);
+        gtk_list_store_set(GTK_LIST_STORE(model), &iter, DT_LIB_COLLECT_COL_TEXT, _("blue"), DT_LIB_COLLECT_COL_ID,
+                           3, DT_LIB_COLLECT_COL_TOOLTIP, _("blue"), DT_LIB_COLLECT_COL_VISIBLE, TRUE,
+                           DT_LIB_COLLECT_COL_PATH, _("blue"), -1);
         gtk_list_store_append(GTK_LIST_STORE(model), &iter);
         gtk_list_store_set(GTK_LIST_STORE(model), &iter, DT_LIB_COLLECT_COL_TEXT, _("purple"),
                            DT_LIB_COLLECT_COL_ID, 4, DT_LIB_COLLECT_COL_TOOLTIP, _("purple"),
@@ -1128,10 +1125,9 @@ static void list_view(dt_lib_collect_rule_t *dr)
 
         gchar *escaped_text = g_markup_escape_text(text, -1);
 
-        gtk_list_store_set(GTK_LIST_STORE(model), &iter, DT_LIB_COLLECT_COL_TEXT, folder,
-                           DT_LIB_COLLECT_COL_ID, sqlite3_column_int(stmt, 1), DT_LIB_COLLECT_COL_TOOLTIP,
-                           escaped_text, DT_LIB_COLLECT_COL_PATH, value, DT_LIB_COLLECT_COL_VISIBLE, TRUE,
-                           -1);
+        gtk_list_store_set(GTK_LIST_STORE(model), &iter, DT_LIB_COLLECT_COL_TEXT, folder, DT_LIB_COLLECT_COL_ID,
+                           sqlite3_column_int(stmt, 1), DT_LIB_COLLECT_COL_TOOLTIP, escaped_text,
+                           DT_LIB_COLLECT_COL_PATH, value, DT_LIB_COLLECT_COL_VISIBLE, TRUE, -1);
         g_free(text);
         g_free(escaped_text);
       }
@@ -1357,15 +1353,12 @@ static void row_activated(GtkTreeView *view, GtkTreePath *path, GtkTreeViewColum
   g_signal_handlers_block_matched(d->rule[active].text, G_SIGNAL_MATCH_FUNC, 0, 0, NULL, entry_changed, NULL);
   gtk_entry_set_text(GTK_ENTRY(d->rule[active].text), text);
   gtk_editable_set_position(GTK_EDITABLE(d->rule[active].text), -1);
-  g_signal_handlers_unblock_matched(d->rule[active].text, G_SIGNAL_MATCH_FUNC, 0, 0, NULL, entry_insert_text,
-                                    NULL);
-  g_signal_handlers_unblock_matched(d->rule[active].text, G_SIGNAL_MATCH_FUNC, 0, 0, NULL, entry_changed,
-                                    NULL);
+  g_signal_handlers_unblock_matched(d->rule[active].text, G_SIGNAL_MATCH_FUNC, 0, 0, NULL, entry_insert_text, NULL);
+  g_signal_handlers_unblock_matched(d->rule[active].text, G_SIGNAL_MATCH_FUNC, 0, 0, NULL, entry_changed, NULL);
   g_free(text);
 
-  if(item == DT_COLLECTION_PROP_TAG || item == DT_COLLECTION_PROP_FOLDERS
-     || item == DT_COLLECTION_PROP_COLORLABEL || item == DT_COLLECTION_PROP_GEOTAGGING
-     || item == DT_COLLECTION_PROP_HISTORY)
+  if(item == DT_COLLECTION_PROP_TAG || item == DT_COLLECTION_PROP_FOLDERS || item == DT_COLLECTION_PROP_COLORLABEL
+     || item == DT_COLLECTION_PROP_GEOTAGGING || item == DT_COLLECTION_PROP_HISTORY)
     set_properties(d->rule + active); // we just have to set the selection
   else
     update_view(d->rule + active); // we have to update visible items too
@@ -1399,7 +1392,7 @@ static void entry_activated(GtkWidget *entry, dt_lib_collect_rule_t *d)
       {
         gchar *text;
         const int item = gtk_combo_box_get_active(GTK_COMBO_BOX(d->combo));
-        if(item == DT_COLLECTION_PROP_FILMROLL || // get full path for film rolls
+        if(item == DT_COLLECTION_PROP_FILMROLL ||                                // get full path for film rolls
            item == DT_COLLECTION_PROP_TAG || item == DT_COLLECTION_PROP_FOLDERS) // or folders
           gtk_tree_model_get(model, &iter, DT_LIB_COLLECT_COL_PATH, &text, -1);
         else
@@ -1421,7 +1414,7 @@ static void entry_activated(GtkWidget *entry, dt_lib_collect_rule_t *d)
 }
 
 static void entry_insert_text(GtkWidget *entry, gchar *new_text, gint new_length, gpointer *position,
-                          dt_lib_collect_rule_t *d)
+                              dt_lib_collect_rule_t *d)
 {
   d->typing = TRUE;
 }
@@ -1571,7 +1564,7 @@ static void filmrolls_removed(gpointer instance, gpointer self)
   dt_lib_collect_t *d = (dt_lib_collect_t *)dm->data;
 
   // update tree
-  if (d->view_rule != DT_COLLECTION_PROP_FOLDERS)
+  if(d->view_rule != DT_COLLECTION_PROP_FOLDERS)
   {
     d->view_rule = -1;
   }
@@ -1791,20 +1784,15 @@ void gui_init(dt_lib_module_t *self)
 
   _lib_collect_gui_update(self);
 
-  dt_control_signal_connect(darktable.signals, DT_SIGNAL_COLLECTION_CHANGED, G_CALLBACK(collection_updated),
-                            self);
+  dt_control_signal_connect(darktable.signals, DT_SIGNAL_COLLECTION_CHANGED, G_CALLBACK(collection_updated), self);
 
-  dt_control_signal_connect(darktable.signals, DT_SIGNAL_FILMROLLS_CHANGED, G_CALLBACK(filmrolls_updated),
-                            self);
+  dt_control_signal_connect(darktable.signals, DT_SIGNAL_FILMROLLS_CHANGED, G_CALLBACK(filmrolls_updated), self);
 
-  dt_control_signal_connect(darktable.signals, DT_SIGNAL_FILMROLLS_IMPORTED, G_CALLBACK(filmrolls_imported),
-                            self);
+  dt_control_signal_connect(darktable.signals, DT_SIGNAL_FILMROLLS_IMPORTED, G_CALLBACK(filmrolls_imported), self);
 
-  dt_control_signal_connect(darktable.signals, DT_SIGNAL_FILMROLLS_REMOVED, G_CALLBACK(filmrolls_removed),
-                            self);
+  dt_control_signal_connect(darktable.signals, DT_SIGNAL_FILMROLLS_REMOVED, G_CALLBACK(filmrolls_removed), self);
 
-  dt_control_signal_connect(darktable.signals, DT_SIGNAL_TAG_CHANGED, G_CALLBACK(tag_changed),
-                            self);
+  dt_control_signal_connect(darktable.signals, DT_SIGNAL_TAG_CHANGED, G_CALLBACK(tag_changed), self);
 }
 
 void gui_cleanup(dt_lib_module_t *self)
@@ -1834,11 +1822,11 @@ void gui_cleanup(dt_lib_module_t *self)
 
 
 #ifdef USE_LUA
-static int new_rule_cb(lua_State*L)
+static int new_rule_cb(lua_State *L)
 {
   dt_lib_collect_params_rule_t rule;
-  memset(&rule,0, sizeof(dt_lib_collect_params_rule_t));
-  luaA_push(L,dt_lib_collect_params_rule_t,&rule);
+  memset(&rule, 0, sizeof(dt_lib_collect_params_rule_t));
+  luaA_push(L, dt_lib_collect_params_rule_t, &rule);
   return 1;
 }
 static int filter_cb(lua_State *L)
@@ -1846,37 +1834,41 @@ static int filter_cb(lua_State *L)
   dt_lib_module_t *self = lua_touserdata(L, lua_upvalueindex(1));
 
   int size;
-  dt_lib_collect_params_t *p = get_params(self,&size);
+  dt_lib_collect_params_t *p = get_params(self, &size);
   // put it in stack so memory is not lost if a lua exception is raised
 
 
 
-  if(lua_gettop(L) > 0) {
-    luaL_checktype(L,1,LUA_TTABLE);
-    dt_lib_collect_params_t *new_p = get_params(self,&size);
+  if(lua_gettop(L) > 0)
+  {
+    luaL_checktype(L, 1, LUA_TTABLE);
+    dt_lib_collect_params_t *new_p = get_params(self, &size);
     new_p->rules = 0;
-    do {
-      lua_pushinteger(L,new_p->rules + 1);
-      lua_gettable(L,1);
-      if(lua_isnil(L,-1)) break;
-      luaA_to(L,dt_lib_collect_params_rule_t,&new_p->rule[new_p->rules],-1);
+    do
+    {
+      lua_pushinteger(L, new_p->rules + 1);
+      lua_gettable(L, 1);
+      if(lua_isnil(L, -1)) break;
+      luaA_to(L, dt_lib_collect_params_rule_t, &new_p->rule[new_p->rules], -1);
       new_p->rules++;
-    }while(new_p->rules < MAX_RULES);
-    if(new_p->rules == MAX_RULES) {
-      lua_pushinteger(L,new_p->rules + 1);
-      lua_gettable(L,1);
-      if(!lua_isnil(L,-1)) {
-        luaL_error(L,"Number of rules given excedes max allowed (%d)",MAX_RULES);
+    } while(new_p->rules < MAX_RULES);
+    if(new_p->rules == MAX_RULES)
+    {
+      lua_pushinteger(L, new_p->rules + 1);
+      lua_gettable(L, 1);
+      if(!lua_isnil(L, -1))
+      {
+        luaL_error(L, "Number of rules given excedes max allowed (%d)", MAX_RULES);
       }
     }
-    set_params(self,new_p,size);
+    set_params(self, new_p, size);
     free(new_p);
-
   }
   lua_newtable(L);
-  for(int i = 0; i < p->rules; i++) {
-    luaA_push(L,dt_lib_collect_params_rule_t,&p->rule[i]);
-    luaL_ref(L,-2);
+  for(int i = 0; i < p->rules; i++)
+  {
+    luaA_push(L, dt_lib_collect_params_rule_t, &p->rule[i]);
+    luaL_ref(L, -2);
   }
   free(p);
   return 1;
@@ -1884,40 +1876,43 @@ static int filter_cb(lua_State *L)
 
 static int mode_member(lua_State *L)
 {
-  dt_lib_collect_params_rule_t *rule = luaL_checkudata(L,1,"dt_lib_collect_params_rule_t");
-  if(lua_gettop(L) > 2) {
+  dt_lib_collect_params_rule_t *rule = luaL_checkudata(L, 1, "dt_lib_collect_params_rule_t");
+  if(lua_gettop(L) > 2)
+  {
     dt_lib_collect_mode_t value;
-    luaA_to(L,dt_lib_collect_mode_t,&value,3);
+    luaA_to(L, dt_lib_collect_mode_t, &value, 3);
     rule->mode = value;
     return 0;
   }
   const dt_lib_collect_mode_t tmp = rule->mode; // temp buffer because of bitfield in the original struct
-  luaA_push(L,dt_lib_collect_mode_t,&tmp);
+  luaA_push(L, dt_lib_collect_mode_t, &tmp);
   return 1;
 }
 
 static int item_member(lua_State *L)
 {
-  dt_lib_collect_params_rule_t *rule = luaL_checkudata(L,1,"dt_lib_collect_params_rule_t");
+  dt_lib_collect_params_rule_t *rule = luaL_checkudata(L, 1, "dt_lib_collect_params_rule_t");
 
-  if(lua_gettop(L) > 2) {
+  if(lua_gettop(L) > 2)
+  {
     dt_collection_properties_t value;
-    luaA_to(L,dt_collection_properties_t,&value,3);
+    luaA_to(L, dt_collection_properties_t, &value, 3);
     rule->item = value;
     return 0;
   }
   const dt_collection_properties_t tmp = rule->item; // temp buffer because of bitfield in the original struct
-  luaA_push(L,dt_collection_properties_t,&tmp);
+  luaA_push(L, dt_collection_properties_t, &tmp);
   return 1;
 }
 
 static int data_member(lua_State *L)
 {
-  dt_lib_collect_params_rule_t *rule = luaL_checkudata(L,1,"dt_lib_collect_params_rule_t");
+  dt_lib_collect_params_rule_t *rule = luaL_checkudata(L, 1, "dt_lib_collect_params_rule_t");
 
-  if(lua_gettop(L) > 2) {
+  if(lua_gettop(L) > 2)
+  {
     size_t tgt_size;
-    const char*data = luaL_checklstring(L,3,&tgt_size);
+    const char *data = luaL_checklstring(L, 3, &tgt_size);
     if(tgt_size > PARAM_STRING_SIZE)
     {
       return luaL_error(L, "string '%s' too long (max is %d)", data, PARAM_STRING_SIZE);
@@ -1925,7 +1920,7 @@ static int data_member(lua_State *L)
     g_strlcpy(rule->string, data, sizeof(rule->string));
     return 0;
   }
-  lua_pushstring(L,rule->string);
+  lua_pushstring(L, rule->string);
   return 1;
 }
 
@@ -1937,7 +1932,7 @@ void init(struct dt_lib_module_t *self)
   lua_State *L = darktable.lua_state.state;
   int my_type = dt_lua_module_entry_get_type(L, "lib", self->plugin_name);
   lua_pushlightuserdata(L, self);
-  lua_pushcclosure(L, filter_cb,1);
+  lua_pushcclosure(L, filter_cb, 1);
   dt_lua_gtk_wrap(L);
   lua_pushcclosure(L, dt_lua_type_member_common, 1);
   dt_lua_type_register_const_type(L, my_type, "filter");
@@ -1945,41 +1940,40 @@ void init(struct dt_lib_module_t *self)
   lua_pushcclosure(L, dt_lua_type_member_common, 1);
   dt_lua_type_register_const_type(L, my_type, "new_rule");
 
-  dt_lua_init_type(L,dt_lib_collect_params_rule_t);
-  lua_pushcfunction(L,mode_member);
+  dt_lua_init_type(L, dt_lib_collect_params_rule_t);
+  lua_pushcfunction(L, mode_member);
   dt_lua_type_register(L, dt_lib_collect_params_rule_t, "mode");
-  lua_pushcfunction(L,item_member);
+  lua_pushcfunction(L, item_member);
   dt_lua_type_register(L, dt_lib_collect_params_rule_t, "item");
-  lua_pushcfunction(L,data_member);
+  lua_pushcfunction(L, data_member);
   dt_lua_type_register(L, dt_lib_collect_params_rule_t, "data");
 
 
-  luaA_enum(L,dt_lib_collect_mode_t);
-  luaA_enum_value(L,dt_lib_collect_mode_t,DT_LIB_COLLECT_MODE_AND);
-  luaA_enum_value(L,dt_lib_collect_mode_t,DT_LIB_COLLECT_MODE_OR);
-  luaA_enum_value(L,dt_lib_collect_mode_t,DT_LIB_COLLECT_MODE_AND_NOT);
+  luaA_enum(L, dt_lib_collect_mode_t);
+  luaA_enum_value(L, dt_lib_collect_mode_t, DT_LIB_COLLECT_MODE_AND);
+  luaA_enum_value(L, dt_lib_collect_mode_t, DT_LIB_COLLECT_MODE_OR);
+  luaA_enum_value(L, dt_lib_collect_mode_t, DT_LIB_COLLECT_MODE_AND_NOT);
 
-  luaA_enum(L,dt_collection_properties_t);
-  luaA_enum_value(L,dt_collection_properties_t,DT_COLLECTION_PROP_FILMROLL);
-  luaA_enum_value(L,dt_collection_properties_t,DT_COLLECTION_PROP_FOLDERS);
-  luaA_enum_value(L,dt_collection_properties_t,DT_COLLECTION_PROP_CAMERA);
-  luaA_enum_value(L,dt_collection_properties_t,DT_COLLECTION_PROP_TAG);
-  luaA_enum_value(L,dt_collection_properties_t,DT_COLLECTION_PROP_DAY);
-  luaA_enum_value(L,dt_collection_properties_t,DT_COLLECTION_PROP_TIME);
-  luaA_enum_value(L,dt_collection_properties_t,DT_COLLECTION_PROP_HISTORY);
-  luaA_enum_value(L,dt_collection_properties_t,DT_COLLECTION_PROP_COLORLABEL);
-  luaA_enum_value(L,dt_collection_properties_t,DT_COLLECTION_PROP_TITLE);
-  luaA_enum_value(L,dt_collection_properties_t,DT_COLLECTION_PROP_DESCRIPTION);
-  luaA_enum_value(L,dt_collection_properties_t,DT_COLLECTION_PROP_CREATOR);
-  luaA_enum_value(L,dt_collection_properties_t,DT_COLLECTION_PROP_PUBLISHER);
-  luaA_enum_value(L,dt_collection_properties_t,DT_COLLECTION_PROP_RIGHTS);
-  luaA_enum_value(L,dt_collection_properties_t,DT_COLLECTION_PROP_LENS);
-  luaA_enum_value(L,dt_collection_properties_t,DT_COLLECTION_PROP_FOCAL_LENGTH);
-  luaA_enum_value(L,dt_collection_properties_t,DT_COLLECTION_PROP_ISO);
-  luaA_enum_value(L,dt_collection_properties_t,DT_COLLECTION_PROP_APERTURE);
-  luaA_enum_value(L,dt_collection_properties_t,DT_COLLECTION_PROP_FILENAME);
-  luaA_enum_value(L,dt_collection_properties_t,DT_COLLECTION_PROP_GEOTAGGING);
-
+  luaA_enum(L, dt_collection_properties_t);
+  luaA_enum_value(L, dt_collection_properties_t, DT_COLLECTION_PROP_FILMROLL);
+  luaA_enum_value(L, dt_collection_properties_t, DT_COLLECTION_PROP_FOLDERS);
+  luaA_enum_value(L, dt_collection_properties_t, DT_COLLECTION_PROP_CAMERA);
+  luaA_enum_value(L, dt_collection_properties_t, DT_COLLECTION_PROP_TAG);
+  luaA_enum_value(L, dt_collection_properties_t, DT_COLLECTION_PROP_DAY);
+  luaA_enum_value(L, dt_collection_properties_t, DT_COLLECTION_PROP_TIME);
+  luaA_enum_value(L, dt_collection_properties_t, DT_COLLECTION_PROP_HISTORY);
+  luaA_enum_value(L, dt_collection_properties_t, DT_COLLECTION_PROP_COLORLABEL);
+  luaA_enum_value(L, dt_collection_properties_t, DT_COLLECTION_PROP_TITLE);
+  luaA_enum_value(L, dt_collection_properties_t, DT_COLLECTION_PROP_DESCRIPTION);
+  luaA_enum_value(L, dt_collection_properties_t, DT_COLLECTION_PROP_CREATOR);
+  luaA_enum_value(L, dt_collection_properties_t, DT_COLLECTION_PROP_PUBLISHER);
+  luaA_enum_value(L, dt_collection_properties_t, DT_COLLECTION_PROP_RIGHTS);
+  luaA_enum_value(L, dt_collection_properties_t, DT_COLLECTION_PROP_LENS);
+  luaA_enum_value(L, dt_collection_properties_t, DT_COLLECTION_PROP_FOCAL_LENGTH);
+  luaA_enum_value(L, dt_collection_properties_t, DT_COLLECTION_PROP_ISO);
+  luaA_enum_value(L, dt_collection_properties_t, DT_COLLECTION_PROP_APERTURE);
+  luaA_enum_value(L, dt_collection_properties_t, DT_COLLECTION_PROP_FILENAME);
+  luaA_enum_value(L, dt_collection_properties_t, DT_COLLECTION_PROP_GEOTAGGING);
 }
 #endif
 #undef MAX_RULES

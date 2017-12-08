@@ -38,8 +38,8 @@ static void dt_guides_q_rect(dt_QRect_t *R1, float left, float top, float width,
 }
 
 
-static void dt_guides_draw_simple_grid(cairo_t *cr, const float x, const float y, const float w,
-                                       const float h, float zoom_scale)
+static void dt_guides_draw_simple_grid(cairo_t *cr, const float x, const float y, const float w, const float h,
+                                       float zoom_scale)
 {
   float right = x + w;
   float bottom = y + h;
@@ -76,8 +76,8 @@ static void dt_guides_draw_diagonal_method(cairo_t *cr, const float x, const flo
 }
 
 
-static void dt_guides_draw_rules_of_thirds(cairo_t *cr, const float left, const float top,
-                                           const float width, const float height)
+static void dt_guides_draw_rules_of_thirds(cairo_t *cr, const float left, const float top, const float width,
+                                           const float height)
 {
   const float right = left + width, bottom = top + height;
   const float x_3 = width / 3.0, y_3 = height / 3.0;
@@ -91,7 +91,7 @@ static void dt_guides_draw_rules_of_thirds(cairo_t *cr, const float left, const 
 
 
 static void dt_guides_draw_harmonious_triangles(cairo_t *cr, const float left, const float top, const float width,
-                                                const float height/*, const float dst*/)
+                                                const float height /*, const float dst*/)
 {
   int dst = (int)((height * cos(atan(width / height)) / (cos(atan(height / width)))));
 
@@ -179,7 +179,8 @@ static void dt_guides_draw_metering(cairo_t *cr, const float x, const float y, c
 #define RADIANS(degrees) ((degrees) * (M_PI / 180.))
 static void dt_guides_draw_golden_mean(cairo_t *cr, dt_QRect_t *R1, dt_QRect_t *R2, dt_QRect_t *R3, dt_QRect_t *R4,
                                        dt_QRect_t *R5, dt_QRect_t *R6, dt_QRect_t *R7, gboolean goldenSection,
-                                       gboolean goldenTriangle, gboolean goldenSpiralSection, gboolean goldenSpiral)
+                                       gboolean goldenTriangle, gboolean goldenSpiralSection,
+                                       gboolean goldenSpiral)
 {
   // Drawing Golden sections.
   if(goldenSection)
@@ -280,44 +281,37 @@ typedef struct _golden_mean_t
   gboolean golden_spiral;
 } _golden_mean_t;
 
-static void _guides_draw_grid(cairo_t *cr, const float x, const float y,
-                              const float w, const float h,
+static void _guides_draw_grid(cairo_t *cr, const float x, const float y, const float w, const float h,
                               const float zoom_scale, void *user_data)
 {
   dt_guides_draw_simple_grid(cr, x, y, w, h, zoom_scale);
 }
-static void _guides_draw_rules_of_thirds(cairo_t *cr, const float x, const float y,
-                                         const float w, const float h,
+static void _guides_draw_rules_of_thirds(cairo_t *cr, const float x, const float y, const float w, const float h,
                                          const float zoom_scale, void *user_data)
 {
   dt_guides_draw_rules_of_thirds(cr, x, y, w, h);
 }
-static void _guides_draw_metering(cairo_t *cr, const float x, const float y,
-                                  const float w, const float h,
+static void _guides_draw_metering(cairo_t *cr, const float x, const float y, const float w, const float h,
                                   const float zoom_scale, void *user_data)
 {
   dt_guides_draw_metering(cr, x, y, w, h);
 }
-static void _guides_draw_perspective(cairo_t *cr, const float x, const float y,
-                                     const float w, const float h,
+static void _guides_draw_perspective(cairo_t *cr, const float x, const float y, const float w, const float h,
                                      const float zoom_scale, void *user_data)
 {
   dt_guides_draw_perspective(cr, x, y, w, h);
 }
-static void _guides_draw_diagonal_method(cairo_t *cr, const float x, const float y,
-                                         const float w, const float h,
+static void _guides_draw_diagonal_method(cairo_t *cr, const float x, const float y, const float w, const float h,
                                          const float zoom_scale, void *user_data)
 {
   dt_guides_draw_diagonal_method(cr, x, y, w, h);
 }
-static void _guides_draw_harmonious_triangles(cairo_t *cr, const float x, const float y,
-                                              const float w, const float h,
-                                              const float zoom_scale, void *user_data)
+static void _guides_draw_harmonious_triangles(cairo_t *cr, const float x, const float y, const float w,
+                                              const float h, const float zoom_scale, void *user_data)
 {
   dt_guides_draw_harmonious_triangles(cr, x, y, w, h);
 }
-static void _guides_draw_golden_mean(cairo_t *cr, const float x, const float y,
-                                     const float w, const float h,
+static void _guides_draw_golden_mean(cairo_t *cr, const float x, const float y, const float w, const float h,
                                      const float zoom_scale, void *user_data)
 {
   _golden_mean_t *d = (_golden_mean_t *)user_data;
@@ -337,8 +331,7 @@ static void _guides_draw_golden_mean(cairo_t *cr, const float x, const float y,
   dt_guides_q_rect(&R3, w_2 - R2.width * INVPHI, -h_2, R2.width * INVPHI, h - R2.height);
   dt_guides_q_rect(&R4, R2.left, R1.top, R3.left - R2.left, R3.height * INVPHI);
   dt_guides_q_rect(&R5, R4.left, R4.bottom, R4.width * INVPHI, R3.height - R4.height);
-  dt_guides_q_rect(&R6, R5.left + R5.width, R5.bottom - R5.height * INVPHI, R3.left - R5.right,
-                   R5.height * INVPHI);
+  dt_guides_q_rect(&R6, R5.left + R5.width, R5.bottom - R5.height * INVPHI, R3.left - R5.right, R5.height * INVPHI);
   dt_guides_q_rect(&R7, R6.right - R6.width * INVPHI, R4.bottom, R6.width * INVPHI, R5.height - R6.height);
 
   dt_guides_draw_golden_mean(cr, &R1, &R2, &R3, &R4, &R5, &R6, &R7, d->golden_section, d->golden_triangle,
@@ -380,10 +373,8 @@ static GtkWidget *_guides_gui_golden_mean(dt_iop_module_t *self, void *user_data
 }
 
 
-static void _guides_add_guide(GList **list, const char *name,
-                              dt_guides_draw_callback draw,
-                              dt_guides_widget_callback widget,
-                              void *user_data, GDestroyNotify free)
+static void _guides_add_guide(GList **list, const char *name, dt_guides_draw_callback draw,
+                              dt_guides_widget_callback widget, void *user_data, GDestroyNotify free)
 {
   dt_guides_t *guide = (dt_guides_t *)malloc(sizeof(dt_guides_t));
   g_strlcpy(guide->name, name, sizeof(guide->name));
@@ -394,7 +385,8 @@ static void _guides_add_guide(GList **list, const char *name,
   *list = g_list_append(*list, guide);
 }
 
-void dt_guides_add_guide(const char *name, dt_guides_draw_callback draw, dt_guides_widget_callback widget, void *user_data, GDestroyNotify free)
+void dt_guides_add_guide(const char *name, dt_guides_draw_callback draw, dt_guides_widget_callback widget,
+                         void *user_data, GDestroyNotify free)
 {
   _guides_add_guide(&darktable.guides, name, draw, widget, user_data, free);
 }
@@ -404,16 +396,19 @@ GList *dt_guides_init()
   GList *guides = NULL;
 
 
-  _guides_add_guide(&guides, _("grid"), _guides_draw_grid, NULL, NULL, NULL); // TODO: make the number of lines configurable with a slider?
+  _guides_add_guide(&guides, _("grid"), _guides_draw_grid, NULL, NULL,
+                    NULL); // TODO: make the number of lines configurable with a slider?
   _guides_add_guide(&guides, _("rules of thirds"), _guides_draw_rules_of_thirds, NULL, NULL, NULL);
   _guides_add_guide(&guides, _("metering"), _guides_draw_metering, NULL, NULL, NULL);
-  _guides_add_guide(&guides, _("perspective"), _guides_draw_perspective, NULL, NULL, NULL); // TODO: make the number of lines configurable with a slider?
+  _guides_add_guide(&guides, _("perspective"), _guides_draw_perspective, NULL, NULL,
+                    NULL); // TODO: make the number of lines configurable with a slider?
   _guides_add_guide(&guides, _("diagonal method"), _guides_draw_diagonal_method, NULL, NULL, NULL);
   _guides_add_guide(&guides, _("harmonious triangles"), _guides_draw_harmonious_triangles, NULL, NULL, NULL);
   {
     _golden_mean_t *user_data = (_golden_mean_t *)malloc(sizeof(_golden_mean_t));
     _golden_mean_set_data(user_data, dt_conf_get_int("plugins/darkroom/clipping/golden_extras"));
-    _guides_add_guide(&guides, _("golden mean"), _guides_draw_golden_mean, _guides_gui_golden_mean, user_data, free);
+    _guides_add_guide(&guides, _("golden mean"), _guides_draw_golden_mean, _guides_gui_golden_mean, user_data,
+                      free);
   }
 
   return guides;

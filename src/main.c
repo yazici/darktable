@@ -34,12 +34,13 @@ int main(int argc, char *argv[])
   // make sure to not redirect output when the output is already being redirected, either to a file or a pipe.
   int out_type = GetFileType(GetStdHandle(STD_OUTPUT_HANDLE));
   int err_type = GetFileType(GetStdHandle(STD_ERROR_HANDLE));
-  gboolean redirect_output = ((out_type != FILE_TYPE_DISK && out_type != FILE_TYPE_PIPE) &&
-                              (err_type != FILE_TYPE_DISK && err_type != FILE_TYPE_PIPE));
+  gboolean redirect_output = ((out_type != FILE_TYPE_DISK && out_type != FILE_TYPE_PIPE)
+                              && (err_type != FILE_TYPE_DISK && err_type != FILE_TYPE_PIPE));
 
   if(redirect_output)
   {
-    // something like C:\Users\username\AppData\Local\Microsoft\Windows\Temporary Internet Files\darktable\darktable-log.txt
+    // something like C:\Users\username\AppData\Local\Microsoft\Windows\Temporary Internet
+    // Files\darktable\darktable-log.txt
     char *logdir = g_build_filename(g_get_user_cache_dir(), "darktable", NULL);
     char *logfile = g_build_filename(logdir, "darktable-log.txt", NULL);
 
@@ -52,8 +53,10 @@ int main(int argc, char *argv[])
     g_free(logfile);
 
     // don't buffer stdout/stderr. we have basically two options: unbuffered or line buffered.
-    // unbuffered keeps the order in which things are printed but concurrent threads printing can lead to intermangled output. ugly.
-    // line buffered should keep lines together but in my tests the order of things no longer matches. ugly and potentially confusing.
+    // unbuffered keeps the order in which things are printed but concurrent threads printing can lead to
+    // intermangled output. ugly.
+    // line buffered should keep lines together but in my tests the order of things no longer matches. ugly and
+    // potentially confusing.
     // thus we are doing the thing that is just ugly (in rare cases) but at least not confusing.
     setvbuf(stdout, NULL, _IONBF, 0);
     setvbuf(stderr, NULL, _IONBF, 0);

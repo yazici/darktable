@@ -24,7 +24,8 @@
 // add the following define to compile this into a standalone test program:
 // #define STANDALONE
 // or use
-// gcc -W -Wall -std=c99 -lz -lm `pkg-config --cflags --libs glib-2.0` -g -O3 -fopenmp -DSTANDALONE -o darktable-pdf pdf.c
+// gcc -W -Wall -std=c99 -lz -lm `pkg-config --cflags --libs glib-2.0` -g -O3 -fopenmp -DSTANDALONE -o
+// darktable-pdf pdf.c
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -52,7 +53,10 @@
 
 #define CLAMP_FLT(A) ((A) > (0.0f) ? ((A) < (1.0f) ? (A) : (1.0f)) : (0.0f))
 
-#define SKIP_SPACES(s)  {while(*(s) == ' ')(s)++;}
+#define SKIP_SPACES(s)                                                                                            \
+  {                                                                                                               \
+    while(*(s) == ' ') (s)++;                                                                                     \
+  }
 
 // puts the length as described in str as pdf points into *length
 // returns 0 on error
@@ -62,17 +66,15 @@ int dt_pdf_parse_length(const char *str, float *length)
   int res = 0;
   char *nptr, *endptr;
 
-  if(str == NULL || length == NULL)
-    return 0;
+  if(str == NULL || length == NULL) return 0;
 
   SKIP_SPACES(str);
 
   nptr = g_strdelimit(g_strdup(str), ",", '.');
 
-  *length =  g_ascii_strtod(nptr, &endptr);
+  *length = g_ascii_strtod(nptr, &endptr);
 
-  if(endptr == NULL || errno == ERANGE)
-    goto end;
+  if(endptr == NULL || errno == ERANGE) goto end;
 
   // 0 is 0 is 0, why should we care about the unit?
   if(*length == 0.0 && nptr != endptr)
@@ -82,8 +84,7 @@ int dt_pdf_parse_length(const char *str, float *length)
   }
 
   // we don't want NAN, INF or parse errors (== 0.0)
-  if(!isnormal(*length))
-    goto end;
+  if(!isnormal(*length)) goto end;
 
   SKIP_SPACES(endptr);
 
@@ -102,7 +103,8 @@ end:
   return res;
 }
 
-// a paper size has 2 numbers, separated by 'x' or '*' and a unit, either one per number or one in the end (for both)
+// a paper size has 2 numbers, separated by 'x' or '*' and a unit, either one per number or one in the end (for
+// both)
 // <n> <u>? [x|*] <n> <u>
 // alternatively it could be a well defined format
 int dt_pdf_parse_paper_size(const char *str, float *width, float *height)
@@ -111,8 +113,7 @@ int dt_pdf_parse_paper_size(const char *str, float *width, float *height)
   gboolean width_has_unit = FALSE;
   char *ptr, *nptr, *endptr;
 
-  if(str == NULL || width == NULL || height == NULL)
-    return 0;
+  if(str == NULL || width == NULL || height == NULL) return 0;
 
   // first check if this is a well known size
   for(int i = 0; dt_pdf_paper_sizes[i].name; i++)
@@ -130,10 +131,9 @@ int dt_pdf_parse_paper_size(const char *str, float *width, float *height)
   // width
   SKIP_SPACES(nptr);
 
-  *width =  g_ascii_strtod(nptr, &endptr);
+  *width = g_ascii_strtod(nptr, &endptr);
 
-  if(endptr == NULL || *endptr == '\0' || errno == ERANGE || !isnormal(*width))
-    goto end;
+  if(endptr == NULL || *endptr == '\0' || errno == ERANGE || !isnormal(*width)) goto end;
 
   nptr = endptr;
 
@@ -154,18 +154,16 @@ int dt_pdf_parse_paper_size(const char *str, float *width, float *height)
   // x
   SKIP_SPACES(nptr);
 
-  if(*nptr != 'x' && *nptr != '*')
-    goto end;
+  if(*nptr != 'x' && *nptr != '*') goto end;
 
   nptr++;
 
   // height
   SKIP_SPACES(nptr);
 
-  *height =  g_ascii_strtod(nptr, &endptr);
+  *height = g_ascii_strtod(nptr, &endptr);
 
-  if(endptr == NULL || *endptr == '\0' || errno == ERANGE || !isnormal(*height))
-    goto end;
+  if(endptr == NULL || *endptr == '\0' || errno == ERANGE || !isnormal(*height)) goto end;
 
   nptr = endptr;
 
@@ -177,8 +175,7 @@ int dt_pdf_parse_paper_size(const char *str, float *width, float *height)
     if(!g_strcmp0(nptr, dt_pdf_units[i].name))
     {
       *height *= dt_pdf_units[i].factor;
-      if(width_has_unit == FALSE)
-        *width *= dt_pdf_units[i].factor;
+      if(width_has_unit == FALSE) *width *= dt_pdf_units[i].factor;
       res = 1;
       break;
     }
@@ -192,7 +189,7 @@ end:
 #undef SKIP_SPACES
 
 
-static const char *stream_encoder_filters[] = {"/ASCIIHexDecode", "/FlateDecode"};
+static const char *stream_encoder_filters[] = { "/ASCIIHexDecode", "/FlateDecode" };
 
 static void _pdf_set_offset(dt_pdf_t *pdf, int id, size_t offset)
 {
@@ -205,7 +202,8 @@ static void _pdf_set_offset(dt_pdf_t *pdf, int id, size_t offset)
   pdf->offsets[id] = offset;
 }
 
-dt_pdf_t *dt_pdf_start(const char *filename, float width, float height, float dpi, dt_pdf_stream_encoder_t default_encoder)
+dt_pdf_t *dt_pdf_start(const char *filename, float width, float height, float dpi,
+                       dt_pdf_stream_encoder_t default_encoder)
 {
   dt_pdf_t *pdf = calloc(1, sizeof(dt_pdf_t));
   if(!pdf) return NULL;
@@ -236,14 +234,12 @@ dt_pdf_t *dt_pdf_start(const char *filename, float width, float height, float dp
 
   // document catalog
   _pdf_set_offset(pdf, 1, bytes_written);
-  bytes_written += fprintf(pdf->fd,
-    "1 0 obj\n"
-    "<<\n"
-    "/Pages 2 0 R\n"
-    "/Type /Catalog\n"
-    ">>\n"
-    "endobj\n"
-  );
+  bytes_written += fprintf(pdf->fd, "1 0 obj\n"
+                                    "<<\n"
+                                    "/Pages 2 0 R\n"
+                                    "/Type /Catalog\n"
+                                    ">>\n"
+                                    "endobj\n");
 
   pdf->bytes_written += bytes_written;
 
@@ -290,7 +286,8 @@ static size_t _pdf_stream_encoder_Flate(dt_pdf_t *pdf, const unsigned char *data
   return destLen;
 }
 
-static size_t _pdf_write_stream(dt_pdf_t *pdf, dt_pdf_stream_encoder_t encoder, const unsigned char *data, size_t len)
+static size_t _pdf_write_stream(dt_pdf_t *pdf, dt_pdf_stream_encoder_t encoder, const unsigned char *data,
+                                size_t len)
 {
   size_t stream_size = 0;
   switch(encoder)
@@ -354,17 +351,14 @@ int dt_pdf_add_icc_from_data(dt_pdf_t *pdf, const unsigned char *data, size_t si
                            "/Filter [ /ASCIIHexDecode ]\n"
                            ">>\n"
                            "stream\n",
-                           icc_id, length_id
-  );
+                           icc_id, length_id);
 
   size_t stream_size = _pdf_stream_encoder_ASCIIHex(pdf, data, size);
   bytes_written += stream_size;
 
-  bytes_written += fprintf(pdf->fd,
-                           "\n"
-                           "endstream\n"
-                           "endobj\n"
-  );
+  bytes_written += fprintf(pdf->fd, "\n"
+                                    "endstream\n"
+                                    "endobj\n");
 
   // length of the stream
   _pdf_set_offset(pdf, length_id, pdf->bytes_written + bytes_written);
@@ -379,9 +373,11 @@ int dt_pdf_add_icc_from_data(dt_pdf_t *pdf, const unsigned char *data, size_t si
 }
 
 // this adds an image to the pdf file and returns the info needed to reference it later.
-// if icc_id is 0 then we suppose the pixel data to be in output device space, otherwise the ICC profile object is referenced.
+// if icc_id is 0 then we suppose the pixel data to be in output device space, otherwise the ICC profile object is
+// referenced.
 // if image == NULL only the outline can be shown later
-dt_pdf_image_t *dt_pdf_add_image(dt_pdf_t *pdf, const unsigned char *image, int width, int height, int bpp, int icc_id, float border)
+dt_pdf_image_t *dt_pdf_add_image(dt_pdf_t *pdf, const unsigned char *image, int width, int height, int bpp,
+                                 int icc_id, float border)
 {
   size_t stream_size = 0;
   size_t bytes_written = 0;
@@ -407,32 +403,31 @@ dt_pdf_image_t *dt_pdf_add_image(dt_pdf_t *pdf, const unsigned char *image, int 
   int length_id = pdf->next_id++;
 
   // the image
-  //start
+  // start
   _pdf_set_offset(pdf, pdf_image->object_id, pdf->bytes_written + bytes_written);
-  bytes_written += fprintf(pdf->fd,
-    "%d 0 obj\n"
-    "<<\n"
-    "/Type /XObject\n"
-    "/Subtype /Image\n"
-    "/Name /Im%d\n"
-    "/Filter [ %s ]\n"
-    "/Width %d\n"
-    "/Height %d\n",
-    pdf_image->object_id, pdf_image->name_id, stream_encoder_filters[pdf->default_encoder], width, height
-  );
-  // As I understand it in the printing case DeviceRGB (==> icc_id = 0) is enough since the pixel data is in the device space then.
+  bytes_written += fprintf(pdf->fd, "%d 0 obj\n"
+                                    "<<\n"
+                                    "/Type /XObject\n"
+                                    "/Subtype /Image\n"
+                                    "/Name /Im%d\n"
+                                    "/Filter [ %s ]\n"
+                                    "/Width %d\n"
+                                    "/Height %d\n",
+                           pdf_image->object_id, pdf_image->name_id, stream_encoder_filters[pdf->default_encoder],
+                           width, height);
+  // As I understand it in the printing case DeviceRGB (==> icc_id = 0) is enough since the pixel data is in the
+  // device space then.
   if(icc_id > 0)
     bytes_written += fprintf(pdf->fd, "/ColorSpace [ /ICCBased %d 0 R ]\n", icc_id);
   else
     bytes_written += fprintf(pdf->fd, "/ColorSpace /DeviceRGB\n");
   bytes_written += fprintf(pdf->fd,
-    "/BitsPerComponent %d\n"
-    "/Intent /Perceptual\n" // TODO: allow setting it from the outside
-    "/Length %d 0 R\n"
-    ">>\n"
-    "stream\n",
-    bpp, length_id
-  );
+                           "/BitsPerComponent %d\n"
+                           "/Intent /Perceptual\n" // TODO: allow setting it from the outside
+                           "/Length %d 0 R\n"
+                           ">>\n"
+                           "stream\n",
+                           bpp, length_id);
 
   // the stream
   stream_size = _pdf_write_stream(pdf, pdf->default_encoder, image, width * height * 3 * (bpp / 8));
@@ -443,12 +438,10 @@ dt_pdf_image_t *dt_pdf_add_image(dt_pdf_t *pdf, const unsigned char *image, int 
   }
   bytes_written += stream_size;
 
-  //end
-  bytes_written += fprintf(pdf->fd,
-    "\n"
-    "endstream\n"
-    "endobj\n"
-  );
+  // end
+  bytes_written += fprintf(pdf->fd, "\n"
+                                    "endstream\n"
+                                    "endobj\n");
 
   // length of the last stream
   _pdf_set_offset(pdf, length_id, pdf->bytes_written + bytes_written);
@@ -474,37 +467,31 @@ dt_pdf_page_t *dt_pdf_add_page(dt_pdf_t *pdf, dt_pdf_image_t **images, int n_ima
 
   // the page object
   _pdf_set_offset(pdf, pdf_page->object_id, pdf->bytes_written + bytes_written);
-  bytes_written += fprintf(pdf->fd,
-    "%d 0 obj\n"
-    "<<\n"
-    "/Type /Page\n"
-    "/Parent 2 0 R\n"
-    "/Resources <<\n"
-    "/XObject <<",
-    pdf_page->object_id
-  );
+  bytes_written += fprintf(pdf->fd, "%d 0 obj\n"
+                                    "<<\n"
+                                    "/Type /Page\n"
+                                    "/Parent 2 0 R\n"
+                                    "/Resources <<\n"
+                                    "/XObject <<",
+                           pdf_page->object_id);
   for(int i = 0; i < n_images; i++)
     bytes_written += fprintf(pdf->fd, "/Im%d %d 0 R\n", images[i]->name_id, images[i]->object_id);
-  bytes_written += fprintf(pdf->fd,
-    ">>\n"
-    "/ProcSet [ /PDF /Text /ImageC ] >>\n"
-    "/MediaBox [0 0 %d %d]\n"
-    "/Contents %d 0 R\n"
-    ">>\n"
-    "endobj\n",
-    (int)(pdf->page_width + 0.5), (int)(pdf->page_height + 0.5), content_id
-  );
+  bytes_written += fprintf(pdf->fd, ">>\n"
+                                    "/ProcSet [ /PDF /Text /ImageC ] >>\n"
+                                    "/MediaBox [0 0 %d %d]\n"
+                                    "/Contents %d 0 R\n"
+                                    ">>\n"
+                                    "endobj\n",
+                           (int)(pdf->page_width + 0.5), (int)(pdf->page_height + 0.5), content_id);
 
   // page content
   _pdf_set_offset(pdf, content_id, pdf->bytes_written + bytes_written);
-  bytes_written += fprintf(pdf->fd,
-    "%d 0 obj\n"
-    "<<\n"
-    "/Length %d 0 R\n"
-    ">>\n"
-    "stream\n",
-    content_id, length_id
-  );
+  bytes_written += fprintf(pdf->fd, "%d 0 obj\n"
+                                    "<<\n"
+                                    "/Length %d 0 R\n"
+                                    ">>\n"
+                                    "stream\n",
+                           content_id, length_id);
 
   // the stream -- we need its size in the length object
   // we want the image printed with at least the given DPI, scaling it down to fit the page if it is too big
@@ -573,32 +560,29 @@ dt_pdf_page_t *dt_pdf_add_page(dt_pdf_t *pdf, dt_pdf_image_t **images, int n_ima
     if(images[i]->outline_mode)
     {
       // instead of drawign the image we just draw the outlines
-      stream_size += fprintf(pdf->fd,
-        "q\n"
-        "[4 6] 0 d\n"
-        "%s %s %s %s re\n"
-        "S\n"
-        "Q\n",
-        translate_x_str, translate_y_str, scale_x_str, scale_y_str
-      );
+      stream_size += fprintf(pdf->fd, "q\n"
+                                      "[4 6] 0 d\n"
+                                      "%s %s %s %s re\n"
+                                      "S\n"
+                                      "Q\n",
+                             translate_x_str, translate_y_str, scale_x_str, scale_y_str);
     }
     else
     {
       stream_size += fprintf(pdf->fd,
-        "q\n"
-        "1 0 0 1 %s %s cm\n", // translate
-        translate_x_str, translate_y_str
-      );
+                             "q\n"
+                             "1 0 0 1 %s %s cm\n", // translate
+                             translate_x_str,
+                             translate_y_str);
       if(rotate_to_fit)
         stream_size += fprintf(pdf->fd,
-          "0 1 -1 0 0 0 cm\n" // rotate
-        );
+                               "0 1 -1 0 0 0 cm\n" // rotate
+                               );
       stream_size += fprintf(pdf->fd,
-        "%s 0 0 %s 0 0 cm\n" // scale
-        "/Im%d Do\n"
-        "Q\n",
-        scale_x_str, scale_y_str, images[i]->name_id
-      );
+                             "%s 0 0 %s 0 0 cm\n" // scale
+                             "/Im%d Do\n"
+                             "Q\n",
+                             scale_x_str, scale_y_str, images[i]->name_id);
     }
 
     // DEBUG: draw the bounding box
@@ -614,20 +598,16 @@ dt_pdf_page_t *dt_pdf_add_page(dt_pdf_t *pdf, dt_pdf_image_t **images, int n_ima
       g_ascii_dtostr(bb_w_str, G_ASCII_DTOSTR_BUF_SIZE, images[i]->bb_width);
       g_ascii_dtostr(bb_h_str, G_ASCII_DTOSTR_BUF_SIZE, images[i]->bb_height);
 
-      stream_size += fprintf(pdf->fd,
-        "q\n"
-        "%s %s %s %s re\n"
-        "S\n"
-        "Q\n",
-        bb_x_str, bb_y_str, bb_w_str, bb_h_str
-      );
+      stream_size += fprintf(pdf->fd, "q\n"
+                                      "%s %s %s %s re\n"
+                                      "S\n"
+                                      "Q\n",
+                             bb_x_str, bb_y_str, bb_w_str, bb_h_str);
     }
   }
 
-  bytes_written += fprintf(pdf->fd,
-    "endstream\n"
-    "endobj\n"
-  );
+  bytes_written += fprintf(pdf->fd, "endstream\n"
+                                    "endobj\n");
   bytes_written += stream_size;
 
   // length of the last stream
@@ -653,20 +633,16 @@ void dt_pdf_finish(dt_pdf_t *pdf, dt_pdf_page_t **pages, int n_pages)
   // the pages dictionary
   _pdf_set_offset(pdf, 2, pdf->bytes_written + bytes_written);
   bytes_written += fprintf(pdf->fd,
-    "2 0 obj\n" // yes, this is hardcoded to be object 2, even if written in the end
-    "<<\n"
-    "/Type /Pages\n"
-    "/Kids [\n"
-  );
-  for(int i = 0; i < n_pages; i++)
-    bytes_written += fprintf(pdf->fd, "%d 0 R\n", pages[i]->object_id);
-  bytes_written += fprintf(pdf->fd,
-    "]\n"
-    "/Count %d\n"
-    ">>\n"
-    "endobj\n",
-    n_pages
-  );
+                           "2 0 obj\n" // yes, this is hardcoded to be object 2, even if written in the end
+                           "<<\n"
+                           "/Type /Pages\n"
+                           "/Kids [\n");
+  for(int i = 0; i < n_pages; i++) bytes_written += fprintf(pdf->fd, "%d 0 R\n", pages[i]->object_id);
+  bytes_written += fprintf(pdf->fd, "]\n"
+                                    "/Count %d\n"
+                                    ">>\n"
+                                    "endobj\n",
+                           n_pages);
 
   // the info
 
@@ -696,7 +672,7 @@ void dt_pdf_finish(dt_pdf_t *pdf, dt_pdf_page_t **pages, int n_pages)
   {
     time_str[14] = '5';
     time_str[15] = '9';
-    time_str[16] = '\0';    /* for safety */
+    time_str[16] = '\0'; /* for safety */
   }
 
   /* get the time zone offset */
@@ -724,19 +700,15 @@ void dt_pdf_finish(dt_pdf_t *pdf, dt_pdf_page_t **pages, int n_pages)
 time_error:
 
   _pdf_set_offset(pdf, info_id, pdf->bytes_written + bytes_written);
-  bytes_written += fprintf(pdf->fd,
-    "%d 0 obj\n"
-    "<<\n"
-    "/Title (%s)\n",
-    info_id, pdf->title ? pdf->title : "untitled"
-  );
+  bytes_written += fprintf(pdf->fd, "%d 0 obj\n"
+                                    "<<\n"
+                                    "/Title (%s)\n",
+                           info_id, pdf->title ? pdf->title : "untitled");
   if(*time_str)
   {
-    bytes_written += fprintf(pdf->fd,
-      "/CreationDate (%1$s)\n"
-      "/ModDate (%1$s)\n",
-      time_str
-    );
+    bytes_written += fprintf(pdf->fd, "/CreationDate (%1$s)\n"
+                                      "/ModDate (%1$s)\n",
+                             time_str);
   }
   bytes_written += fprintf(pdf->fd, "/Producer (%s http://www.darktable.org)\n"
                                     ">>\n"
@@ -746,25 +718,23 @@ time_error:
   pdf->bytes_written += bytes_written;
 
   // the cross reference table
-  fprintf(pdf->fd,
-    "xref\n"
-    "0 %d\n"
-    "0000000000 65535 f \n",
-    pdf->next_id
-  );
+  fprintf(pdf->fd, "xref\n"
+                   "0 %d\n"
+                   "0000000000 65535 f \n",
+          pdf->next_id);
   for(int i = 0; i < pdf->next_id - 1; i++) fprintf(pdf->fd, "%010zu 00000 n \n", pdf->offsets[i]);
 
   // the trailer
   fprintf(pdf->fd,
-    "trailer\n"
-    "<<\n"
-    "/Size %d\n"
-    "/Info %d 0 R\n" // we want to have the Info last in the file, so this is /Size - 1
-    "/Root 1 0 R\n"
-    "/ID [<dead> <babe>]\n" // TODO find something less necrophilic, maybe hash of image + history? or just of filename + date :)
-    ">>\n",
-    pdf->next_id, info_id
-  );
+          "trailer\n"
+          "<<\n"
+          "/Size %d\n"
+          "/Info %d 0 R\n" // we want to have the Info last in the file, so this is /Size - 1
+          "/Root 1 0 R\n"
+          "/ID [<dead> <babe>]\n" // TODO find something less necrophilic, maybe hash of image + history? or just
+                                  // of filename + date :)
+          ">>\n",
+          pdf->next_id, info_id);
 
   // and finally the file footer with the offset of the xref section
   fprintf(pdf->fd, "startxref\n"
@@ -780,7 +750,7 @@ time_error:
 #ifdef STANDALONE
 
 // just for debugging to read a ppm file
-float * read_ppm(const char * filename, int * wd, int * ht)
+float *read_ppm(const char *filename, int *wd, int *ht)
 {
   FILE *f = g_fopen(filename, "rb");
 
@@ -800,7 +770,7 @@ float * read_ppm(const char * filename, int * wd, int * ht)
     return NULL;
   }
 
-  float *image = (float*)malloc(sizeof(float) * width * height * 3);
+  float *image = (float *)malloc(sizeof(float) * width * height * 3);
 
   if(max <= 255)
   {
@@ -815,12 +785,11 @@ float * read_ppm(const char * filename, int * wd, int * ht)
       fclose(f);
       return NULL;
     }
-    // and transform it into 0..1 range
-    #ifdef _OPENMP
-    #pragma omp parallel for schedule(static) default(none) shared(image, tmp, width, height, max)
-    #endif
-    for(int i = 0; i < width * height * 3; i++)
-      image[i] = (float)tmp[i] / max;
+// and transform it into 0..1 range
+#ifdef _OPENMP
+#pragma omp parallel for schedule(static) default(none) shared(image, tmp, width, height, max)
+#endif
+    for(int i = 0; i < width * height * 3; i++) image[i] = (float)tmp[i] / max;
     free(tmp);
   }
   else
@@ -836,18 +805,16 @@ float * read_ppm(const char * filename, int * wd, int * ht)
       fclose(f);
       return NULL;
     }
-    // swap byte order
-    #ifdef _OPENMP
-    #pragma omp parallel for schedule(static) default(none) shared(tmp, width, height)
-    #endif
-    for(int k = 0; k < 3 * width * height; k++)
-      tmp[k] = ((tmp[k] & 0xff) << 8) | (tmp[k] >> 8);
-    // and transform it into 0..1 range
-    #ifdef _OPENMP
-    #pragma omp parallel for schedule(static) default(none) shared(image, tmp, max, width, height)
-    #endif
-    for(int i = 0; i < width * height * 3; i++)
-      image[i] = (float)tmp[i] / max;
+// swap byte order
+#ifdef _OPENMP
+#pragma omp parallel for schedule(static) default(none) shared(tmp, width, height)
+#endif
+    for(int k = 0; k < 3 * width * height; k++) tmp[k] = ((tmp[k] & 0xff) << 8) | (tmp[k] >> 8);
+// and transform it into 0..1 range
+#ifdef _OPENMP
+#pragma omp parallel for schedule(static) default(none) shared(image, tmp, max, width, height)
+#endif
+    for(int i = 0; i < width * height * 3; i++) image[i] = (float)tmp[i] / max;
     free(tmp);
   }
   fclose(f);
@@ -900,10 +867,9 @@ int main(int argc, char *argv[])
     }
 
 #ifdef _OPENMP
-  #pragma omp parallel for schedule(static) default(none) shared(image, data, width, height)
+#pragma omp parallel for schedule(static) default(none) shared(image, data, width, height)
 #endif
-    for(int i = 0; i < width * height * 3; i++)
-      data[i] = CLAMP_FLT(image[i]) * 65535;
+    for(int i = 0; i < width * height * 3; i++) data[i] = CLAMP_FLT(image[i]) * 65535;
 
     images[i] = dt_pdf_add_image(pdf, (unsigned char *)data, width, height, 16, icc_id, border);
     free(image);
@@ -911,12 +877,13 @@ int main(int argc, char *argv[])
   }
 
   // add pages with one image each, filling the page minus borders
-  for(int i = 0; i < n_images; i++)
-    pages[i] = dt_pdf_add_page(pdf, &images[i], 1);
+  for(int i = 0; i < n_images; i++) pages[i] = dt_pdf_add_page(pdf, &images[i], 1);
 
   // add the whole bunch of images to the last page
-  // images' default bounding boxen span the whole page, so set them a little smaller first, also enable bounding box drawing.
-  // we can also set outline mode afterwards. note that it is NOT safe to load images with outline_mode = 1 and then set it to 0 later!
+  // images' default bounding boxen span the whole page, so set them a little smaller first, also enable bounding
+  // box drawing.
+  // we can also set outline mode afterwards. note that it is NOT safe to load images with outline_mode = 1 and
+  // then set it to 0 later!
   {
     // TODO: use border and add new pages when we filled one up
     float bb_size = dt_pdf_mm_to_point(60);
@@ -935,7 +902,7 @@ int main(int argc, char *argv[])
       images[i]->bb_x = x;
       images[i]->bb_y = y;
       x += bb_step;
-      if((i+1) % n_x == 0)
+      if((i + 1) % n_x == 0)
       {
         x = bb_empty * 0.5;
         y += bb_step;
@@ -947,10 +914,8 @@ int main(int argc, char *argv[])
 
   dt_pdf_finish(pdf, pages, n_pages);
 
-  for(int i = 0; i < n_images; i++)
-    free(images[i]);
-  for(int i = 0; i < n_pages; i++)
-    free(pages[i]);
+  for(int i = 0; i < n_images; i++) free(images[i]);
+  for(int i = 0; i < n_pages; i++) free(pages[i]);
 
   return 0;
 }

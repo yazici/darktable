@@ -32,15 +32,15 @@ typedef struct dt_cache_entry_t
   dt_pthread_rwlock_t lock;
   int _lock_demoting;
   uint32_t key;
-}
-dt_cache_entry_t;
+} dt_cache_entry_t;
 
 typedef void((*dt_cache_allocate_t)(void *userdata, dt_cache_entry_t *entry));
 typedef void((*dt_cache_cleanup_t)(void *userdata, dt_cache_entry_t *entry));
 
 typedef struct dt_cache_t
 {
-  dt_pthread_mutex_t lock; // big fat lock. we're only expecting a couple hand full of cpu threads to use this concurrently.
+  dt_pthread_mutex_t lock; // big fat lock. we're only expecting a couple hand full of cpu threads to use this
+                           // concurrently.
 
   size_t entry_size; // cache line allocation
   size_t cost;       // user supplied cost per cache line (bytes?)
@@ -54,8 +54,7 @@ typedef struct dt_cache_t
   dt_cache_allocate_t cleanup;
   void *allocate_data;
   void *cleanup_data;
-}
-dt_cache_t;
+} dt_cache_t;
 
 // entry size is only used if alloc callback is 0
 void dt_cache_init(dt_cache_t *cache, size_t entry_size, size_t cost_quota);
@@ -75,8 +74,9 @@ static inline void dt_cache_set_cleanup_callback(dt_cache_t *cache, dt_cache_cle
 }
 
 // returns a slot in the cache for this key (newly allocated if need be), locked according to mode (r, w)
-#define dt_cache_get(A, B, C)  dt_cache_get_with_caller(A, B, C, __FILE__, __LINE__)
-dt_cache_entry_t *dt_cache_get_with_caller(dt_cache_t *cache, const uint32_t key, char mode, const char *file, int line);
+#define dt_cache_get(A, B, C) dt_cache_get_with_caller(A, B, C, __FILE__, __LINE__)
+dt_cache_entry_t *dt_cache_get_with_caller(dt_cache_t *cache, const uint32_t key, char mode, const char *file,
+                                           int line);
 // same but returns 0 if not allocated yet (both will block and wait for entry rw locks to be released)
 dt_cache_entry_t *dt_cache_testget(dt_cache_t *cache, const uint32_t key, char mode);
 // release a lock on a cache entry. the cache knows which one you mean (r or w).
@@ -96,9 +96,8 @@ void dt_cache_gc(dt_cache_t *cache, const float fill_ratio);
 // iterate over all currently contained data blocks.
 // not thread safe! only use this for init/cleanup!
 // returns non zero the first time process() returns non zero.
-int dt_cache_for_all(dt_cache_t *cache,
-    int (*process)(const uint32_t key, const void *data, void *user_data),
-    void *user_data);
+int dt_cache_for_all(dt_cache_t *cache, int (*process)(const uint32_t key, const void *data, void *user_data),
+                     void *user_data);
 
 // modelines: These editor modelines have been set for all relevant files by tools/update_modelines.sh
 // vim: shiftwidth=2 expandtab tabstop=2 cindent

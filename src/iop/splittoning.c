@@ -454,7 +454,7 @@ void init(dt_iop_module_t *module)
   module->params = calloc(1, sizeof(dt_iop_splittoning_params_t));
   module->default_params = calloc(1, sizeof(dt_iop_splittoning_params_t));
   module->default_enabled = 0;
-    module->priority = 869; // module order created by iop_dependencies.py, do not edit!
+  module->priority = 869; // module order created by iop_dependencies.py, do not edit!
   module->params_size = sizeof(dt_iop_splittoning_params_t);
   module->gui_data = NULL;
   dt_iop_splittoning_params_t tmp = (dt_iop_splittoning_params_t){ 0, 0.5, 0.2, 0.5, 0.5, 33.0 };
@@ -469,7 +469,7 @@ void cleanup(dt_iop_module_t *module)
 }
 
 static inline int gui_init_tab(struct dt_iop_module_t *self, int line, const char *name, GtkWidget **ppcolor,
-                                const GdkRGBA *c, GtkWidget **pphue, GtkWidget **ppsaturation)
+                               const GdkRGBA *c, GtkWidget **pphue, GtkWidget **ppsaturation)
 {
   GtkGrid *grid = GTK_GRID(self->widget);
   gtk_grid_attach(grid, dt_ui_section_label_new(name), 0, line++, 2, 1);

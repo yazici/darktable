@@ -127,7 +127,8 @@ void draw_color_boxes_outline(cairo_t *cr, point_t *bb, chart_t *chart)
   _draw_boxes(cr, bb, chart->box_table);
 }
 
-void draw_color_boxes_inside(cairo_t *cr, point_t *bb, chart_t *chart, float shrink, float line_width, gboolean colored)
+void draw_color_boxes_inside(cairo_t *cr, point_t *bb, chart_t *chart, float shrink, float line_width,
+                             gboolean colored)
 {
   GHashTableIter table_iter;
   gpointer key, value;

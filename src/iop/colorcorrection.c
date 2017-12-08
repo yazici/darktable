@@ -226,7 +226,7 @@ void init(dt_iop_module_t *module)
   module->params = calloc(1, sizeof(dt_iop_colorcorrection_params_t));
   module->default_params = calloc(1, sizeof(dt_iop_colorcorrection_params_t));
   module->default_enabled = 0;
-    module->priority = 724; // module order created by iop_dependencies.py, do not edit!
+  module->priority = 724; // module order created by iop_dependencies.py, do not edit!
   module->params_size = sizeof(dt_iop_colorcorrection_params_t);
   module->gui_data = NULL;
   dt_iop_colorcorrection_params_t tmp = (dt_iop_colorcorrection_params_t){ 0., 0., 0., 0., 1.0 };
@@ -242,12 +242,9 @@ void cleanup(dt_iop_module_t *module)
 
 static void sat_callback(GtkWidget *slider, gpointer user_data);
 static gboolean dt_iop_colorcorrection_draw(GtkWidget *widget, cairo_t *cr, gpointer user_data);
-static gboolean dt_iop_colorcorrection_motion_notify(GtkWidget *widget, GdkEventMotion *event,
-                                                     gpointer user_data);
-static gboolean dt_iop_colorcorrection_button_press(GtkWidget *widget, GdkEventButton *event,
-                                                    gpointer user_data);
-static gboolean dt_iop_colorcorrection_leave_notify(GtkWidget *widget, GdkEventCrossing *event,
-                                                    gpointer user_data);
+static gboolean dt_iop_colorcorrection_motion_notify(GtkWidget *widget, GdkEventMotion *event, gpointer user_data);
+static gboolean dt_iop_colorcorrection_button_press(GtkWidget *widget, GdkEventButton *event, gpointer user_data);
+static gboolean dt_iop_colorcorrection_leave_notify(GtkWidget *widget, GdkEventCrossing *event, gpointer user_data);
 static gboolean dt_iop_colorcorrection_scrolled(GtkWidget *widget, GdkEventScroll *event, gpointer user_data);
 static gboolean dt_iop_colorcorrection_key_press(GtkWidget *widget, GdkEventKey *event, gpointer user_data);
 
@@ -267,16 +264,14 @@ void gui_init(struct dt_iop_module_t *self)
 
   gtk_widget_add_events(GTK_WIDGET(g->area), GDK_POINTER_MOTION_MASK | GDK_POINTER_MOTION_HINT_MASK
                                                  | GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK
-                                                 | GDK_LEAVE_NOTIFY_MASK | GDK_SCROLL_MASK
-                                                 | GDK_SMOOTH_SCROLL_MASK | GDK_KEY_PRESS_MASK);
+                                                 | GDK_LEAVE_NOTIFY_MASK | GDK_SCROLL_MASK | GDK_SMOOTH_SCROLL_MASK
+                                                 | GDK_KEY_PRESS_MASK);
   gtk_widget_set_can_focus(GTK_WIDGET(g->area), TRUE);
   g_signal_connect(G_OBJECT(g->area), "draw", G_CALLBACK(dt_iop_colorcorrection_draw), self);
-  g_signal_connect(G_OBJECT(g->area), "button-press-event", G_CALLBACK(dt_iop_colorcorrection_button_press),
-                   self);
+  g_signal_connect(G_OBJECT(g->area), "button-press-event", G_CALLBACK(dt_iop_colorcorrection_button_press), self);
   g_signal_connect(G_OBJECT(g->area), "motion-notify-event", G_CALLBACK(dt_iop_colorcorrection_motion_notify),
                    self);
-  g_signal_connect(G_OBJECT(g->area), "leave-notify-event", G_CALLBACK(dt_iop_colorcorrection_leave_notify),
-                   self);
+  g_signal_connect(G_OBJECT(g->area), "leave-notify-event", G_CALLBACK(dt_iop_colorcorrection_leave_notify), self);
   g_signal_connect(G_OBJECT(g->area), "scroll-event", G_CALLBACK(dt_iop_colorcorrection_scrolled), self);
   g_signal_connect(G_OBJECT(g->area), "key-press-event", G_CALLBACK(dt_iop_colorcorrection_key_press), self);
 
@@ -349,8 +344,7 @@ static gboolean dt_iop_colorcorrection_draw(GtkWidget *widget, cairo_t *crf, gpo
       // dt_iop_Lab_to_sRGB(Lab, rgb, 0, 0, 1.0, 1, 1);
       cairo_set_source_rgb(cr, rgb[0], rgb[1], rgb[2]);
       cairo_rectangle(cr, width * i / (float)cells, height * j / (float)cells,
-                      width / (float)cells - DT_PIXEL_APPLY_DPI(1),
-                      height / (float)cells - DT_PIXEL_APPLY_DPI(1));
+                      width / (float)cells - DT_PIXEL_APPLY_DPI(1), height / (float)cells - DT_PIXEL_APPLY_DPI(1));
       cairo_fill(cr);
     }
   cairo_set_antialias(cr, CAIRO_ANTIALIAS_DEFAULT);
@@ -386,8 +380,7 @@ static gboolean dt_iop_colorcorrection_draw(GtkWidget *widget, cairo_t *crf, gpo
   return TRUE;
 }
 
-static gboolean dt_iop_colorcorrection_motion_notify(GtkWidget *widget, GdkEventMotion *event,
-                                                     gpointer user_data)
+static gboolean dt_iop_colorcorrection_motion_notify(GtkWidget *widget, GdkEventMotion *event, gpointer user_data)
 {
   dt_iop_module_t *self = (dt_iop_module_t *)user_data;
   dt_iop_colorcorrection_gui_data_t *g = (dt_iop_colorcorrection_gui_data_t *)self->gui_data;
@@ -431,8 +424,7 @@ static gboolean dt_iop_colorcorrection_motion_notify(GtkWidget *widget, GdkEvent
   return TRUE;
 }
 
-static gboolean dt_iop_colorcorrection_button_press(GtkWidget *widget, GdkEventButton *event,
-                                                    gpointer user_data)
+static gboolean dt_iop_colorcorrection_button_press(GtkWidget *widget, GdkEventButton *event, gpointer user_data)
 {
   if(event->button == 1 && event->type == GDK_2BUTTON_PRESS)
   {
@@ -462,8 +454,7 @@ static gboolean dt_iop_colorcorrection_button_press(GtkWidget *widget, GdkEventB
   return FALSE;
 }
 
-static gboolean dt_iop_colorcorrection_leave_notify(GtkWidget *widget, GdkEventCrossing *event,
-                                                    gpointer user_data)
+static gboolean dt_iop_colorcorrection_leave_notify(GtkWidget *widget, GdkEventCrossing *event, gpointer user_data)
 {
   dt_iop_module_t *self = (dt_iop_module_t *)user_data;
   gtk_widget_queue_draw(self->widget);
@@ -479,9 +470,9 @@ static gboolean dt_iop_colorcorrection_scrolled(GtkWidget *widget, GdkEventScrol
   gdouble delta_y;
   if(dt_gui_get_scroll_deltas(event, NULL, &delta_y))
   {
-     p->saturation = CLAMP(p->saturation - 0.1 * delta_y, -3.0, 3.0);
-     dt_bauhaus_slider_set(g->slider, p->saturation);
-     gtk_widget_queue_draw(widget);
+    p->saturation = CLAMP(p->saturation - 0.1 * delta_y, -3.0, 3.0);
+    dt_bauhaus_slider_set(g->slider, p->saturation);
+    gtk_widget_queue_draw(widget);
   }
 
   return TRUE;

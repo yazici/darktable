@@ -108,9 +108,9 @@ typedef struct dt_lib_module_t
   void (*gui_reset)(struct dt_lib_module_t *self);
 
   /** entering a view, only called if lib is displayed on the new view */
-  void (*view_enter)(struct dt_lib_module_t *self,struct dt_view_t *old_view,struct dt_view_t *new_view);
+  void (*view_enter)(struct dt_lib_module_t *self, struct dt_view_t *old_view, struct dt_view_t *new_view);
   /** entering a view, only called if lib is displayed on the old view */
-  void (*view_leave)(struct dt_lib_module_t *self,struct dt_view_t *old_view,struct dt_view_t *new_view);
+  void (*view_leave)(struct dt_lib_module_t *self, struct dt_view_t *old_view, struct dt_view_t *new_view);
 
   /** optional event callbacks for big center widget. */
   /** optional method called after lighttable expose. */
@@ -119,15 +119,15 @@ typedef struct dt_lib_module_t
   int (*mouse_leave)(struct dt_lib_module_t *self);
   int (*mouse_moved)(struct dt_lib_module_t *self, double x, double y, double pressure, int which);
   int (*button_released)(struct dt_lib_module_t *self, double x, double y, int which, uint32_t state);
-  int (*button_pressed)(struct dt_lib_module_t *self, double x, double y, double pressure, int which,
-                        int type, uint32_t state);
+  int (*button_pressed)(struct dt_lib_module_t *self, double x, double y, double pressure, int which, int type,
+                        uint32_t state);
   int (*scrolled)(struct dt_lib_module_t *self, double x, double y, int up);
   void (*configure)(struct dt_lib_module_t *self, int width, int height);
   int (*position)(const struct dt_lib_module_t *self);
   /** implement these three if you want customizable presets to be stored in db. */
   /** legacy_params can run in iterations, just return to what version you updated the preset. */
-  void *(*legacy_params)(struct dt_lib_module_t *self, const void *const old_params,
-                         const size_t old_params_size, const int old_version, int *new_version, size_t *new_size);
+  void *(*legacy_params)(struct dt_lib_module_t *self, const void *const old_params, const size_t old_params_size,
+                         const int old_version, int *new_version, size_t *new_size);
   void *(*get_params)(struct dt_lib_module_t *self, int *size);
   int (*set_params)(struct dt_lib_module_t *self, const void *params, int size);
   void (*init_presets)(struct dt_lib_module_t *self);

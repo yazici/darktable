@@ -113,26 +113,15 @@ void dt_mipmap_cache_print(dt_mipmap_cache_t *cache);
 // get a buffer and lock according to mode ('r' or 'w').
 // see dt_mipmap_get_flags_t for explanation of the exact
 // behaviour. pass 0 as flags for the default (best effort)
-#define dt_mipmap_cache_get(A,B,C,D,E,F) dt_mipmap_cache_get_with_caller(A,B,C,D,E,F,__FILE__,__LINE__)
-void dt_mipmap_cache_get_with_caller(
-    dt_mipmap_cache_t *cache,
-    dt_mipmap_buffer_t *buf,
-    const uint32_t imgid,
-    const dt_mipmap_size_t mip,
-    const dt_mipmap_get_flags_t flags,
-    const char mode,
-    const char *file,
-    int line);
+#define dt_mipmap_cache_get(A, B, C, D, E, F) dt_mipmap_cache_get_with_caller(A, B, C, D, E, F, __FILE__, __LINE__)
+void dt_mipmap_cache_get_with_caller(dt_mipmap_cache_t *cache, dt_mipmap_buffer_t *buf, const uint32_t imgid,
+                                     const dt_mipmap_size_t mip, const dt_mipmap_get_flags_t flags,
+                                     const char mode, const char *file, int line);
 
 // convenience function with fewer params
-#define dt_mipmap_cache_write_get(A,B,C,D) dt_mipmap_cache_write_get_with_caller(A,B,C,D,__FILE__,__LINE__)
-void dt_mipmap_cache_write_get_with_caller(
-    dt_mipmap_cache_t *cache,
-    dt_mipmap_buffer_t *buf,
-    const uint32_t imgid,
-    const int mip,
-    const char *file,
-    int line);
+#define dt_mipmap_cache_write_get(A, B, C, D) dt_mipmap_cache_write_get_with_caller(A, B, C, D, __FILE__, __LINE__)
+void dt_mipmap_cache_write_get_with_caller(dt_mipmap_cache_t *cache, dt_mipmap_buffer_t *buf, const uint32_t imgid,
+                                           const int mip, const char *file, int line);
 
 // drop a lock
 #define dt_mipmap_cache_release(A, B) dt_mipmap_cache_release_with_caller(A, B, __FILE__, __LINE__)
@@ -151,17 +140,16 @@ void dt_mimap_cache_evict(dt_mipmap_cache_t *cache, const uint32_t imgid);
 // depending on the user parameter for the maximum thumbnail dimensions.
 // actual resolution depends on the image and is only known after
 // the thumbnail is loaded.
-dt_mipmap_size_t dt_mipmap_cache_get_matching_size(
-    const dt_mipmap_cache_t *cache,
-    const int32_t width,
-    const int32_t height);
+dt_mipmap_size_t dt_mipmap_cache_get_matching_size(const dt_mipmap_cache_t *cache, const int32_t width,
+                                                   const int32_t height);
 
 // returns the colorspace to use for created thumbnails, takes config into account
 dt_colorspaces_color_profile_type_t dt_mipmap_cache_get_colorspace();
 
 // copy over thumbnails. used by file operation that copies raw files, to speed up thumbnail generation.
 // only copies over the jpg backend on disk, doesn't directly affect the in-memory cache.
-void dt_mipmap_cache_copy_thumbnails(const dt_mipmap_cache_t *cache, const uint32_t dst_imgid, const uint32_t src_imgid);
+void dt_mipmap_cache_copy_thumbnails(const dt_mipmap_cache_t *cache, const uint32_t dst_imgid,
+                                     const uint32_t src_imgid);
 
 // modelines: These editor modelines have been set for all relevant files by tools/update_modelines.sh
 // vim: shiftwidth=2 expandtab tabstop=2 cindent

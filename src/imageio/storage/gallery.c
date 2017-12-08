@@ -71,9 +71,8 @@ const char *name(const struct dt_imageio_module_storage_t *self)
   return _("website gallery");
 }
 
-void *legacy_params(dt_imageio_module_storage_t *self, const void *const old_params,
-                    const size_t old_params_size, const int old_version, const int new_version,
-                    size_t *new_size)
+void *legacy_params(dt_imageio_module_storage_t *self, const void *const old_params, const size_t old_params_size,
+                    const int old_version, const int new_version, size_t *new_size)
 {
   if(old_version == 1 && new_version == 2)
   {
@@ -236,8 +235,7 @@ int store(dt_imageio_module_storage_t *self, dt_imageio_module_data_t *sdata, co
 
   // if filenamepattern is a directory just let att ${FILE_NAME} as default..
   if(g_file_test(tmp_dir, G_FILE_TEST_EXISTS | G_FILE_TEST_IS_DIR)
-     || ((d->filename + strlen(d->filename) - 1)[0] == '/'
-         || (d->filename + strlen(d->filename) - 1)[0] == '\\'))
+     || ((d->filename + strlen(d->filename) - 1)[0] == '/' || (d->filename + strlen(d->filename) - 1)[0] == '\\'))
     snprintf(d->filename + strlen(d->filename), sizeof(d->filename) - strlen(d->filename), "/$(FILE_NAME)");
 
   // avoid braindead export which is bound to overwrite at random:
@@ -322,8 +320,7 @@ int store(dt_imageio_module_storage_t *self, dt_imageio_module_data_t *sdata, co
            "      <img src=\"%s\" alt=\"img%d\" class=\"img\" onclick=\"openSwipe(%d)\"/></div>\n"
            "      <h1>%s</h1>\n"
            "      %s</div>\n",
-           relthumbfilename,
-           num, num-1, title ? title : "&nbsp;", description ? description : "&nbsp;");
+           relthumbfilename, num, num - 1, title ? title : "&nbsp;", description ? description : "&nbsp;");
 
   // export image to file. need this to be able to access meaningful
   // fdata->width and height below.
@@ -335,13 +332,12 @@ int store(dt_imageio_module_storage_t *self, dt_imageio_module_data_t *sdata, co
     return 1;
   }
 
-  snprintf(pair->item, sizeof(pair->item),
-           "{\n"
-           "src: '%s',\n"
-           "w: %d,\n"
-           "h: %d,\n"
-           "msrc: '%s',\n"
-           "},\n",
+  snprintf(pair->item, sizeof(pair->item), "{\n"
+                                           "src: '%s',\n"
+                                           "w: %d,\n"
+                                           "h: %d,\n"
+                                           "msrc: '%s',\n"
+                                           "},\n",
            relfilename, fdata->width, fdata->height, relthumbfilename);
 
   pair->pos = num;
@@ -362,8 +358,8 @@ int store(dt_imageio_module_storage_t *self, dt_imageio_module_data_t *sdata, co
   if(c <= filename || *c == '/') c = filename + strlen(filename);
   ext = format->extension(fdata);
   sprintf(c, "-thumb.%s", ext);
-  if(dt_imageio_export(imgid, filename, format, fdata, FALSE, TRUE, FALSE, icc_type, icc_filename, icc_intent, self,
-                       sdata, num, total) != 0)
+  if(dt_imageio_export(imgid, filename, format, fdata, FALSE, TRUE, FALSE, icc_type, icc_filename, icc_intent,
+                       self, sdata, num, total) != 0)
   {
     fprintf(stderr, "[imageio_storage_gallery] could not export to file: `%s'!\n", filename);
     dt_control_log(_("could not export to file `%s'!"), filename);
@@ -376,8 +372,8 @@ int store(dt_imageio_module_storage_t *self, dt_imageio_module_data_t *sdata, co
   printf("[export_job] exported to `%s'\n", filename);
   char *trunc = filename + strlen(filename) - 32;
   if(trunc < filename) trunc = filename;
-  dt_control_log(ngettext("%d/%d exported to `%s%s'", "%d/%d exported to `%s%s'", num),
-                 num, total, trunc != filename ? ".." : "", trunc);
+  dt_control_log(ngettext("%d/%d exported to `%s%s'", "%d/%d exported to `%s%s'", num), num, total,
+                 trunc != filename ? ".." : "", trunc);
   return 0;
 }
 
@@ -452,23 +448,22 @@ void finalize_store(dt_imageio_module_storage_t *self, dt_imageio_module_data_t 
 
   FILE *f = g_fopen(filename, "wb");
   if(!f) return;
-  fprintf(f,
-          "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\" "
-          "\"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">\n"
-          "<html xmlns=\"http://www.w3.org/1999/xhtml\">\n"
-          "  <head>\n"
-          "    <meta http-equiv=\"Content-type\" content=\"text/html;charset=UTF-8\" />\n"
-          "    <link rel=\"shortcut icon\" href=\"style/favicon.ico\" />\n"
-          "    <link rel=\"stylesheet\" href=\"style/style.css\" type=\"text/css\" />\n"
-          "    <link rel=\"stylesheet\" href=\"pswp/photoswipe.css\">\n" 
-          "    <link rel=\"stylesheet\" href=\"pswp/default-skin/default-skin.css\">\n"
-          "    <script src=\"pswp/photoswipe.min.js\"></script>\n"
-          "    <script src=\"pswp/photoswipe-ui-default.min.js\"></script>\n"
-          "    <title>%s</title>\n"
-          "  </head>\n"
-          "  <body>\n"
-          "    <div class=\"title\">%s</div>\n"
-          "    <div class=\"page\">\n",
+  fprintf(f, "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\" "
+             "\"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">\n"
+             "<html xmlns=\"http://www.w3.org/1999/xhtml\">\n"
+             "  <head>\n"
+             "    <meta http-equiv=\"Content-type\" content=\"text/html;charset=UTF-8\" />\n"
+             "    <link rel=\"shortcut icon\" href=\"style/favicon.ico\" />\n"
+             "    <link rel=\"stylesheet\" href=\"style/style.css\" type=\"text/css\" />\n"
+             "    <link rel=\"stylesheet\" href=\"pswp/photoswipe.css\">\n"
+             "    <link rel=\"stylesheet\" href=\"pswp/default-skin/default-skin.css\">\n"
+             "    <script src=\"pswp/photoswipe.min.js\"></script>\n"
+             "    <script src=\"pswp/photoswipe-ui-default.min.js\"></script>\n"
+             "    <title>%s</title>\n"
+             "  </head>\n"
+             "  <body>\n"
+             "    <div class=\"title\">%s</div>\n"
+             "    <div class=\"page\">\n",
           title, title);
 
   size_t count = 0;
@@ -481,56 +476,58 @@ void finalize_store(dt_imageio_module_storage_t *self, dt_imageio_module_data_t 
     count++;
   }
 
-  fprintf(f, "        <p style=\"clear:both;\"></p>\n"
-             "    </div>\n"
-             "    <div class=\"footer\">\n"
-             "      <script language=\"JavaScript\" type=\"text/javascript\">\n"
-             "      document.write(\"download all: <em>curl -O#  \" + document.documentURI.replace( /\\\\/g, '/' ).replace( /\\/[^\\/]*$/, '' ) + \"/img_[0000-%04zu].jpg</em>\")\n"
-             "      </script><br />\n"
-             "      created with %s\n"
-             "    </div>\n"
-             "    <div class=\"pswp\" tabindex=\"-1\" role=\"dialog\" aria-hidden=\"true\">\n"
-             "        <div class=\"pswp__bg\"></div>\n"
-             "        <div class=\"pswp__scroll-wrap\">\n"
-             "            <div class=\"pswp__container\">\n"
-             "                <div class=\"pswp__item\"></div>\n"
-             "                <div class=\"pswp__item\"></div>\n"
-             "                <div class=\"pswp__item\"></div>\n"
-             "            </div>\n"
-             "            <div class=\"pswp__ui pswp__ui--hidden\">\n"
-             "                <div class=\"pswp__top-bar\">\n"
-             "                    <div class=\"pswp__counter\"></div>\n"
-             "                    <button class=\"pswp__button pswp__button--close\" title=\"Close (Esc)\"></button>\n"
-             "                    <button class=\"pswp__button pswp__button--share\" title=\"Share\"></button>\n"
-             "                    <button class=\"pswp__button pswp__button--fs\" title=\"Toggle fullscreen\"></button>\n"
-             "                    <button class=\"pswp__button pswp__button--zoom\" title=\"Zoom in/out\"></button>\n"
-             "                    <div class=\"pswp__preloader\">\n"
-             "                        <div class=\"pswp__preloader__icn\">\n"
-             "                          <div class=\"pswp__preloader__cut\">\n"
-             "                            <div class=\"pswp__preloader__donut\"></div>\n"
-             "                          </div>\n"
-             "                        </div>\n"
-             "                   </div>\n"
-             "                </div>\n"
-             "                <div class=\"pswp__share-modal pswp__share-modal--hidden pswp__single-tap\">\n"
-             "                    <div class=\"pswp__share-tooltip\"></div>\n"
-             "                </div>\n"
-             "                <button class=\"pswp__button pswp__button--arrow--left\" title=\"Previous (arrow left)\">\n"
-             "                </button>\n"
-             "                <button class=\"pswp__button pswp__button--arrow--right\" title=\"Next (arrow right)\">\n"
-             "                </button>\n"
-             "                <div class=\"pswp__caption\">\n"
-             "                    <div class=\"pswp__caption__center\"></div>\n"
-             "                </div>\n"
-             "            </div>\n"
-             "        </div>\n"
-             "    </div>\n"
-             "  </body>\n"
-             "<script>\n"
-             "var pswpElement = document.querySelectorAll('.pswp')[0];\n"
-             "var items = [\n",
-          count,
-          darktable_package_string);
+  fprintf(
+      f,
+      "        <p style=\"clear:both;\"></p>\n"
+      "    </div>\n"
+      "    <div class=\"footer\">\n"
+      "      <script language=\"JavaScript\" type=\"text/javascript\">\n"
+      "      document.write(\"download all: <em>curl -O#  \" + document.documentURI.replace( /\\\\/g, '/' "
+      ").replace( /\\/[^\\/]*$/, '' ) + \"/img_[0000-%04zu].jpg</em>\")\n"
+      "      </script><br />\n"
+      "      created with %s\n"
+      "    </div>\n"
+      "    <div class=\"pswp\" tabindex=\"-1\" role=\"dialog\" aria-hidden=\"true\">\n"
+      "        <div class=\"pswp__bg\"></div>\n"
+      "        <div class=\"pswp__scroll-wrap\">\n"
+      "            <div class=\"pswp__container\">\n"
+      "                <div class=\"pswp__item\"></div>\n"
+      "                <div class=\"pswp__item\"></div>\n"
+      "                <div class=\"pswp__item\"></div>\n"
+      "            </div>\n"
+      "            <div class=\"pswp__ui pswp__ui--hidden\">\n"
+      "                <div class=\"pswp__top-bar\">\n"
+      "                    <div class=\"pswp__counter\"></div>\n"
+      "                    <button class=\"pswp__button pswp__button--close\" title=\"Close (Esc)\"></button>\n"
+      "                    <button class=\"pswp__button pswp__button--share\" title=\"Share\"></button>\n"
+      "                    <button class=\"pswp__button pswp__button--fs\" title=\"Toggle fullscreen\"></button>\n"
+      "                    <button class=\"pswp__button pswp__button--zoom\" title=\"Zoom in/out\"></button>\n"
+      "                    <div class=\"pswp__preloader\">\n"
+      "                        <div class=\"pswp__preloader__icn\">\n"
+      "                          <div class=\"pswp__preloader__cut\">\n"
+      "                            <div class=\"pswp__preloader__donut\"></div>\n"
+      "                          </div>\n"
+      "                        </div>\n"
+      "                   </div>\n"
+      "                </div>\n"
+      "                <div class=\"pswp__share-modal pswp__share-modal--hidden pswp__single-tap\">\n"
+      "                    <div class=\"pswp__share-tooltip\"></div>\n"
+      "                </div>\n"
+      "                <button class=\"pswp__button pswp__button--arrow--left\" title=\"Previous (arrow left)\">\n"
+      "                </button>\n"
+      "                <button class=\"pswp__button pswp__button--arrow--right\" title=\"Next (arrow right)\">\n"
+      "                </button>\n"
+      "                <div class=\"pswp__caption\">\n"
+      "                    <div class=\"pswp__caption__center\"></div>\n"
+      "                </div>\n"
+      "            </div>\n"
+      "        </div>\n"
+      "    </div>\n"
+      "  </body>\n"
+      "<script>\n"
+      "var pswpElement = document.querySelectorAll('.pswp')[0];\n"
+      "var items = [\n",
+      count, darktable_package_string);
   while(d->l)
   {
     pair_t *p = (pair_t *)d->l->data;
@@ -562,8 +559,7 @@ size_t params_size(dt_imageio_module_storage_t *self)
 void init(dt_imageio_module_storage_t *self)
 {
 #ifdef USE_LUA
-  dt_lua_register_module_member(darktable.lua_state.state, self, dt_imageio_gallery_t, filename,
-                                char_path_length);
+  dt_lua_register_module_member(darktable.lua_state.state, self, dt_imageio_gallery_t, filename, char_path_length);
   dt_lua_register_module_member(darktable.lua_state.state, self, dt_imageio_gallery_t, title, char_1024);
 #endif
 }
@@ -609,12 +605,9 @@ int set_params(dt_imageio_module_storage_t *self, const void *params, const int 
 int supported(dt_imageio_module_storage_t *storage, dt_imageio_module_format_t *format)
 {
   const char *mime = format->mime(NULL);
-  if(strcmp(mime, "image/jpeg") == 0)
-    return 1;
-  if(strcmp(mime, "image/png") == 0)
-    return 1;
-  if(strcmp(mime, "image/webp") == 0)
-    return 1;
+  if(strcmp(mime, "image/jpeg") == 0) return 1;
+  if(strcmp(mime, "image/png") == 0) return 1;
+  if(strcmp(mime, "image/webp") == 0) return 1;
 
   return 0;
 }

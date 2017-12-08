@@ -69,20 +69,20 @@ enum border_mode
 #endif
 
 #if DEBUG_PRINT_INFO
-#define debug_info(...)                                                                                      \
-  do                                                                                                         \
-  {                                                                                                          \
-    fprintf(stderr, __VA_ARGS__);                                                                            \
+#define debug_info(...)                                                                                           \
+  do                                                                                                              \
+  {                                                                                                               \
+    fprintf(stderr, __VA_ARGS__);                                                                                 \
   } while(0)
 #else
 #define debug_info(...)
 #endif
 
 #if DEBUG_PRINT_VERBOSE
-#define debug_extra(...)                                                                                     \
-  do                                                                                                         \
-  {                                                                                                          \
-    fprintf(stderr, __VA_ARGS__);                                                                            \
+#define debug_extra(...)                                                                                          \
+  do                                                                                                              \
+  {                                                                                                               \
+    fprintf(stderr, __VA_ARGS__);                                                                                 \
   } while(0)
 #else
 #define debug_extra(...)
@@ -252,8 +252,7 @@ static inline float sinf_fast(float t)
  */
 static inline __m128 sinf_fast_sse(__m128 t)
 {
-  static const __m128 a
-      = { 4.f / (M_PI * M_PI), 4.f / (M_PI * M_PI), 4.f / (M_PI * M_PI), 4.f / (M_PI * M_PI) };
+  static const __m128 a = { 4.f / (M_PI * M_PI), 4.f / (M_PI * M_PI), 4.f / (M_PI * M_PI), 4.f / (M_PI * M_PI) };
   static const __m128 p = { 0.225f, 0.225f, 0.225f, 0.225f };
   static const __m128 pi = { M_PI, M_PI, M_PI, M_PI };
 
@@ -452,8 +451,7 @@ static inline __m128 lanczos_sse2(__m128 width, __m128 t)
   static const uint32_t fone[] __attribute__((aligned(SSE_ALIGNMENT)))
   = { 0x3f800000, 0x3f800000, 0x3f800000, 0x3f800000 };
   static const uint32_t ione[] __attribute__((aligned(SSE_ALIGNMENT))) = { 1, 1, 1, 1 };
-  static const __m128 eps
-      = { DT_LANCZOS_EPSILON, DT_LANCZOS_EPSILON, DT_LANCZOS_EPSILON, DT_LANCZOS_EPSILON };
+  static const __m128 eps = { DT_LANCZOS_EPSILON, DT_LANCZOS_EPSILON, DT_LANCZOS_EPSILON, DT_LANCZOS_EPSILON };
   static const __m128 pi = { M_PI, M_PI, M_PI, M_PI };
   static const __m128 pi2 = { M_PI * M_PI, M_PI * M_PI, M_PI * M_PI, M_PI * M_PI };
 
@@ -531,8 +529,8 @@ static const struct dt_interpolation dt_interpolator[] = {
  * @param norm [out] Kernel norm
  * @param first [out] first input sample index used
  * @param t [in] Interpolated coordinate */
-static inline void compute_upsampling_kernel_plain(const struct dt_interpolation *itor, float *kernel,
-                                                   float *norm, int *first, float t)
+static inline void compute_upsampling_kernel_plain(const struct dt_interpolation *itor, float *kernel, float *norm,
+                                                   int *first, float t)
 {
   int f = (int)t - itor->width + 1;
   if(first)
@@ -573,8 +571,8 @@ static inline void compute_upsampling_kernel_plain(const struct dt_interpolation
  *
  * @return kernel norm
  */
-static inline void compute_upsampling_kernel_sse(const struct dt_interpolation *itor, float *kernel,
-                                                 float *norm, int *first, float t)
+static inline void compute_upsampling_kernel_sse(const struct dt_interpolation *itor, float *kernel, float *norm,
+                                                 int *first, float t)
 {
   int f = (int)t - itor->width + 1;
   if(first)
@@ -648,9 +646,8 @@ static inline void compute_upsampling_kernel(const struct dt_interpolation *itor
  * @param first [out] index of the first sample for which the kernel is to be applied
  * @param outoinratio [in] "out samples" over "in samples" ratio
  * @param xout [in] Output coordinate */
-static inline void compute_downsampling_kernel_plain(const struct dt_interpolation *itor, int *taps,
-                                                     int *first, float *kernel, float *norm,
-                                                     float outoinratio, int xout)
+static inline void compute_downsampling_kernel_plain(const struct dt_interpolation *itor, int *taps, int *first,
+                                                     float *kernel, float *norm, float outoinratio, int xout)
 {
   // Keep this at hand
   float w = (float)itor->width;
@@ -777,8 +774,8 @@ static inline void compute_downsampling_kernel(const struct dt_interpolation *it
 #define MAX_KERNEL_REQ ((2 * (MAX_HALF_FILTER_WIDTH) + 3) & (~3))
 
 float dt_interpolation_compute_sample(const struct dt_interpolation *itor, const float *in, const float x,
-                                      const float y, const int width, const int height,
-                                      const int samplestride, const int linestride)
+                                      const float y, const int width, const int height, const int samplestride,
+                                      const int linestride)
 {
   assert(itor->width < (MAX_HALF_FILTER_WIDTH + 1));
 
@@ -964,9 +961,9 @@ static void dt_interpolation_compute_pixel4c_plain(const struct dt_interpolation
 }
 
 #if defined(__SSE2__)
-static void dt_interpolation_compute_pixel4c_sse(const struct dt_interpolation *itor, const float *in,
-                                                 float *out, const float x, const float y, const int width,
-                                                 const int height, const int linestride)
+static void dt_interpolation_compute_pixel4c_sse(const struct dt_interpolation *itor, const float *in, float *out,
+                                                 const float x, const float y, const int width, const int height,
+                                                 const int linestride)
 {
   assert(itor->width < (MAX_HALF_FILTER_WIDTH + 1));
 
@@ -1170,8 +1167,8 @@ const struct dt_interpolation *dt_interpolation_new(enum dt_interpolation_type t
  * @return 0 for success, !0 for failure
  */
 static int prepare_resampling_plan(const struct dt_interpolation *itor, int in, const int in_x0, int out,
-                                   const int out_x0, float scale, int **plength, float **pkernel,
-                                   int **pindex, int **pmeta)
+                                   const int out_x0, float scale, int **plength, float **pkernel, int **pindex,
+                                   int **pmeta)
 {
   // Safe return values
   *plength = NULL;
@@ -1228,7 +1225,7 @@ static int prepare_resampling_plan(const struct dt_interpolation *itor, int in, 
   float *scratchpad = scratchreq ? (float *)blob : NULL;
   blob = (char *)blob + scratchreq;
   int *meta = metareq ? (int *)blob : NULL;
-//   blob = (char *)blob + metareq;
+  //   blob = (char *)blob + metareq;
 
   /* setting this as a const should help the compilers trim all unnecessary
    * codepaths */
@@ -1366,8 +1363,8 @@ static void dt_interpolation_resample_plain(const struct dt_interpolation *itor,
   int r;
 
   debug_info("resampling %p (%dx%d@%dx%d scale %f) -> %p (%dx%d@%dx%d scale %f)\n", in, roi_in->width,
-             roi_in->height, roi_in->x, roi_in->y, roi_in->scale, out, roi_out->width, roi_out->height,
-             roi_out->x, roi_out->y, roi_out->scale);
+             roi_in->height, roi_in->x, roi_in->y, roi_in->scale, out, roi_out->width, roi_out->height, roi_out->x,
+             roi_out->y, roi_out->scale);
 
   // Fast code path for 1:1 copy, only cropping area can change
   if(roi_out->scale == 1.f)
@@ -1400,8 +1397,8 @@ static void dt_interpolation_resample_plain(const struct dt_interpolation *itor,
 #endif
 
   // Prepare resampling plans once and for all
-  r = prepare_resampling_plan(itor, roi_in->width, roi_in->x, roi_out->width, roi_out->x, roi_out->scale,
-                              &hlength, &hkernel, &hindex, NULL);
+  r = prepare_resampling_plan(itor, roi_in->width, roi_in->x, roi_out->width, roi_out->x, roi_out->scale, &hlength,
+                              &hkernel, &hindex, NULL);
   if(r)
   {
     goto exit;
@@ -1524,8 +1521,8 @@ static void dt_interpolation_resample_sse(const struct dt_interpolation *itor, f
   int r;
 
   debug_info("resampling %p (%dx%d@%dx%d scale %f) -> %p (%dx%d@%dx%d scale %f)\n", in, roi_in->width,
-             roi_in->height, roi_in->x, roi_in->y, roi_in->scale, out, roi_out->width, roi_out->height,
-             roi_out->x, roi_out->y, roi_out->scale);
+             roi_in->height, roi_in->x, roi_in->y, roi_in->scale, out, roi_out->width, roi_out->height, roi_out->x,
+             roi_out->y, roi_out->scale);
 
   // Fast code path for 1:1 copy, only cropping area can change
   if(roi_out->scale == 1.f)
@@ -1558,8 +1555,8 @@ static void dt_interpolation_resample_sse(const struct dt_interpolation *itor, f
 #endif
 
   // Prepare resampling plans once and for all
-  r = prepare_resampling_plan(itor, roi_in->width, roi_in->x, roi_out->width, roi_out->x, roi_out->scale,
-                              &hlength, &hkernel, &hindex, NULL);
+  r = prepare_resampling_plan(itor, roi_in->width, roi_in->x, roi_out->width, roi_out->x, roi_out->scale, &hlength,
+                              &hkernel, &hindex, NULL);
   if(r)
   {
     goto exit;
@@ -1650,8 +1647,8 @@ static void dt_interpolation_resample_sse(const struct dt_interpolation *itor, f
     }
 
     // Progress in vertical context
-//     viidx += vl;
-//     vkidx += vl;
+    //     viidx += vl;
+    //     vkidx += vl;
   }
 
   _mm_sfence();
@@ -1673,9 +1670,8 @@ exit:
 /** Applies resampling (re-scaling) on *full* input and output buffers.
  *  roi_in and roi_out define the part of the buffers that is affected.
  */
-void dt_interpolation_resample(const struct dt_interpolation *itor, float *out,
-                               const dt_iop_roi_t *const roi_out, const int32_t out_stride,
-                               const float *const in, const dt_iop_roi_t *const roi_in,
+void dt_interpolation_resample(const struct dt_interpolation *itor, float *out, const dt_iop_roi_t *const roi_out,
+                               const int32_t out_stride, const float *const in, const dt_iop_roi_t *const roi_in,
                                const int32_t in_stride)
 {
   if(darktable.codepath.OPENMP_SIMD)
@@ -1709,8 +1705,7 @@ void dt_interpolation_resample_roi(const struct dt_interpolation *itor, float *o
 #ifdef HAVE_OPENCL
 dt_interpolation_cl_global_t *dt_interpolation_init_cl_global()
 {
-  dt_interpolation_cl_global_t *g
-      = (dt_interpolation_cl_global_t *)malloc(sizeof(dt_interpolation_cl_global_t));
+  dt_interpolation_cl_global_t *g = (dt_interpolation_cl_global_t *)malloc(sizeof(dt_interpolation_cl_global_t));
 
   const int program = 2; // basic.cl, from programs.conf
   g->kernel_interpolation_resample = dt_opencl_create_kernel(program, "interpolation_resample");
@@ -1766,8 +1761,8 @@ int dt_interpolation_resample_cl(const struct dt_interpolation *itor, int devid,
   cl_mem dev_vmeta = NULL;
 
   debug_info("resampling_cl %p (%dx%d@%dx%d scale %f) -> %p (%dx%d@%dx%d scale %f)\n", (void *)dev_in,
-             roi_in->width, roi_in->height, roi_in->x, roi_in->y, roi_in->scale, (void *)dev_out,
-             roi_out->width, roi_out->height, roi_out->x, roi_out->y, roi_out->scale);
+             roi_in->width, roi_in->height, roi_in->x, roi_in->y, roi_in->scale, (void *)dev_out, roi_out->width,
+             roi_out->height, roi_out->x, roi_out->y, roi_out->scale);
 
   // Fast code path for 1:1 copy, only cropping area can change
   if(roi_out->scale == 1.f)
@@ -1797,8 +1792,8 @@ int dt_interpolation_resample_cl(const struct dt_interpolation *itor, int devid,
 #endif
 
   // Prepare resampling plans once and for all
-  r = prepare_resampling_plan(itor, roi_in->width, roi_in->x, roi_out->width, roi_out->x, roi_out->scale,
-                              &hlength, &hkernel, &hindex, &hmeta);
+  r = prepare_resampling_plan(itor, roi_in->width, roi_in->x, roi_out->width, roi_out->x, roi_out->scale, &hlength,
+                              &hkernel, &hindex, &hmeta);
   if(r)
   {
     goto error;
@@ -1837,9 +1832,14 @@ int dt_interpolation_resample_cl(const struct dt_interpolation *itor, int devid,
   int vblocksize;
 
   dt_opencl_local_buffer_t locopt
-    = (dt_opencl_local_buffer_t){ .xoffset = 0, .xfactor = 1, .yoffset = 0, .yfactor = 1,
-                                  .cellsize = 4 * sizeof(float), .overhead = hmaxtaps * sizeof(float) + hmaxtaps * sizeof(int),
-                                  .sizex = 1, .sizey = (1 << 16) * taps };
+      = (dt_opencl_local_buffer_t){.xoffset = 0,
+                                   .xfactor = 1,
+                                   .yoffset = 0,
+                                   .yfactor = 1,
+                                   .cellsize = 4 * sizeof(float),
+                                   .overhead = hmaxtaps * sizeof(float) + hmaxtaps * sizeof(int),
+                                   .sizex = 1,
+                                   .sizey = (1 << 16) * taps };
 
   if(dt_opencl_local_buffer_opt(devid, kernel, &locopt))
     vblocksize = locopt.sizey;
@@ -1851,9 +1851,8 @@ int dt_interpolation_resample_cl(const struct dt_interpolation *itor, int devid,
     // our strategy does not work: the vertical number of taps exceeds the vertical workgroupsize;
     // there is no point in continuing on the GPU - that would be way too slow; let's delegate the stuff to
     // the CPU then.
-    dt_print(
-        DT_DEBUG_OPENCL,
-        "[opencl_resampling] resampling plan cannot efficiently be run on the GPU - fall back to CPU.\n");
+    dt_print(DT_DEBUG_OPENCL,
+             "[opencl_resampling] resampling plan cannot efficiently be run on the GPU - fall back to CPU.\n");
     goto error;
   }
 
@@ -1868,8 +1867,7 @@ int dt_interpolation_resample_cl(const struct dt_interpolation *itor, int devid,
   dev_hlength = dt_opencl_copy_host_to_device_constant(devid, sizeof(int) * width, hlength);
   if(dev_hlength == NULL) goto error;
 
-  dev_hkernel
-      = dt_opencl_copy_host_to_device_constant(devid, sizeof(float) * width * (hmaxtaps + 1), hkernel);
+  dev_hkernel = dt_opencl_copy_host_to_device_constant(devid, sizeof(float) * width * (hmaxtaps + 1), hkernel);
   if(dev_hkernel == NULL) goto error;
 
   dev_hmeta = dt_opencl_copy_host_to_device_constant(devid, sizeof(int) * width * 3, hmeta);
@@ -1881,8 +1879,7 @@ int dt_interpolation_resample_cl(const struct dt_interpolation *itor, int devid,
   dev_vlength = dt_opencl_copy_host_to_device_constant(devid, sizeof(int) * height, vlength);
   if(dev_vlength == NULL) goto error;
 
-  dev_vkernel
-      = dt_opencl_copy_host_to_device_constant(devid, sizeof(float) * height * (vmaxtaps + 1), vkernel);
+  dev_vkernel = dt_opencl_copy_host_to_device_constant(devid, sizeof(float) * height * (vmaxtaps + 1), vkernel);
   if(dev_vkernel == NULL) goto error;
 
   dev_vmeta = dt_opencl_copy_host_to_device_constant(devid, sizeof(int) * height * 3, vmeta);

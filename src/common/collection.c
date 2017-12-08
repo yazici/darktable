@@ -33,7 +33,7 @@
 
 
 #ifdef _WIN32
-//MSVCRT does not have strptime implemented
+// MSVCRT does not have strptime implemented
 #include "win/strptime.h"
 #endif
 
@@ -134,9 +134,8 @@ int dt_collection_update(const dt_collection_t *collection)
       need_operator = 1;
     }
     // DON'T SELECT IMAGES MARKED TO BE DELETED.
-    wq = dt_util_dstrcat(wq, " %s (flags & %d) != %d",
-                         (need_operator) ? "AND" : ((need_operator = 1) ? "" : ""), DT_IMAGE_REMOVE,
-                         DT_IMAGE_REMOVE);
+    wq = dt_util_dstrcat(wq, " %s (flags & %d) != %d", (need_operator) ? "AND" : ((need_operator = 1) ? "" : ""),
+                         DT_IMAGE_REMOVE, DT_IMAGE_REMOVE);
 
     if(collection->params.filter_flags & COLLECTION_FILTER_CUSTOM_COMPARE)
       wq = dt_util_dstrcat(wq, " %s (flags & 7) %s %d AND (flags & 7) != 6",
@@ -146,8 +145,8 @@ int dt_collection_update(const dt_collection_t *collection)
       wq = dt_util_dstrcat(wq, " %s (flags & 7) >= %d AND (flags & 7) != 6",
                            (need_operator) ? "and" : ((need_operator = 1) ? "" : ""), rating - 1);
     else if(collection->params.filter_flags & COLLECTION_FILTER_EQUAL_RATING)
-      wq = dt_util_dstrcat(wq, " %s (flags & 7) == %d",
-                           (need_operator) ? "AND" : ((need_operator = 1) ? "" : ""), rating - 1);
+      wq = dt_util_dstrcat(wq, " %s (flags & 7) == %d", (need_operator) ? "AND" : ((need_operator = 1) ? "" : ""),
+                           rating - 1);
 
     if(collection->params.filter_flags & COLLECTION_FILTER_ALTERED)
       wq = dt_util_dstrcat(wq, " %s id IN (SELECT imgid FROM main.history WHERE imgid=id)",
@@ -195,9 +194,8 @@ int dt_collection_update(const dt_collection_t *collection)
   }
 
   /* store the new query */
-  query
-      = dt_util_dstrcat(query, "%s %s%s", selq, sq ? sq : "",
-                        (collection->params.query_flags & COLLECTION_QUERY_USE_LIMIT) ? " " LIMIT_QUERY : "");
+  query = dt_util_dstrcat(query, "%s %s%s", selq, sq ? sq : "",
+                          (collection->params.query_flags & COLLECTION_QUERY_USE_LIMIT) ? " " LIMIT_QUERY : "");
   result = _dt_collection_store(collection, query);
 
   /* free memory used */
@@ -436,7 +434,8 @@ static uint32_t _dt_collection_compute_count(const dt_collection_t *collection)
 
   gchar *fq = g_strstr_len(query, strlen(query), "FROM");
   if((collection->params.query_flags & COLLECTION_QUERY_USE_ONLY_WHERE_EXT))
-    count_query = dt_util_dstrcat(NULL, "SELECT COUNT(DISTINCT main.images.id) FROM main.images %s", collection->where_ext);
+    count_query = dt_util_dstrcat(NULL, "SELECT COUNT(DISTINCT main.images.id) FROM main.images %s",
+                                  collection->where_ext);
   else
     count_query = dt_util_dstrcat(count_query, "SELECT COUNT(DISTINCT id) %s", fq);
 
@@ -463,8 +462,8 @@ uint32_t dt_collection_get_selected_count(const dt_collection_t *collection)
 {
   sqlite3_stmt *stmt = NULL;
   uint32_t count = 0;
-  DT_DEBUG_SQLITE3_PREPARE_V2(dt_database_get(darktable.db),
-                              "SELECT COUNT(*) FROM main.selected_images", -1, &stmt, NULL);
+  DT_DEBUG_SQLITE3_PREPARE_V2(dt_database_get(darktable.db), "SELECT COUNT(*) FROM main.selected_images", -1,
+                              &stmt, NULL);
   if(sqlite3_step(stmt) == SQLITE_ROW) count = sqlite3_column_int(stmt, 0);
   sqlite3_finalize(stmt);
   return count;
@@ -477,8 +476,7 @@ GList *dt_collection_get_all(const dt_collection_t *collection, int limit)
   gchar *sq = NULL;
 
   /* get collection order */
-  if((collection->params.query_flags & COLLECTION_QUERY_USE_SORT))
-    sq = dt_collection_get_sort_query(collection);
+  if((collection->params.query_flags & COLLECTION_QUERY_USE_SORT)) sq = dt_collection_get_sort_query(collection);
 
 
   sqlite3_stmt *stmt = NULL;
@@ -517,8 +515,7 @@ GList *dt_collection_get_all(const dt_collection_t *collection, int limit)
 
 int dt_collection_get_nth(const dt_collection_t *collection, int nth)
 {
-  if(nth < 0 || nth >= dt_collection_get_count(collection))
-    return -1;
+  if(nth < 0 || nth >= dt_collection_get_count(collection)) return -1;
   const gchar *query = dt_collection_get_query(collection);
   sqlite3_stmt *stmt = NULL;
   DT_DEBUG_SQLITE3_PREPARE_V2(dt_database_get(darktable.db), query, -1, &stmt, NULL);
@@ -528,13 +525,12 @@ int dt_collection_get_nth(const dt_collection_t *collection, int nth)
   int result = -1;
   if(sqlite3_step(stmt) == SQLITE_ROW)
   {
-    result  = sqlite3_column_int(stmt, 0);
+    result = sqlite3_column_int(stmt, 0);
   }
 
   sqlite3_finalize(stmt);
 
   return result;
-
 }
 
 GList *dt_collection_get_selected(const dt_collection_t *collection, int limit)
@@ -544,8 +540,7 @@ GList *dt_collection_get_selected(const dt_collection_t *collection, int limit)
   gchar *sq = NULL;
 
   /* get collection order */
-  if((collection->params.query_flags & COLLECTION_QUERY_USE_SORT))
-    sq = dt_collection_get_sort_query(collection);
+  if((collection->params.query_flags & COLLECTION_QUERY_USE_SORT)) sq = dt_collection_get_sort_query(collection);
 
 
   sqlite3_stmt *stmt = NULL;
@@ -762,15 +757,12 @@ void dt_collection_get_makermodel(const gchar *filter, GList **sanitized, GList 
   gchar *needle = NULL;
 
   GHashTable *names = NULL;
-  if (sanitized)
-    names = g_hash_table_new(g_str_hash, g_str_equal);
+  if(sanitized) names = g_hash_table_new(g_str_hash, g_str_equal);
 
-  if (filter && filter[0] != '\0')
-    needle = g_utf8_strdown(filter, -1);
+  if(filter && filter[0] != '\0') needle = g_utf8_strdown(filter, -1);
 
   DT_DEBUG_SQLITE3_PREPARE_V2(dt_database_get(darktable.db),
-                              "SELECT maker, model FROM main.images GROUP BY maker, model",
-                              -1, &stmt, NULL);
+                              "SELECT maker, model FROM main.images GROUP BY maker, model", -1, &stmt, NULL);
   while(sqlite3_step(stmt) == SQLITE_ROW)
   {
     char *exif_maker = (char *)sqlite3_column_text(stmt, 0);
@@ -780,22 +772,20 @@ void dt_collection_get_makermodel(const gchar *filter, GList **sanitized, GList 
     char model[64];
     char alias[64];
     maker[0] = model[0] = alias[0] = '\0';
-    dt_rawspeed_lookup_makermodel(exif_maker, exif_model,
-                                  maker, sizeof(maker),
-                                  model, sizeof(model),
-                                  alias, sizeof(alias));
+    dt_rawspeed_lookup_makermodel(exif_maker, exif_model, maker, sizeof(maker), model, sizeof(model), alias,
+                                  sizeof(alias));
 
     // Create the makermodel by concatenation
     char makermodel[128];
     g_strlcpy(makermodel, maker, sizeof(makermodel));
     int maker_len = strlen(maker);
     makermodel[maker_len] = ' ';
-    g_strlcpy(makermodel+maker_len+1, model, sizeof(makermodel)-maker_len-1);
+    g_strlcpy(makermodel + maker_len + 1, model, sizeof(makermodel) - maker_len - 1);
 
     gchar *haystack = g_utf8_strdown(makermodel, -1);
-    if (!needle || g_strrstr(haystack, needle) != NULL)
+    if(!needle || g_strrstr(haystack, needle) != NULL)
     {
-      if (exif)
+      if(exif)
       {
         // Append a two element list with maker and model
         GList *inner_list = NULL;
@@ -804,7 +794,7 @@ void dt_collection_get_makermodel(const gchar *filter, GList **sanitized, GList 
         *exif = g_list_append(*exif, inner_list);
       }
 
-      if (sanitized)
+      if(sanitized)
       {
         gchar *key = g_strdup(makermodel);
         g_hash_table_add(names, key);
@@ -817,7 +807,7 @@ void dt_collection_get_makermodel(const gchar *filter, GList **sanitized, GList 
 
   if(sanitized)
   {
-    *sanitized = g_list_sort(g_hash_table_get_keys(names), (GCompareFunc) strcmp);
+    *sanitized = g_list_sort(g_hash_table_get_keys(names), (GCompareFunc)strcmp);
     g_hash_table_destroy(names);
   }
 }
@@ -878,7 +868,7 @@ static gchar *get_query_string(const dt_collection_properties_t property, const 
       break;
 
     case DT_COLLECTION_PROP_CAMERA: // camera
-      if (!text || text[0] == '\0') // Optimize away the empty case
+      if(!text || text[0] == '\0')  // Optimize away the empty case
         query = dt_util_dstrcat(query, "(1=1)");
       else
       {
@@ -887,7 +877,7 @@ static gchar *get_query_string(const dt_collection_properties_t property, const 
         GList *lists = NULL;
         dt_collection_get_makermodel(text, NULL, &lists);
         GList *element = lists;
-        while (element)
+        while(element)
         {
           GList *tuple = element->data;
           char *mk = sqlite3_mprintf("%q", tuple->data);
@@ -914,23 +904,28 @@ static gchar *get_query_string(const dt_collection_properties_t property, const 
     // TODO: Autogenerate this code?
     case DT_COLLECTION_PROP_TITLE: // title
       query = dt_util_dstrcat(query, "(id IN (SELECT id FROM main.meta_data WHERE key = %d AND value "
-                                     "LIKE '%%%s%%'))", DT_METADATA_XMP_DC_TITLE, escaped_text);
+                                     "LIKE '%%%s%%'))",
+                              DT_METADATA_XMP_DC_TITLE, escaped_text);
       break;
     case DT_COLLECTION_PROP_DESCRIPTION: // description
       query = dt_util_dstrcat(query, "(id IN (SELECT id FROM main.meta_data WHERE key = %d AND value "
-                                     "LIKE '%%%s%%'))", DT_METADATA_XMP_DC_DESCRIPTION, escaped_text);
+                                     "LIKE '%%%s%%'))",
+                              DT_METADATA_XMP_DC_DESCRIPTION, escaped_text);
       break;
     case DT_COLLECTION_PROP_CREATOR: // creator
       query = dt_util_dstrcat(query, "(id IN (SELECT id FROM main.meta_data WHERE key = %d AND value "
-                                     "LIKE '%%%s%%'))", DT_METADATA_XMP_DC_CREATOR, escaped_text);
+                                     "LIKE '%%%s%%'))",
+                              DT_METADATA_XMP_DC_CREATOR, escaped_text);
       break;
     case DT_COLLECTION_PROP_PUBLISHER: // publisher
       query = dt_util_dstrcat(query, "(id IN (SELECT id FROM main.meta_data WHERE key = %d AND value "
-                                     "LIKE '%%%s%%'))", DT_METADATA_XMP_DC_PUBLISHER, escaped_text);
+                                     "LIKE '%%%s%%'))",
+                              DT_METADATA_XMP_DC_PUBLISHER, escaped_text);
       break;
     case DT_COLLECTION_PROP_RIGHTS: // rights
       query = dt_util_dstrcat(query, "(id IN (SELECT id FROM main.meta_data WHERE key = %d AND value "
-                                     "LIKE '%%%s%%'))", DT_METADATA_XMP_DC_RIGHTS, escaped_text);
+                                     "LIKE '%%%s%%'))",
+                              DT_METADATA_XMP_DC_RIGHTS, escaped_text);
       break;
     case DT_COLLECTION_PROP_LENS: // lens
       query = dt_util_dstrcat(query, "(lens LIKE '%%%s%%')", escaped_text);
@@ -966,8 +961,7 @@ static gchar *get_query_string(const dt_collection_properties_t property, const 
 
       if(operator&& strcmp(operator, "[]") == 0)
       {
-        if(number1 && number2)
-          query = dt_util_dstrcat(query, "((iso >= %s) AND (iso <= %s))", number1, number2);
+        if(number1 && number2) query = dt_util_dstrcat(query, "((iso >= %s) AND (iso <= %s))", number1, number2);
       }
       else if(operator&& number1)
         query = dt_util_dstrcat(query, "(iso %s %s)", operator, number1);
@@ -1242,12 +1236,9 @@ void dt_collection_hint_message(const dt_collection_t *collection)
   }
   else
   {
-    message = g_strdup_printf(
-      ngettext(
-        "%d image of %d in current collection is selected", 
-        "%d images of %d in current collection are selected", 
-        cs),
-      cs, c);
+    message = g_strdup_printf(ngettext("%d image of %d in current collection is selected",
+                                       "%d images of %d in current collection are selected", cs),
+                              cs, c);
   }
 
   g_idle_add(dt_collection_hint_message_internal, message);

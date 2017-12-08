@@ -191,8 +191,8 @@ void connect_key_accels(dt_iop_module_t *self)
   dt_accel_connect_slider_iop(self, "dithering", GTK_WIDGET(g->dithering));
 }
 
-int legacy_params(dt_iop_module_t *self, const void *const old_params, const int old_version,
-                  void *new_params, const int new_version)
+int legacy_params(dt_iop_module_t *self, const void *const old_params, const int old_version, void *new_params,
+                  const int new_version)
 {
   if(old_version == 1 && new_version == 4)
   {
@@ -364,8 +364,8 @@ static void draw_overlay(cairo_t *cr, float x, float y, float fx, float fy, int 
 
 // FIXME: For portrait images the overlay is a bit off. The coordinates in mouse_moved seem to be ok though.
 // WTF?
-void gui_post_expose(struct dt_iop_module_t *self, cairo_t *cr, int32_t width, int32_t height,
-                     int32_t pointerx, int32_t pointery)
+void gui_post_expose(struct dt_iop_module_t *self, cairo_t *cr, int32_t width, int32_t height, int32_t pointerx,
+                     int32_t pointery)
 {
   dt_develop_t *dev = self->dev;
   //   dt_iop_vignette_gui_data_t *g = (dt_iop_vignette_gui_data_t *)self->gui_data;
@@ -778,8 +778,7 @@ void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const 
       if(weight > 0)
       {
         // Then apply falloff vignette
-        float falloff = (data->brightness < 0) ? (1.0 + (weight * data->brightness))
-                                               : (weight * data->brightness);
+        float falloff = (data->brightness < 0) ? (1.0 + (weight * data->brightness)) : (weight * data->brightness);
         col0 = data->brightness < 0 ? col0 * falloff + dith : col0 + falloff + dith;
         col1 = data->brightness < 0 ? col1 * falloff + dith : col1 + falloff + dith;
         col2 = data->brightness < 0 ? col2 * falloff + dith : col2 + falloff + dith;
@@ -1100,7 +1099,7 @@ void init(dt_iop_module_t *module)
   module->params = calloc(1, sizeof(dt_iop_vignette_params_t));
   module->default_params = calloc(1, sizeof(dt_iop_vignette_params_t));
   module->default_enabled = 0;
-    module->priority = 855; // module order created by iop_dependencies.py, do not edit!
+  module->priority = 855; // module order created by iop_dependencies.py, do not edit!
   module->params_size = sizeof(dt_iop_vignette_params_t);
   module->gui_data = NULL;
   dt_iop_vignette_params_t tmp
@@ -1178,7 +1177,8 @@ void gui_init(struct dt_iop_module_t *self)
   gtk_widget_set_tooltip_text(g->center_y, _("vertical offset of center of the effect"));
   gtk_widget_set_tooltip_text(g->shape, _("shape factor\n0 produces a rectangle\n1 produces a circle or ellipse\n"
                                           "2 produces a diamond"));
-  gtk_widget_set_tooltip_text(GTK_WIDGET(g->autoratio), _("enable to have the ratio automatically follow the image size"));
+  gtk_widget_set_tooltip_text(GTK_WIDGET(g->autoratio),
+                              _("enable to have the ratio automatically follow the image size"));
   gtk_widget_set_tooltip_text(g->whratio, _("width-to-height ratio"));
   gtk_widget_set_tooltip_text(g->dithering, _("add some level of random noise to prevent banding"));
 

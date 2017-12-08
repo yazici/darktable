@@ -19,60 +19,61 @@
 #include "lua/types.h"
 #include "lua/widget/common.h"
 
-static dt_lua_widget_type_t file_chooser_button_type = {
-  .name = "file_chooser_button",
-  .gui_init = NULL,
-  .gui_cleanup = NULL,
-  .alloc_size = sizeof(dt_lua_widget_t),
-  .parent= &widget_type
-};
+static dt_lua_widget_type_t file_chooser_button_type = {.name = "file_chooser_button",
+                                                        .gui_init = NULL,
+                                                        .gui_cleanup = NULL,
+                                                        .alloc_size = sizeof(dt_lua_widget_t),
+                                                        .parent = &widget_type };
 
 
 static void file_set_callback(GtkButton *widget, gpointer user_data)
 {
-  dt_lua_async_call_alien(dt_lua_widget_trigger_callback,
-      0,NULL,NULL,
-      LUA_ASYNC_TYPENAME,"lua_widget",user_data,
-      LUA_ASYNC_TYPENAME,"const char*","file-set",
-      LUA_ASYNC_DONE);
+  dt_lua_async_call_alien(dt_lua_widget_trigger_callback, 0, NULL, NULL, LUA_ASYNC_TYPENAME, "lua_widget",
+                          user_data, LUA_ASYNC_TYPENAME, "const char*", "file-set", LUA_ASYNC_DONE);
 }
 
 static int is_directory_member(lua_State *L)
 {
   lua_file_chooser_button file_chooser_button;
-  luaA_to(L,lua_file_chooser_button,&file_chooser_button,1);
-  if(lua_gettop(L) > 2) {
-    const gboolean is_directory = lua_toboolean(L,3);
-    gtk_file_chooser_set_action(GTK_FILE_CHOOSER(file_chooser_button->widget),is_directory?GTK_FILE_CHOOSER_ACTION_SELECT_FOLDER:GTK_FILE_CHOOSER_ACTION_OPEN);
+  luaA_to(L, lua_file_chooser_button, &file_chooser_button, 1);
+  if(lua_gettop(L) > 2)
+  {
+    const gboolean is_directory = lua_toboolean(L, 3);
+    gtk_file_chooser_set_action(GTK_FILE_CHOOSER(file_chooser_button->widget),
+                                is_directory ? GTK_FILE_CHOOSER_ACTION_SELECT_FOLDER
+                                             : GTK_FILE_CHOOSER_ACTION_OPEN);
     return 0;
   }
-  lua_pushboolean(L,gtk_file_chooser_get_action(GTK_FILE_CHOOSER(file_chooser_button->widget)) == GTK_FILE_CHOOSER_ACTION_SELECT_FOLDER);
+  lua_pushboolean(L, gtk_file_chooser_get_action(GTK_FILE_CHOOSER(file_chooser_button->widget))
+                         == GTK_FILE_CHOOSER_ACTION_SELECT_FOLDER);
   return 1;
 }
 
 static int title_member(lua_State *L)
 {
   lua_file_chooser_button file_chooser_button;
-  luaA_to(L,lua_file_chooser_button,&file_chooser_button,1);
-  if(lua_gettop(L) > 2) {
-    const char * title = luaL_checkstring(L,3);
-    gtk_file_chooser_button_set_title(GTK_FILE_CHOOSER_BUTTON(file_chooser_button->widget),title);
+  luaA_to(L, lua_file_chooser_button, &file_chooser_button, 1);
+  if(lua_gettop(L) > 2)
+  {
+    const char *title = luaL_checkstring(L, 3);
+    gtk_file_chooser_button_set_title(GTK_FILE_CHOOSER_BUTTON(file_chooser_button->widget), title);
     return 0;
   }
-  lua_pushstring(L,gtk_file_chooser_button_get_title(GTK_FILE_CHOOSER_BUTTON(file_chooser_button->widget)));
+  lua_pushstring(L, gtk_file_chooser_button_get_title(GTK_FILE_CHOOSER_BUTTON(file_chooser_button->widget)));
   return 1;
 }
 
 static int value_member(lua_State *L)
 {
   lua_file_chooser_button file_chooser_button;
-  luaA_to(L,lua_file_chooser_button,&file_chooser_button,1);
-  if(lua_gettop(L) > 2) {
-    const char * value = luaL_checkstring(L,3);
-    gtk_file_chooser_set_filename(GTK_FILE_CHOOSER(file_chooser_button->widget),value);
+  luaA_to(L, lua_file_chooser_button, &file_chooser_button, 1);
+  if(lua_gettop(L) > 2)
+  {
+    const char *value = luaL_checkstring(L, 3);
+    gtk_file_chooser_set_filename(GTK_FILE_CHOOSER(file_chooser_button->widget), value);
     return 0;
   }
-  lua_pushstring(L,gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(file_chooser_button->widget)));
+  lua_pushstring(L, gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(file_chooser_button->widget)));
   return 1;
 }
 
@@ -87,27 +88,28 @@ static int tostring_member(lua_State *L)
   return 1;
 }
 
-int dt_lua_init_widget_file_chooser_button(lua_State* L)
+int dt_lua_init_widget_file_chooser_button(lua_State *L)
 {
-  dt_lua_init_widget_type(L,&file_chooser_button_type,lua_file_chooser_button,GTK_TYPE_FILE_CHOOSER_BUTTON);
+  dt_lua_init_widget_type(L, &file_chooser_button_type, lua_file_chooser_button, GTK_TYPE_FILE_CHOOSER_BUTTON);
 
   lua_pushcfunction(L, tostring_member);
   dt_lua_gtk_wrap(L);
   dt_lua_type_setmetafield(L, lua_file_chooser_button, "__tostring");
 
-  lua_pushcfunction(L,title_member);
+  lua_pushcfunction(L, title_member);
   dt_lua_gtk_wrap(L);
   dt_lua_type_register(L, lua_file_chooser_button, "title");
 
-  lua_pushcfunction(L,is_directory_member);
+  lua_pushcfunction(L, is_directory_member);
   dt_lua_gtk_wrap(L);
   dt_lua_type_register(L, lua_file_chooser_button, "is_directory");
 
-  lua_pushcfunction(L,value_member);
+  lua_pushcfunction(L, value_member);
   dt_lua_gtk_wrap(L);
   dt_lua_type_register(L, lua_file_chooser_button, "value");
 
-  dt_lua_widget_register_gtk_callback(L,lua_file_chooser_button,"file-set","changed_callback",G_CALLBACK(file_set_callback));
+  dt_lua_widget_register_gtk_callback(L, lua_file_chooser_button, "file-set", "changed_callback",
+                                      G_CALLBACK(file_set_callback));
 
   return 0;
 }

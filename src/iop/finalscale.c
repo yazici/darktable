@@ -41,7 +41,8 @@ const char *name()
 
 int flags()
 {
-  return IOP_FLAGS_ALLOW_TILING | IOP_FLAGS_HIDDEN | IOP_FLAGS_TILING_FULL_ROI | IOP_FLAGS_ONE_INSTANCE | IOP_FLAGS_NO_HISTORY_STACK;
+  return IOP_FLAGS_ALLOW_TILING | IOP_FLAGS_HIDDEN | IOP_FLAGS_TILING_FULL_ROI | IOP_FLAGS_ONE_INSTANCE
+         | IOP_FLAGS_NO_HISTORY_STACK;
 }
 
 int groups()
@@ -57,8 +58,8 @@ void modify_roi_in(dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const d
   roi_in->x /= roi_out->scale;
   roi_in->y /= roi_out->scale;
   // out = in * scale + .5f to more precisely round to user input in export module:
-  roi_in->width  = (roi_out->width  - .5f)/roi_out->scale;
-  roi_in->height = (roi_out->height - .5f)/roi_out->scale;
+  roi_in->width = (roi_out->width - .5f) / roi_out->scale;
+  roi_in->height = (roi_out->height - .5f) / roi_out->scale;
   roi_in->scale = 1.0f;
 }
 
@@ -68,8 +69,7 @@ int process_cl(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, cl_m
 {
   if(roi_out->scale >= 1.00001f)
   {
-    dt_print(DT_DEBUG_OPENCL,
-             "[opencl_finalscale] finalscale with upscaling not yet supported by opencl code\n");
+    dt_print(DT_DEBUG_OPENCL, "[opencl_finalscale] finalscale with upscaling not yet supported by opencl code\n");
     return FALSE;
   }
 
@@ -117,7 +117,7 @@ void init(dt_iop_module_t *self)
   self->default_params = calloc(1, sizeof(dt_iop_finalscale_params_t));
   self->default_enabled = 1;
   self->hide_enable_button = 1;
-    self->priority = 913; // module order created by iop_dependencies.py, do not edit!
+  self->priority = 913; // module order created by iop_dependencies.py, do not edit!
   self->params_size = sizeof(dt_iop_finalscale_params_t);
   self->gui_data = NULL;
 }

@@ -49,10 +49,10 @@ typedef __m128 (*dt_interpolation_sse_func)(__m128 width, __m128 t);
 /** Interpolation structure */
 struct dt_interpolation
 {
-  enum dt_interpolation_type id;     /**< Id such as defined by the dt_interpolation_type */
-  const char *name;                  /**< internal name  */
-  int width;                         /**< Half width of its kernel support */
-  dt_interpolation_func func;        /**< Kernel function */
+  enum dt_interpolation_type id; /**< Id such as defined by the dt_interpolation_type */
+  const char *name;              /**< internal name  */
+  int width;                     /**< Half width of its kernel support */
+  dt_interpolation_func func;    /**< Kernel function */
 #if defined(__SSE2__)
   dt_interpolation_sse_func funcsse; /**< Kernel function (four params a time) */
 #endif
@@ -79,8 +79,8 @@ struct dt_interpolation
  * @return computed sample
  */
 float dt_interpolation_compute_sample(const struct dt_interpolation *itor, const float *in, const float x,
-                                      const float y, const int width, const int height,
-                                      const int samplestride, const int linestride);
+                                      const float y, const int width, const int height, const int samplestride,
+                                      const int linestride);
 
 /** Compute an interpolated 4 component pixel.
  *
@@ -132,9 +132,8 @@ const struct dt_interpolation *dt_interpolation_new(enum dt_interpolation_type t
  * @param roi_in [in] Region of interest of the original image
  * @param in_stride [in] Input line stride in <strong>bytes</strong>
  */
-void dt_interpolation_resample(const struct dt_interpolation *itor, float *out,
-                               const dt_iop_roi_t *const roi_out, const int32_t out_stride,
-                               const float *const in, const dt_iop_roi_t *const roi_in,
+void dt_interpolation_resample(const struct dt_interpolation *itor, float *out, const dt_iop_roi_t *const roi_out,
+                               const int32_t out_stride, const float *const in, const dt_iop_roi_t *const roi_in,
                                const int32_t in_stride);
 
 void dt_interpolation_resample_roi(const struct dt_interpolation *itor, float *out,

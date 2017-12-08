@@ -147,8 +147,8 @@ static gboolean start_kwallet(backend_kwallet_context_t *context)
   */
   GVariant *ret = g_dbus_connection_call_sync(context->connection, klauncher_service_name, klauncher_path,
                                               klauncher_interface, "start_service_by_desktop_name",
-                                              g_variant_new("(sasassb)", "kwalletd", NULL, NULL, "", FALSE),
-                                              NULL, G_DBUS_CALL_FLAGS_NONE, -1, NULL, &error);
+                                              g_variant_new("(sasassb)", "kwalletd", NULL, NULL, "", FALSE), NULL,
+                                              G_DBUS_CALL_FLAGS_NONE, -1, NULL, &error);
 
   if(check_error(error))
   {
@@ -181,8 +181,8 @@ static gboolean init_kwallet(backend_kwallet_context_t *context)
   // Make a proxy to KWallet.
   if(context->proxy) g_object_unref(context->proxy);
 
-  context->proxy = g_dbus_proxy_new_sync(context->connection, G_DBUS_PROXY_FLAGS_NONE, NULL,
-                                         kwallet_service_name, kwallet_path, kwallet_interface, NULL, &error);
+  context->proxy = g_dbus_proxy_new_sync(context->connection, G_DBUS_PROXY_FLAGS_NONE, NULL, kwallet_service_name,
+                                         kwallet_path, kwallet_interface, NULL, &error);
 
   if(check_error(error))
   {
@@ -205,8 +205,7 @@ static gboolean init_kwallet(backend_kwallet_context_t *context)
   // Get the wallet name.
   g_free(context->wallet_name);
 
-  ret = g_dbus_proxy_call_sync(context->proxy, "networkWallet", NULL, G_DBUS_CALL_FLAGS_NONE, -1, NULL,
-                               &error);
+  ret = g_dbus_proxy_call_sync(context->proxy, "networkWallet", NULL, G_DBUS_CALL_FLAGS_NONE, -1, NULL, &error);
 
   child = g_variant_get_child_value(ret, 0);
   context->wallet_name = g_variant_dup_string(child, NULL);
@@ -274,9 +273,9 @@ static int get_wallet_handle(const backend_kwallet_context_t *context)
    *
    * out i arg_0
    */
-  GVariant *ret = g_dbus_proxy_call_sync(context->proxy, "open",
-                                         g_variant_new("(sxs)", context->wallet_name, 0LL, app_id),
-                                         G_DBUS_CALL_FLAGS_NONE, -1, NULL, &error);
+  GVariant *ret
+      = g_dbus_proxy_call_sync(context->proxy, "open", g_variant_new("(sxs)", context->wallet_name, 0LL, app_id),
+                               G_DBUS_CALL_FLAGS_NONE, -1, NULL, &error);
 
   if(check_error(error))
   {
@@ -300,9 +299,8 @@ static int get_wallet_handle(const backend_kwallet_context_t *context)
    *
    * out b arg_0
    */
-  ret = g_dbus_proxy_call_sync(context->proxy, "hasFolder",
-                               g_variant_new("(iss)", handle, kwallet_folder, app_id), G_DBUS_CALL_FLAGS_NONE,
-                               -1, NULL, &error);
+  ret = g_dbus_proxy_call_sync(context->proxy, "hasFolder", g_variant_new("(iss)", handle, kwallet_folder, app_id),
+                               G_DBUS_CALL_FLAGS_NONE, -1, NULL, &error);
 
   if(check_error(error))
   {
@@ -330,8 +328,8 @@ static int get_wallet_handle(const backend_kwallet_context_t *context)
      * out b arg_0
      */
     ret = g_dbus_proxy_call_sync(context->proxy, "createFolder",
-                                 g_variant_new("(iss)", handle, kwallet_folder, app_id),
-                                 G_DBUS_CALL_FLAGS_NONE, -1, NULL, &error);
+                                 g_variant_new("(iss)", handle, kwallet_folder, app_id), G_DBUS_CALL_FLAGS_NONE,
+                                 -1, NULL, &error);
 
     if(check_error(error))
     {
@@ -352,8 +350,7 @@ static int get_wallet_handle(const backend_kwallet_context_t *context)
 
 // Store (key,value) pairs from a GHashTable in the kwallet.
 // Every 'slot' has to take care of it's own data.
-gboolean dt_pwstorage_kwallet_set(const backend_kwallet_context_t *context, const gchar *slot,
-                                  GHashTable *table)
+gboolean dt_pwstorage_kwallet_set(const backend_kwallet_context_t *context, const gchar *slot, GHashTable *table)
 {
   printf("slot %s\n", slot);
 
@@ -408,8 +405,8 @@ gboolean dt_pwstorage_kwallet_set(const backend_kwallet_context_t *context, cons
   GVariant *ret = g_dbus_proxy_call_sync(
       context->proxy, "writeMap",
       g_variant_new("(iss@ays)", wallet_handle, kwallet_folder, slot,
-                    g_variant_new_from_data(G_VARIANT_TYPE_BYTESTRING, byte_array->data, byte_array->len,
-                                            TRUE, g_free, byte_array->data),
+                    g_variant_new_from_data(G_VARIANT_TYPE_BYTESTRING, byte_array->data, byte_array->len, TRUE,
+                                            g_free, byte_array->data),
                     app_id),
       G_DBUS_CALL_FLAGS_NONE, -1, NULL, &error);
 
@@ -427,8 +424,7 @@ gboolean dt_pwstorage_kwallet_set(const backend_kwallet_context_t *context, cons
   g_variant_unref(ret);
 
   if(return_code != 0)
-    dt_print(DT_DEBUG_PWSTORAGE, "[pwstorage_kwallet_set] Warning: bad return code %d from kwallet\n",
-             return_code);
+    dt_print(DT_DEBUG_PWSTORAGE, "[pwstorage_kwallet_set] Warning: bad return code %d from kwallet\n", return_code);
 
   return return_code == 0;
 }

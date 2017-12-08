@@ -445,8 +445,8 @@ error:
  * @see https://developers.google.com/picasa-web/docs/2.0/developers_guide_protocol#PostPhotos
  * @return the id of the uploaded photo
  */
-static const gchar *picasa_upload_photo_to_album(PicasaContext *ctx, gchar *albumid, gchar *fname,
-                                                 gchar *title, gchar *summary, const int imgid)
+static const gchar *picasa_upload_photo_to_album(PicasaContext *ctx, gchar *albumid, gchar *fname, gchar *title,
+                                                 gchar *summary, const int imgid)
 {
   _buffer_t buffer = { 0 };
   gchar *photo_id = NULL;
@@ -680,8 +680,8 @@ static gchar *picasa_get_user_refresh_token(PicasaContext *ctx)
   JsonObject *reply;
   gchar *params = NULL;
 
-  params = dt_util_dstrcat(params, "refresh_token=%s&client_id=" GOOGLE_API_KEY
-                                   "&client_secret=" GOOGLE_API_SECRET "&grant_type=refresh_token",
+  params = dt_util_dstrcat(params, "refresh_token=%s&client_id=" GOOGLE_API_KEY "&client_secret=" GOOGLE_API_SECRET
+                                   "&grant_type=refresh_token",
                            ctx->refresh_token);
 
   reply = picasa_query_post_auth(ctx, "o/oauth2/token", params);
@@ -701,14 +701,13 @@ static int picasa_get_user_auth_token(dt_storage_picasa_gui_data_t *ui)
 {
   ///////////// open the authentication url in a browser
   GError *error = NULL;
-  if(!gtk_show_uri(
-         gdk_screen_get_default(), GOOGLE_WS_BASE_URL
-         "o/oauth2/auth?"
-         "client_id=" GOOGLE_API_KEY "&redirect_uri=urn:ietf:wg:oauth:2.0:oob"
-         "&scope=https://picasaweb.google.com/data/ https://www.googleapis.com/auth/userinfo.profile"
-         " https://www.googleapis.com/auth/userinfo.email"
-         "&response_type=code",
-         gtk_get_current_event_time(), &error))
+  if(!gtk_show_uri(gdk_screen_get_default(), GOOGLE_WS_BASE_URL
+                   "o/oauth2/auth?"
+                   "client_id=" GOOGLE_API_KEY "&redirect_uri=urn:ietf:wg:oauth:2.0:oob"
+                   "&scope=https://picasaweb.google.com/data/ https://www.googleapis.com/auth/userinfo.profile"
+                   " https://www.googleapis.com/auth/userinfo.email"
+                   "&response_type=code",
+                   gtk_get_current_event_time(), &error))
   {
     fprintf(stderr, "[picasa] error opening browser: %s\n", error->message);
     g_error_free(error);
@@ -722,9 +721,9 @@ static int picasa_get_user_auth_token(dt_storage_picasa_gui_data_t *ui)
                          "and click the OK button once you are done.");
 
   GtkWidget *window = dt_ui_main_window(darktable.gui->ui);
-  GtkDialog *picasa_auth_dialog = GTK_DIALOG(
-      gtk_message_dialog_new(GTK_WINDOW(window), GTK_DIALOG_DESTROY_WITH_PARENT, GTK_MESSAGE_QUESTION,
-                             GTK_BUTTONS_OK_CANCEL, _("google+ authentication")));
+  GtkDialog *picasa_auth_dialog
+      = GTK_DIALOG(gtk_message_dialog_new(GTK_WINDOW(window), GTK_DIALOG_DESTROY_WITH_PARENT, GTK_MESSAGE_QUESTION,
+                                          GTK_BUTTONS_OK_CANCEL, _("google+ authentication")));
   gtk_message_dialog_format_secondary_text(GTK_MESSAGE_DIALOG(picasa_auth_dialog), "%s\n\n%s", text1, text2);
 
   GtkWidget *entry = gtk_entry_new();
@@ -732,8 +731,7 @@ static int picasa_get_user_auth_token(dt_storage_picasa_gui_data_t *ui)
   gtk_box_pack_start(GTK_BOX(hbox), GTK_WIDGET(gtk_label_new(_("verification code:"))), FALSE, FALSE, 0);
   gtk_box_pack_start(GTK_BOX(hbox), GTK_WIDGET(entry), TRUE, TRUE, 0);
 
-  GtkWidget *picasaauthdialog_vbox
-      = gtk_message_dialog_get_message_area(GTK_MESSAGE_DIALOG(picasa_auth_dialog));
+  GtkWidget *picasaauthdialog_vbox = gtk_message_dialog_get_message_area(GTK_MESSAGE_DIALOG(picasa_auth_dialog));
   gtk_box_pack_end(GTK_BOX(picasaauthdialog_vbox), hbox, TRUE, TRUE, 0);
 
   gtk_widget_show_all(GTK_WIDGET(picasa_auth_dialog));
@@ -763,8 +761,7 @@ static int picasa_get_user_auth_token(dt_storage_picasa_gui_data_t *ui)
   }
   gtk_widget_destroy(GTK_WIDGET(picasa_auth_dialog));
 
-  if(result == GTK_RESPONSE_CANCEL)
-    return 1;
+  if(result == GTK_RESPONSE_CANCEL) return 1;
 
   // Interchange now the authorization_code for an access_token and refresh_token
   JsonObject *reply;
@@ -894,8 +891,8 @@ static void ui_refresh_users(dt_storage_picasa_gui_data_t *ui)
 
   if(g_slist_length(accountlist) == 0)
   {
-    gtk_list_store_set(list_store, &iter, COMBO_USER_MODEL_NAME_COL, _("new account"),
-                       COMBO_USER_MODEL_TOKEN_COL, NULL, COMBO_USER_MODEL_ID_COL, NULL, -1);
+    gtk_list_store_set(list_store, &iter, COMBO_USER_MODEL_NAME_COL, _("new account"), COMBO_USER_MODEL_TOKEN_COL,
+                       NULL, COMBO_USER_MODEL_ID_COL, NULL, -1);
   }
   else
   {
@@ -935,8 +932,8 @@ static void ui_refresh_albums(dt_storage_picasa_gui_data_t *ui)
   GtkTreeIter iter;
   gtk_list_store_clear(model_album);
   gtk_list_store_append(model_album, &iter);
-  gtk_list_store_set(model_album, &iter, COMBO_ALBUM_MODEL_NAME_COL, _("drop box"),
-                     COMBO_ALBUM_MODEL_ID_COL, NULL, -1);
+  gtk_list_store_set(model_album, &iter, COMBO_ALBUM_MODEL_NAME_COL, _("drop box"), COMBO_ALBUM_MODEL_ID_COL, NULL,
+                     -1);
   if(albumList != NULL)
   {
     gtk_list_store_append(model_album, &iter);
@@ -1021,8 +1018,7 @@ static gboolean ui_authenticate(dt_storage_picasa_gui_data_t *ui)
   gtk_combo_box_get_active_iter(ui->comboBox_username, &iter);
   GtkTreeModel *accountModel = gtk_combo_box_get_model(ui->comboBox_username);
   gtk_tree_model_get(accountModel, &iter, COMBO_USER_MODEL_TOKEN_COL, &uiselectedaccounttoken, -1);
-  gtk_tree_model_get(accountModel, &iter, COMBO_USER_MODEL_REFRESH_TOKEN_COL, &uiselectedaccountrefreshtoken,
-                     -1);
+  gtk_tree_model_get(accountModel, &iter, COMBO_USER_MODEL_REFRESH_TOKEN_COL, &uiselectedaccountrefreshtoken, -1);
   gtk_tree_model_get(accountModel, &iter, COMBO_USER_MODEL_ID_COL, &uiselecteduserid, -1);
 
   if(ctx->token != NULL)
@@ -1083,8 +1079,8 @@ static gboolean ui_authenticate(dt_storage_picasa_gui_data_t *ui)
         if(g_strcmp0(uid, accountinfo->id) == 0)
         {
           gtk_list_store_set(model, &iter, COMBO_USER_MODEL_NAME_COL, accountinfo->username,
-                             COMBO_USER_MODEL_TOKEN_COL, accountinfo->token,
-                             COMBO_USER_MODEL_REFRESH_TOKEN_COL, accountinfo->refresh_token, -1);
+                             COMBO_USER_MODEL_TOKEN_COL, accountinfo->token, COMBO_USER_MODEL_REFRESH_TOKEN_COL,
+                             accountinfo->refresh_token, -1);
           updated = TRUE;
           break;
         }
@@ -1215,8 +1211,7 @@ void gui_init(struct dt_imageio_module_storage_t *self)
 
   // connect buttons to signals
   g_signal_connect(G_OBJECT(ui->button_login), "clicked", G_CALLBACK(ui_login_clicked), (gpointer)ui);
-  g_signal_connect(G_OBJECT(ui->comboBox_username), "changed", G_CALLBACK(ui_combo_username_changed),
-                   (gpointer)ui);
+  g_signal_connect(G_OBJECT(ui->comboBox_username), "changed", G_CALLBACK(ui_combo_username_changed), (gpointer)ui);
   g_signal_connect(G_OBJECT(ui->comboBox_album), "changed", G_CALLBACK(ui_combo_album_changed), (gpointer)ui);
 
   g_object_unref(model_username);
@@ -1282,8 +1277,8 @@ int store(dt_imageio_module_storage_t *self, struct dt_imageio_module_data_t *sd
 
   dt_image_cache_read_release(darktable.image_cache, img);
 
-  if(dt_imageio_export(imgid, fname, format, fdata, high_quality, upscale, FALSE, icc_type, icc_filename, icc_intent,
-                       self, sdata, num, total) != 0)
+  if(dt_imageio_export(imgid, fname, format, fdata, high_quality, upscale, FALSE, icc_type, icc_filename,
+                       icc_intent, self, sdata, num, total) != 0)
   {
     g_printerr("[picasa] could not export to file: `%s'!\n", fname);
     dt_control_log(_("could not export to file `%s'!"), fname);

@@ -27,7 +27,7 @@
 
 /* helper macro that applies the DPI transformation to fixed pixel values. input should be defaulting to 96
  * DPI */
-#define DT_PIXEL_APPLY_DPI(value) ((value) * darktable.gui->dpi_factor)
+#define DT_PIXEL_APPLY_DPI(value) ((value)*darktable.gui->dpi_factor)
 
 typedef struct dt_gui_widgets_t
 {
@@ -44,7 +44,8 @@ typedef struct dt_gui_widgets_t
 
 } dt_gui_widgets_t;
 
-typedef enum dt_gui_color_t {
+typedef enum dt_gui_color_t
+{
   DT_GUI_COLOR_BG = 0,
   DT_GUI_COLOR_DARKROOM_BG,
   DT_GUI_COLOR_DARKROOM_PREVIEW_BG,
@@ -85,40 +86,51 @@ typedef struct dt_gui_gtk_t
 
 } dt_gui_gtk_t;
 
-#if (CAIRO_VERSION >= CAIRO_VERSION_ENCODE(1, 13, 1))
-static inline cairo_surface_t *dt_cairo_image_surface_create(cairo_format_t format, int width, int height) {
-  cairo_surface_t *cst = cairo_image_surface_create(format, width * darktable.gui->ppd, height * darktable.gui->ppd);
+#if(CAIRO_VERSION >= CAIRO_VERSION_ENCODE(1, 13, 1))
+static inline cairo_surface_t *dt_cairo_image_surface_create(cairo_format_t format, int width, int height)
+{
+  cairo_surface_t *cst
+      = cairo_image_surface_create(format, width * darktable.gui->ppd, height * darktable.gui->ppd);
   cairo_surface_set_device_scale(cst, darktable.gui->ppd, darktable.gui->ppd);
   return cst;
 }
 
-static inline cairo_surface_t *dt_cairo_image_surface_create_for_data(unsigned char *data, cairo_format_t format, int width, int height, int stride) {
+static inline cairo_surface_t *dt_cairo_image_surface_create_for_data(unsigned char *data, cairo_format_t format,
+                                                                      int width, int height, int stride)
+{
   cairo_surface_t *cst = cairo_image_surface_create_for_data(data, format, width, height, stride);
   cairo_surface_set_device_scale(cst, darktable.gui->ppd, darktable.gui->ppd);
   return cst;
 }
 
-static inline cairo_surface_t *dt_cairo_image_surface_create_from_png(const char *filename) {
+static inline cairo_surface_t *dt_cairo_image_surface_create_from_png(const char *filename)
+{
   cairo_surface_t *cst = cairo_image_surface_create_from_png(filename);
   cairo_surface_set_device_scale(cst, darktable.gui->ppd, darktable.gui->ppd);
   return cst;
 }
 
-static inline int dt_cairo_image_surface_get_width(cairo_surface_t *surface) {
+static inline int dt_cairo_image_surface_get_width(cairo_surface_t *surface)
+{
   return cairo_image_surface_get_width(surface) / darktable.gui->ppd;
 }
 
-static inline int dt_cairo_image_surface_get_height(cairo_surface_t *surface) {
+static inline int dt_cairo_image_surface_get_height(cairo_surface_t *surface)
+{
   return cairo_image_surface_get_height(surface) / darktable.gui->ppd;
 }
 
-static inline cairo_surface_t *dt_gdk_cairo_surface_create_from_pixbuf(const GdkPixbuf *pixbuf, int scale, GdkWindow *for_window) {
+static inline cairo_surface_t *dt_gdk_cairo_surface_create_from_pixbuf(const GdkPixbuf *pixbuf, int scale,
+                                                                       GdkWindow *for_window)
+{
   cairo_surface_t *cst = gdk_cairo_surface_create_from_pixbuf(pixbuf, scale, for_window);
   cairo_surface_set_device_scale(cst, darktable.gui->ppd, darktable.gui->ppd);
   return cst;
 }
 
-static inline GdkPixbuf *dt_gdk_pixbuf_new_from_file_at_size(const char *filename, int width, int height, GError **error) {
+static inline GdkPixbuf *dt_gdk_pixbuf_new_from_file_at_size(const char *filename, int width, int height,
+                                                             GError **error)
+{
   return gdk_pixbuf_new_from_file_at_size(filename, width * darktable.gui->ppd, height * darktable.gui->ppd, error);
 }
 #else
@@ -275,8 +287,8 @@ static inline void dt_ui_section_label_set(GtkWidget *label)
   gtk_widget_set_hexpand(label, TRUE); // not really needed, but it makes sure that parent containers expand
   g_object_set(G_OBJECT(label), "xalign", 1.0, (gchar *)0);    // make the text right aligned
   gtk_widget_set_margin_bottom(label, DT_PIXEL_APPLY_DPI(10)); // gtk+ css doesn't support margins :(
-  gtk_widget_set_margin_start(label, DT_PIXEL_APPLY_DPI(30)); // gtk+ css doesn't support margins :(
-  gtk_widget_set_name(label, "section_label"); // make sure that we can style these easily
+  gtk_widget_set_margin_start(label, DT_PIXEL_APPLY_DPI(30));  // gtk+ css doesn't support margins :(
+  gtk_widget_set_name(label, "section_label");                 // make sure that we can style these easily
 }
 static inline GtkWidget *dt_ui_section_label_new(const gchar *str)
 {

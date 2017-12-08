@@ -148,8 +148,8 @@ static GList *dt_metadata_get_xmp(int id, const char *key, uint32_t *count)
       else // single image under mouse cursor
       {
         DT_DEBUG_SQLITE3_PREPARE_V2(dt_database_get(darktable.db),
-                                    "SELECT color FROM main.color_labels WHERE imgid=?1 ORDER BY color",
-                                    -1, &stmt, NULL);
+                                    "SELECT color FROM main.color_labels WHERE imgid=?1 ORDER BY color", -1, &stmt,
+                                    NULL);
         DT_DEBUG_SQLITE3_BIND_INT(stmt, 1, id);
       }
       while(sqlite3_step(stmt) == SQLITE_ROW)
@@ -242,9 +242,9 @@ static GList *dt_metadata_get_exif(int id, const char *key, uint32_t *count)
   {
     if(id == -1)
     {
-      DT_DEBUG_SQLITE3_PREPARE_V2(dt_database_get(darktable.db),
-                                  "SELECT iso FROM main.images WHERE id IN "
-                                  "(SELECT imgid FROM main.selected_images)", -1, &stmt, NULL);
+      DT_DEBUG_SQLITE3_PREPARE_V2(dt_database_get(darktable.db), "SELECT iso FROM main.images WHERE id IN "
+                                                                 "(SELECT imgid FROM main.selected_images)",
+                                  -1, &stmt, NULL);
     }
     else // single image under mouse cursor
     {

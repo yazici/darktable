@@ -356,14 +356,14 @@ typedef struct
 
 static void fb_query_post_add_form_arguments(const gchar *key, const gchar *value, HttppostFormList *formlist)
 {
-  curl_formadd(&(formlist->formpost), &(formlist->lastptr), CURLFORM_COPYNAME, key, CURLFORM_COPYCONTENTS,
-               value, CURLFORM_END);
+  curl_formadd(&(formlist->formpost), &(formlist->lastptr), CURLFORM_COPYNAME, key, CURLFORM_COPYCONTENTS, value,
+               CURLFORM_END);
 }
 
 static void fb_query_post_add_file_arguments(const gchar *key, const gchar *value, HttppostFormList *formlist)
 {
-  curl_formadd(&(formlist->formpost), &(formlist->lastptr), CURLFORM_COPYNAME, key, CURLFORM_COPYCONTENTS,
-               value, CURLFORM_END);
+  curl_formadd(&(formlist->formpost), &(formlist->lastptr), CURLFORM_COPYNAME, key, CURLFORM_COPYCONTENTS, value,
+               CURLFORM_END);
 
   curl_formadd(&(formlist->formpost), &(formlist->lastptr), CURLFORM_COPYNAME, key, CURLFORM_FILE, value,
                CURLFORM_END);
@@ -393,8 +393,8 @@ static JsonObject *fb_query_post(FBContext *ctx, const gchar *method, GHashTable
   formlist.formpost = NULL;
   formlist.lastptr = NULL;
 
-  curl_formadd(&(formlist.formpost), &(formlist.lastptr), CURLFORM_COPYNAME, "access_token",
-               CURLFORM_COPYCONTENTS, ctx->token, CURLFORM_END);
+  curl_formadd(&(formlist.formpost), &(formlist.lastptr), CURLFORM_COPYNAME, "access_token", CURLFORM_COPYCONTENTS,
+               ctx->token, CURLFORM_END);
   if(args != NULL) g_hash_table_foreach(args, (GHFunc)fb_query_post_add_form_arguments, &formlist);
 
   if(files != NULL) g_hash_table_foreach(files, (GHFunc)fb_query_post_add_file_arguments, &formlist);
@@ -622,9 +622,9 @@ static gchar *facebook_get_user_auth_token_from_url(dt_storage_facebook_gui_data
                    "you are done.");
 
   GtkWidget *window = dt_ui_main_window(darktable.gui->ui);
-  GtkDialog *fb_auth_dialog = GTK_DIALOG(
-      gtk_message_dialog_new(GTK_WINDOW(window), GTK_DIALOG_DESTROY_WITH_PARENT, GTK_MESSAGE_QUESTION,
-                             GTK_BUTTONS_OK_CANCEL, _("facebook authentication")));
+  GtkDialog *fb_auth_dialog
+      = GTK_DIALOG(gtk_message_dialog_new(GTK_WINDOW(window), GTK_DIALOG_DESTROY_WITH_PARENT, GTK_MESSAGE_QUESTION,
+                                          GTK_BUTTONS_OK_CANCEL, _("facebook authentication")));
   gtk_message_dialog_format_secondary_text(GTK_MESSAGE_DIALOG(fb_auth_dialog), "%s\n\n%s", text1, text2);
 
   GtkWidget *entry = gtk_entry_new();
@@ -661,8 +661,7 @@ static gchar *facebook_get_user_auth_token_from_url(dt_storage_facebook_gui_data
       gtk_message_dialog_format_secondary_markup(
           GTK_MESSAGE_DIALOG(fb_auth_dialog),
           "%s\n\n%s%s\n\n<span foreground=\"" MSGCOLOR_RED "\"><small>%s</small></span>", text1, text2,
-          _("the given URL is not valid, it should look like: "),
-          FB_WS_BASE_URL "connect/login_success.html?...");
+          _("the given URL is not valid, it should look like: "), FB_WS_BASE_URL "connect/login_success.html?...");
   }
   gtk_widget_destroy(GTK_WIDGET(fb_auth_dialog));
 
@@ -707,11 +706,11 @@ static gboolean facebook_get_user_auth_token_from_server(dt_storage_facebook_gui
   // create a dialog telling the user to login in the browser
   GtkWidget *win = dt_ui_main_window(darktable.gui->ui);
 
-  GtkWidget *dialog = gtk_message_dialog_new(
-      GTK_WINDOW(win), GTK_DIALOG_DESTROY_WITH_PARENT, GTK_MESSAGE_INFO, GTK_BUTTONS_CANCEL,
-      _("a new window or tab of your browser should have been "
-        "loaded. you have to login into your facebook account there "
-        "and authorize darktable to upload photos before continuing."));
+  GtkWidget *dialog = gtk_message_dialog_new(GTK_WINDOW(win), GTK_DIALOG_DESTROY_WITH_PARENT, GTK_MESSAGE_INFO,
+                                             GTK_BUTTONS_CANCEL,
+                                             _("a new window or tab of your browser should have been "
+                                               "loaded. you have to login into your facebook account there "
+                                               "and authorize darktable to upload photos before continuing."));
 
   gtk_window_set_title(GTK_WINDOW(dialog), _("facebook authentication"));
 
@@ -840,8 +839,8 @@ static void ui_refresh_users(dt_storage_facebook_gui_data_t *ui)
   int active_account = 0;
   if(g_slist_length(accountlist) == 0)
   {
-    gtk_list_store_set(list_store, &iter, COMBO_USER_MODEL_NAME_COL, _("new account"),
-                       COMBO_USER_MODEL_TOKEN_COL, NULL, COMBO_USER_MODEL_ID_COL, NULL, -1);
+    gtk_list_store_set(list_store, &iter, COMBO_USER_MODEL_NAME_COL, _("new account"), COMBO_USER_MODEL_TOKEN_COL,
+                       NULL, COMBO_USER_MODEL_ID_COL, NULL, -1);
   }
   else
   {
@@ -942,8 +941,8 @@ static void ui_authenticate_finish(dt_storage_facebook_gui_data_t *ui, gboolean 
     {
       gtk_list_store_append(model, &iter);
       gtk_list_store_set(model, &iter, COMBO_USER_MODEL_NAME_COL, accountinfo->readablename,
-                         COMBO_USER_MODEL_TOKEN_COL, accountinfo->token, COMBO_USER_MODEL_ID_COL,
-                         accountinfo->id, -1);
+                         COMBO_USER_MODEL_TOKEN_COL, accountinfo->token, COMBO_USER_MODEL_ID_COL, accountinfo->id,
+                         -1);
     }
     gtk_combo_box_set_active_iter(ui->comboBox_username, &iter);
     // we have to re-set the current token here since ui_combo_username_changed is called
@@ -1157,14 +1156,14 @@ void gui_init(struct dt_imageio_module_storage_t *self)
   GtkListStore *list_store = gtk_list_store_new(COMBO_ALBUM_MODEL_NB_COL, G_TYPE_STRING, G_TYPE_INT);
   GtkTreeIter iter;
   gtk_list_store_append(list_store, &iter);
-  gtk_list_store_set(list_store, &iter, COMBO_PRIVACY_MODEL_NAME_COL, _("only me"),
-                     COMBO_PRIVACY_MODEL_VAL_COL, FBALBUM_PRIVACY_SELF, -1);
+  gtk_list_store_set(list_store, &iter, COMBO_PRIVACY_MODEL_NAME_COL, _("only me"), COMBO_PRIVACY_MODEL_VAL_COL,
+                     FBALBUM_PRIVACY_SELF, -1);
   gtk_list_store_append(list_store, &iter);
-  gtk_list_store_set(list_store, &iter, COMBO_PRIVACY_MODEL_NAME_COL, _("friends"),
-                     COMBO_PRIVACY_MODEL_VAL_COL, FBALBUM_PRIVACY_ALL_FRIENDS, -1);
+  gtk_list_store_set(list_store, &iter, COMBO_PRIVACY_MODEL_NAME_COL, _("friends"), COMBO_PRIVACY_MODEL_VAL_COL,
+                     FBALBUM_PRIVACY_ALL_FRIENDS, -1);
   gtk_list_store_append(list_store, &iter);
-  gtk_list_store_set(list_store, &iter, COMBO_PRIVACY_MODEL_NAME_COL, _("public"),
-                     COMBO_PRIVACY_MODEL_VAL_COL, FBALBUM_PRIVACY_EVERYONE, -1);
+  gtk_list_store_set(list_store, &iter, COMBO_PRIVACY_MODEL_NAME_COL, _("public"), COMBO_PRIVACY_MODEL_VAL_COL,
+                     FBALBUM_PRIVACY_EVERYONE, -1);
   gtk_list_store_append(list_store, &iter);
   gtk_list_store_set(list_store, &iter, COMBO_PRIVACY_MODEL_NAME_COL, _("friends of friends"),
                      COMBO_PRIVACY_MODEL_VAL_COL, FBALBUM_PRIVACY_FRIENDS_OF_FRIENDS, -1);
@@ -1207,8 +1206,7 @@ void gui_init(struct dt_imageio_module_storage_t *self)
 
   // connect buttons to signals
   g_signal_connect(G_OBJECT(ui->button_login), "clicked", G_CALLBACK(ui_login_clicked), (gpointer)ui);
-  g_signal_connect(G_OBJECT(ui->comboBox_username), "changed", G_CALLBACK(ui_combo_username_changed),
-                   (gpointer)ui);
+  g_signal_connect(G_OBJECT(ui->comboBox_username), "changed", G_CALLBACK(ui_combo_username_changed), (gpointer)ui);
   g_signal_connect(G_OBJECT(ui->comboBox_album), "changed", G_CALLBACK(ui_combo_album_changed), (gpointer)ui);
 
   g_object_unref(model_username);
@@ -1292,9 +1290,8 @@ int store(dt_imageio_module_storage_t *self, struct dt_imageio_module_data_t *sd
   if(fdata->max_height == 0 || fdata->max_height > FB_IMAGE_MAX_SIZE) fdata->max_height = FB_IMAGE_MAX_SIZE;
   if(fdata->max_width == 0 || fdata->max_width > FB_IMAGE_MAX_SIZE) fdata->max_width = FB_IMAGE_MAX_SIZE;
 
-  if(dt_imageio_export(imgid, fname, format, fdata, high_quality, upscale, FALSE, icc_type, icc_filename, icc_intent,
-                       self, sdata, num, total)
-     != 0)
+  if(dt_imageio_export(imgid, fname, format, fdata, high_quality, upscale, FALSE, icc_type, icc_filename,
+                       icc_intent, self, sdata, num, total) != 0)
   {
     g_printerr("[facebook] could not export to file: `%s'!\n", fname);
     dt_control_log(_("could not export to file `%s'!"), fname);
@@ -1310,9 +1307,8 @@ int store(dt_imageio_module_storage_t *self, struct dt_imageio_module_data_t *sd
       result = 0;
       goto cleanup;
     }
-    const gchar *album_id
-        = fb_create_album(p->facebook_ctx, p->facebook_ctx->album_title, p->facebook_ctx->album_summary,
-                          p->facebook_ctx->album_permission);
+    const gchar *album_id = fb_create_album(p->facebook_ctx, p->facebook_ctx->album_title,
+                                            p->facebook_ctx->album_summary, p->facebook_ctx->album_permission);
     if(album_id == NULL)
     {
       dt_control_log(_("unable to create album"));
@@ -1374,8 +1370,7 @@ void *get_params(struct dt_imageio_module_storage_t *self)
   {
     return NULL;
   }
-  dt_storage_facebook_param_t *p
-      = (dt_storage_facebook_param_t *)g_malloc0(sizeof(dt_storage_facebook_param_t));
+  dt_storage_facebook_param_t *p = (dt_storage_facebook_param_t *)g_malloc0(sizeof(dt_storage_facebook_param_t));
   p->hash = 1;
   p->facebook_ctx = ui->facebook_api;
   int index = gtk_combo_box_get_active(ui->comboBox_album);

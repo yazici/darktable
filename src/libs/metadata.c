@@ -58,7 +58,7 @@ const char *name(dt_lib_module_t *self)
 
 const char **views(dt_lib_module_t *self)
 {
-  static const char *v[] = {"lighttable", "tethering", NULL};
+  static const char *v[] = { "lighttable", "tethering", NULL };
   return v;
 }
 
@@ -80,8 +80,7 @@ static void fill_combo_box_entry(GtkComboBox *box, uint32_t count, GList *items,
 
   if(count > 1)
   {
-    gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(box),
-                                   _("<leave unchanged>")); // FIXME: should be italic!
+    gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(box), _("<leave unchanged>")); // FIXME: should be italic!
     gtk_combo_box_set_button_sensitivity(GTK_COMBO_BOX(box), GTK_SENSITIVITY_AUTO);
     *multi = TRUE;
   }
@@ -222,8 +221,7 @@ static void write_metadata(dt_lib_module_t *self)
     dt_metadata_set(mouse_over_id, "Xmp.dc.description", description);
   if(rights != NULL && (d->multi_rights == FALSE || gtk_combo_box_get_active(GTK_COMBO_BOX(d->rights)) != 0))
     dt_metadata_set(mouse_over_id, "Xmp.dc.rights", rights);
-  if(creator != NULL
-     && (d->multi_creator == FALSE || gtk_combo_box_get_active(GTK_COMBO_BOX(d->creator)) != 0))
+  if(creator != NULL && (d->multi_creator == FALSE || gtk_combo_box_get_active(GTK_COMBO_BOX(d->creator)) != 0))
     dt_metadata_set(mouse_over_id, "Xmp.dc.creator", creator);
   if(publisher != NULL
      && (d->multi_publisher == FALSE || gtk_combo_box_get_active(GTK_COMBO_BOX(d->publisher)) != 0))
@@ -499,8 +497,7 @@ int set_params(dt_lib_module_t *self, const void *params, int size)
   if(!publisher) return 1;
   const int publisher_len = strlen(publisher) + 1;
 
-  if(size != title_len + description_len + rights_len + creator_len + publisher_len)
-    return 1;
+  if(size != title_len + description_len + rights_len + creator_len + publisher_len) return 1;
 
   if(title != NULL && title[0] != '\0') dt_metadata_set(-1, "Xmp.dc.title", title);
   if(description != NULL && description[0] != '\0') dt_metadata_set(-1, "Xmp.dc.description", description);

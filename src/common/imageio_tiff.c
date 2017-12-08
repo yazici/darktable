@@ -138,7 +138,7 @@ static inline int _read_planar_f(tiff_t *t)
   return 1;
 }
 
-static void _warning_handler(const char* module, const char* fmt, va_list ap)
+static void _warning_handler(const char *module, const char *fmt, va_list ap)
 {
   fprintf(stderr, "[tiff_open] warning: %s: ", module);
   vfprintf(stderr, fmt, ap);
@@ -153,8 +153,7 @@ dt_imageio_retval_t dt_imageio_open_tiff(dt_image_t *img, const char *filename, 
 
   const char *ext = filename + strlen(filename);
   while(*ext != '.' && ext > filename) ext--;
-  if(strncmp(ext, ".tif", 4) && strncmp(ext, ".TIF", 4) && strncmp(ext, ".tiff", 5)
-     && strncmp(ext, ".TIFF", 5))
+  if(strncmp(ext, ".tif", 4) && strncmp(ext, ".TIF", 4) && strncmp(ext, ".tiff", 5) && strncmp(ext, ".TIFF", 5))
     return DT_IMAGEIO_FILE_CORRUPTED;
   if(!img->exif_inited) (void)dt_exif_read(img, filename);
 
@@ -176,7 +175,8 @@ dt_imageio_retval_t dt_imageio_open_tiff(dt_image_t *img, const char *filename, 
 
   t.scanlinesize = TIFFScanlineSize(t.tiff);
 
-  dt_print(DT_DEBUG_CAMERA_SUPPORT, "[tiff_open] %dx%d %dbpp, %d samples per pixel.\n", t.width, t.height, t.bpp, t.spp);
+  dt_print(DT_DEBUG_CAMERA_SUPPORT, "[tiff_open] %dx%d %dbpp, %d samples per pixel.\n", t.width, t.height, t.bpp,
+           t.spp);
 
   // we only support 8/16 and 32 bits per pixel formats.
   if(t.bpp != 8 && t.bpp != 16 && t.bpp != 32)

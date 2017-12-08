@@ -56,7 +56,8 @@ void dt_view_manager_init(dt_view_manager_t *vm)
 {
   /* prepare statements */
   DT_DEBUG_SQLITE3_PREPARE_V2(dt_database_get(darktable.db), "SELECT imgid FROM main.selected_images "
-                              "WHERE imgid = ?1", -1, &vm->statements.is_selected, NULL);
+                                                             "WHERE imgid = ?1",
+                              -1, &vm->statements.is_selected, NULL);
   DT_DEBUG_SQLITE3_PREPARE_V2(dt_database_get(darktable.db), "DELETE FROM main.selected_images WHERE imgid = ?1",
                               -1, &vm->statements.delete_from_selected, NULL);
   DT_DEBUG_SQLITE3_PREPARE_V2(dt_database_get(darktable.db),
@@ -110,7 +111,7 @@ const dt_view_t *dt_view_manager_get_current_view(dt_view_manager_t *vm)
 // anything not hardcoded will be put alphabetically wrt. localised names.
 static gint sort_views(gconstpointer a, gconstpointer b)
 {
-  static const char *view_order[] = {"lighttable", "darkroom"};
+  static const char *view_order[] = { "lighttable", "darkroom" };
   static const int n_view_order = G_N_ELEMENTS(view_order);
 
   dt_view_t *av = (dt_view_t *)a;
@@ -179,20 +180,15 @@ static int dt_view_load_module(void *v, const char *libname, const char *module_
   if(!g_module_symbol(view->module, "enter", (gpointer) & (view->enter))) view->enter = NULL;
   if(!g_module_symbol(view->module, "leave", (gpointer) & (view->leave))) view->leave = NULL;
   if(!g_module_symbol(view->module, "reset", (gpointer) & (view->reset))) view->reset = NULL;
-  if(!g_module_symbol(view->module, "mouse_enter", (gpointer) & (view->mouse_enter)))
-    view->mouse_enter = NULL;
-  if(!g_module_symbol(view->module, "mouse_leave", (gpointer) & (view->mouse_leave)))
-    view->mouse_leave = NULL;
-  if(!g_module_symbol(view->module, "mouse_moved", (gpointer) & (view->mouse_moved)))
-    view->mouse_moved = NULL;
+  if(!g_module_symbol(view->module, "mouse_enter", (gpointer) & (view->mouse_enter))) view->mouse_enter = NULL;
+  if(!g_module_symbol(view->module, "mouse_leave", (gpointer) & (view->mouse_leave))) view->mouse_leave = NULL;
+  if(!g_module_symbol(view->module, "mouse_moved", (gpointer) & (view->mouse_moved))) view->mouse_moved = NULL;
   if(!g_module_symbol(view->module, "button_released", (gpointer) & (view->button_released)))
     view->button_released = NULL;
   if(!g_module_symbol(view->module, "button_pressed", (gpointer) & (view->button_pressed)))
     view->button_pressed = NULL;
-  if(!g_module_symbol(view->module, "key_pressed", (gpointer) & (view->key_pressed)))
-    view->key_pressed = NULL;
-  if(!g_module_symbol(view->module, "key_released", (gpointer) & (view->key_released)))
-    view->key_released = NULL;
+  if(!g_module_symbol(view->module, "key_pressed", (gpointer) & (view->key_pressed))) view->key_pressed = NULL;
+  if(!g_module_symbol(view->module, "key_released", (gpointer) & (view->key_released))) view->key_released = NULL;
   if(!g_module_symbol(view->module, "configure", (gpointer) & (view->configure))) view->configure = NULL;
   if(!g_module_symbol(view->module, "scrolled", (gpointer) & (view->scrolled))) view->scrolled = NULL;
   if(!g_module_symbol(view->module, "init_key_accels", (gpointer) & (view->init_key_accels)))
@@ -237,18 +233,18 @@ void dt_vm_remove_child(GtkWidget *widget, gpointer data)
    When expanders get destoyed, they destroy the child
    so remove the child before that
    */
-static void _remove_child(GtkWidget *child,GtkContainer *container)
+static void _remove_child(GtkWidget *child, GtkContainer *container)
 {
-    if(DTGTK_IS_EXPANDER(child))
-    {
-      GtkWidget * evb = dtgtk_expander_get_body_event_box(DTGTK_EXPANDER(child));
-      gtk_container_remove(GTK_CONTAINER(evb),dtgtk_expander_get_body(DTGTK_EXPANDER(child)));
-      gtk_widget_destroy(child);
-    }
-    else
-    {
-      gtk_container_remove(container,child);
-    }
+  if(DTGTK_IS_EXPANDER(child))
+  {
+    GtkWidget *evb = dtgtk_expander_get_body_event_box(DTGTK_EXPANDER(child));
+    gtk_container_remove(GTK_CONTAINER(evb), dtgtk_expander_get_body(DTGTK_EXPANDER(child)));
+    gtk_widget_destroy(child);
+  }
+  else
+  {
+    gtk_container_remove(container, child);
+  }
 }
 
 static void bitness_nagging()
@@ -265,18 +261,17 @@ static void bitness_nagging()
     flags = GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT;
     dialog = gtk_dialog_new_with_buttons(
         _("you are making a mistake!"), GTK_WINDOW(dt_ui_main_window(darktable.gui->ui)), flags,
-        _("_yes, i understood. please let me suffer by using 32-bit darktable."), GTK_RESPONSE_NONE,
-        NULL);
+        _("_yes, i understood. please let me suffer by using 32-bit darktable."), GTK_RESPONSE_NONE, NULL);
 #ifdef GDK_WINDOWING_QUARTZ
     dt_osx_disallow_fullscreen(dialog);
 #endif
     content_area = gtk_dialog_get_content_area(GTK_DIALOG(dialog));
 
     const gchar *msg = _("warning!\nyou are using a 32-bit build of darktable.\nthe 32-bit build has "
-                          "severely limited virtual address space.\nwe have had numerous reports that "
-                          "darktable exhibits sporadic issues and crashes when using 32-bit builds.\nwe "
-                          "strongly recommend you switch to a proper 64-bit build.\notherwise, you are "
-                          "GUARANTEED to experience issues which cannot be fixed.\n");
+                         "severely limited virtual address space.\nwe have had numerous reports that "
+                         "darktable exhibits sporadic issues and crashes when using 32-bit builds.\nwe "
+                         "strongly recommend you switch to a proper 64-bit build.\notherwise, you are "
+                         "GUARANTEED to experience issues which cannot be fixed.\n");
 
     gtk_container_add(GTK_CONTAINER(content_area), gtk_label_new(msg));
     gtk_widget_show_all(dialog);
@@ -357,8 +352,7 @@ int dt_view_manager_switch_by_view(dt_view_manager_t *vm, const dt_view_t *nv)
     }
 
     /* remove all widgets in all containers */
-    for(int l = 0; l < DT_UI_CONTAINER_SIZE; l++)
-      dt_ui_container_destroy_children(darktable.gui->ui, l);
+    for(int l = 0; l < DT_UI_CONTAINER_SIZE; l++) dt_ui_container_destroy_children(darktable.gui->ui, l);
     vm->current_view = NULL;
     return 0;
   }
@@ -399,7 +393,7 @@ int dt_view_manager_switch_by_view(dt_view_manager_t *vm, const dt_view_t *nv)
 
     /* remove all widets in all containers */
     for(int l = 0; l < DT_UI_CONTAINER_SIZE; l++)
-      dt_ui_container_foreach(darktable.gui->ui, l,(GtkCallback)_remove_child);
+      dt_ui_container_foreach(darktable.gui->ui, l, (GtkCallback)_remove_child);
   }
 
   /* change current view to the new view */
@@ -493,8 +487,8 @@ const char *dt_view_manager_name(dt_view_manager_t *vm)
     return vm->current_view->module_name;
 }
 
-void dt_view_manager_expose(dt_view_manager_t *vm, cairo_t *cr, int32_t width, int32_t height,
-                            int32_t pointerx, int32_t pointery)
+void dt_view_manager_expose(dt_view_manager_t *vm, cairo_t *cr, int32_t width, int32_t height, int32_t pointerx,
+                            int32_t pointery)
 {
   if(!vm->current_view)
   {
@@ -605,8 +599,8 @@ int dt_view_manager_button_released(dt_view_manager_t *vm, double x, double y, i
   return 0;
 }
 
-int dt_view_manager_button_pressed(dt_view_manager_t *vm, double x, double y, double pressure, int which,
-                                   int type, uint32_t state)
+int dt_view_manager_button_pressed(dt_view_manager_t *vm, double x, double y, double pressure, int which, int type,
+                                   uint32_t state)
 {
   if(!vm->current_view) return 0;
   dt_view_t *v = vm->current_view;
@@ -636,18 +630,8 @@ int dt_view_manager_key_pressed(dt_view_manager_t *vm, guint key, guint state)
 {
   // ↑ ↑ ↓ ↓ ← → ← → b a
   static int konami_state = 0;
-  static guint konami_sequence[] = {
-    GDK_KEY_Up,
-    GDK_KEY_Up,
-    GDK_KEY_Down,
-    GDK_KEY_Down,
-    GDK_KEY_Left,
-    GDK_KEY_Right,
-    GDK_KEY_Left,
-    GDK_KEY_Right,
-    GDK_KEY_b,
-    GDK_KEY_a
-  };
+  static guint konami_sequence[] = { GDK_KEY_Up,    GDK_KEY_Up,   GDK_KEY_Down,  GDK_KEY_Down, GDK_KEY_Left,
+                                     GDK_KEY_Right, GDK_KEY_Left, GDK_KEY_Right, GDK_KEY_b,    GDK_KEY_a };
   if(key == konami_sequence[konami_state])
   {
     konami_state++;
@@ -782,8 +766,8 @@ int32_t dt_view_get_image_to_act_on()
   //   it only affects the selection.
   const int32_t mouse_over_id = dt_control_get_mouse_over_id();
 
-  const int zoom = darktable.view_manager->proxy.lighttable.get_images_in_row(
-      darktable.view_manager->proxy.lighttable.view);
+  const int zoom
+      = darktable.view_manager->proxy.lighttable.get_images_in_row(darktable.view_manager->proxy.lighttable.view);
 
   const int full_preview_id = darktable.view_manager->proxy.lighttable.get_full_preview_id(
       darktable.view_manager->proxy.lighttable.view);
@@ -809,13 +793,14 @@ int32_t dt_view_get_image_to_act_on()
 }
 
 int dt_view_image_expose(dt_view_image_over_t *image_over, uint32_t imgid, cairo_t *cr, int32_t width,
-                         int32_t height, int32_t zoom, int32_t px, int32_t py, gboolean full_preview, gboolean image_only)
+                         int32_t height, int32_t zoom, int32_t px, int32_t py, gboolean full_preview,
+                         gboolean image_only)
 {
   int missing = 0;
   const double start = dt_get_wtime();
-// some performance tuning stuff, for your pleasure.
-// on my machine with 7 image per row it seems grouping has the largest
-// impact from around 400ms -> 55ms per redraw.
+  // some performance tuning stuff, for your pleasure.
+  // on my machine with 7 image per row it seems grouping has the largest
+  // impact from around 400ms -> 55ms per redraw.
 
   // active if zoom>1 or in the proper area
   const gboolean in_metadata_zone = (px < width && py < height / 2) || (zoom > 1);
@@ -833,9 +818,10 @@ int dt_view_image_expose(dt_view_image_over_t *image_over, uint32_t imgid, cairo
   float bgcol = 0.4, fontcol = 0.425, bordercol = 0.1, outlinecol = 0.2;
   int selected = 0, is_grouped = 0;
   // this is a gui thread only thing. no mutex required:
-  const int imgsel = dt_control_get_mouse_over_id(); //  darktable.control->global_settings.lib_image_mouse_over_id;
+  const int imgsel
+      = dt_control_get_mouse_over_id(); //  darktable.control->global_settings.lib_image_mouse_over_id;
 
-  if (draw_selected)
+  if(draw_selected)
   {
     /* clear and reset statements */
     DT_DEBUG_SQLITE3_CLEAR_BINDINGS(darktable.view_manager->statements.is_selected);
@@ -872,7 +858,7 @@ int dt_view_image_expose(dt_view_image_over_t *image_over, uint32_t imgid, cairo
   }
 
   float imgwd = 0.90f;
-  if (image_only)
+  if(image_only)
   {
     imgwd = 1.0;
   }
@@ -926,19 +912,17 @@ int dt_view_image_expose(dt_view_image_over_t *image_over, uint32_t imgid, cairo
       pango_cairo_show_layout(cr, layout);
       pango_font_description_free(desc);
       g_object_unref(layout);
-
     }
   }
 
   dt_mipmap_buffer_t buf;
-  dt_mipmap_size_t mip
-      = dt_mipmap_cache_get_matching_size(darktable.mipmap_cache, imgwd * width, imgwd * height);
+  dt_mipmap_size_t mip = dt_mipmap_cache_get_matching_size(darktable.mipmap_cache, imgwd * width, imgwd * height);
   dt_mipmap_cache_get(darktable.mipmap_cache, &buf, imgid, mip, DT_MIPMAP_BEST_EFFORT, 'r');
   // if we got a different mip than requested, and it's not a skull (8x8 px), we count
   // this thumbnail as missing (to trigger re-exposure)
   if(buf.size != mip && buf.width != 8 && buf.height != 8) missing = 1;
 
-  if (draw_thumb)
+  if(draw_thumb)
   {
     float scale = 1.0;
 
@@ -957,14 +941,14 @@ int dt_view_image_expose(dt_view_image_over_t *image_over, uint32_t imgid, cairo
           pthread_rwlock_rdlock(&darktable.color_profiles->xprofile_lock);
           have_lock = TRUE;
 
-          // we only color manage when a thumbnail is sRGB or AdobeRGB. everything else just gets dumped to the screen
-          if(buf.color_space == DT_COLORSPACE_SRGB &&
-             darktable.color_profiles->transform_srgb_to_display)
+          // we only color manage when a thumbnail is sRGB or AdobeRGB. everything else just gets dumped to the
+          // screen
+          if(buf.color_space == DT_COLORSPACE_SRGB && darktable.color_profiles->transform_srgb_to_display)
           {
             transform = darktable.color_profiles->transform_srgb_to_display;
           }
-          else if(buf.color_space == DT_COLORSPACE_ADOBERGB &&
-                  darktable.color_profiles->transform_adobe_rgb_to_display)
+          else if(buf.color_space == DT_COLORSPACE_ADOBERGB
+                  && darktable.color_profiles->transform_adobe_rgb_to_display)
           {
             transform = darktable.color_profiles->transform_adobe_rgb_to_display;
           }
@@ -978,14 +962,15 @@ int dt_view_image_expose(dt_view_image_over_t *image_over, uint32_t imgid, cairo
             }
             else if(buf.color_space != DT_COLORSPACE_DISPLAY)
             {
-              fprintf(stderr, "oops, there seems to be a code path setting an unhandled color space of thumbnails (%s)!\n",
+              fprintf(stderr,
+                      "oops, there seems to be a code path setting an unhandled color space of thumbnails (%s)!\n",
                       dt_colorspaces_get_name(buf.color_space, "from file"));
             }
           }
         }
 
 #ifdef _OPENMP
-  #pragma omp parallel for schedule(static) default(none) shared(buf, rgbbuf, transform)
+#pragma omp parallel for schedule(static) default(none) shared(buf, rgbbuf, transform)
 #endif
         for(int i = 0; i < buf.height; i++)
         {
@@ -1009,8 +994,7 @@ int dt_view_image_expose(dt_view_image_over_t *image_over, uint32_t imgid, cairo
         if(have_lock) pthread_rwlock_unlock(&darktable.color_profiles->xprofile_lock);
 
         const int32_t stride = cairo_format_stride_for_width(CAIRO_FORMAT_RGB24, buf.width);
-        surface
-          = cairo_image_surface_create_for_data(rgbbuf, CAIRO_FORMAT_RGB24, buf.width, buf.height, stride);
+        surface = cairo_image_surface_create_for_data(rgbbuf, CAIRO_FORMAT_RGB24, buf.width, buf.height, stride);
       }
 
       if(zoom == 1 && !image_only)
@@ -1025,7 +1009,7 @@ int dt_view_image_expose(dt_view_image_over_t *image_over, uint32_t imgid, cairo
     // draw centered and fitted:
     cairo_save(cr);
 
-    if (image_only) // in this case we want to display the picture exactly at (px, py)
+    if(image_only) // in this case we want to display the picture exactly at (px, py)
       cairo_translate(cr, px, py);
     else
       cairo_translate(cr, width / 2.0, height / 2.0);
@@ -1034,7 +1018,7 @@ int dt_view_image_expose(dt_view_image_over_t *image_over, uint32_t imgid, cairo
 
     if(buf.buf && surface)
     {
-      if (!image_only) cairo_translate(cr, -0.5 * buf.width, -0.5 * buf.height);
+      if(!image_only) cairo_translate(cr, -0.5 * buf.width, -0.5 * buf.height);
       cairo_set_source_surface(cr, surface, 0, 0);
       // set filter no nearest:
       // in skull mode, we want to see big pixels.
@@ -1051,7 +1035,7 @@ int dt_view_image_expose(dt_view_image_over_t *image_over, uint32_t imgid, cairo
 
     free(rgbbuf);
 
-    if (image_only)
+    if(image_only)
     {
       cairo_restore(cr);
       cairo_save(cr);
@@ -1279,7 +1263,7 @@ int dt_view_image_expose(dt_view_image_over_t *image_over, uint32_t imgid, cairo
   // kill all paths, in case img was not loaded yet, or is blocked:
   cairo_new_path(cr);
 
-  if (draw_colorlabels)
+  if(draw_colorlabels)
   {
     // TODO: make mouse sensitive, just as stars!
     // TODO: cache in image struct!
@@ -1310,7 +1294,7 @@ int dt_view_image_expose(dt_view_image_over_t *image_over, uint32_t imgid, cairo
     }
   }
 
-  if (draw_local_copy)
+  if(draw_local_copy)
   {
     if(img && width > DECORATION_SIZE_LIMIT)
     {
@@ -1353,12 +1337,11 @@ int dt_view_image_expose(dt_view_image_over_t *image_over, uint32_t imgid, cairo
     cairo_fill(cr);
     pango_font_description_free(desc);
     g_object_unref(layout);
-
   }
 
   // draw custom metadata from accompanying text file:
-  if(draw_metadata && img && (img->flags & DT_IMAGE_HAS_TXT) && dt_conf_get_bool("plugins/lighttable/draw_custom_metadata")
-     && (zoom == 1))
+  if(draw_metadata && img && (img->flags & DT_IMAGE_HAS_TXT)
+     && dt_conf_get_bool("plugins/lighttable/draw_custom_metadata") && (zoom == 1))
   {
     char *path = dt_image_get_text_path(img->id);
     if(path)
@@ -1397,7 +1380,6 @@ int dt_view_image_expose(dt_view_image_over_t *image_over, uint32_t imgid, cairo
         fclose(f);
         pango_font_description_free(desc);
         g_object_unref(layout);
-
       }
       g_free(path);
     }
@@ -1412,14 +1394,8 @@ int dt_view_image_expose(dt_view_image_over_t *image_over, uint32_t imgid, cairo
   return missing;
 }
 
-void
-dt_view_image_only_expose(
-  uint32_t imgid,
-  cairo_t *cr,
-  int32_t width,
-  int32_t height,
-  int32_t offsetx,
-  int32_t offsety)
+void dt_view_image_only_expose(uint32_t imgid, cairo_t *cr, int32_t width, int32_t height, int32_t offsetx,
+                               int32_t offsety)
 {
   dt_view_image_over_t image_over;
   dt_view_image_expose(&image_over, imgid, cr, width, height, 1, offsetx, offsety, TRUE, TRUE);
@@ -1694,8 +1670,7 @@ gboolean dt_view_map_remove_marker(const dt_view_manager_t *vm, dt_geo_map_displ
 #ifdef HAVE_PRINT
 void dt_view_print_settings(const dt_view_manager_t *vm, dt_print_info_t *pinfo)
 {
-  if (vm->proxy.print.view)
-    vm->proxy.print.print_settings(vm->proxy.print.view, pinfo);
+  if(vm->proxy.print.view) vm->proxy.print.print_settings(vm->proxy.print.view, pinfo);
 }
 #endif
 

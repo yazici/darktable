@@ -138,8 +138,8 @@ static inline void fib_latt(int *const x, int *const y, float radius, int step, 
 // most are chosen arbitrarily and/or by experiment/trial+error ... I am sorry ;-)
 // and having everything user-defineable would be just too much
 // -----------------------------------------------------------------------------------------
-void process(struct dt_iop_module_t *module, dt_dev_pixelpipe_iop_t *piece, const void *const i,
-             void *const o, const dt_iop_roi_t *const roi_in, const dt_iop_roi_t *const roi_out)
+void process(struct dt_iop_module_t *module, dt_dev_pixelpipe_iop_t *piece, const void *const i, void *const o,
+             const dt_iop_roi_t *const roi_in, const dt_iop_roi_t *const roi_out)
 {
   dt_iop_defringe_data_t *d = (dt_iop_defringe_data_t *)piece->data;
   assert(dt_iop_module_colorspace(module) == iop_cs_Lab);
@@ -249,8 +249,7 @@ void process(struct dt_iop_module_t *module, dt_dev_pixelpipe_iop_t *piece, cons
   }
 
 #ifdef _OPENMP
-#pragma omp parallel for default(none) shared(width, height,                                                 \
-                                              d) reduction(+ : avg_edge_chroma) schedule(static)
+#pragma omp parallel for default(none) shared(width, height, d) reduction(+ : avg_edge_chroma) schedule(static)
 #endif
   for(int v = 0; v < height; v++)
   {
@@ -286,8 +285,8 @@ void process(struct dt_iop_module_t *module, dt_dev_pixelpipe_iop_t *piece, cons
 #ifdef _OPENMP
 // dynamically/guided scheduled due to possible uneven edge-chroma distribution (thanks to rawtherapee code
 // for this hint!)
-#pragma omp parallel for default(none) shared(width, height, d, xy_small, xy_avg, xy_artifact)               \
-    firstprivate(thresh, avg_edge_chroma) schedule(guided, 32)
+#pragma omp parallel for default(none) shared(width, height, d, xy_small, xy_avg, xy_artifact)                    \
+                                                  firstprivate(thresh, avg_edge_chroma) schedule(guided, 32)
 #endif
   for(int v = 0; v < height; v++)
   {
@@ -321,8 +320,7 @@ void process(struct dt_iop_module_t *module, dt_dev_pixelpipe_iop_t *piece, cons
          || out[(size_t)v * width * ch + MIN(width - 1, (t + 1)) * ch + 3] > local_thresh
          || out[(size_t)MIN(height - 1, (v + 1)) * width * ch + MAX(0, (t - 1)) * ch + 3] > local_thresh
          || out[(size_t)MIN(height - 1, (v + 1)) * width * ch + t * ch + 3] > local_thresh
-         || out[(size_t)MIN(height - 1, (v + 1)) * width * ch + MIN(width - 1, (t + 1)) * ch + 3]
-            > local_thresh)
+         || out[(size_t)MIN(height - 1, (v + 1)) * width * ch + MIN(width - 1, (t + 1)) * ch + 3] > local_thresh)
       {
         float atot = 0, btot = 0;
         float norm = 0;
@@ -369,7 +367,8 @@ void process(struct dt_iop_module_t *module, dt_dev_pixelpipe_iop_t *piece, cons
     }
   }
 
-  if(piece->pipe->mask_display & DT_DEV_PIXELPIPE_DISPLAY_MASK) dt_iop_alpha_copy(i, o, roi_out->width, roi_out->height);
+  if(piece->pipe->mask_display & DT_DEV_PIXELPIPE_DISPLAY_MASK)
+    dt_iop_alpha_copy(i, o, roi_out->width, roi_out->height);
 
   goto FINISH_PROCESS;
 
@@ -395,7 +394,7 @@ void init(dt_iop_module_t *module)
 {
   module->params = calloc(1, sizeof(dt_iop_defringe_params_t));
   module->default_params = calloc(1, sizeof(dt_iop_defringe_params_t));
-    module->priority = 405; // module order created by iop_dependencies.py, do not edit!
+  module->priority = 405; // module order created by iop_dependencies.py, do not edit!
   module->params_size = sizeof(dt_iop_defringe_params_t);
   module->gui_data = NULL;
   module->data = NULL;
@@ -445,7 +444,8 @@ void gui_init(dt_iop_module_t *module)
   dt_bauhaus_combobox_add(g->mode_select, _("global average (fast)"));   // 0
   dt_bauhaus_combobox_add(g->mode_select, _("local average (slow)"));    // 1
   dt_bauhaus_combobox_add(g->mode_select, _("static threshold (fast)")); // 2
-  gtk_widget_set_tooltip_text(g->mode_select,
+  gtk_widget_set_tooltip_text(
+      g->mode_select,
       _("method for color protection:\n - global average: fast, might show slightly wrong previews in high "
         "magnification; might sometimes protect saturation too much or too low in comparison to local "
         "average\n - local average: slower, might protect saturation better than global average by using "

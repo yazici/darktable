@@ -31,7 +31,7 @@ void dt_lua_event_trigger(lua_State *L, const char *event, int nargs)
   lua_getfield(L, LUA_REGISTRYINDEX, "dt_lua_event_list");
   if(lua_isnil(L, -1))
   { // events have been disabled
-    lua_pop(L, nargs+1);
+    lua_pop(L, nargs + 1);
     return;
   }
   lua_getfield(L, -1, event);
@@ -49,17 +49,17 @@ void dt_lua_event_trigger(lua_State *L, const char *event, int nargs)
   lua_getfield(L, -2, "on_event");
   lua_getfield(L, -3, "data");
   lua_pushstring(L, event);
-  for(int i = 1; i <= nargs; i++) lua_pushvalue(L, -6 -nargs);
-  dt_lua_treated_pcall(L,nargs+2,0);
+  for(int i = 1; i <= nargs; i++) lua_pushvalue(L, -6 - nargs);
+  dt_lua_treated_pcall(L, nargs + 2, 0);
   lua_pop(L, nargs + 3);
   dt_lua_redraw_screen();
 }
 
-int dt_lua_event_trigger_wrapper(lua_State *L) 
+int dt_lua_event_trigger_wrapper(lua_State *L)
 {
-  const char*event = luaL_checkstring(L,1);
-  int nargs = lua_gettop(L) -1;
-  dt_lua_event_trigger(L,event,nargs);
+  const char *event = luaL_checkstring(L, 1);
+  int nargs = lua_gettop(L) - 1;
+  dt_lua_event_trigger(L, event, nargs);
   return 0;
 }
 
@@ -141,15 +141,14 @@ int dt_lua_event_keyed_trigger(lua_State *L)
   lua_getfield(L, 1, luaL_checkstring(L, 3));
   if(lua_isnil(L, -1))
   {
-    luaL_error(L, "event %s triggered for unregistered key %s", luaL_checkstring(L, 2),
-               luaL_checkstring(L, 3));
+    luaL_error(L, "event %s triggered for unregistered key %s", luaL_checkstring(L, 2), luaL_checkstring(L, 3));
   }
   const int callback_marker = lua_gettop(L);
   for(int i = 2; i < callback_marker; i++)
   {
     lua_pushvalue(L, i);
   }
-  dt_lua_treated_pcall(L,callback_marker-2,0);
+  dt_lua_treated_pcall(L, callback_marker - 2, 0);
   return 0;
 }
 
@@ -190,7 +189,7 @@ int dt_lua_event_multiinstance_trigger(lua_State *L)
     {
       lua_pushvalue(L, i);
     }
-    dt_lua_treated_pcall(L,arg_top-1,0);
+    dt_lua_treated_pcall(L, arg_top - 1, 0);
   }
   return 0;
 }
@@ -247,11 +246,9 @@ int dt_lua_init_early_events(lua_State *L)
 static gboolean shortcut_callback(GtkAccelGroup *accel_group, GObject *acceleratable, guint keyval,
                                   GdkModifierType modifier, gpointer p)
 {
-  dt_lua_async_call_alien(dt_lua_event_trigger_wrapper,
-      0, NULL, NULL,
-      LUA_ASYNC_TYPENAME,"const char*","shortcut",
-      LUA_ASYNC_TYPENAME_WITH_FREE,"char*",strdup(p),g_cclosure_new(G_CALLBACK(&free),NULL,NULL),
-      LUA_ASYNC_DONE);
+  dt_lua_async_call_alien(dt_lua_event_trigger_wrapper, 0, NULL, NULL, LUA_ASYNC_TYPENAME, "const char*",
+                          "shortcut", LUA_ASYNC_TYPENAME_WITH_FREE, "char*", strdup(p),
+                          g_cclosure_new(G_CALLBACK(&free), NULL, NULL), LUA_ASYNC_DONE);
   return TRUE;
 }
 
@@ -280,14 +277,14 @@ static int register_shortcut_event(lua_State *L)
    */
 
 
-static void format_destructor(void* arg, dt_imageio_module_format_t *format)
+static void format_destructor(void *arg, dt_imageio_module_format_t *format)
 {
-  format->free_params(format,arg);
+  format->free_params(format, arg);
 }
 
-static void storage_destructor(void* arg, dt_imageio_module_storage_t *storage)
+static void storage_destructor(void *arg, dt_imageio_module_storage_t *storage)
 {
-  storage->free_params(storage,arg);
+  storage->free_params(storage, arg);
 }
 
 static void on_export_image_tmpfile(gpointer instance, int imgid, char *filename,
@@ -295,30 +292,30 @@ static void on_export_image_tmpfile(gpointer instance, int imgid, char *filename
                                     dt_imageio_module_storage_t *storage, dt_imageio_module_data_t *sdata,
                                     gpointer user_data)
 {
-  if(storage){
+  if(storage)
+  {
     dt_imageio_module_data_t *format_copy = format->get_params(format);
-    memcpy(format_copy,fdata,format->params_size(format));
+    memcpy(format_copy, fdata, format->params_size(format));
     dt_imageio_module_data_t *storage_copy = storage->get_params(storage);
-    memcpy(storage_copy,sdata,storage->params_size(storage));
-    dt_lua_async_call_alien(dt_lua_event_trigger_wrapper,
-        0, NULL, NULL,
-        LUA_ASYNC_TYPENAME,"const char*","intermediate-export-image",
-        LUA_ASYNC_TYPENAME,"dt_lua_image_t",imgid,
-        LUA_ASYNC_TYPENAME_WITH_FREE,"char*",strdup(filename),g_cclosure_new(G_CALLBACK(&free),NULL,NULL),
-        LUA_ASYNC_TYPEID_WITH_FREE,format->parameter_lua_type,format_copy,g_cclosure_new(G_CALLBACK(&format_destructor),format,NULL),
-        LUA_ASYNC_TYPEID_WITH_FREE,storage->parameter_lua_type,storage_copy,g_cclosure_new(G_CALLBACK(&storage_destructor),storage,NULL),
-        LUA_ASYNC_DONE);
-  }else{
+    memcpy(storage_copy, sdata, storage->params_size(storage));
+    dt_lua_async_call_alien(
+        dt_lua_event_trigger_wrapper, 0, NULL, NULL, LUA_ASYNC_TYPENAME, "const char*",
+        "intermediate-export-image", LUA_ASYNC_TYPENAME, "dt_lua_image_t", imgid, LUA_ASYNC_TYPENAME_WITH_FREE,
+        "char*", strdup(filename), g_cclosure_new(G_CALLBACK(&free), NULL, NULL), LUA_ASYNC_TYPEID_WITH_FREE,
+        format->parameter_lua_type, format_copy, g_cclosure_new(G_CALLBACK(&format_destructor), format, NULL),
+        LUA_ASYNC_TYPEID_WITH_FREE, storage->parameter_lua_type, storage_copy,
+        g_cclosure_new(G_CALLBACK(&storage_destructor), storage, NULL), LUA_ASYNC_DONE);
+  }
+  else
+  {
     dt_imageio_module_data_t *format_copy = format->get_params(format);
-    memcpy(format_copy,fdata,format->params_size(format));
-    dt_lua_async_call_alien(dt_lua_event_trigger_wrapper,
-        0, NULL, NULL,
-        LUA_ASYNC_TYPENAME,"const char*","intermediate-export-image",
-        LUA_ASYNC_TYPENAME_WITH_FREE,"char*",strdup(filename),g_cclosure_new(G_CALLBACK(&free),NULL,NULL),
-        LUA_ASYNC_TYPENAME,"dt_lua_image_t",imgid,
-        LUA_ASYNC_TYPEID_WITH_FREE,format->parameter_lua_type,format_copy,g_cclosure_new(G_CALLBACK(&format_destructor),format,NULL),
-        LUA_ASYNC_TYPENAME,"void",NULL,
-        LUA_ASYNC_DONE);
+    memcpy(format_copy, fdata, format->params_size(format));
+    dt_lua_async_call_alien(dt_lua_event_trigger_wrapper, 0, NULL, NULL, LUA_ASYNC_TYPENAME, "const char*",
+                            "intermediate-export-image", LUA_ASYNC_TYPENAME_WITH_FREE, "char*", strdup(filename),
+                            g_cclosure_new(G_CALLBACK(&free), NULL, NULL), LUA_ASYNC_TYPENAME, "dt_lua_image_t",
+                            imgid, LUA_ASYNC_TYPEID_WITH_FREE, format->parameter_lua_type, format_copy,
+                            g_cclosure_new(G_CALLBACK(&format_destructor), format, NULL), LUA_ASYNC_TYPENAME,
+                            "void", NULL, LUA_ASYNC_DONE);
   }
 }
 
@@ -335,12 +332,12 @@ int dt_lua_init_events(lua_State *L)
   lua_pushcfunction(L, dt_lua_event_multiinstance_register);
   lua_pushcfunction(L, dt_lua_event_multiinstance_trigger);
   dt_lua_event_add(L, "intermediate-export-image");
-  dt_control_signal_connect(darktable.signals, DT_SIGNAL_IMAGE_EXPORT_TMPFILE,
-                            G_CALLBACK(on_export_image_tmpfile), NULL);
+  dt_control_signal_connect(darktable.signals, DT_SIGNAL_IMAGE_EXPORT_TMPFILE, G_CALLBACK(on_export_image_tmpfile),
+                            NULL);
 
   lua_pushcfunction(L, dt_lua_event_multiinstance_register);
   lua_pushcfunction(L, dt_lua_event_multiinstance_trigger);
-  dt_lua_event_add(L,"pre-import");
+  dt_lua_event_add(L, "pre-import");
   return 0;
 }
 // modelines: These editor modelines have been set for all relevant files by tools/update_modelines.sh

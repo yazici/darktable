@@ -68,8 +68,8 @@ const char *name(dt_lib_module_t *self)
 
 const char **views(dt_lib_module_t *self)
 {
-  static const char *v1[] = {"lighttable", "darkroom", "map", "tethering", NULL};
-  static const char *v2[] = {"lighttable", "map", "tethering", NULL};
+  static const char *v1[] = { "lighttable", "darkroom", "map", "tethering", NULL };
+  static const char *v2[] = { "lighttable", "map", "tethering", NULL };
 
   if(dt_conf_get_bool("plugins/darkroom/tagging/visible"))
     return v1;
@@ -170,8 +170,7 @@ static void attach_selected_tag(dt_lib_module_t *self, dt_lib_tagging_t *d)
   GtkTreeModel *model = NULL;
   GtkTreeView *view = d->related;
   GtkTreeSelection *selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(view));
-  if(!gtk_tree_selection_get_selected(selection, &model, &iter)
-     && !gtk_tree_model_get_iter_first(model, &iter))
+  if(!gtk_tree_selection_get_selected(selection, &model, &iter) && !gtk_tree_model_get_iter_first(model, &iter))
     return;
   guint tagid;
   gtk_tree_model_get(model, &iter, DT_LIB_TAGGING_COL_ID, &tagid, -1);
@@ -369,10 +368,9 @@ static void import_button_clicked(GtkButton *button, gpointer user_data)
   }
 
   GtkWidget *win = dt_ui_main_window(darktable.gui->ui);
-  GtkWidget *filechooser = gtk_file_chooser_dialog_new(_("Select a keyword file"), GTK_WINDOW(win),
-                                                       GTK_FILE_CHOOSER_ACTION_OPEN,
-                                                       _("_cancel"), GTK_RESPONSE_CANCEL,
-                                                       _("_import"), GTK_RESPONSE_ACCEPT, (char *)NULL);
+  GtkWidget *filechooser = gtk_file_chooser_dialog_new(
+      _("Select a keyword file"), GTK_WINDOW(win), GTK_FILE_CHOOSER_ACTION_OPEN, _("_cancel"), GTK_RESPONSE_CANCEL,
+      _("_import"), GTK_RESPONSE_ACCEPT, (char *)NULL);
 #ifdef GDK_WINDOWING_QUARTZ
   dt_osx_disallow_fullscreen(filechooser);
 #endif
@@ -409,10 +407,9 @@ static void export_button_clicked(GtkButton *button, gpointer user_data)
   }
 
   GtkWidget *win = dt_ui_main_window(darktable.gui->ui);
-  GtkWidget *filechooser = gtk_file_chooser_dialog_new(_("Select file to export to"), GTK_WINDOW(win),
-                                                       GTK_FILE_CHOOSER_ACTION_SAVE,
-                                                       _("_cancel"), GTK_RESPONSE_CANCEL,
-                                                       _("_export"), GTK_RESPONSE_ACCEPT, (char *)NULL);
+  GtkWidget *filechooser = gtk_file_chooser_dialog_new(
+      _("Select file to export to"), GTK_WINDOW(win), GTK_FILE_CHOOSER_ACTION_SAVE, _("_cancel"),
+      GTK_RESPONSE_CANCEL, _("_export"), GTK_RESPONSE_ACCEPT, (char *)NULL);
 #ifdef GDK_WINDOWING_QUARTZ
   dt_osx_disallow_fullscreen(filechooser);
 #endif

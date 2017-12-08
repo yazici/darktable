@@ -435,10 +435,14 @@ int process_cl(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, cl_m
   // printf("\n");
 
   int hblocksize;
-  dt_opencl_local_buffer_t hlocopt
-    = (dt_opencl_local_buffer_t){ .xoffset = 2 * wdh, .xfactor = 1, .yoffset = 0, .yfactor = 1,
-                                  .cellsize = 4 * sizeof(float), .overhead = 0,
-                                  .sizex = 1 << 16, .sizey = 1 };
+  dt_opencl_local_buffer_t hlocopt = (dt_opencl_local_buffer_t){.xoffset = 2 * wdh,
+                                                                .xfactor = 1,
+                                                                .yoffset = 0,
+                                                                .yfactor = 1,
+                                                                .cellsize = 4 * sizeof(float),
+                                                                .overhead = 0,
+                                                                .sizex = 1 << 16,
+                                                                .sizey = 1 };
 
   if(dt_opencl_local_buffer_opt(devid, gd->kernel_soften_hblur, &hlocopt))
     hblocksize = hlocopt.sizex;
@@ -446,10 +450,14 @@ int process_cl(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, cl_m
     hblocksize = 1;
 
   int vblocksize;
-  dt_opencl_local_buffer_t vlocopt
-    = (dt_opencl_local_buffer_t){ .xoffset = 1, .xfactor = 1, .yoffset = 2 * wdh, .yfactor = 1,
-                                  .cellsize = 4 * sizeof(float), .overhead = 0,
-                                  .sizex = 1, .sizey = 1 << 16 };
+  dt_opencl_local_buffer_t vlocopt = (dt_opencl_local_buffer_t){.xoffset = 1,
+                                                                .xfactor = 1,
+                                                                .yoffset = 2 * wdh,
+                                                                .yfactor = 1,
+                                                                .cellsize = 4 * sizeof(float),
+                                                                .overhead = 0,
+                                                                .sizex = 1,
+                                                                .sizey = 1 << 16 };
 
   if(dt_opencl_local_buffer_opt(devid, gd->kernel_soften_vblur, &vlocopt))
     vblocksize = vlocopt.sizey;
@@ -498,8 +506,7 @@ int process_cl(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, cl_m
     dt_opencl_set_kernel_arg(devid, gd->kernel_soften_hblur, 4, sizeof(int), (void *)&width);
     dt_opencl_set_kernel_arg(devid, gd->kernel_soften_hblur, 5, sizeof(int), (void *)&height);
     dt_opencl_set_kernel_arg(devid, gd->kernel_soften_hblur, 6, sizeof(int), (void *)&hblocksize);
-    dt_opencl_set_kernel_arg(devid, gd->kernel_soften_hblur, 7, (hblocksize + 2 * wdh) * 4 * sizeof(float),
-                             NULL);
+    dt_opencl_set_kernel_arg(devid, gd->kernel_soften_hblur, 7, (hblocksize + 2 * wdh) * 4 * sizeof(float), NULL);
     err = dt_opencl_enqueue_kernel_2d_with_local(devid, gd->kernel_soften_hblur, sizes, local);
     if(err != CL_SUCCESS) goto error;
 
@@ -518,8 +525,7 @@ int process_cl(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, cl_m
     dt_opencl_set_kernel_arg(devid, gd->kernel_soften_vblur, 4, sizeof(int), (void *)&width);
     dt_opencl_set_kernel_arg(devid, gd->kernel_soften_vblur, 5, sizeof(int), (void *)&height);
     dt_opencl_set_kernel_arg(devid, gd->kernel_soften_vblur, 6, sizeof(int), (void *)&vblocksize);
-    dt_opencl_set_kernel_arg(devid, gd->kernel_soften_vblur, 7, (vblocksize + 2 * wdh) * 4 * sizeof(float),
-                             NULL);
+    dt_opencl_set_kernel_arg(devid, gd->kernel_soften_vblur, 7, (vblocksize + 2 * wdh) * 4 * sizeof(float), NULL);
     err = dt_opencl_enqueue_kernel_2d_with_local(devid, gd->kernel_soften_vblur, sizes, local);
     if(err != CL_SUCCESS) goto error;
   }
@@ -552,8 +558,7 @@ error:
 #endif
 
 void tiling_callback(struct dt_iop_module_t *self, struct dt_dev_pixelpipe_iop_t *piece,
-                     const dt_iop_roi_t *roi_in, const dt_iop_roi_t *roi_out,
-                     struct dt_develop_tiling_t *tiling)
+                     const dt_iop_roi_t *roi_in, const dt_iop_roi_t *roi_out, struct dt_develop_tiling_t *tiling)
 {
   dt_iop_soften_data_t *d = (dt_iop_soften_data_t *)piece->data;
 
@@ -581,8 +586,7 @@ void tiling_callback(struct dt_iop_module_t *self, struct dt_dev_pixelpipe_iop_t
 void init_global(dt_iop_module_so_t *module)
 {
   const int program = 9; // soften.cl, from programs.conf
-  dt_iop_soften_global_data_t *gd
-      = (dt_iop_soften_global_data_t *)malloc(sizeof(dt_iop_soften_global_data_t));
+  dt_iop_soften_global_data_t *gd = (dt_iop_soften_global_data_t *)malloc(sizeof(dt_iop_soften_global_data_t));
   module->data = gd;
   gd->kernel_soften_overexposed = dt_opencl_create_kernel(program, "soften_overexposed");
   gd->kernel_soften_hblur = dt_opencl_create_kernel(program, "soften_hblur");
@@ -679,7 +683,7 @@ void init(dt_iop_module_t *module)
   module->params = calloc(1, sizeof(dt_iop_soften_params_t));
   module->default_params = calloc(1, sizeof(dt_iop_soften_params_t));
   module->default_enabled = 0;
-    module->priority = 840; // module order created by iop_dependencies.py, do not edit!
+  module->priority = 840; // module order created by iop_dependencies.py, do not edit!
   module->params_size = sizeof(dt_iop_soften_params_t);
   module->gui_data = NULL;
   dt_iop_soften_params_t tmp = (dt_iop_soften_params_t){ 50, 100.0, 0.33, 50 };

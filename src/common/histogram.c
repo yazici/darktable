@@ -203,8 +203,8 @@ inline static void histogram_helper_cs_Lab(const dt_dev_histogram_collection_par
 //==============================================================================
 
 void dt_histogram_worker(dt_dev_histogram_collection_params_t *const histogram_params,
-                         dt_dev_histogram_stats_t *histogram_stats, const void *const pixel,
-                         uint32_t **histogram, const dt_worker Worker)
+                         dt_dev_histogram_stats_t *histogram_stats, const void *const pixel, uint32_t **histogram,
+                         const dt_worker Worker)
 {
   const int nthreads = omp_get_max_threads();
 
@@ -276,8 +276,8 @@ void dt_histogram_helper(dt_dev_histogram_collection_params_t *histogram_params,
   }
 }
 
-void dt_histogram_max_helper(const dt_dev_histogram_stats_t *const histogram_stats,
-                             dt_iop_colorspace_type_t cst, uint32_t **histogram, uint32_t *histogram_max)
+void dt_histogram_max_helper(const dt_dev_histogram_stats_t *const histogram_stats, dt_iop_colorspace_type_t cst,
+                             uint32_t **histogram, uint32_t *histogram_max)
 {
   if(*histogram == NULL) return;
   histogram_max[0] = histogram_max[1] = histogram_max[2] = histogram_max[3] = 0;

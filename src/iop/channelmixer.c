@@ -89,10 +89,10 @@ typedef struct dt_iop_channelmixer_params_t
 typedef struct dt_iop_channelmixer_gui_data_t
 {
   GtkBox *vbox;
-  GtkWidget *combo1;                      // Output channel
-  GtkLabel *dtlabel1, *dtlabel2;          // output channel, source channels
-  GtkLabel *label1, *label2, *label3;     // red, green, blue
-  GtkWidget *scale1, *scale2, *scale3;    // red, green, blue
+  GtkWidget *combo1;                   // Output channel
+  GtkLabel *dtlabel1, *dtlabel2;       // output channel, source channels
+  GtkLabel *label1, *label2, *label3;  // red, green, blue
+  GtkWidget *scale1, *scale2, *scale3; // red, green, blue
 } dt_iop_channelmixer_gui_data_t;
 
 typedef struct dt_iop_channelmixer_data_t
@@ -147,10 +147,10 @@ void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const 
              void *const ovoid, const dt_iop_roi_t *const roi_in, const dt_iop_roi_t *const roi_out)
 {
   const dt_iop_channelmixer_data_t *data = (dt_iop_channelmixer_data_t *)piece->data;
-  const gboolean gray_mix_mode = (data->red[CHANNEL_GRAY] != 0.0 || data->green[CHANNEL_GRAY] != 0.0
-                                  || data->blue[CHANNEL_GRAY] != 0.0)
-                                     ? TRUE
-                                     : FALSE;
+  const gboolean gray_mix_mode
+      = (data->red[CHANNEL_GRAY] != 0.0 || data->green[CHANNEL_GRAY] != 0.0 || data->blue[CHANNEL_GRAY] != 0.0)
+            ? TRUE
+            : FALSE;
   const int ch = piece->colors;
 
 #ifdef _OPENMP
@@ -228,7 +228,8 @@ void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const 
     }
   }
 
-  if(piece->pipe->mask_display & DT_DEV_PIXELPIPE_DISPLAY_MASK) dt_iop_alpha_copy(ivoid, ovoid, roi_out->width, roi_out->height);
+  if(piece->pipe->mask_display & DT_DEV_PIXELPIPE_DISPLAY_MASK)
+    dt_iop_alpha_copy(ivoid, ovoid, roi_out->width, roi_out->height);
 }
 
 
@@ -249,10 +250,10 @@ int process_cl(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, cl_m
   const int width = roi_in->width;
   const int height = roi_in->height;
 
-  const int gray_mix_mode = (data->red[CHANNEL_GRAY] != 0.0f || data->green[CHANNEL_GRAY] != 0.0f
-                             || data->blue[CHANNEL_GRAY] != 0.0f)
-                                ? TRUE
-                                : FALSE;
+  const int gray_mix_mode
+      = (data->red[CHANNEL_GRAY] != 0.0f || data->green[CHANNEL_GRAY] != 0.0f || data->blue[CHANNEL_GRAY] != 0.0f)
+            ? TRUE
+            : FALSE;
 
   size_t sizes[] = { ROUNDUPWD(width), ROUNDUPHT(height), 1 };
 
@@ -418,12 +419,11 @@ void init(dt_iop_module_t *module)
   module->params = calloc(1, sizeof(dt_iop_channelmixer_params_t));
   module->default_params = calloc(1, sizeof(dt_iop_channelmixer_params_t));
   module->default_enabled = 0;
-    module->priority = 826; // module order created by iop_dependencies.py, do not edit!
+  module->priority = 826; // module order created by iop_dependencies.py, do not edit!
   module->params_size = sizeof(dt_iop_channelmixer_params_t);
   module->gui_data = NULL;
-  dt_iop_channelmixer_params_t tmp = (dt_iop_channelmixer_params_t){ { 0, 0, 0, 1, 0, 0, 0 },
-                                                                     { 0, 0, 0, 0, 1, 0, 0 },
-                                                                     { 0, 0, 0, 0, 0, 1, 0 } };
+  dt_iop_channelmixer_params_t tmp
+      = (dt_iop_channelmixer_params_t){ { 0, 0, 0, 1, 0, 0, 0 }, { 0, 0, 0, 0, 1, 0, 0 }, { 0, 0, 0, 0, 0, 1, 0 } };
   memcpy(module->params, &tmp, sizeof(dt_iop_channelmixer_params_t));
   memcpy(module->default_params, &tmp, sizeof(dt_iop_channelmixer_params_t));
 }
@@ -486,25 +486,21 @@ void init_presets(dt_iop_module_so_t *self)
 {
   DT_DEBUG_SQLITE3_EXEC(dt_database_get(darktable.db), "BEGIN", NULL, NULL, NULL);
 
-  dt_gui_presets_add_generic(_("swap R and B"), self->op, self->version(),
-                             &(dt_iop_channelmixer_params_t){ { 0, 0, 0, 0, 0, 1, 0 },
-                                                              { 0, 0, 0, 0, 1, 0, 0 },
-                                                              { 0, 0, 0, 1, 0, 0, 0 } },
-                             sizeof(dt_iop_channelmixer_params_t), 1);
-  dt_gui_presets_add_generic(_("swap G and B"), self->op, self->version(),
-                             &(dt_iop_channelmixer_params_t){ { 0, 0, 0, 1, 0, 0, 0 },
-                                                              { 0, 0, 0, 0, 0, 1, 0 },
-                                                              { 0, 0, 0, 0, 1, 0, 0 } },
-                             sizeof(dt_iop_channelmixer_params_t), 1);
+  dt_gui_presets_add_generic(
+      _("swap R and B"), self->op, self->version(),
+      &(dt_iop_channelmixer_params_t){ { 0, 0, 0, 0, 0, 1, 0 }, { 0, 0, 0, 0, 1, 0, 0 }, { 0, 0, 0, 1, 0, 0, 0 } },
+      sizeof(dt_iop_channelmixer_params_t), 1);
+  dt_gui_presets_add_generic(
+      _("swap G and B"), self->op, self->version(),
+      &(dt_iop_channelmixer_params_t){ { 0, 0, 0, 1, 0, 0, 0 }, { 0, 0, 0, 0, 0, 1, 0 }, { 0, 0, 0, 0, 1, 0, 0 } },
+      sizeof(dt_iop_channelmixer_params_t), 1);
   dt_gui_presets_add_generic(_("color contrast boost"), self->op, self->version(),
-                             &(dt_iop_channelmixer_params_t){ { 0, 0, 0.8, 1, 0, 0, 0 },
-                                                              { 0, 0, 0.1, 0, 1, 0, 0 },
-                                                              { 0, 0, 0.1, 0, 0, 1, 0 } },
+                             &(dt_iop_channelmixer_params_t){
+                                 { 0, 0, 0.8, 1, 0, 0, 0 }, { 0, 0, 0.1, 0, 1, 0, 0 }, { 0, 0, 0.1, 0, 0, 1, 0 } },
                              sizeof(dt_iop_channelmixer_params_t), 1);
   dt_gui_presets_add_generic(_("color details boost"), self->op, self->version(),
-                             &(dt_iop_channelmixer_params_t){ { 0, 0, 0.1, 1, 0, 0, 0 },
-                                                              { 0, 0, 0.8, 0, 1, 0, 0 },
-                                                              { 0, 0, 0.1, 0, 0, 1, 0 } },
+                             &(dt_iop_channelmixer_params_t){
+                                 { 0, 0, 0.1, 1, 0, 0, 0 }, { 0, 0, 0.8, 0, 1, 0, 0 }, { 0, 0, 0.1, 0, 0, 1, 0 } },
                              sizeof(dt_iop_channelmixer_params_t), 1);
   dt_gui_presets_add_generic(_("color artifacts boost"), self->op, self->version(),
                              &(dt_iop_channelmixer_params_t){ { 0, 0, 0.1, 1, 0, 0, 0 },

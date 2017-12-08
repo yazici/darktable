@@ -177,16 +177,15 @@ void dt_dev_cleanup(dt_develop_t *dev)
 void dt_dev_process_image(dt_develop_t *dev)
 {
   if(!dev->gui_attached || dev->pipe->processing) return;
-  int err
-      = dt_control_add_job_res(darktable.control, dt_dev_process_image_job_create(dev), DT_CTL_WORKER_ZOOM_1);
+  int err = dt_control_add_job_res(darktable.control, dt_dev_process_image_job_create(dev), DT_CTL_WORKER_ZOOM_1);
   if(err) fprintf(stderr, "[dev_process_image] job queue exceeded!\n");
 }
 
 void dt_dev_process_preview(dt_develop_t *dev)
 {
   if(!dev->gui_attached) return;
-  int err = dt_control_add_job_res(darktable.control, dt_dev_process_preview_job_create(dev),
-                                   DT_CTL_WORKER_ZOOM_FILL);
+  int err
+      = dt_control_add_job_res(darktable.control, dt_dev_process_preview_job_create(dev), DT_CTL_WORKER_ZOOM_FILL);
   if(err) fprintf(stderr, "[dev_process_preview] job queue exceeded!\n");
 }
 
@@ -225,8 +224,7 @@ void dt_dev_process_preview_job(dt_develop_t *dev)
 
   // lock if there, issue a background load, if not (best-effort for mip f).
   dt_mipmap_buffer_t buf;
-  dt_mipmap_cache_get(darktable.mipmap_cache, &buf, dev->image_storage.id, DT_MIPMAP_F, DT_MIPMAP_BEST_EFFORT,
-                      'r');
+  dt_mipmap_cache_get(darktable.mipmap_cache, &buf, dev->image_storage.id, DT_MIPMAP_F, DT_MIPMAP_BEST_EFFORT, 'r');
   if(!buf.buf)
   {
     dt_control_log_busy_leave();
@@ -313,8 +311,7 @@ void dt_dev_process_image_job(dt_develop_t *dev)
   dt_mipmap_buffer_t buf;
   dt_times_t start;
   dt_get_times(&start);
-  dt_mipmap_cache_get(darktable.mipmap_cache, &buf, dev->image_storage.id, DT_MIPMAP_FULL,
-                           DT_MIPMAP_BLOCKING, 'r');
+  dt_mipmap_cache_get(darktable.mipmap_cache, &buf, dev->image_storage.id, DT_MIPMAP_FULL, DT_MIPMAP_BLOCKING, 'r');
   dt_show_times(&start, "[dev]", "to load the image.");
 
   // failed to load raw?
@@ -391,7 +388,7 @@ restart:
   }
   const int wd = MIN(window_width, dev->pipe->processed_width * scale);
   const int ht = MIN(window_height, dev->pipe->processed_height * scale);
-  x = MAX(0, scale * dev->pipe->processed_width  * (.5 + zoom_x) - wd / 2);
+  x = MAX(0, scale * dev->pipe->processed_width * (.5 + zoom_x) - wd / 2);
   y = MAX(0, scale * dev->pipe->processed_height * (.5 + zoom_y) - ht / 2);
 
   dt_get_times(&start);
@@ -509,8 +506,8 @@ void dt_dev_configure(dt_develop_t *dev, int wd, int ht)
 {
   // fixed border on every side
   const int tb = DT_PIXEL_APPLY_DPI(dt_conf_get_int("plugins/darkroom/ui/border_size"));
-  wd -= 2*tb;
-  ht -= 2*tb;
+  wd -= 2 * tb;
+  ht -= 2 * tb;
   if(dev->width != wd || dev->height != ht)
   {
     dev->width = wd;
@@ -582,13 +579,13 @@ void dt_dev_add_history_item(dt_develop_t *dev, dt_iop_module_t *module, gboolea
     history = g_list_nth(dev->history, dev->history_end - 1);
     dt_dev_history_item_t *hist = history ? (dt_dev_history_item_t *)(history->data) : 0;
     if(!history // if no history yet, push new item for sure.
-       || module != hist->module
-       || module->instance != hist->module->instance             // add new item for different op
-       || module->multi_priority != hist->module->multi_priority // or instance
-       || ((dev->focus_hash != hist->focus_hash)                 // or if focused out and in
-       && (// but only add item if there is a difference at all for the same module
-         (module->params_size != hist->module->params_size) ||
-         (module->params_size == hist->module->params_size && memcmp(hist->params, module->params, module->params_size)))))
+       || module != hist->module || module->instance != hist->module->instance // add new item for different op
+       || module->multi_priority != hist->module->multi_priority               // or instance
+       || ((dev->focus_hash != hist->focus_hash)                               // or if focused out and in
+           && ( // but only add item if there is a difference at all for the same module
+                  (module->params_size != hist->module->params_size)
+                  || (module->params_size == hist->module->params_size
+                      && memcmp(hist->params, module->params, module->params_size)))))
     {
       // new operation, push new item
       // printf("adding new history item %d - %s\n", dev->history_end, module->op);
@@ -744,8 +741,8 @@ void dt_dev_reload_history_items(dt_develop_t *dev)
         gtk_container_child_get_property(
             GTK_CONTAINER(dt_ui_get_container(darktable.gui->ui, DT_UI_CONTAINER_PANEL_RIGHT_CENTER)),
             base->expander, "position", &gv);
-        gtk_box_reorder_child(dt_ui_get_container(darktable.gui->ui, DT_UI_CONTAINER_PANEL_RIGHT_CENTER),
-                              expander, g_value_get_int(&gv) + pos_base - pos_module);
+        gtk_box_reorder_child(dt_ui_get_container(darktable.gui->ui, DT_UI_CONTAINER_PANEL_RIGHT_CENTER), expander,
+                              g_value_get_int(&gv) + pos_base - pos_module);
         dt_iop_gui_set_expanded(module, TRUE, FALSE);
         dt_iop_gui_update_blending(module);
 
@@ -842,8 +839,7 @@ void dt_dev_write_history(dt_develop_t *dev)
   }
 
   DT_DEBUG_SQLITE3_PREPARE_V2(dt_database_get(darktable.db),
-                              "UPDATE main.images SET history_end = ?1 WHERE id = ?2", -1,
-                              &stmt, NULL);
+                              "UPDATE main.images SET history_end = ?1 WHERE id = ?2", -1, &stmt, NULL);
   DT_DEBUG_SQLITE3_BIND_INT(stmt, 1, dev->history_end);
   DT_DEBUG_SQLITE3_BIND_INT(stmt, 2, dev->image_storage.id);
   sqlite3_step(stmt);
@@ -918,8 +914,8 @@ static void auto_apply_presets(dt_develop_t *dev)
     sqlite3_finalize(stmt);
     int cnt = 0;
     // count what we found:
-    DT_DEBUG_SQLITE3_PREPARE_V2(dt_database_get(darktable.db), "SELECT COUNT(*) FROM memory.history", -1,
-                                &stmt, NULL);
+    DT_DEBUG_SQLITE3_PREPARE_V2(dt_database_get(darktable.db), "SELECT COUNT(*) FROM memory.history", -1, &stmt,
+                                NULL);
     if(sqlite3_step(stmt) == SQLITE_ROW)
     {
       // if there is anything..
@@ -927,7 +923,8 @@ static void auto_apply_presets(dt_develop_t *dev)
       sqlite3_finalize(stmt);
 
       // workaround a sqlite3 "feature". The above statement to insert items into memory.history is complex and in
-      // this case sqlite does not give rowid a linear increment. But the following code really expect that the rowid in
+      // this case sqlite does not give rowid a linear increment. But the following code really expect that the
+      // rowid in
       // this table starts from 0 and increment one by one. So in the following code we rewrite the num values.
 
       if(cnt > 0)
@@ -981,8 +978,8 @@ static void auto_apply_presets(dt_develop_t *dev)
       {
         sqlite3_finalize(stmt);
         DT_DEBUG_SQLITE3_PREPARE_V2(dt_database_get(darktable.db),
-                                    "UPDATE main.images SET history_end=history_end+?1 WHERE id=?2",
-                                    -1, &stmt, NULL);
+                                    "UPDATE main.images SET history_end=history_end+?1 WHERE id=?2", -1, &stmt,
+                                    NULL);
         DT_DEBUG_SQLITE3_BIND_INT(stmt, 1, cnt);
         DT_DEBUG_SQLITE3_BIND_INT(stmt, 2, imgid);
         if(sqlite3_step(stmt) == SQLITE_DONE)
@@ -1088,10 +1085,9 @@ void dt_dev_read_history(dt_develop_t *dev)
 
     if(!hist->module)
     {
-      fprintf(
-          stderr,
-          "[dev_read_history] the module `%s' requested by image `%s' is not installed on this computer!\n",
-          opname, dev->image_storage.filename);
+      fprintf(stderr,
+              "[dev_read_history] the module `%s' requested by image `%s' is not installed on this computer!\n",
+              opname, dev->image_storage.filename);
       free(hist);
       continue;
     }
@@ -1119,8 +1115,8 @@ void dt_dev_read_history(dt_develop_t *dev)
       memcpy(hist->blend_params, blendop_params, sizeof(dt_develop_blend_params_t));
     }
     else if(blendop_params
-            && dt_develop_blend_legacy_params(hist->module, blendop_params, blendop_version,
-                                              hist->blend_params, dt_develop_blend_version(), bl_length) == 0)
+            && dt_develop_blend_legacy_params(hist->module, blendop_params, blendop_version, hist->blend_params,
+                                              dt_develop_blend_version(), bl_length) == 0)
     {
       // do nothing
     }
@@ -1133,8 +1129,8 @@ void dt_dev_read_history(dt_develop_t *dev)
        || strcmp((char *)sqlite3_column_text(stmt, 3), hist->module->op))
     {
       if(!hist->module->legacy_params
-         || hist->module->legacy_params(hist->module, sqlite3_column_blob(stmt, 4), labs(modversion),
-                                        hist->params, labs(hist->module->version())))
+         || hist->module->legacy_params(hist->module, sqlite3_column_blob(stmt, 4), labs(modversion), hist->params,
+                                        labs(hist->module->version())))
       {
         fprintf(stderr, "[dev_read_history] module `%s' version mismatch: history is %d, dt %d.\n",
                 hist->module->op, modversion, hist->module->version());
@@ -1195,8 +1191,7 @@ void dt_dev_read_history(dt_develop_t *dev)
   DT_DEBUG_SQLITE3_BIND_INT(stmt, 1, dev->image_storage.id);
   if(sqlite3_step(stmt) == SQLITE_ROW) // seriously, this should never fail
   {
-    if(sqlite3_column_type(stmt, 0) != SQLITE_NULL)
-      dev->history_end = sqlite3_column_int(stmt, 0);
+    if(sqlite3_column_type(stmt, 0) != SQLITE_NULL) dev->history_end = sqlite3_column_int(stmt, 0);
   }
 
   if(dev->gui_attached)
@@ -1247,8 +1242,8 @@ void dt_dev_reprocess_center(dt_develop_t *dev)
 }
 
 
-void dt_dev_check_zoom_bounds(dt_develop_t *dev, float *zoom_x, float *zoom_y, dt_dev_zoom_t zoom,
-                              int closeup, float *boxww, float *boxhh)
+void dt_dev_check_zoom_bounds(dt_develop_t *dev, float *zoom_x, float *zoom_y, dt_dev_zoom_t zoom, int closeup,
+                              float *boxww, float *boxhh)
 {
   int procw = 0, proch = 0;
   dt_dev_get_processed_size(dev, &procw, &proch);
@@ -1315,8 +1310,7 @@ void dt_dev_get_processed_size(const dt_develop_t *dev, int *procw, int *proch)
   return;
 }
 
-void dt_dev_get_pointer_zoom_pos(dt_develop_t *dev, const float px, const float py, float *zoom_x,
-                                 float *zoom_y)
+void dt_dev_get_pointer_zoom_pos(dt_develop_t *dev, const float px, const float py, float *zoom_x, float *zoom_y)
 {
   dt_dev_zoom_t zoom;
   int closeup, procw = 0, proch = 0;
@@ -1427,8 +1421,7 @@ float dt_dev_exposure_get_black(dt_develop_t *dev)
 
 gboolean dt_dev_modulegroups_available(dt_develop_t *dev)
 {
-  if(dev->proxy.modulegroups.module && dev->proxy.modulegroups.set && dev->proxy.modulegroups.get)
-    return TRUE;
+  if(dev->proxy.modulegroups.module && dev->proxy.modulegroups.set && dev->proxy.modulegroups.get) return TRUE;
 
   return FALSE;
 }
@@ -1576,10 +1569,10 @@ dt_iop_module_t *dt_dev_module_duplicate(dt_develop_t *dev, dt_iop_module_t *bas
 
 void dt_dev_invalidate_history_module(GList *list, dt_iop_module_t *module)
 {
-  while (list)
+  while(list)
   {
     dt_dev_history_item_t *hitem = (dt_dev_history_item_t *)list->data;
-    if (hitem->module == module)
+    if(hitem->module == module)
     {
       hitem->module = NULL;
       // set the multi_name to the module op name to be able to recreate the multi-instance later
@@ -1710,8 +1703,8 @@ int dt_dev_distort_backtransform(dt_develop_t *dev, float *points, size_t points
   return dt_dev_distort_backtransform_plus(dev, dev->preview_pipe, 0, 99999, points, points_count);
 }
 
-int dt_dev_distort_transform_plus(dt_develop_t *dev, dt_dev_pixelpipe_t *pipe, int pmin, int pmax,
-                                  float *points, size_t points_count)
+int dt_dev_distort_transform_plus(dt_develop_t *dev, dt_dev_pixelpipe_t *pipe, int pmin, int pmax, float *points,
+                                  size_t points_count)
 {
   dt_pthread_mutex_lock(&dev->history_mutex);
   GList *modules = g_list_first(dev->iop);
@@ -1725,8 +1718,8 @@ int dt_dev_distort_transform_plus(dt_develop_t *dev, dt_dev_pixelpipe_t *pipe, i
     }
     dt_iop_module_t *module = (dt_iop_module_t *)(modules->data);
     dt_dev_pixelpipe_iop_t *piece = (dt_dev_pixelpipe_iop_t *)(pieces->data);
-    if(piece->enabled && module->priority <= pmax && module->priority >= pmin &&
-      !(dev->gui_module && dev->gui_module->operation_tags_filter() & module->operation_tags()))
+    if(piece->enabled && module->priority <= pmax && module->priority >= pmin
+       && !(dev->gui_module && dev->gui_module->operation_tags_filter() & module->operation_tags()))
     {
       module->distort_transform(module, piece, points, points_count);
     }
@@ -1752,8 +1745,8 @@ int dt_dev_distort_backtransform_plus(dt_develop_t *dev, dt_dev_pixelpipe_t *pip
     }
     dt_iop_module_t *module = (dt_iop_module_t *)(modules->data);
     dt_dev_pixelpipe_iop_t *piece = (dt_dev_pixelpipe_iop_t *)(pieces->data);
-    if(piece->enabled && module->priority <= pmax && module->priority >= pmin &&
-      !(dev->gui_module && dev->gui_module->operation_tags_filter() & module->operation_tags()))
+    if(piece->enabled && module->priority <= pmax && module->priority >= pmin
+       && !(dev->gui_module && dev->gui_module->operation_tags_filter() & module->operation_tags()))
     {
       module->distort_backtransform(module, piece, points, points_count);
     }
@@ -1811,8 +1804,8 @@ uint64_t dt_dev_hash_plus(dt_develop_t *dev, struct dt_dev_pixelpipe_t *pipe, in
   return hash;
 }
 
-int dt_dev_wait_hash(dt_develop_t *dev, struct dt_dev_pixelpipe_t *pipe, int pmin, int pmax, dt_pthread_mutex_t *lock,
-                     const volatile uint64_t *const hash)
+int dt_dev_wait_hash(dt_develop_t *dev, struct dt_dev_pixelpipe_t *pipe, int pmin, int pmax,
+                     dt_pthread_mutex_t *lock, const volatile uint64_t *const hash)
 {
   const int usec = 5000;
   int nloop;
@@ -1826,12 +1819,11 @@ int dt_dev_wait_hash(dt_develop_t *dev, struct dt_dev_pixelpipe_t *pipe, int pmi
   nloop = dt_conf_get_int("pixelpipe_synchronization_timeout");
 #endif
 
-  if(nloop <= 0) return TRUE;  // non-positive values omit pixelpipe synchronization
+  if(nloop <= 0) return TRUE; // non-positive values omit pixelpipe synchronization
 
   for(int n = 0; n < nloop; n++)
   {
-    if(pipe->shutdown)
-      return TRUE;  // stop waiting if pipe shuts down
+    if(pipe->shutdown) return TRUE; // stop waiting if pipe shuts down
 
     uint64_t probehash;
 
@@ -1844,8 +1836,7 @@ int dt_dev_wait_hash(dt_develop_t *dev, struct dt_dev_pixelpipe_t *pipe, int pmi
     else
       probehash = *hash;
 
-    if(probehash == dt_dev_hash_plus(dev, pipe, pmin, pmax))
-      return TRUE;
+    if(probehash == dt_dev_hash_plus(dev, pipe, pmin, pmax)) return TRUE;
 
     dt_iop_nap(usec);
   }
@@ -1853,12 +1844,11 @@ int dt_dev_wait_hash(dt_develop_t *dev, struct dt_dev_pixelpipe_t *pipe, int pmi
   return FALSE;
 }
 
-int dt_dev_sync_pixelpipe_hash(dt_develop_t *dev, struct dt_dev_pixelpipe_t *pipe, int pmin, int pmax, dt_pthread_mutex_t *lock,
-                               const volatile uint64_t *const hash)
+int dt_dev_sync_pixelpipe_hash(dt_develop_t *dev, struct dt_dev_pixelpipe_t *pipe, int pmin, int pmax,
+                               dt_pthread_mutex_t *lock, const volatile uint64_t *const hash)
 {
   // first wait for matching hash values
-  if(dt_dev_wait_hash(dev, pipe, pmin, pmax, lock, hash))
-    return TRUE;
+  if(dt_dev_wait_hash(dev, pipe, pmin, pmax, lock, hash)) return TRUE;
 
   // timed out. let's see if history stack has changed
   if(pipe->changed & (DT_DEV_PIPE_TOP_CHANGED | DT_DEV_PIPE_REMOVE | DT_DEV_PIPE_SYNCH))
@@ -1894,8 +1884,8 @@ uint64_t dt_dev_hash_distort_plus(dt_develop_t *dev, struct dt_dev_pixelpipe_t *
     }
     dt_iop_module_t *module = (dt_iop_module_t *)(modules->data);
     dt_dev_pixelpipe_iop_t *piece = (dt_dev_pixelpipe_iop_t *)(pieces->data);
-    if(piece->enabled && module->operation_tags() & IOP_TAG_DISTORT
-      && module->priority <= pmax && module->priority >= pmin)
+    if(piece->enabled && module->operation_tags() & IOP_TAG_DISTORT && module->priority <= pmax
+       && module->priority >= pmin)
     {
       hash = ((hash << 5) + hash) ^ piece->hash;
     }
@@ -1906,8 +1896,8 @@ uint64_t dt_dev_hash_distort_plus(dt_develop_t *dev, struct dt_dev_pixelpipe_t *
   return hash;
 }
 
-int dt_dev_wait_hash_distort(dt_develop_t *dev, struct dt_dev_pixelpipe_t *pipe, int pmin, int pmax, dt_pthread_mutex_t *lock,
-                     const volatile uint64_t *const hash)
+int dt_dev_wait_hash_distort(dt_develop_t *dev, struct dt_dev_pixelpipe_t *pipe, int pmin, int pmax,
+                             dt_pthread_mutex_t *lock, const volatile uint64_t *const hash)
 {
   const int usec = 5000;
   int nloop;
@@ -1921,12 +1911,11 @@ int dt_dev_wait_hash_distort(dt_develop_t *dev, struct dt_dev_pixelpipe_t *pipe,
   nloop = dt_conf_get_int("pixelpipe_synchronization_timeout");
 #endif
 
-  if(nloop <= 0) return TRUE;  // non-positive values omit pixelpipe synchronization
+  if(nloop <= 0) return TRUE; // non-positive values omit pixelpipe synchronization
 
   for(int n = 0; n < nloop; n++)
   {
-    if(pipe->shutdown)
-      return TRUE;  // stop waiting if pipe shuts down
+    if(pipe->shutdown) return TRUE; // stop waiting if pipe shuts down
 
     uint64_t probehash;
 
@@ -1939,8 +1928,7 @@ int dt_dev_wait_hash_distort(dt_develop_t *dev, struct dt_dev_pixelpipe_t *pipe,
     else
       probehash = *hash;
 
-    if(probehash == dt_dev_hash_distort_plus(dev, pipe, pmin, pmax))
-      return TRUE;
+    if(probehash == dt_dev_hash_distort_plus(dev, pipe, pmin, pmax)) return TRUE;
 
     dt_iop_nap(usec);
   }
@@ -1948,12 +1936,11 @@ int dt_dev_wait_hash_distort(dt_develop_t *dev, struct dt_dev_pixelpipe_t *pipe,
   return FALSE;
 }
 
-int dt_dev_sync_pixelpipe_hash_distort(dt_develop_t *dev, struct dt_dev_pixelpipe_t *pipe, int pmin, int pmax, dt_pthread_mutex_t *lock,
-                                       const volatile uint64_t *const hash)
+int dt_dev_sync_pixelpipe_hash_distort(dt_develop_t *dev, struct dt_dev_pixelpipe_t *pipe, int pmin, int pmax,
+                                       dt_pthread_mutex_t *lock, const volatile uint64_t *const hash)
 {
   // first wait for matching hash values
-  if(dt_dev_wait_hash_distort(dev, pipe, pmin, pmax, lock, hash))
-    return TRUE;
+  if(dt_dev_wait_hash_distort(dev, pipe, pmin, pmax, lock, hash)) return TRUE;
 
   // timed out. let's see if history stack has changed
   if(pipe->changed & (DT_DEV_PIPE_TOP_CHANGED | DT_DEV_PIPE_REMOVE | DT_DEV_PIPE_SYNCH))

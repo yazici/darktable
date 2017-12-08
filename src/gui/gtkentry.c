@@ -224,8 +224,7 @@ const dt_gtkentry_completion_spec *dt_gtkentry_get_default_path_compl_list()
  *
  * @return g_malloc()'ed string. Must be free'd by the caller.
  */
-gchar *dt_gtkentry_build_completion_tooltip_text(const gchar *header,
-                                                 const dt_gtkentry_completion_spec *compl_list)
+gchar *dt_gtkentry_build_completion_tooltip_text(const gchar *header, const dt_gtkentry_completion_spec *compl_list)
 {
   size_t array_len = 0;
   for(dt_gtkentry_completion_spec const *p = compl_list; p->description != NULL; p++) array_len++;
@@ -233,8 +232,7 @@ gchar *dt_gtkentry_build_completion_tooltip_text(const gchar *header,
   const gchar **l = lines;
   *l++ = header;
 
-  for(dt_gtkentry_completion_spec const *p = compl_list; p->description != NULL; p++, l++)
-    *l = _(p->description);
+  for(dt_gtkentry_completion_spec const *p = compl_list; p->description != NULL; p++, l++) *l = _(p->description);
 
   *l = NULL;
 

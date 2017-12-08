@@ -262,8 +262,7 @@ void init_pipe(struct dt_iop_module_t *self, dt_dev_pixelpipe_t *pipe, dt_dev_pi
                                 default_params->transition_y[DT_IOP_LOWLIGHT_BANDS - 2]);
   for(int k = 0; k < DT_IOP_LOWLIGHT_BANDS; k++)
     (void)dt_draw_curve_add_point(d->curve, default_params->transition_x[k], default_params->transition_y[k]);
-  (void)dt_draw_curve_add_point(d->curve, default_params->transition_x[1] + 1.0,
-                                default_params->transition_y[1]);
+  (void)dt_draw_curve_add_point(d->curve, default_params->transition_x[1] + 1.0, default_params->transition_y[1]);
 }
 
 void cleanup_pipe(struct dt_iop_module_t *self, dt_dev_pixelpipe_t *pipe, dt_dev_pixelpipe_iop_t *piece)
@@ -288,7 +287,7 @@ void init(dt_iop_module_t *module)
   module->params = calloc(1, sizeof(dt_iop_lowlight_params_t));
   module->default_params = calloc(1, sizeof(dt_iop_lowlight_params_t));
   module->default_enabled = 0; // we're a rather slow and rare op.
-    module->priority = 623; // module order created by iop_dependencies.py, do not edit!
+  module->priority = 623;      // module order created by iop_dependencies.py, do not edit!
   module->params_size = sizeof(dt_iop_lowlight_params_t);
   module->gui_data = NULL;
   dt_iop_lowlight_params_t tmp;
@@ -469,8 +468,8 @@ void init_presets(dt_iop_module_so_t *self)
 }
 
 // fills in new parameters based on mouse position (in 0,1)
-static void dt_iop_lowlight_get_params(dt_iop_lowlight_params_t *p, const double mouse_x,
-                                       const double mouse_y, const float rad)
+static void dt_iop_lowlight_get_params(dt_iop_lowlight_params_t *p, const double mouse_x, const double mouse_y,
+                                       const float rad)
 {
   for(int k = 0; k < DT_IOP_LOWLIGHT_BANDS; k++)
   {
@@ -531,8 +530,7 @@ static gboolean lowlight_draw(GtkWidget *widget, cairo_t *crf, gpointer user_dat
       dt_draw_curve_set_point(c->transition_curve, k + 1, p.transition_x[k], p.transition_y[k]);
     dt_draw_curve_set_point(c->transition_curve, DT_IOP_LOWLIGHT_BANDS + 1, p.transition_x[1] + 1.0,
                             p.transition_y[DT_IOP_LOWLIGHT_BANDS - 1]);
-    dt_draw_curve_calc_values(c->transition_curve, 0.0, 1.0, DT_IOP_LOWLIGHT_RES, c->draw_min_xs,
-                              c->draw_min_ys);
+    dt_draw_curve_calc_values(c->transition_curve, 0.0, 1.0, DT_IOP_LOWLIGHT_RES, c->draw_min_xs, c->draw_min_ys);
 
     p = *(dt_iop_lowlight_params_t *)self->params;
     dt_iop_lowlight_get_params(&p, c->mouse_x, .0, c->mouse_radius);
@@ -542,8 +540,7 @@ static gboolean lowlight_draw(GtkWidget *widget, cairo_t *crf, gpointer user_dat
       dt_draw_curve_set_point(c->transition_curve, k + 1, p.transition_x[k], p.transition_y[k]);
     dt_draw_curve_set_point(c->transition_curve, DT_IOP_LOWLIGHT_BANDS + 1, p.transition_x[1] + 1.0,
                             p.transition_y[DT_IOP_LOWLIGHT_BANDS - 1]);
-    dt_draw_curve_calc_values(c->transition_curve, 0.0, 1.0, DT_IOP_LOWLIGHT_RES, c->draw_max_xs,
-                              c->draw_max_ys);
+    dt_draw_curve_calc_values(c->transition_curve, 0.0, 1.0, DT_IOP_LOWLIGHT_RES, c->draw_max_xs, c->draw_max_ys);
   }
 
   cairo_save(cr);
@@ -591,8 +588,7 @@ static gboolean lowlight_draw(GtkWidget *widget, cairo_t *crf, gpointer user_dat
   cairo_set_line_width(cr, DT_PIXEL_APPLY_DPI(1.));
   for(int k = 0; k < DT_IOP_LOWLIGHT_BANDS; k++)
   {
-    cairo_arc(cr, width * p.transition_x[k], -height * p.transition_y[k], DT_PIXEL_APPLY_DPI(3.0), 0.0,
-              2.0 * M_PI);
+    cairo_arc(cr, width * p.transition_x[k], -height * p.transition_y[k], DT_PIXEL_APPLY_DPI(3.0), 0.0, 2.0 * M_PI);
     if(c->x_move == k)
       cairo_fill(cr);
     else
@@ -630,7 +626,7 @@ static gboolean lowlight_draw(GtkWidget *widget, cairo_t *crf, gpointer user_dat
   PangoRectangle ink;
   PangoFontDescription *desc = pango_font_description_copy_static(darktable.bauhaus->pango_font_desc);
   pango_font_description_set_weight(desc, PANGO_WEIGHT_BOLD);
-  pango_font_description_set_absolute_size(desc,(.06 * height) * PANGO_SCALE);
+  pango_font_description_set_absolute_size(desc, (.06 * height) * PANGO_SCALE);
   layout = pango_cairo_create_layout(cr);
   pango_layout_set_font_description(layout, desc);
   cairo_set_source_rgb(cr, .1, .1, .1);
@@ -722,15 +718,14 @@ static gboolean lowlight_motion_notify(GtkWidget *widget, GdkEventMotion *event,
   gtk_widget_queue_draw(widget);
   gint x, y;
 #if GTK_CHECK_VERSION(3, 20, 0)
-  gdk_window_get_device_position(event->window,
-      gdk_seat_get_pointer(gdk_display_get_default_seat(
-          gdk_window_get_display(event->window))),
-      &x, &y, 0);
+  gdk_window_get_device_position(
+      event->window, gdk_seat_get_pointer(gdk_display_get_default_seat(gdk_window_get_display(event->window))), &x,
+      &y, 0);
 #else
-  gdk_window_get_device_position(event->window,
-                                 gdk_device_manager_get_client_pointer(
-                                     gdk_display_get_device_manager(gdk_window_get_display(event->window))),
-                                 &x, &y, NULL);
+  gdk_window_get_device_position(
+      event->window,
+      gdk_device_manager_get_client_pointer(gdk_display_get_device_manager(gdk_window_get_display(event->window))),
+      &x, &y, NULL);
 #endif
   return TRUE;
 }
@@ -839,9 +834,9 @@ void gui_init(struct dt_iop_module_t *self)
   gtk_box_pack_start(GTK_BOX(self->widget), GTK_WIDGET(c->area), FALSE, FALSE, 0);
 
   gtk_widget_add_events(GTK_WIDGET(c->area), GDK_POINTER_MOTION_MASK | GDK_POINTER_MOTION_HINT_MASK
-                                             | GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK
-                                             | GDK_LEAVE_NOTIFY_MASK | GDK_SCROLL_MASK
-                                             | GDK_SMOOTH_SCROLL_MASK);
+                                                 | GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK
+                                                 | GDK_LEAVE_NOTIFY_MASK | GDK_SCROLL_MASK
+                                                 | GDK_SMOOTH_SCROLL_MASK);
   g_signal_connect(G_OBJECT(c->area), "draw", G_CALLBACK(lowlight_draw), self);
   g_signal_connect(G_OBJECT(c->area), "button-press-event", G_CALLBACK(lowlight_button_press), self);
   g_signal_connect(G_OBJECT(c->area), "button-release-event", G_CALLBACK(lowlight_button_release), self);

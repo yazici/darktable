@@ -515,7 +515,7 @@ int dt_lua_init_image(lua_State *L)
   luaA_struct_member(L, dt_image_t, width, const int32_t);
   luaA_struct_member(L, dt_image_t, height, const int32_t);
   luaA_struct_member(L, dt_image_t, longitude, protected_double); // set to NAN if value is not set
-  luaA_struct_member(L, dt_image_t, latitude, protected_double); // set to NAN if value is not set
+  luaA_struct_member(L, dt_image_t, latitude, protected_double);  // set to NAN if value is not set
   luaA_struct_member(L, dt_image_t, elevation, protected_double); // set to NAN if value is not set
 
   dt_lua_init_int_type(L, dt_lua_image_t);
@@ -624,7 +624,7 @@ int dt_lua_init_image(lua_State *L)
   lua_pushcclosure(L, dt_lua_type_member_common, 1);
   dt_lua_type_register_const(L, dt_lua_image_t, "drop_cache");
   lua_pushcfunction(L, image_tostring);
-  dt_lua_type_setmetafield(L,dt_lua_image_t,"__tostring");
+  dt_lua_type_setmetafield(L, dt_lua_image_t, "__tostring");
 
   return 0;
 }

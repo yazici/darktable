@@ -87,8 +87,7 @@ static inline void _dt_focus_cdf22_wtf(uint8_t *buf, const int l, const int widt
   }
 }
 
-static void _dt_focus_update(dt_focus_cluster_t *f, int frows, int fcols, int i, int j, int wd, int ht,
-                             int diff)
+static void _dt_focus_update(dt_focus_cluster_t *f, int frows, int fcols, int i, int j, int wd, int ht, int diff)
 {
   const int32_t thrs = FOCUS_THRS;
   if(diff > thrs)
@@ -146,8 +145,7 @@ static void dt_focus_create_clusters(dt_focus_cluster_t *focus, int frows, int f
     {
       _dt_focus_update(focus, frows, fcols, i, j, wd, ht,
                        abs(_from_uint8(buffer[4 * ((j + 2) * wd + i) + CHANNEL])));
-      _dt_focus_update(focus, frows, fcols, i, j, wd, ht,
-                       abs(_from_uint8(buffer[4 * (j * wd + i + 2) + CHANNEL])));
+      _dt_focus_update(focus, frows, fcols, i, j, wd, ht, abs(_from_uint8(buffer[4 * (j * wd + i + 2) + CHANNEL])));
     }
 
 #if 1 // second pass, HH2
@@ -272,7 +270,7 @@ static void dt_focus_draw_clusters(cairo_t *cr, int width, int height, int imgid
   }
 
   const int32_t tb = DT_PIXEL_APPLY_DPI(dt_conf_get_int("plugins/darkroom/ui/border_size"));
-  const float scale = fminf((width-2*tb) / (float)wd, (height-2*tb) / (float)ht);
+  const float scale = fminf((width - 2 * tb) / (float)wd, (height - 2 * tb) / (float)ht);
   cairo_scale(cr, scale, scale);
 
   cairo_translate(cr, -wd / 2.0f, -ht / 2.0f);
@@ -320,8 +318,8 @@ static void dt_focus_draw_clusters(cairo_t *cr, int width, int height, int imgid
         cairo_curve_to(cr, pos[2 * k + 0] - offx[2 * k + 0] + offy[2 * k + 0],
                        pos[2 * k + 1] - offx[2 * k + 1] + offy[2 * k + 1],
                        pos[2 * k + 0] - offx[2 * k + 0] + offy[2 * k + 0],
-                       pos[2 * k + 1] - offx[2 * k + 1] + offy[2 * k + 1],
-                       2 * pos[2 * k + 0] - offx[2 * k + 0], 2 * pos[2 * k + 1] - offx[2 * k + 1]);
+                       pos[2 * k + 1] - offx[2 * k + 1] + offy[2 * k + 1], 2 * pos[2 * k + 0] - offx[2 * k + 0],
+                       2 * pos[2 * k + 1] - offx[2 * k + 1]);
         cairo_curve_to(cr, 3 * pos[2 * k + 0] - offx[2 * k + 0] - offy[2 * k + 0],
                        3 * pos[2 * k + 1] - offx[2 * k + 1] - offy[2 * k + 1],
                        3 * pos[2 * k + 0] - offx[2 * k + 0] - offy[2 * k + 0],

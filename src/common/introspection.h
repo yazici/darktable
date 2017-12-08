@@ -292,8 +292,7 @@ static inline const char *dt_introspection_get_enum_name(dt_introspection_field_
   if(!(self && self->header.type == DT_INTROSPECTION_TYPE_ENUM)) return NULL;
 
   for(dt_introspection_type_enum_tuple_t *iter = self->Enum.values; iter->name; iter++)
-    if(iter->value == value)
-      return iter->name;
+    if(iter->value == value) return iter->name;
 
   return NULL;
 }

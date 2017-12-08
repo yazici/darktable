@@ -271,7 +271,7 @@ static void color_picker_helper_xtrans_seq(const dt_iop_buffer_dsc_t *const dsc,
                                            float *const picked_color_max)
 {
   const int width = roi->width;
-  const uint8_t(*const xtrans)[6] = (const uint8_t(*const)[6])dsc->xtrans;
+  const uint8_t (*const xtrans)[6] = (const uint8_t (*const)[6])dsc->xtrans;
 
   uint32_t weights[3] = { 0u, 0u, 0u };
 
@@ -306,7 +306,7 @@ static void color_picker_helper_xtrans_parallel(const dt_iop_buffer_dsc_t *const
                                                 float *const picked_color_max)
 {
   const int width = roi->width;
-  const uint8_t(*const xtrans)[6] = (const uint8_t(*const)[6])dsc->xtrans;
+  const uint8_t (*const xtrans)[6] = (const uint8_t (*const)[6])dsc->xtrans;
 
   uint32_t weights[3] = { 0u, 0u, 0u };
 

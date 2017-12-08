@@ -94,6 +94,10 @@
 #include <omp.h>
 #endif
 
+#ifdef HAVE_FFTW3_OMP
+#include <fftw3.h>
+#endif
+
 #ifdef _WIN32
 #include "win/dtwin.h"
 #endif //_WIN32
@@ -107,7 +111,8 @@ darktable_t darktable;
 static int usage(const char *argv0)
 {
   printf("usage: %s [-d "
-         "{all,cache,camctl,camsupport,control,dev,input,lighttable,lua,masks,memory,nan,opencl,perf,pwstorage,print,sql}]"
+         "{all,cache,camctl,camsupport,control,dev,input,lighttable,lua,masks,memory,nan,opencl,perf,pwstorage,"
+         "print,sql}]"
          " [IMG_1234.{RAW,..}|image_folder/]",
          argv0);
 #ifdef HAVE_OPENCL
@@ -133,8 +138,7 @@ gboolean dt_supported_image(const gchar *filename)
 {
   gboolean supported = FALSE;
   char *ext = g_strrstr(filename, ".");
-  if(!ext)
-    return FALSE;
+  if(!ext) return FALSE;
   ext++;
   for(const char **i = dt_supported_extensions; *i != NULL; i++)
     if(!g_ascii_strncasecmp(ext, *i, strlen(*i)))
@@ -306,8 +310,7 @@ static void dt_codepaths_init()
 #endif
   {
     fprintf(stderr, "[dt_codepaths_init] SSE2-optimized codepath is disabled or unavailable.\n");
-    fprintf(stderr,
-            "[dt_codepaths_init] expect a LOT of functionality to be broken. you have been warned.\n");
+    fprintf(stderr, "[dt_codepaths_init] expect a LOT of functionality to be broken. you have been warned.\n");
   }
 }
 
@@ -317,8 +320,7 @@ int dt_init(int argc, char *argv[], const gboolean init_gui, const gboolean load
 
 #ifndef __WIN32__
   if(getuid() == 0 || geteuid() == 0)
-    printf(
-        "WARNING: either your user id or the effective user id are 0. are you running darktable as root?\n");
+    printf("WARNING: either your user id or the effective user id are 0. are you running darktable as root?\n");
 #endif
 
 #if defined(__SSE__)
@@ -381,13 +383,13 @@ int dt_init(int argc, char *argv[], const gboolean init_gui, const gboolean load
 #ifndef _WIN32
       // see http://standards.freedesktop.org/basedir-spec/latest/ar01s03.html for a reason to use those as a
       // default
-      if(!g_strcmp0(DARKTABLE_SHAREDIR, "/usr/local/share")
-         || !g_strcmp0(DARKTABLE_SHAREDIR, "/usr/local/share/")
+      if(!g_strcmp0(DARKTABLE_SHAREDIR, "/usr/local/share") || !g_strcmp0(DARKTABLE_SHAREDIR, "/usr/local/share/")
          || !g_strcmp0(DARKTABLE_SHAREDIR, "/usr/share") || !g_strcmp0(DARKTABLE_SHAREDIR, "/usr/share/"))
         new_xdg_data_dirs = g_strdup("/usr/local/share/" G_SEARCHPATH_SEPARATOR_S "/usr/share/");
       else
-        new_xdg_data_dirs = g_strdup_printf("%s" G_SEARCHPATH_SEPARATOR_S "/usr/local/share/" G_SEARCHPATH_SEPARATOR_S
-                                            "/usr/share/", DARKTABLE_SHAREDIR);
+        new_xdg_data_dirs = g_strdup_printf("%s" G_SEARCHPATH_SEPARATOR_S
+                                            "/usr/local/share/" G_SEARCHPATH_SEPARATOR_S "/usr/share/",
+                                            DARKTABLE_SHAREDIR);
 #else
       set_env = FALSE;
 #endif
@@ -436,6 +438,10 @@ int dt_init(int argc, char *argv[], const gboolean init_gui, const gboolean load
   darktable.num_openmp_threads = 1;
 #ifdef _OPENMP
   darktable.num_openmp_threads = omp_get_num_procs();
+
+#ifdef HAVE_FFTW3_OMP
+  fftwf_init_threads();
+#endif
 #endif
   darktable.unmuted = 0;
   GSList *config_override = NULL;
@@ -454,14 +460,11 @@ int dt_init(int argc, char *argv[], const gboolean init_gui, const gboolean load
       else if(!strcmp(argv[k], "--version"))
       {
 #ifdef USE_LUA
-        const char *lua_api_version = strcmp(LUA_API_VERSION_SUFFIX, "") ?
-                                      STR(LUA_API_VERSION_MAJOR) "."
-                                      STR(LUA_API_VERSION_MINOR) "."
-                                      STR(LUA_API_VERSION_PATCH) "-"
-                                      LUA_API_VERSION_SUFFIX :
-                                      STR(LUA_API_VERSION_MAJOR) "."
-                                      STR(LUA_API_VERSION_MINOR) "."
-                                      STR(LUA_API_VERSION_PATCH);
+        const char *lua_api_version
+            = strcmp(LUA_API_VERSION_SUFFIX, "")
+                  ? STR(LUA_API_VERSION_MAJOR) "." STR(LUA_API_VERSION_MINOR) "." STR(
+                        LUA_API_VERSION_PATCH) "-" LUA_API_VERSION_SUFFIX
+                  : STR(LUA_API_VERSION_MAJOR) "." STR(LUA_API_VERSION_MINOR) "." STR(LUA_API_VERSION_PATCH);
 #endif
         printf("this is %s\ncopyright (c) 2009-%s johannes hanika\n" PACKAGE_BUGREPORT "\n\ncompile options:\n"
                "  bit depth is %s\n"
@@ -517,8 +520,7 @@ int dt_init(int argc, char *argv[], const gboolean init_gui, const gboolean load
                "  OpenEXR support disabled\n"
 #endif
                ,
-               darktable_package_string,
-               darktable_last_commit_year,
+               darktable_package_string, darktable_last_commit_year,
                (sizeof(void *) == 8 ? "64 bit" : sizeof(void *) == 4 ? "32 bit" : "unknown")
 #if USE_LUA
                    ,
@@ -530,43 +532,43 @@ int dt_init(int argc, char *argv[], const gboolean init_gui, const gboolean load
       else if(!strcmp(argv[k], "--library") && argc > k + 1)
       {
         dbfilename_from_command = argv[++k];
-        argv[k-1] = NULL;
+        argv[k - 1] = NULL;
         argv[k] = NULL;
       }
       else if(!strcmp(argv[k], "--datadir") && argc > k + 1)
       {
         datadir_from_command = argv[++k];
-        argv[k-1] = NULL;
+        argv[k - 1] = NULL;
         argv[k] = NULL;
       }
       else if(!strcmp(argv[k], "--moduledir") && argc > k + 1)
       {
         moduledir_from_command = argv[++k];
-        argv[k-1] = NULL;
+        argv[k - 1] = NULL;
         argv[k] = NULL;
       }
       else if(!strcmp(argv[k], "--tmpdir") && argc > k + 1)
       {
         tmpdir_from_command = argv[++k];
-        argv[k-1] = NULL;
+        argv[k - 1] = NULL;
         argv[k] = NULL;
       }
       else if(!strcmp(argv[k], "--configdir") && argc > k + 1)
       {
         configdir_from_command = argv[++k];
-        argv[k-1] = NULL;
+        argv[k - 1] = NULL;
         argv[k] = NULL;
       }
       else if(!strcmp(argv[k], "--cachedir") && argc > k + 1)
       {
         cachedir_from_command = argv[++k];
-        argv[k-1] = NULL;
+        argv[k - 1] = NULL;
         argv[k] = NULL;
       }
       else if(!strcmp(argv[k], "--localedir") && argc > k + 1)
       {
         bindtextdomain(GETTEXT_PACKAGE, argv[++k]);
-        argv[k-1] = NULL;
+        argv[k - 1] = NULL;
         argv[k] = NULL;
       }
       else if(argv[k][1] == 'd' && argc > k + 1)
@@ -608,7 +610,7 @@ int dt_init(int argc, char *argv[], const gboolean init_gui, const gboolean load
         else
           return usage(argv[0]);
         k++;
-        argv[k-1] = NULL;
+        argv[k - 1] = NULL;
         argv[k] = NULL;
       }
       else if(argv[k][1] == 't' && argc > k + 1)
@@ -616,13 +618,13 @@ int dt_init(int argc, char *argv[], const gboolean init_gui, const gboolean load
         darktable.num_openmp_threads = CLAMP(atol(argv[k + 1]), 1, 100);
         printf("[dt_init] using %d threads for openmp parallel sections\n", darktable.num_openmp_threads);
         k++;
-        argv[k-1] = NULL;
+        argv[k - 1] = NULL;
         argv[k] = NULL;
       }
       else if(!strcmp(argv[k], "--conf") && argc > k + 1)
       {
         gchar *keyval = g_strdup(argv[++k]), *c = keyval;
-        argv[k-1] = NULL;
+        argv[k - 1] = NULL;
         argv[k] = NULL;
         gchar *end = keyval + strlen(keyval);
         while(*c != '=' && c < end) c++;
@@ -639,7 +641,7 @@ int dt_init(int argc, char *argv[], const gboolean init_gui, const gboolean load
       else if(!strcmp(argv[k], "--noiseprofiles") && argc > k + 1)
       {
         noiseprofiles_from_command = argv[++k];
-        argv[k-1] = NULL;
+        argv[k - 1] = NULL;
         argv[k] = NULL;
       }
       else if(!strcmp(argv[k], "--luacmd") && argc > k + 1)
@@ -649,7 +651,7 @@ int dt_init(int argc, char *argv[], const gboolean init_gui, const gboolean load
 #else
         ++k;
 #endif
-        argv[k-1] = NULL;
+        argv[k - 1] = NULL;
         argv[k] = NULL;
       }
       else if(!strcmp(argv[k], "--disable-opencl"))
@@ -682,7 +684,7 @@ int dt_init(int argc, char *argv[], const gboolean init_gui, const gboolean load
       k -= i;
       for(int j = i + k; j < argc; j++)
       {
-        argv[j-k] = argv[j];
+        argv[j - k] = argv[j];
         argv[j] = NULL;
       }
       argc -= k;
@@ -804,10 +806,10 @@ int dt_init(int argc, char *argv[], const gboolean init_gui, const gboolean load
       if(filename == NULL) continue;
       if(!connection) connection = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
       // ... and send it to the running instance of darktable
-      image_loaded_elsewhere = g_dbus_connection_call_sync(connection, "org.darktable.service", "/darktable",
-                                                           "org.darktable.service.Remote", "Open",
-                                                           g_variant_new("(s)", filename), NULL,
-                                                           G_DBUS_CALL_FLAGS_NONE, -1, NULL, NULL) != NULL;
+      image_loaded_elsewhere
+          = g_dbus_connection_call_sync(connection, "org.darktable.service", "/darktable",
+                                        "org.darktable.service.Remote", "Open", g_variant_new("(s)", filename),
+                                        NULL, G_DBUS_CALL_FLAGS_NONE, -1, NULL, NULL) != NULL;
       g_free(filename);
     }
     if(connection) g_object_unref(connection);
@@ -1035,6 +1037,16 @@ void dt_cleanup()
 #ifdef USE_LUA
   dt_lua_finalize();
 #endif
+
+#ifdef HAVE_FFTW3_OMP
+#ifdef _OPENMP
+
+  fftwf_cleanup_threads();
+
+#endif
+#endif
+
+
   dt_view_manager_cleanup(darktable.view_manager);
   free(darktable.view_manager);
   if(init_gui)
@@ -1162,8 +1174,8 @@ void dt_configure_defaults()
   const int threads = dt_get_num_threads();
   const size_t mem = dt_get_total_memory();
   const int bits = (sizeof(void *) == 4) ? 32 : 64;
-  fprintf(stderr, "[defaults] found a %d-bit system with %zu kb ram and %d cores (%d atom based)\n", bits,
-          mem, threads, atom_cores);
+  fprintf(stderr, "[defaults] found a %d-bit system with %zu kb ram and %d cores (%d atom based)\n", bits, mem,
+          threads, atom_cores);
   if(mem >= (8u << 20) && threads > 4)
   {
     fprintf(stderr, "[defaults] setting very high quality defaults\n");

@@ -98,8 +98,8 @@ int groups()
   return IOP_GROUP_COLOR;
 }
 
-int legacy_params(dt_iop_module_t *self, const void *const old_params, const int old_version,
-                  void *new_params, const int new_version)
+int legacy_params(dt_iop_module_t *self, const void *const old_params, const int old_version, void *new_params,
+                  const int new_version)
 {
   if(old_version == 1 && new_version == 2)
   {
@@ -218,8 +218,8 @@ void process_sse2(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, c
     {
       for(int i = 0; i < roi_out->width; i++)
       {
-        _mm_stream_ps(
-            out, _mm_min_ps(max, _mm_max_ps(min, _mm_add_ps(offset, _mm_mul_ps(scale, _mm_load_ps(in))))));
+        _mm_stream_ps(out,
+                      _mm_min_ps(max, _mm_max_ps(min, _mm_add_ps(offset, _mm_mul_ps(scale, _mm_load_ps(in))))));
         in += ch;
         out += ch;
       }
@@ -303,7 +303,7 @@ void init(dt_iop_module_t *module)
   // our module is disabled by default
   module->default_enabled = 0;
   // we are pretty late in the pipe:
-    module->priority = 797; // module order created by iop_dependencies.py, do not edit!
+  module->priority = 797; // module order created by iop_dependencies.py, do not edit!
   module->params_size = sizeof(dt_iop_colorcontrast_params_t);
   module->gui_data = NULL;
   // init defaults:

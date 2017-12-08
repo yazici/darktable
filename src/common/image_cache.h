@@ -24,8 +24,7 @@
 typedef struct dt_image_cache_t
 {
   dt_cache_t cache;
-}
-dt_image_cache_t;
+} dt_image_cache_t;
 
 // what to do if an image struct is
 // released after writing.
@@ -35,8 +34,7 @@ typedef enum dt_image_cache_write_mode_t
   DT_IMAGE_CACHE_SAFE = 0,
   // only write to db and do xmp only during shutdown
   DT_IMAGE_CACHE_RELAXED = 1
-}
-dt_image_cache_write_mode_t;
+} dt_image_cache_write_mode_t;
 
 void dt_image_cache_init(dt_image_cache_t *cache);
 void dt_image_cache_cleanup(dt_image_cache_t *cache);

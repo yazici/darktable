@@ -145,7 +145,8 @@ uint32_t view(const dt_view_t *self)
   return DT_VIEW_LIGHTTABLE;
 }
 
-typedef enum dt_lighttable_direction_t {
+typedef enum dt_lighttable_direction_t
+{
   DIRECTION_UP = 0,
   DIRECTION_DOWN = 1,
   DIRECTION_LEFT = 2,
@@ -197,13 +198,13 @@ static void move_view(dt_library_t *lib, dt_lighttable_direction_t dir)
     break;
     case DIRECTION_PGUP:
     {
-      lib->offset -= (lib->max_rows - 1 ) * iir;
+      lib->offset -= (lib->max_rows - 1) * iir;
       while(lib->offset < 0) lib->offset += iir;
     }
     break;
     case DIRECTION_PGDOWN:
     {
-      lib->offset += (lib->max_rows - 1 ) * iir;
+      lib->offset += (lib->max_rows - 1) * iir;
       while(lib->offset >= lib->collection_count) lib->offset -= iir;
     }
     break;
@@ -284,7 +285,7 @@ static void _update_collected_images(dt_view_t *self)
   // a temporary (in-memory) table (collected_images).
   //
   // 0. get current lower rowid
-  if (lib->full_preview_id != -1)
+  if(lib->full_preview_id != -1)
   {
     DT_DEBUG_SQLITE3_PREPARE_V2(dt_database_get(darktable.db), "SELECT MIN(rowid) FROM memory.collected_images",
                                 -1, &stmt, NULL);
@@ -297,11 +298,11 @@ static void _update_collected_images(dt_view_t *self)
 
   // 1. drop previous data
 
-  DT_DEBUG_SQLITE3_EXEC(dt_database_get(darktable.db), "DELETE FROM memory.collected_images", NULL, NULL,
-                        NULL);
+  DT_DEBUG_SQLITE3_EXEC(dt_database_get(darktable.db), "DELETE FROM memory.collected_images", NULL, NULL, NULL);
   // reset autoincrement. need in star_key_accel_callback
   DT_DEBUG_SQLITE3_EXEC(dt_database_get(darktable.db), "DELETE FROM memory.sqlite_sequence WHERE "
-                                                       "name='collected_images'", NULL, NULL, NULL);
+                                                       "name='collected_images'",
+                        NULL, NULL, NULL);
 
   // 2. insert collected images into the temporary table
 
@@ -318,7 +319,7 @@ static void _update_collected_images(dt_view_t *self)
   g_free(ins_query);
 
   // 3. get new low-bound, then update the full preview rowid accordingly
-  if (lib->full_preview_id != -1)
+  if(lib->full_preview_id != -1)
   {
     DT_DEBUG_SQLITE3_PREPARE_V2(dt_database_get(darktable.db), "SELECT MIN(rowid) FROM memory.collected_images",
                                 -1, &stmt, NULL);
@@ -334,12 +335,13 @@ static void _update_collected_images(dt_view_t *self)
     lib->full_preview_rowid += (min_after - min_before);
 
     char col_query[128] = { 0 };
-    snprintf(col_query, sizeof(col_query), "SELECT imgid FROM memory.collected_images WHERE rowid=%d", lib->full_preview_rowid);
+    snprintf(col_query, sizeof(col_query), "SELECT imgid FROM memory.collected_images WHERE rowid=%d",
+             lib->full_preview_rowid);
     DT_DEBUG_SQLITE3_PREPARE_V2(dt_database_get(darktable.db), col_query, -1, &stmt, NULL);
     if(sqlite3_step(stmt) == SQLITE_ROW)
     {
       int nid = sqlite3_column_int(stmt, 0);
-      if (nid != lib->full_preview_id)
+      if(nid != lib->full_preview_id)
       {
         lib->full_preview_id = sqlite3_column_int(stmt, 0);
         dt_control_set_mouse_over_id(lib->full_preview_id);
@@ -465,7 +467,7 @@ grid_to_index (int row, int col, int stride, int offset)
 #endif
 
 static int expose_filemanager(dt_view_t *self, cairo_t *cr, int32_t width, int32_t height, int32_t pointerx,
-                               int32_t pointery)
+                              int32_t pointery)
 {
   dt_library_t *lib = (dt_library_t *)self->data;
   gboolean offset_changed = FALSE;
@@ -630,7 +632,7 @@ end_query_cache:
   int current_image = 0;
   int before_mouse_over_id = 0;
 
-  if (lib->using_arrows)
+  if(lib->using_arrows)
   {
     before_mouse_over_id = dt_control_get_mouse_over_id();
   }
@@ -658,7 +660,7 @@ end_query_cache:
         if(iir == 1 && row) continue;
 
         /* set mouse over id if pointer is in current row / col */
-        if (lib->using_arrows)
+        if(lib->using_arrows)
         {
 
           if(before_mouse_over_id == -1)
@@ -669,56 +671,56 @@ end_query_cache:
           if(before_mouse_over_id == id)
           {
             // I would like to jump from before_mouse_over_id to query_ids[idx]
-            int idx = current_image+lib->key_jump_offset-1;
-            int current_row = (int)((current_image-1)/iir);
-            int current_col = current_image%iir;
+            int idx = current_image + lib->key_jump_offset - 1;
+            int current_row = (int)((current_image - 1) / iir);
+            int current_col = current_image % iir;
 
             // detect if the current movement need some extra movement (page adjust)
-            if (current_row  == (int)(max_rows-1.5) && lib->key_jump_offset == iir)
+            if(current_row == (int)(max_rows - 1.5) && lib->key_jump_offset == iir)
               // going DOWN from last row
               move_view(lib, DIRECTION_DOWN);
-            else if (current_row  == 0 && lib->key_jump_offset == iir*-1)
+            else if(current_row == 0 && lib->key_jump_offset == iir * -1)
             {
               // going UP from first row
               move_view(lib, DIRECTION_UP);
             }
-            else if (current_row == (int)(max_rows-1.5) && current_col ==  0 && lib->key_jump_offset == 1)
+            else if(current_row == (int)(max_rows - 1.5) && current_col == 0 && lib->key_jump_offset == 1)
               // going RIGHT from last visible
               move_view(lib, DIRECTION_DOWN);
-            else if (current_row == 0 && current_col ==  1 && lib->key_jump_offset == -1)
+            else if(current_row == 0 && current_col == 1 && lib->key_jump_offset == -1)
               // going LEFT from first visible
               move_view(lib, DIRECTION_UP);
-            if (idx > -1 && idx < lib->collection_count && query_ids[idx])
+            if(idx > -1 && idx < lib->collection_count && query_ids[idx])
             {
-                // offset is valid..we know where to jump
-                mouse_over_id = query_ids[idx];
+              // offset is valid..we know where to jump
+              mouse_over_id = query_ids[idx];
             }
             else
               // going into a non existing position. Do nothing
               mouse_over_id = before_mouse_over_id;
 
-            if (lib->key_jump_offset != 0) 
+            if(lib->key_jump_offset != 0)
             {
-              if (lib->key_select) 
+              if(lib->key_select)
               {
                 // managing shift + movement
                 int direction = (lib->key_jump_offset > 0) ? DIRECTION_RIGHT : DIRECTION_LEFT;
-                if (lib->key_select_direction != direction ) 
+                if(lib->key_select_direction != direction)
                 {
-                  lib->key_select_direction =  direction;
+                  lib->key_select_direction = direction;
                   dt_selection_toggle(darktable.selection, before_mouse_over_id);
                 }
                 int loop_count = abs(lib->key_jump_offset); // ex: from -10 to 1  // from 10 to 1
                 int to_toggle = 0;
-                while (loop_count--)
+                while(loop_count--)
                 {
                   // ex shift + down toggle selection on images_in_row images
-                  to_toggle =  idx+(-1*lib->key_jump_offset/abs(lib->key_jump_offset)*loop_count);
-                  if (query_ids[to_toggle])
-                    dt_selection_toggle(darktable.selection, query_ids[to_toggle]);
+                  to_toggle = idx + (-1 * lib->key_jump_offset / abs(lib->key_jump_offset) * loop_count);
+                  if(query_ids[to_toggle]) dt_selection_toggle(darktable.selection, query_ids[to_toggle]);
                 }
               }
-              lib->key_jump_offset = 0; // avoid key_release events move cursor. TBD: return the right value in key_pressed and trash the flag
+              lib->key_jump_offset = 0; // avoid key_release events move cursor. TBD: return the right value in
+                                        // key_pressed and trash the flag
             }
           }
         }
@@ -737,7 +739,7 @@ end_query_cache:
           dt_selection_select_single(darktable.selection, id);
         }
         missing += dt_view_image_expose(&(lib->image_over), id, cr, wd, iir == 1 ? height : ht, iir, img_pointerx,
-                             img_pointery, FALSE, FALSE);
+                                        img_pointery, FALSE, FALSE);
 
         cairo_restore(cr);
       }
@@ -915,8 +917,8 @@ after_drawing:
       imgids[imgids_num++] = sqlite3_column_int(lib->statements.main_query, 0);
 
     float imgwd = iir == 1 ? 0.97 : 0.8;
-    dt_mipmap_size_t mip = dt_mipmap_cache_get_matching_size(darktable.mipmap_cache, imgwd * wd,
-                                                             imgwd * (iir == 1 ? height : ht));
+    dt_mipmap_size_t mip
+        = dt_mipmap_cache_get_matching_size(darktable.mipmap_cache, imgwd * wd, imgwd * (iir == 1 ? height : ht));
     while(imgids_num > 0)
     {
       imgids_num--;
@@ -956,7 +958,7 @@ after_drawing:
 #define DT_LIBRARY_MAX_ZOOM 13
 
 static int expose_zoomable(dt_view_t *self, cairo_t *cr, int32_t width, int32_t height, int32_t pointerx,
-                            int32_t pointery)
+                           int32_t pointery)
 {
   dt_library_t *lib = (dt_library_t *)self->data;
   float zoom, zoom_x, zoom_y;
@@ -1174,8 +1176,8 @@ static int expose_zoomable(dt_view_t *self, cairo_t *cr, int32_t width, int32_t 
 
         cairo_save(cr);
         // if(zoom == 1) dt_image_prefetch(image, DT_IMAGE_MIPF);
-        missing += dt_view_image_expose(&(lib->image_over), id, cr, wd, zoom == 1 ? height : ht, zoom, img_pointerx,
-                             img_pointery, FALSE, FALSE);
+        missing += dt_view_image_expose(&(lib->image_over), id, cr, wd, zoom == 1 ? height : ht, zoom,
+                                        img_pointerx, img_pointery, FALSE, FALSE);
         cairo_restore(cr);
         if(zoom == 1)
         {
@@ -1231,20 +1233,20 @@ static int expose_full_preview(dt_view_t *self, cairo_t *cr, int32_t width, int3
     gboolean preload = preload_num > 0;
     preload_num = CLAMPS(preload_num, 1, 99999);
 
-    gchar *stmt_string = g_strdup_printf("SELECT col.imgid AS id, col.rowid FROM memory.collected_images AS col %s "
-                                         "WHERE col.rowid %s %d ORDER BY col.rowid %s LIMIT %d",
-                                         (sel_img_count <= 1) ?
-                                           /* We want to operate on the currently collected images,
-                                            * so there's no need to match against the selection */
-                                           "" :
-                                           /* Limit the matches to the current selection */
-                                           "INNER JOIN main.selected_images AS sel ON col.imgid = sel.imgid",
-                                         (offset >= 0) ? ">" : "<",
-                                         lib->full_preview_rowid,
-                                         /* Direction of our navigation -- when showing for the first time,
-                                          * i.e. when offset == 0, assume forward navigation */
-                                         (offset >= 0) ? "ASC" : "DESC",
-                                         preload_num);
+    gchar *stmt_string
+        = g_strdup_printf("SELECT col.imgid AS id, col.rowid FROM memory.collected_images AS col %s "
+                          "WHERE col.rowid %s %d ORDER BY col.rowid %s LIMIT %d",
+                          (sel_img_count <= 1) ?
+                                               /* We want to operate on the currently collected images,
+                                                * so there's no need to match against the selection */
+                              ""
+                                               :
+                                               /* Limit the matches to the current selection */
+                              "INNER JOIN main.selected_images AS sel ON col.imgid = sel.imgid",
+                          (offset >= 0) ? ">" : "<", lib->full_preview_rowid,
+                          /* Direction of our navigation -- when showing for the first time,
+                           * i.e. when offset == 0, assume forward navigation */
+                          (offset >= 0) ? "ASC" : "DESC", preload_num);
     DT_DEBUG_SQLITE3_PREPARE_V2(dt_database_get(darktable.db), stmt_string, -1, &stmt, NULL);
 
     /* Walk through the "next" images, activate preload and find out where to go if moving */
@@ -1255,7 +1257,7 @@ static int expose_full_preview(dt_view_t *self, cairo_t *cr, int32_t width, int3
     }
     int count = 0;
 
-    while (sqlite3_step(stmt) == SQLITE_ROW)
+    while(sqlite3_step(stmt) == SQLITE_ROW)
     {
       /* Check if we're about to move */
       if(count == 0 && offset != 0)
@@ -1302,18 +1304,17 @@ static int expose_full_preview(dt_view_t *self, cairo_t *cr, int32_t width, int3
       free(lib->full_res_thumb);
       lib->full_res_thumb = NULL;
       dt_colorspaces_color_profile_type_t color_space;
-      if(!dt_imageio_large_thumbnail(filename, &lib->full_res_thumb,
-                                               &lib->full_res_thumb_wd,
-                                               &lib->full_res_thumb_ht,
-                                               &color_space)) {
+      if(!dt_imageio_large_thumbnail(filename, &lib->full_res_thumb, &lib->full_res_thumb_wd,
+                                     &lib->full_res_thumb_ht, &color_space))
+      {
         lib->full_res_thumb_orientation = ORIENTATION_NONE;
         lib->full_res_thumb_id = lib->full_preview_id;
       }
 
       if(lib->full_res_thumb_id == lib->full_preview_id)
       {
-        dt_focus_create_clusters(lib->full_res_focus, frows, fcols, lib->full_res_thumb,
-                                 lib->full_res_thumb_wd, lib->full_res_thumb_ht);
+        dt_focus_create_clusters(lib->full_res_focus, frows, fcols, lib->full_res_thumb, lib->full_res_thumb_wd,
+                                 lib->full_res_thumb_ht);
       }
     }
   }
@@ -1375,12 +1376,12 @@ static int expose_full_preview(dt_view_t *self, cairo_t *cr, int32_t width, int3
   }
   else
 #endif
-  const int missing = dt_view_image_expose(&(lib->image_over), lib->full_preview_id, cr,
-                                           width, height, 1, pointerx, pointery, TRUE, FALSE);
+  const int missing = dt_view_image_expose(&(lib->image_over), lib->full_preview_id, cr, width, height, 1,
+                                           pointerx, pointery, TRUE, FALSE);
 
   if(lib->display_focus && (lib->full_res_thumb_id == lib->full_preview_id))
-    dt_focus_draw_clusters(cr, width, height, lib->full_preview_id, lib->full_res_thumb_wd,
-                           lib->full_res_thumb_ht, lib->full_res_focus, frows, fcols);
+    dt_focus_draw_clusters(cr, width, height, lib->full_preview_id, lib->full_res_thumb_wd, lib->full_res_thumb_ht,
+                           lib->full_res_focus, frows, fcols);
   return missing;
 }
 
@@ -1427,8 +1428,7 @@ void expose(dt_view_t *self, cairo_t *cr, int32_t width, int32_t height, int32_t
   const double end = dt_get_wtime();
   if(darktable.unmuted & DT_DEBUG_PERF)
     dt_print(DT_DEBUG_LIGHTTABLE, "[lighttable] expose took %0.04f sec\n", end - start);
-  if(missing_thumbnails)
-    g_timeout_add(500, _expose_again, 0);
+  if(missing_thumbnails) g_timeout_add(500, _expose_again, 0);
 }
 
 static gboolean go_up_key_accel_callback(GtkAccelGroup *accel_group, GObject *acceleratable, guint keyval,
@@ -1513,7 +1513,7 @@ static gboolean realign_key_accel_callback(GtkAccelGroup *accel_group, GObject *
 }
 
 static gboolean select_toggle_callback(GtkAccelGroup *accel_group, GObject *acceleratable, guint keyval,
-                                           GdkModifierType modifier, gpointer data)
+                                       GdkModifierType modifier, gpointer data)
 {
   uint32_t id = dt_control_get_mouse_over_id();
   dt_selection_toggle(darktable.selection, id);
@@ -1521,7 +1521,7 @@ static gboolean select_toggle_callback(GtkAccelGroup *accel_group, GObject *acce
 }
 
 static gboolean select_single_callback(GtkAccelGroup *accel_group, GObject *acceleratable, guint keyval,
-                                           GdkModifierType modifier, gpointer data)
+                                       GdkModifierType modifier, gpointer data)
 {
   uint32_t id = dt_control_get_mouse_over_id();
   dt_selection_select_single(darktable.selection, id);
@@ -1544,8 +1544,8 @@ static gboolean star_key_accel_callback(GtkAccelGroup *accel_group, GObject *acc
     int imgid_for_offset;
     sqlite3_stmt *stmt;
 
-    DT_DEBUG_SQLITE3_PREPARE_V2(dt_database_get(darktable.db),
-                                "SELECT MIN(imgid) FROM main.selected_images", -1, &stmt, NULL);
+    DT_DEBUG_SQLITE3_PREPARE_V2(dt_database_get(darktable.db), "SELECT MIN(imgid) FROM main.selected_images", -1,
+                                &stmt, NULL);
     if(sqlite3_step(stmt) == SQLITE_ROW)
     {
       sqlite3_stmt *inner_stmt;
@@ -1557,12 +1557,11 @@ static gboolean star_key_accel_callback(GtkAccelGroup *accel_group, GObject *acc
       }
 
       DT_DEBUG_SQLITE3_PREPARE_V2(dt_database_get(darktable.db),
-          //"SELECT imgid FROM memory.collected_images", -1, &inner_stmt,
-          "SELECT rowid FROM memory.collected_images WHERE imgid=?1", -1, &inner_stmt,
-          NULL);
+                                  //"SELECT imgid FROM memory.collected_images", -1, &inner_stmt,
+                                  "SELECT rowid FROM memory.collected_images WHERE imgid=?1", -1, &inner_stmt,
+                                  NULL);
       DT_DEBUG_SQLITE3_BIND_INT(inner_stmt, 1, imgid_for_offset);
-      if(sqlite3_step(inner_stmt) == SQLITE_ROW)
-        next_image_rowid = sqlite3_column_int(inner_stmt, 0);
+      if(sqlite3_step(inner_stmt) == SQLITE_ROW) next_image_rowid = sqlite3_column_int(inner_stmt, 0);
       sqlite3_finalize(inner_stmt);
     }
     sqlite3_finalize(stmt);
@@ -1588,11 +1587,10 @@ static gboolean star_key_accel_callback(GtkAccelGroup *accel_group, GObject *acc
       sqlite3_stmt *stmt;
       DT_DEBUG_SQLITE3_PREPARE_V2(dt_database_get(darktable.db),
                                   "SELECT imgid FROM memory.collected_images WHERE rowid=?1 OR rowid=?1 - 1 "
-                                  "ORDER BY rowid DESC LIMIT 1", -1, &stmt,
-                                  NULL);
+                                  "ORDER BY rowid DESC LIMIT 1",
+                                  -1, &stmt, NULL);
       DT_DEBUG_SQLITE3_BIND_INT(stmt, 1, next_image_rowid);
-      if(sqlite3_step(stmt) == SQLITE_ROW)
-        mouse_over_id = sqlite3_column_int(stmt, 0);
+      if(sqlite3_step(stmt) == SQLITE_ROW) mouse_over_id = sqlite3_column_int(stmt, 0);
       sqlite3_finalize(stmt);
       dt_control_set_mouse_over_id(mouse_over_id);
     }
@@ -1606,8 +1604,7 @@ static void _lighttable_mipmaps_updated_signal_callback(gpointer instance, gpoin
 }
 
 static void drag_and_drop_received(GtkWidget *widget, GdkDragContext *context, gint x, gint y,
-                                   GtkSelectionData *selection_data, guint target_type, guint time,
-                                   gpointer data)
+                                   GtkSelectionData *selection_data, guint target_type, guint time, gpointer data)
 {
   gboolean success = FALSE;
 
@@ -1621,8 +1618,9 @@ static void drag_and_drop_received(GtkWidget *widget, GdkDragContext *context, g
       {
         if(**image_to_load)
         {
-          dt_load_from_string(*image_to_load, FALSE, NULL); // TODO: do we want to open the image in darkroom mode? If
-                                                            // yes -> set to TRUE.
+          dt_load_from_string(*image_to_load, FALSE,
+                              NULL); // TODO: do we want to open the image in darkroom mode? If
+                                     // yes -> set to TRUE.
         }
         image_to_load++;
       }
@@ -1636,10 +1634,8 @@ static void drag_and_drop_received(GtkWidget *widget, GdkDragContext *context, g
 void enter(dt_view_t *self)
 {
   // init drag&drop of files/folders
-  gtk_drag_dest_set(dt_ui_center(darktable.gui->ui), GTK_DEST_DEFAULT_ALL, target_list, n_targets,
-                    GDK_ACTION_COPY);
-  g_signal_connect(dt_ui_center(darktable.gui->ui), "drag-data-received", G_CALLBACK(drag_and_drop_received),
-                   self);
+  gtk_drag_dest_set(dt_ui_center(darktable.gui->ui), GTK_DEST_DEFAULT_ALL, target_list, n_targets, GDK_ACTION_COPY);
+  g_signal_connect(dt_ui_center(darktable.gui->ui), "drag-data-received", G_CALLBACK(drag_and_drop_received), self);
 
   /* connect to signals */
   dt_control_signal_connect(darktable.signals, DT_SIGNAL_DEVELOP_MIPMAP_UPDATED,
@@ -1702,10 +1698,11 @@ void reset(dt_view_t *self)
 
 void mouse_enter(dt_view_t *self)
 {
-  // TODO: In gtk.c the function center_leave return true. It is not needed when using arrows. the same for mouse_leave, mouse_move
+  // TODO: In gtk.c the function center_leave return true. It is not needed when using arrows. the same for
+  // mouse_leave, mouse_move
   dt_library_t *lib = (dt_library_t *)self->data;
   uint32_t id = dt_control_get_mouse_over_id();
-  if (lib->using_arrows == 0) 
+  if(lib->using_arrows == 0)
   {
     if(id == -1)
       dt_control_set_mouse_over_id(
@@ -1716,7 +1713,7 @@ void mouse_enter(dt_view_t *self)
 void mouse_leave(dt_view_t *self)
 {
   dt_library_t *lib = (dt_library_t *)self->data;
-  if (lib->using_arrows == 0) 
+  if(lib->using_arrows == 0)
   {
     lib->last_mouse_over_id = dt_control_get_mouse_over_id(); // see mouse_enter (re: fluxbox)
     if(!lib->pan && dt_conf_get_int("plugins/lighttable/images_in_row") != 1)
@@ -1835,7 +1832,7 @@ int button_pressed(dt_view_t *self, double x, double y, double pressure, int whi
       case DT_VIEW_DESERT:
       {
 
-        if (lib->using_arrows)
+        if(lib->using_arrows)
         {
           // in this case dt_control_get_mouse_over_id() means "last image visited with arrows"
           lib->using_arrows = 0;
@@ -1893,8 +1890,8 @@ int button_pressed(dt_view_t *self, double x, double y, double pressure, int whi
           sqlite3_stmt *stmt;
           DT_DEBUG_SQLITE3_PREPARE_V2(
               dt_database_get(darktable.db),
-              "INSERT OR IGNORE INTO main.selected_images SELECT id FROM main.images WHERE group_id = ?1",
-              -1, &stmt, NULL);
+              "INSERT OR IGNORE INTO main.selected_images SELECT id FROM main.images WHERE group_id = ?1", -1,
+              &stmt, NULL);
           DT_DEBUG_SQLITE3_BIND_INT(stmt, 1, group_id);
           sqlite3_step(stmt);
           sqlite3_finalize(stmt);
@@ -1935,7 +1932,7 @@ int button_pressed(dt_view_t *self, double x, double y, double pressure, int whi
               char *argv[] = { player, filename, NULL };
               gboolean ret
                   = g_spawn_async(NULL, argv, NULL, G_SPAWN_DO_NOT_REAP_CHILD | G_SPAWN_SEARCH_PATH
-                                                    | G_SPAWN_STDOUT_TO_DEV_NULL | G_SPAWN_STDERR_TO_DEV_NULL,
+                                                        | G_SPAWN_STDOUT_TO_DEV_NULL | G_SPAWN_STDERR_TO_DEV_NULL,
                                   NULL, NULL, &lib->audio_player_pid, NULL);
 
               if(ret)
@@ -1981,8 +1978,7 @@ int key_released(dt_view_t *self, guint key, guint state)
 
     lib->full_preview_id = -1;
     lib->full_preview_rowid = -1;
-    if(!lib->using_arrows)
-      dt_control_set_mouse_over_id(-1);
+    if(!lib->using_arrows) dt_control_set_mouse_over_id(-1);
 
     dt_ui_panel_show(darktable.gui->ui, DT_UI_PANEL_LEFT, (lib->full_preview & 1), FALSE);
     dt_ui_panel_show(darktable.gui->ui, DT_UI_PANEL_RIGHT, (lib->full_preview & 2), FALSE);
@@ -2017,8 +2013,7 @@ int key_pressed(dt_view_t *self, guint key, guint state)
   {
     lib->full_preview_id = -1;
     lib->full_preview_rowid = -1;
-    if(!lib->using_arrows)
-      dt_control_set_mouse_over_id(-1);
+    if(!lib->using_arrows) dt_control_set_mouse_over_id(-1);
 
     dt_ui_panel_show(darktable.gui->ui, DT_UI_PANEL_LEFT, (lib->full_preview & 1), FALSE);
     dt_ui_panel_show(darktable.gui->ui, DT_UI_PANEL_RIGHT, (lib->full_preview & 2), FALSE);
@@ -2060,8 +2055,7 @@ int key_pressed(dt_view_t *self, guint key, guint state)
       {
         sqlite3_stmt *stmt;
         DT_DEBUG_SQLITE3_PREPARE_V2(dt_database_get(darktable.db),
-                                    "SELECT rowid FROM memory.collected_images WHERE imgid=?1", -1, &stmt,
-                                    NULL);
+                                    "SELECT rowid FROM memory.collected_images WHERE imgid=?1", -1, &stmt, NULL);
         DT_DEBUG_SQLITE3_BIND_INT(stmt, 1, lib->full_preview_id);
         if(sqlite3_step(stmt) == SQLITE_ROW)
         {
@@ -2097,18 +2091,19 @@ int key_pressed(dt_view_t *self, guint key, guint state)
     return 0;
   }
 
-  if (key == GDK_KEY_Shift_L || key == GDK_KEY_Shift_R)
+  if(key == GDK_KEY_Shift_L || key == GDK_KEY_Shift_R)
   {
     lib->key_select = 1;
   }
 
-  if((key == accels->lighttable_left.accel_key && state == accels->lighttable_left.accel_mods) || ( key == accels->lighttable_left.accel_key && layout == 1 && zoom != 1 ))
+  if((key == accels->lighttable_left.accel_key && state == accels->lighttable_left.accel_mods)
+     || (key == accels->lighttable_left.accel_key && layout == 1 && zoom != 1))
   {
     if(lib->full_preview_id > -1)
       lib->track = -DT_LIBRARY_MAX_ZOOM;
     else if(layout == 1)
     {
-      if (zoom == 1)
+      if(zoom == 1)
       {
         move_view(lib, DIRECTION_UP);
         lib->using_arrows = 0;
@@ -2125,14 +2120,15 @@ int key_pressed(dt_view_t *self, guint key, guint state)
     return 1;
   }
 
-  //if(key == accels->lighttable_right.accel_key && state == accels->lighttable_right.accel_mods)
-  if((key == accels->lighttable_right.accel_key && state == accels->lighttable_right.accel_mods) || ( key == accels->lighttable_right.accel_key && layout == 1 && zoom != 1 ))
+  // if(key == accels->lighttable_right.accel_key && state == accels->lighttable_right.accel_mods)
+  if((key == accels->lighttable_right.accel_key && state == accels->lighttable_right.accel_mods)
+     || (key == accels->lighttable_right.accel_key && layout == 1 && zoom != 1))
   {
     if(lib->full_preview_id > -1)
       lib->track = +DT_LIBRARY_MAX_ZOOM;
     else if(layout == 1)
     {
-      if (zoom == 1)
+      if(zoom == 1)
       {
         move_view(lib, DIRECTION_DOWN);
         lib->using_arrows = 0;
@@ -2149,20 +2145,22 @@ int key_pressed(dt_view_t *self, guint key, guint state)
     return 1;
   }
 
-  if((key == accels->lighttable_up.accel_key && state == accels->lighttable_up.accel_mods) || ( key == accels->lighttable_up.accel_key && layout == 1 && zoom != 1 ))
+  if((key == accels->lighttable_up.accel_key && state == accels->lighttable_up.accel_mods)
+     || (key == accels->lighttable_up.accel_key && layout == 1 && zoom != 1))
   {
     if(lib->full_preview_id > -1)
       lib->track = -DT_LIBRARY_MAX_ZOOM;
     else if(layout == 1)
     {
-      if (zoom == 1)
+      if(zoom == 1)
       {
         move_view(lib, DIRECTION_UP);
         lib->using_arrows = 0;
       }
-      else {
+      else
+      {
         lib->using_arrows = 1;
-        lib->key_jump_offset = zoom*-1;
+        lib->key_jump_offset = zoom * -1;
       }
     }
     else
@@ -2170,13 +2168,14 @@ int key_pressed(dt_view_t *self, guint key, guint state)
     return 1;
   }
 
-  if((key == accels->lighttable_down.accel_key && state == accels->lighttable_down.accel_mods) || ( key == accels->lighttable_down.accel_key && layout == 1 && zoom != 1 ))
+  if((key == accels->lighttable_down.accel_key && state == accels->lighttable_down.accel_mods)
+     || (key == accels->lighttable_down.accel_key && layout == 1 && zoom != 1))
   {
     if(lib->full_preview_id > -1)
       lib->track = +DT_LIBRARY_MAX_ZOOM;
-    else if(layout == 1) 
+    else if(layout == 1)
     {
-      if (zoom == 1)
+      if(zoom == 1)
       {
         move_view(lib, DIRECTION_DOWN);
         lib->using_arrows = 0;
@@ -2317,8 +2316,8 @@ static void display_profile_callback(GtkWidget *combo, gpointer user_data)
     if(pp->display_pos == pos)
     {
       if(darktable.color_profiles->display_type != pp->type
-        || (darktable.color_profiles->display_type == DT_COLORSPACE_FILE
-        && strcmp(darktable.color_profiles->display_filename, pp->filename)))
+         || (darktable.color_profiles->display_type == DT_COLORSPACE_FILE
+             && strcmp(darktable.color_profiles->display_filename, pp->filename)))
       {
         darktable.color_profiles->display_type = pp->type;
         g_strlcpy(darktable.color_profiles->display_filename, pp->filename,
@@ -2330,7 +2329,8 @@ static void display_profile_callback(GtkWidget *combo, gpointer user_data)
   }
 
   // profile not found, fall back to system display profile. shouldn't happen
-  fprintf(stderr, "can't find display profile `%s', using system display profile instead\n", dt_bauhaus_combobox_get_text(combo));
+  fprintf(stderr, "can't find display profile `%s', using system display profile instead\n",
+          dt_bauhaus_combobox_get_text(combo));
   profile_changed = darktable.color_profiles->display_type != DT_COLORSPACE_DISPLAY;
   darktable.color_profiles->display_type = DT_COLORSPACE_DISPLAY;
   darktable.color_profiles->display_filename[0] = '\0';
@@ -2350,7 +2350,8 @@ void gui_init(dt_view_t *self)
   dt_library_t *lib = (dt_library_t *)self->data;
 
   // create display profile button
-  GtkWidget *const profile_button = dtgtk_button_new(dtgtk_cairo_paint_display, CPF_STYLE_FLAT | CPF_DO_NOT_USE_BORDER);
+  GtkWidget *const profile_button
+      = dtgtk_button_new(dtgtk_cairo_paint_display, CPF_STYLE_FLAT | CPF_DO_NOT_USE_BORDER);
   gtk_widget_set_tooltip_text(profile_button, _("set display profile"));
   dt_view_manager_module_toolbox_add(darktable.view_manager, profile_button, DT_VIEW_LIGHTTABLE);
 
@@ -2362,7 +2363,8 @@ void gui_init(dt_view_t *self)
 #if GTK_CHECK_VERSION(3, 16, 0)
   g_object_set(G_OBJECT(lib->profile_floating_window), "transitions-enabled", FALSE, NULL);
 #endif
-  g_signal_connect_swapped(G_OBJECT(profile_button), "button-press-event", G_CALLBACK(gtk_widget_show_all), lib->profile_floating_window);
+  g_signal_connect_swapped(G_OBJECT(profile_button), "button-press-event", G_CALLBACK(gtk_widget_show_all),
+                           lib->profile_floating_window);
 
   GtkWidget *vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 5);
   gtk_widget_set_margin_start(vbox, DT_PIXEL_APPLY_DPI(8));
@@ -2397,8 +2399,8 @@ void gui_init(dt_view_t *self)
     {
       dt_bauhaus_combobox_add(display_profile, prof->name);
       if(prof->type == darktable.color_profiles->display_type
-        && (prof->type != DT_COLORSPACE_FILE
-        || !strcmp(prof->filename, darktable.color_profiles->display_filename)))
+         && (prof->type != DT_COLORSPACE_FILE
+             || !strcmp(prof->filename, darktable.color_profiles->display_filename)))
       {
         dt_bauhaus_combobox_set(display_profile, prof->display_pos);
       }
@@ -2406,8 +2408,7 @@ void gui_init(dt_view_t *self)
   }
 
   char tooltip[1024];
-  snprintf(tooltip, sizeof(tooltip), _("display ICC profiles in %s/color/out or %s/color/out"), confdir,
-           datadir);
+  snprintf(tooltip, sizeof(tooltip), _("display ICC profiles in %s/color/out or %s/color/out"), confdir, datadir);
   gtk_widget_set_tooltip_text(display_profile, tooltip);
 
   g_signal_connect(G_OBJECT(display_intent), "value-changed", G_CALLBACK(display_intent_callback), NULL);

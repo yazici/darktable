@@ -136,8 +136,8 @@ void connect_key_accels(dt_iop_module_t *self)
   dt_accel_connect_slider_iop(self, "target level", GTK_WIDGET(g->deflicker_target_level));
 }
 
-int legacy_params(dt_iop_module_t *self, const void *const old_params, const int old_version,
-                  void *new_params, const int new_version)
+int legacy_params(dt_iop_module_t *self, const void *const old_params, const int old_version, void *new_params,
+                  const int new_version)
 {
   if(old_version == 2 && new_version == 5)
   {
@@ -180,7 +180,8 @@ int legacy_params(dt_iop_module_t *self, const void *const old_params, const int
   }
   if(old_version == 4 && new_version == 5)
   {
-    typedef enum dt_iop_exposure_deflicker_histogram_source_t {
+    typedef enum dt_iop_exposure_deflicker_histogram_source_t
+    {
       DEFLICKER_HISTOGRAM_SOURCE_THUMBNAIL,
       DEFLICKER_HISTOGRAM_SOURCE_SOURCEFILE
     } dt_iop_exposure_deflicker_histogram_source_t;
@@ -212,7 +213,7 @@ int legacy_params(dt_iop_module_t *self, const void *const old_params, const int
   return 1;
 }
 
-void init_presets (dt_iop_module_so_t *self)
+void init_presets(dt_iop_module_so_t *self)
 {
   DT_DEBUG_SQLITE3_EXEC(dt_database_get(darktable.db), "BEGIN", NULL, NULL, NULL);
 
@@ -260,8 +261,7 @@ static void deflicker_prepare_histogram(dt_iop_module_t *self, uint32_t **histog
   histogram_params.roi = &histogram_roi;
   histogram_params.bins_count = DEFLICKER_BINS_COUNT;
 
-  dt_histogram_worker(&histogram_params, histogram_stats, buf.buf, histogram,
-                      dt_histogram_helper_cs_RAW_uint16);
+  dt_histogram_worker(&histogram_params, histogram_stats, buf.buf, histogram, dt_histogram_helper_cs_RAW_uint16);
   histogram_stats->ch = 1u;
 
   dt_mipmap_cache_release(darktable.mipmap_cache, &buf);
@@ -294,8 +294,7 @@ static void compute_correction(dt_iop_module_t *self, dt_iop_params_t *p1, dt_de
 
   const size_t total = (size_t)histogram_stats->ch * histogram_stats->pixels;
 
-  const double thr
-      = CLAMP(((double)total * (double)p->deflicker_percentile / (double)100.0), 0.0, (double)total);
+  const double thr = CLAMP(((double)total * (double)p->deflicker_percentile / (double)100.0), 0.0, (double)total);
 
   size_t n = 0;
   uint32_t raw = 0;
@@ -405,14 +404,15 @@ void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const 
     ((float *)o)[k] = (((float *)i)[k] - d->black) * d->scale;
   }
 
-  if(piece->pipe->mask_display & DT_DEV_PIXELPIPE_DISPLAY_MASK) dt_iop_alpha_copy(i, o, roi_out->width, roi_out->height);
+  if(piece->pipe->mask_display & DT_DEV_PIXELPIPE_DISPLAY_MASK)
+    dt_iop_alpha_copy(i, o, roi_out->width, roi_out->height);
 
   for(int k = 0; k < 3; k++) piece->pipe->dsc.processed_maximum[k] *= d->scale;
 }
 
 #if defined(__SSE__)
-void process_sse2(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const void *const i,
-                  void *const o, const dt_iop_roi_t *const roi_in, const dt_iop_roi_t *const roi_out)
+void process_sse2(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const void *const i, void *const o,
+                  const dt_iop_roi_t *const roi_in, const dt_iop_roi_t *const roi_out)
 {
   const dt_iop_exposure_data_t *const d = (const dt_iop_exposure_data_t *const)piece->data;
 
@@ -433,7 +433,8 @@ void process_sse2(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, c
       _mm_store_ps(out, _mm_mul_ps(_mm_sub_ps(_mm_load_ps(in), blackv), scalev));
   }
 
-  if(piece->pipe->mask_display & DT_DEV_PIXELPIPE_DISPLAY_MASK) dt_iop_alpha_copy(i, o, roi_out->width, roi_out->height);
+  if(piece->pipe->mask_display & DT_DEV_PIXELPIPE_DISPLAY_MASK)
+    dt_iop_alpha_copy(i, o, roi_out->width, roi_out->height);
 
   for(int k = 0; k < 3; k++) piece->pipe->dsc.processed_maximum[k] *= d->scale;
 }
@@ -550,8 +551,7 @@ void reload_defaults(dt_iop_module_t *module)
                                                             .black = 0.0f,
                                                             .exposure = 0.0f,
                                                             .deflicker_percentile = 50.0f,
-                                                            .deflicker_target_level = -4.0f
-  };
+                                                            .deflicker_target_level = -4.0f };
 
   memcpy(module->params, &tmp, sizeof(dt_iop_exposure_params_t));
   memcpy(module->default_params, &tmp, sizeof(dt_iop_exposure_params_t));
@@ -739,8 +739,8 @@ static void autoexpp_callback(GtkWidget *slider, gpointer user_data)
   if(self->request_color_pick != DT_REQUEST_COLORPICK_MODULE || self->picked_color_max[0] < 0.0f) return;
 
   dt_iop_exposure_gui_data_t *g = (dt_iop_exposure_gui_data_t *)self->gui_data;
-  const float white = fmaxf(fmaxf(self->picked_color_max[0], self->picked_color_max[1]),
-                            self->picked_color_max[2]) * (1.0 - dt_bauhaus_slider_get(g->autoexpp));
+  const float white = fmaxf(fmaxf(self->picked_color_max[0], self->picked_color_max[1]), self->picked_color_max[2])
+                      * (1.0 - dt_bauhaus_slider_get(g->autoexpp));
   exposure_set_white(self, white);
 }
 
@@ -807,8 +807,8 @@ static gboolean draw(GtkWidget *widget, cairo_t *cr, dt_iop_module_t *self)
 
   if(self->picked_color_max[0] < 0.0f) return FALSE;
 
-  const float white = fmaxf(fmaxf(self->picked_color_max[0], self->picked_color_max[1]),
-                            self->picked_color_max[2]) * (1.0 - dt_bauhaus_slider_get(g->autoexpp));
+  const float white = fmaxf(fmaxf(self->picked_color_max[0], self->picked_color_max[1]), self->picked_color_max[2])
+                      * (1.0 - dt_bauhaus_slider_get(g->autoexpp));
   const float black
       = fminf(fminf(self->picked_color_min[0], self->picked_color_min[1]), self->picked_color_min[2]);
 
@@ -867,7 +867,7 @@ void gui_init(struct dt_iop_module_t *self)
   gtk_box_pack_start(GTK_BOX(self->widget), GTK_WIDGET(g->black), TRUE, TRUE, 0);
 
   g->mode_stack = gtk_stack_new();
-  gtk_stack_set_homogeneous(GTK_STACK(g->mode_stack),FALSE);
+  gtk_stack_set_homogeneous(GTK_STACK(g->mode_stack), FALSE);
   gtk_box_pack_start(GTK_BOX(self->widget), g->mode_stack, TRUE, TRUE, 0);
 
   GtkWidget *vbox_manual = GTK_WIDGET(gtk_box_new(GTK_ORIENTATION_VERTICAL, DT_BAUHAUS_SPACE));
@@ -880,7 +880,8 @@ void gui_init(struct dt_iop_module_t *self)
   gtk_box_pack_start(GTK_BOX(vbox_manual), GTK_WIDGET(g->exposure), TRUE, TRUE, 0);
 
   g->autoexpp = dt_bauhaus_slider_new_with_range(self, 0.0, 0.2, .001, 0.01, 3);
-  gtk_widget_set_tooltip_text(g->autoexpp, _("percentage of bright values clipped out, toggle color picker to activate"));
+  gtk_widget_set_tooltip_text(g->autoexpp,
+                              _("percentage of bright values clipped out, toggle color picker to activate"));
   dt_bauhaus_slider_set_format(g->autoexpp, "%.3f%%");
   dt_bauhaus_widget_set_label(g->autoexpp, NULL, _("clipping threshold"));
   dt_bauhaus_widget_set_quad_paint(g->autoexpp, dtgtk_cairo_paint_colorpicker, CPF_ACTIVE);
@@ -912,7 +913,8 @@ void gui_init(struct dt_iop_module_t *self)
   gtk_box_pack_start(GTK_BOX(hbox1), GTK_WIDGET(label), FALSE, FALSE, 0);
 
   g->deflicker_used_EC = GTK_LABEL(gtk_label_new("")); // This gets filled in by process
-  gtk_widget_set_tooltip_text(GTK_WIDGET(g->deflicker_used_EC), _("what exposure correction has actually been used"));
+  gtk_widget_set_tooltip_text(GTK_WIDGET(g->deflicker_used_EC),
+                              _("what exposure correction has actually been used"));
   gtk_box_pack_start(GTK_BOX(hbox1), GTK_WIDGET(g->deflicker_used_EC), FALSE, FALSE, 0);
 
   dt_pthread_mutex_lock(&g->lock);
@@ -929,10 +931,9 @@ void gui_init(struct dt_iop_module_t *self)
   g_signal_connect(G_OBJECT(g->exposure), "value-changed", G_CALLBACK(exposure_callback), self);
   g_signal_connect(G_OBJECT(g->autoexpp), "value-changed", G_CALLBACK(autoexpp_callback), self);
   g_signal_connect(G_OBJECT(g->autoexpp), "quad-pressed", G_CALLBACK(autoexp_callback), self);
-  g_signal_connect(G_OBJECT(g->deflicker_percentile), "value-changed", G_CALLBACK(deflicker_params_callback),
+  g_signal_connect(G_OBJECT(g->deflicker_percentile), "value-changed", G_CALLBACK(deflicker_params_callback), self);
+  g_signal_connect(G_OBJECT(g->deflicker_target_level), "value-changed", G_CALLBACK(deflicker_params_callback),
                    self);
-  g_signal_connect(G_OBJECT(g->deflicker_target_level), "value-changed",
-                   G_CALLBACK(deflicker_params_callback), self);
   g_signal_connect(G_OBJECT(self->widget), "draw", G_CALLBACK(draw), self);
 }
 

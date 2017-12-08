@@ -64,8 +64,8 @@ int flags()
   return IOP_FLAGS_SUPPORTS_BLENDING | IOP_FLAGS_NO_MASKS;
 }
 
-int legacy_params(dt_iop_module_t *self, const void *const old_params, const int old_version,
-                  void *new_params, const int new_version)
+int legacy_params(dt_iop_module_t *self, const void *const old_params, const int old_version, void *new_params,
+                  const int new_version)
 {
   if(old_version == 1 && new_version == 2)
   {
@@ -161,16 +161,16 @@ static void _resynch_params(struct dt_iop_module_t *self)
 static void _reset_form_creation(GtkWidget *widget, dt_iop_module_t *self)
 {
   dt_iop_spots_gui_data_t *g = (dt_iop_spots_gui_data_t *)self->gui_data;
-  if(gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(g->bt_path)) ||
-      gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(g->bt_circle)) ||
-      gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(g->bt_ellipse)))
+  if(gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(g->bt_path))
+     || gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(g->bt_circle))
+     || gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(g->bt_ellipse)))
   {
     // we unset the creation mode
     dt_masks_change_form_gui(NULL);
   }
-  if (widget != g->bt_path) gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(g->bt_path), FALSE);
-  if (widget != g->bt_circle) gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(g->bt_circle), FALSE);
-  if (widget != g->bt_ellipse) gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(g->bt_ellipse), FALSE);
+  if(widget != g->bt_path) gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(g->bt_path), FALSE);
+  if(widget != g->bt_circle) gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(g->bt_circle), FALSE);
+  if(widget != g->bt_ellipse) gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(g->bt_ellipse), FALSE);
 }
 
 static gboolean _add_path(GtkWidget *widget, GdkEventButton *e, dt_iop_module_t *self)
@@ -217,9 +217,8 @@ static gboolean _add_ellipse(GtkWidget *widget, GdkEventButton *e, dt_iop_module
 }
 
 
-static gboolean masks_form_is_in_roi(dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece,
-                                     dt_masks_form_t *form, const dt_iop_roi_t *roi_in,
-                                     const dt_iop_roi_t *roi_out)
+static gboolean masks_form_is_in_roi(dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, dt_masks_form_t *form,
+                                     const dt_iop_roi_t *roi_in, const dt_iop_roi_t *roi_out)
 {
   // we get the area for the form
   int fl, ft, fw, fh;
@@ -242,8 +241,8 @@ void modify_roi_out(struct dt_iop_module_t *self, struct dt_dev_pixelpipe_iop_t 
 }
 
 // needed if mask dest is in roi and mask src is not
-void modify_roi_in(struct dt_iop_module_t *self, struct dt_dev_pixelpipe_iop_t *piece,
-                   const dt_iop_roi_t *roi_out, dt_iop_roi_t *roi_in)
+void modify_roi_in(struct dt_iop_module_t *self, struct dt_dev_pixelpipe_iop_t *piece, const dt_iop_roi_t *roi_out,
+                   dt_iop_roi_t *roi_in)
 {
   *roi_in = *roi_out;
 
@@ -302,8 +301,8 @@ void modify_roi_in(struct dt_iop_module_t *self, struct dt_dev_pixelpipe_iop_t *
   roi_in->height = CLAMP(roib - roi_in->y, 1, scheight + .5f - roi_in->y);
 }
 
-static void masks_point_denormalize(dt_dev_pixelpipe_iop_t *piece, const dt_iop_roi_t *roi,
-                                    const float *points, size_t points_count, float *new)
+static void masks_point_denormalize(dt_dev_pixelpipe_iop_t *piece, const dt_iop_roi_t *roi, const float *points,
+                                    size_t points_count, float *new)
 {
   const float scalex = piece->pipe->iwidth * roi->scale, scaley = piece->pipe->iheight * roi->scale;
 
@@ -314,9 +313,8 @@ static void masks_point_denormalize(dt_dev_pixelpipe_iop_t *piece, const dt_iop_
   }
 }
 
-static int masks_point_calc_delta(dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece,
-                                  const dt_iop_roi_t *roi, const float *target, const float *source, int *dx,
-                                  int *dy)
+static int masks_point_calc_delta(dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const dt_iop_roi_t *roi,
+                                  const float *target, const float *source, int *dx, int *dy)
 {
   float points[4];
   masks_point_denormalize(piece, roi, target, 1, points);
@@ -468,7 +466,8 @@ void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const 
               out[4 * ((size_t)roi_out->width * (yy - roi_out->y) + xx - roi_out->x) + c]
                   = out[4 * ((size_t)roi_out->width * (yy - roi_out->y) + xx - roi_out->x) + c] * (1.0f - f)
                     + in[4 * ((size_t)roi_in->width * (yy - posy + posy_source - roi_in->y) + xx - posx
-                              + posx_source - roi_in->x) + c] * f;
+                              + posx_source - roi_in->x)
+                         + c] * f;
           }
         }
 
@@ -538,7 +537,7 @@ void init(dt_iop_module_t *module)
   // our module is disabled by default
   // by default:
   module->default_enabled = 0;
-    module->priority = 188; // module order created by iop_dependencies.py, do not edit!
+  module->priority = 188; // module order created by iop_dependencies.py, do not edit!
   module->params_size = sizeof(dt_iop_spots_params_t);
   module->gui_data = NULL;
   // init defaults:
@@ -569,7 +568,7 @@ void gui_focus(struct dt_iop_module_t *self, gboolean in)
     else
     {
       // lost focus, hide all shapes
-      if (darktable.develop->form_gui->creation && darktable.develop->form_gui->creation_module == self)
+      if(darktable.develop->form_gui->creation && darktable.develop->form_gui->creation_module == self)
         dt_masks_change_form_gui(NULL);
       dt_iop_spots_gui_data_t *g = (dt_iop_spots_gui_data_t *)self->gui_data;
       gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(g->bt_path), FALSE);
@@ -649,16 +648,14 @@ void gui_init(dt_iop_module_t *self)
   gtk_widget_set_size_request(GTK_WIDGET(g->bt_path), bs, bs);
   gtk_box_pack_end(GTK_BOX(hbox), g->bt_path, FALSE, FALSE, 0);
 
-  g->bt_ellipse
-      = dtgtk_togglebutton_new(dtgtk_cairo_paint_masks_ellipse, CPF_STYLE_FLAT | CPF_DO_NOT_USE_BORDER);
+  g->bt_ellipse = dtgtk_togglebutton_new(dtgtk_cairo_paint_masks_ellipse, CPF_STYLE_FLAT | CPF_DO_NOT_USE_BORDER);
   g_signal_connect(G_OBJECT(g->bt_ellipse), "button-press-event", G_CALLBACK(_add_ellipse), self);
   gtk_widget_set_tooltip_text(g->bt_ellipse, _("add ellipse"));
   gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(g->bt_ellipse), FALSE);
   gtk_widget_set_size_request(GTK_WIDGET(g->bt_ellipse), bs, bs);
   gtk_box_pack_end(GTK_BOX(hbox), g->bt_ellipse, FALSE, FALSE, 0);
 
-  g->bt_circle
-      = dtgtk_togglebutton_new(dtgtk_cairo_paint_masks_circle, CPF_STYLE_FLAT | CPF_DO_NOT_USE_BORDER);
+  g->bt_circle = dtgtk_togglebutton_new(dtgtk_cairo_paint_masks_circle, CPF_STYLE_FLAT | CPF_DO_NOT_USE_BORDER);
   g_signal_connect(G_OBJECT(g->bt_circle), "button-press-event", G_CALLBACK(_add_circle), self);
   gtk_widget_set_tooltip_text(g->bt_circle, _("add circle"));
   gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(g->bt_circle), FALSE);
@@ -684,19 +681,19 @@ void gui_cleanup(dt_iop_module_t *self)
   self->gui_data = NULL;
 }
 
-void init_key_accels (dt_iop_module_so_t *module)
+void init_key_accels(dt_iop_module_so_t *module)
 {
-  dt_accel_register_iop (module, TRUE, NC_("accel", "spot circle tool"),   0, 0);
-  dt_accel_register_iop (module, TRUE, NC_("accel", "spot elipse tool"),   0, 0);
-  dt_accel_register_iop (module, TRUE, NC_("accel", "spot path tool"),     0, 0);
-  dt_accel_register_iop (module, TRUE, NC_("accel", "spot show or hide"),  0, 0);
+  dt_accel_register_iop(module, TRUE, NC_("accel", "spot circle tool"), 0, 0);
+  dt_accel_register_iop(module, TRUE, NC_("accel", "spot elipse tool"), 0, 0);
+  dt_accel_register_iop(module, TRUE, NC_("accel", "spot path tool"), 0, 0);
+  dt_accel_register_iop(module, TRUE, NC_("accel", "spot show or hide"), 0, 0);
 }
 
 static gboolean _add_circle_key_accel(GtkAccelGroup *accel_group, GObject *acceleratable, guint keyval,
                                       GdkModifierType modifier, gpointer data)
 {
   dt_iop_module_t *module = (dt_iop_module_t *)data;
-  const dt_iop_spots_gui_data_t *g = (dt_iop_spots_gui_data_t *) module->gui_data;
+  const dt_iop_spots_gui_data_t *g = (dt_iop_spots_gui_data_t *)module->gui_data;
   _add_circle(GTK_WIDGET(g->bt_circle), NULL, module);
   gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(g->bt_circle), TRUE);
   return TRUE;
@@ -706,7 +703,7 @@ static gboolean _add_ellipse_key_accel(GtkAccelGroup *accel_group, GObject *acce
                                        GdkModifierType modifier, gpointer data)
 {
   dt_iop_module_t *module = (dt_iop_module_t *)data;
-  const dt_iop_spots_gui_data_t *g = (dt_iop_spots_gui_data_t *) module->gui_data;
+  const dt_iop_spots_gui_data_t *g = (dt_iop_spots_gui_data_t *)module->gui_data;
   _add_ellipse(GTK_WIDGET(g->bt_ellipse), NULL, module);
   gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(g->bt_ellipse), TRUE);
   return TRUE;
@@ -716,7 +713,7 @@ static gboolean _add_path_key_accel(GtkAccelGroup *accel_group, GObject *acceler
                                     GdkModifierType modifier, gpointer data)
 {
   dt_iop_module_t *module = (dt_iop_module_t *)data;
-  const dt_iop_spots_gui_data_t *g = (dt_iop_spots_gui_data_t *) module->gui_data;
+  const dt_iop_spots_gui_data_t *g = (dt_iop_spots_gui_data_t *)module->gui_data;
   _add_path(GTK_WIDGET(g->bt_path), NULL, module);
   gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(g->bt_path), TRUE);
   return TRUE;
@@ -726,25 +723,26 @@ static gboolean _show_hide_key_accel(GtkAccelGroup *accel_group, GObject *accele
                                      GdkModifierType modifier, gpointer data)
 {
   dt_iop_module_t *module = (dt_iop_module_t *)data;
-  dt_masks_set_edit_mode(module, module->dev->form_gui->edit_mode == DT_MASKS_EDIT_FULL ? DT_MASKS_EDIT_OFF : DT_MASKS_EDIT_FULL);
+  dt_masks_set_edit_mode(module, module->dev->form_gui->edit_mode == DT_MASKS_EDIT_FULL ? DT_MASKS_EDIT_OFF
+                                                                                        : DT_MASKS_EDIT_FULL);
   return TRUE;
 }
 
-void connect_key_accels (dt_iop_module_t *module)
+void connect_key_accels(dt_iop_module_t *module)
 {
   GClosure *closure;
 
   closure = g_cclosure_new(G_CALLBACK(_add_circle_key_accel), (gpointer)module, NULL);
-  dt_accel_connect_iop (module, "spot circle tool", closure);
+  dt_accel_connect_iop(module, "spot circle tool", closure);
 
   closure = g_cclosure_new(G_CALLBACK(_add_ellipse_key_accel), (gpointer)module, NULL);
-  dt_accel_connect_iop (module, "spot elipse tool", closure);
+  dt_accel_connect_iop(module, "spot elipse tool", closure);
 
   closure = g_cclosure_new(G_CALLBACK(_add_path_key_accel), (gpointer)module, NULL);
-  dt_accel_connect_iop (module, "spot path tool", closure);
+  dt_accel_connect_iop(module, "spot path tool", closure);
 
   closure = g_cclosure_new(G_CALLBACK(_show_hide_key_accel), (gpointer)module, NULL);
-  dt_accel_connect_iop (module, "spot show or hide", closure);
+  dt_accel_connect_iop(module, "spot show or hide", closure);
 }
 
 // modelines: These editor modelines have been set for all relevant files by tools/update_modelines.sh

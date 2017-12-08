@@ -82,8 +82,8 @@ static inline void dt_draw_grid(cairo_t *cr, const int num, const int left, cons
   }
 }
 
-static inline void dt_draw_loglog_grid(cairo_t *cr, const int num, const int left, const int top,
-                                       const int right, const int bottom, const int base)
+static inline void dt_draw_loglog_grid(cairo_t *cr, const int num, const int left, const int top, const int right,
+                                       const int bottom, const int base)
 {
   float width = right - left;
   float height = bottom - top;
@@ -188,8 +188,8 @@ static inline void dt_draw_curve_set_point(dt_draw_curve_t *c, const int num, co
   c->c.m_anchors[num].y = y;
 }
 
-static inline void dt_draw_curve_calc_values(dt_draw_curve_t *c, const float min, const float max,
-                                             const int res, float *x, float *y)
+static inline void dt_draw_curve_calc_values(dt_draw_curve_t *c, const float min, const float max, const int res,
+                                             float *x, float *y)
 {
   c->csample.m_samplingRes = res;
   c->csample.m_outputRes = 0x10000;

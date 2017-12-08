@@ -67,7 +67,11 @@ dt_imageio_retval_t dt_imageio_open_pfm(dt_image_t *img, const char *filename, d
     for(size_t i = (size_t)img->width * img->height; i > 0; i--)
       for(int c = 0; c < 3; c++)
       {
-        union { float f; guint32 i; } v;
+        union
+        {
+          float f;
+          guint32 i;
+        } v;
         v.f = buf[3 * (i - 1) + c];
         if(swap_byte_order) v.i = GUINT32_SWAP_LE_BE(v.i);
         buf[4 * (i - 1) + c] = v.f;
@@ -77,18 +81,21 @@ dt_imageio_retval_t dt_imageio_open_pfm(dt_image_t *img, const char *filename, d
     for(size_t j = 0; j < img->height; j++)
       for(size_t i = 0; i < img->width; i++)
       {
-        union { float f; guint32 i; } v;
+        union
+        {
+          float f;
+          guint32 i;
+        } v;
         ret = fread(&v.f, sizeof(float), 1, f);
         if(swap_byte_order) v.i = GUINT32_SWAP_LE_BE(v.i);
-        buf[4 * (img->width * j + i) + 2] = buf[4 * (img->width * j + i) + 1]
-            = buf[4 * (img->width * j + i) + 0] = v.f;
+        buf[4 * (img->width * j + i) + 2] = buf[4 * (img->width * j + i) + 1] = buf[4 * (img->width * j + i) + 0]
+            = v.f;
       }
   float *line = (float *)calloc(4 * img->width, sizeof(float));
   for(size_t j = 0; j < img->height / 2; j++)
   {
     memcpy(line, buf + img->width * j * 4, 4 * sizeof(float) * img->width);
-    memcpy(buf + img->width * j * 4, buf + img->width * (img->height - 1 - j) * 4,
-           4 * sizeof(float) * img->width);
+    memcpy(buf + img->width * j * 4, buf + img->width * (img->height - 1 - j) * 4, 4 * sizeof(float) * img->width);
     memcpy(buf + img->width * (img->height - 1 - j) * 4, line, 4 * sizeof(float) * img->width);
   }
   free(line);

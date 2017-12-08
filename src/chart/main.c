@@ -604,8 +604,7 @@ static void export_raw(dt_lut_t *self, char *filename, char *name, char *descrip
   GList *patch_names = NULL;
   char *gray_ramp_key = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(self->gray_ramp));
 
-  if(gray_ramp_key)
-    patch_names = g_hash_table_lookup(self->chart->patch_sets, gray_ramp_key);
+  if(gray_ramp_key) patch_names = g_hash_table_lookup(self->chart->patch_sets, gray_ramp_key);
 
   const int num_gray = g_list_length(patch_names);
 
@@ -708,13 +707,15 @@ static void add_hdr_patches(int *N, double **target_L, double **target_a, double
 
   for(int j = 0; j < *N; j++)
   {
-    if((*target_L)[j] == 100.0 && (*target_a)[j] == 0.0 && (*target_b)[j] == 0.0 && (*colorchecker_Lab)[j * 3] == 100.0
-      && (*colorchecker_Lab)[j * 3 + 1] == 0.0 && (*colorchecker_Lab)[j * 3 + 2] == 0.0)
+    if((*target_L)[j] == 100.0 && (*target_a)[j] == 0.0 && (*target_b)[j] == 0.0
+       && (*colorchecker_Lab)[j * 3] == 100.0 && (*colorchecker_Lab)[j * 3 + 1] == 0.0
+       && (*colorchecker_Lab)[j * 3 + 2] == 0.0)
     {
       need_hdr00 = FALSE;
     }
-    else if((*target_L)[j] == 200.0 && (*target_a)[j] == 0.0 && (*target_b)[j] == 0.0 && (*colorchecker_Lab)[j * 3] == 200.0
-      && (*colorchecker_Lab)[j * 3 + 1] == 0.0 && (*colorchecker_Lab)[j * 3 + 2] == 0.0)
+    else if((*target_L)[j] == 200.0 && (*target_a)[j] == 0.0 && (*target_b)[j] == 0.0
+            && (*colorchecker_Lab)[j * 3] == 200.0 && (*colorchecker_Lab)[j * 3 + 1] == 0.0
+            && (*colorchecker_Lab)[j * 3 + 2] == 0.0)
     {
       need_hdr01 = FALSE;
     }
@@ -970,14 +971,14 @@ static void process_data(dt_lut_t *self, double *target_L, double *target_a, dou
   double avgerr, maxerr;
   sparsity = thinplate_match(&tonecurve, 3, N, colorchecker_Lab, target, sparsity, perm, coeff, &avgerr, &maxerr);
 
-  if (self->result_label != NULL)
+  if(self->result_label != NULL)
   {
     // TODO: is the rank interesting, too?
     char *result_string = g_strdup_printf(_("average dE: %.02f\nmax dE: %.02f"), avgerr, maxerr);
     gtk_label_set_text(GTK_LABEL(self->result_label), result_string);
     g_free(result_string);
   }
-  
+
   free(coeff_b);
   free(coeff_a);
   free(coeff_L);
@@ -1539,21 +1540,19 @@ static void get_corners(point_t *bb, box_t *box, point_t *corners)
 static void get_pixel_region(const image_t *const image, const point_t *const corners, int *x_start, int *y_start,
                              int *x_end, int *y_end)
 {
-  *x_start = CLAMP((int)(MIN(corners[TOP_LEFT].x,
-                             MIN(corners[TOP_RIGHT].x, MIN(corners[BOTTOM_RIGHT].x, corners[BOTTOM_LEFT].x)))
-                         + 0.5),
-                   0, image->width);
+  *x_start
+      = CLAMP((int)(MIN(corners[TOP_LEFT].x,
+                        MIN(corners[TOP_RIGHT].x, MIN(corners[BOTTOM_RIGHT].x, corners[BOTTOM_LEFT].x))) + 0.5),
+              0, image->width);
   *x_end = CLAMP((int)(MAX(corners[TOP_LEFT].x,
-                           MAX(corners[TOP_RIGHT].x, MAX(corners[BOTTOM_RIGHT].x, corners[BOTTOM_LEFT].x)))
-                       + 0.5),
+                           MAX(corners[TOP_RIGHT].x, MAX(corners[BOTTOM_RIGHT].x, corners[BOTTOM_LEFT].x))) + 0.5),
                  0, image->width);
-  *y_start = CLAMP((int)(MIN(corners[TOP_LEFT].y,
-                             MIN(corners[TOP_RIGHT].y, MIN(corners[BOTTOM_RIGHT].y, corners[BOTTOM_LEFT].y)))
-                         + 0.5),
-                   0, image->height);
+  *y_start
+      = CLAMP((int)(MIN(corners[TOP_LEFT].y,
+                        MIN(corners[TOP_RIGHT].y, MIN(corners[BOTTOM_RIGHT].y, corners[BOTTOM_LEFT].y))) + 0.5),
+              0, image->height);
   *y_end = CLAMP((int)(MAX(corners[TOP_LEFT].y,
-                           MAX(corners[TOP_RIGHT].y, MAX(corners[BOTTOM_RIGHT].y, corners[BOTTOM_LEFT].y)))
-                       + 0.5),
+                           MAX(corners[TOP_RIGHT].y, MAX(corners[BOTTOM_RIGHT].y, corners[BOTTOM_LEFT].y))) + 0.5),
                  0, image->height);
 }
 
@@ -1675,7 +1674,8 @@ static int main_gui(dt_lut_t *self, int argc, char *argv[])
 }
 
 static int parse_csv(dt_lut_t *self, const char *filename, double **target_L_ptr, double **target_a_ptr,
-                     double **target_b_ptr, double **source_Lab_ptr, int *num_gray, char **name, char **description)
+                     double **target_b_ptr, double **source_Lab_ptr, int *num_gray, char **name,
+                     char **description)
 {
   *target_L_ptr = NULL;
   *target_a_ptr = NULL;
@@ -1698,7 +1698,7 @@ static int parse_csv(dt_lut_t *self, const char *filename, double **target_L_ptr
   }
 
   // header lines
-  char key[16] = {0}, value[256] = {0};
+  char key[16] = { 0 }, value[256] = { 0 };
   int unused = fscanf(f, "%15[^;];%255[^\n]\n", key, value);
   if(g_strcmp0(key, "name") || unused == EOF)
   {

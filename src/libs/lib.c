@@ -562,8 +562,7 @@ static int dt_lib_load_module(void *m, const char *libname, const char *plugin_n
     module->expandable = _lib_default_expandable;
   if(!g_module_symbol(module->module, "init", (gpointer) & (module->init))) module->init = NULL;
 
-  if(!g_module_symbol(module->module, "gui_reset", (gpointer) & (module->gui_reset)))
-    module->gui_reset = NULL;
+  if(!g_module_symbol(module->module, "gui_reset", (gpointer) & (module->gui_reset))) module->gui_reset = NULL;
   if(!g_module_symbol(module->module, "gui_init", (gpointer) & (module->gui_init))) goto error;
   if(!g_module_symbol(module->module, "gui_cleanup", (gpointer) & (module->gui_cleanup))) goto error;
 
@@ -581,8 +580,7 @@ static int dt_lib_load_module(void *m, const char *libname, const char *plugin_n
     module->button_released = NULL;
   if(!g_module_symbol(module->module, "button_pressed", (gpointer) & (module->button_pressed)))
     module->button_pressed = NULL;
-  if(!g_module_symbol(module->module, "configure", (gpointer) & (module->configure)))
-    module->configure = NULL;
+  if(!g_module_symbol(module->module, "configure", (gpointer) & (module->configure))) module->configure = NULL;
   if(!g_module_symbol(module->module, "scrolled", (gpointer) & (module->scrolled))) module->scrolled = NULL;
   if(!g_module_symbol(module->module, "position", (gpointer) & (module->position))) module->position = NULL;
   if(!g_module_symbol(module->module, "legacy_params", (gpointer) & (module->legacy_params)))
@@ -626,9 +624,8 @@ error:
   return 1;
 }
 
-static void *_update_params(dt_lib_module_t *module,
-                            const void *const old_params, size_t old_params_size, int old_version,
-                            int target_version, size_t *new_size)
+static void *_update_params(dt_lib_module_t *module, const void *const old_params, size_t old_params_size,
+                            int old_version, int target_version, size_t *new_size)
 {
   // make a copy of the old params so we can free it in the loop
   void *params = malloc(old_params_size);
@@ -692,12 +689,11 @@ void dt_lib_init_presets(dt_lib_module_t *module)
         size_t new_params_size = 0;
         void *new_params = NULL;
 
-        if(module->legacy_params
-          && (new_params = _update_params(module, op_params, op_params_size, op_version, version, &new_params_size)))
+        if(module->legacy_params && (new_params = _update_params(module, op_params, op_params_size, op_version,
+                                                                 version, &new_params_size)))
         {
           // write the updated preset back to db
-          fprintf(stderr,
-                  "[lighttable_init_presets] updating '%s' preset '%s' from version %d to version %d\n",
+          fprintf(stderr, "[lighttable_init_presets] updating '%s' preset '%s' from version %d to version %d\n",
                   module->plugin_name, name, op_version, version);
           sqlite3_stmt *innerstmt;
           DT_DEBUG_SQLITE3_PREPARE_V2(dt_database_get(darktable.db),
@@ -979,8 +975,7 @@ GtkWidget *dt_lib_gui_get_expander(dt_lib_module_t *module)
   GtkWidget *pluginui_frame = dtgtk_expander_get_frame(DTGTK_EXPANDER(expander));
 
   /* setup the header box */
-  g_signal_connect(G_OBJECT(header_evb), "button-press-event", G_CALLBACK(_lib_plugin_header_button_press),
-                   module);
+  g_signal_connect(G_OBJECT(header_evb), "button-press-event", G_CALLBACK(_lib_plugin_header_button_press), module);
 
   /* setup plugin content frame */
   gtk_frame_set_shadow_type(GTK_FRAME(pluginui_frame), GTK_SHADOW_IN);
@@ -1078,7 +1073,7 @@ void dt_lib_cleanup(dt_lib_t *lib)
   while(lib->plugins)
   {
     dt_lib_module_t *module = (dt_lib_module_t *)(lib->plugins->data);
-    if(module) 
+    if(module)
     {
       if(module->data != NULL)
       {
@@ -1154,8 +1149,7 @@ void dt_lib_set_visible(dt_lib_module_t *module, gboolean visible)
 
 void dt_lib_connect_common_accels(dt_lib_module_t *module)
 {
-  if(module->reset_button)
-    dt_accel_connect_button_lib(module, "reset module parameters", module->reset_button);
+  if(module->reset_button) dt_accel_connect_button_lib(module, "reset module parameters", module->reset_button);
   if(module->presets_button) dt_accel_connect_button_lib(module, "show preset menu", module->presets_button);
   if(module->init_presets)
   {

@@ -201,9 +201,8 @@ static int set_grad_from_points(struct dt_iop_module_t *self, float xa, float ya
                                 float *rotation, float *offset)
 {
   // we want absolute positions
-  float pts[4]
-      = { xa * self->dev->preview_pipe->backbuf_width, ya * self->dev->preview_pipe->backbuf_height,
-          xb * self->dev->preview_pipe->backbuf_width, yb * self->dev->preview_pipe->backbuf_height };
+  float pts[4] = { xa * self->dev->preview_pipe->backbuf_width, ya * self->dev->preview_pipe->backbuf_height,
+                   xb * self->dev->preview_pipe->backbuf_width, yb * self->dev->preview_pipe->backbuf_height };
   dt_dev_distort_backtransform_plus(self->dev, self->dev->preview_pipe, self->priority + 1, 9999999, pts, 2);
   dt_dev_pixelpipe_iop_t *piece = dt_dev_distort_get_iop_pipe(self->dev, self->dev->preview_pipe, self);
   pts[0] /= (float)piece->buf_out.width;
@@ -389,8 +388,8 @@ static int set_points_from_grad(struct dt_iop_module_t *self, float *xa, float *
   return 1;
 }
 
-void gui_post_expose(struct dt_iop_module_t *self, cairo_t *cr, int32_t width, int32_t height,
-                     int32_t pointerx, int32_t pointery)
+void gui_post_expose(struct dt_iop_module_t *self, cairo_t *cr, int32_t width, int32_t height, int32_t pointerx,
+                     int32_t pointery)
 {
   dt_develop_t *dev = self->dev;
   dt_iop_graduatednd_gui_data_t *g = (dt_iop_graduatednd_gui_data_t *)self->gui_data;
@@ -672,8 +671,8 @@ void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const 
   const float offset = data->offset / 100.0 * 2;
 
 #if 1
-  const float filter_compression
-      = 1.0 / filter_radie / (1.0 - (0.5 + (data->compression / 100.0) * 0.9 / 2.0)) * 0.5;
+  const float filter_compression = 1.0 / filter_radie / (1.0 - (0.5 + (data->compression / 100.0) * 0.9 / 2.0))
+                                   * 0.5;
 #else
   const float compression = data->compression / 100.0f;
   const float t = 1.0f - .8f / (.8f + compression);
@@ -772,7 +771,8 @@ void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const 
     }
   }
 
-  if(piece->pipe->mask_display & DT_DEV_PIXELPIPE_DISPLAY_MASK) dt_iop_alpha_copy(ivoid, ovoid, roi_out->width, roi_out->height);
+  if(piece->pipe->mask_display & DT_DEV_PIXELPIPE_DISPLAY_MASK)
+    dt_iop_alpha_copy(ivoid, ovoid, roi_out->width, roi_out->height);
 }
 
 #if defined(__SSE__)
@@ -797,8 +797,8 @@ void process_sse2(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, c
   const float offset = data->offset / 100.0 * 2;
 
 #if 1
-  const float filter_compression = 1.0 / filter_radie
-                                   / (1.0 - (0.5 + (data->compression / 100.0) * 0.9 / 2.0)) * 0.5;
+  const float filter_compression = 1.0 / filter_radie / (1.0 - (0.5 + (data->compression / 100.0) * 0.9 / 2.0))
+                                   * 0.5;
 #else
   const float compression = data->compression / 100.0f;
   const float t = 1.0f - .8f / (.8f + compression);
@@ -902,7 +902,8 @@ void process_sse2(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, c
   }
   _mm_sfence();
 
-  if(piece->pipe->mask_display & DT_DEV_PIXELPIPE_DISPLAY_MASK) dt_iop_alpha_copy(ivoid, ovoid, roi_out->width, roi_out->height);
+  if(piece->pipe->mask_display & DT_DEV_PIXELPIPE_DISPLAY_MASK)
+    dt_iop_alpha_copy(ivoid, ovoid, roi_out->width, roi_out->height);
 }
 #endif
 
@@ -935,8 +936,8 @@ int process_cl(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, cl_m
   const float density = data->density;
 
 #if 1
-  const float filter_compression = 1.0 / filter_radie
-                                   / (1.0 - (0.5 + (data->compression / 100.0) * 0.9 / 2.0)) * 0.5;
+  const float filter_compression = 1.0 / filter_radie / (1.0 - (0.5 + (data->compression / 100.0) * 0.9 / 2.0))
+                                   * 0.5;
 #else
   const float compression = data->compression / 100.0f;
   const float t = 1.0f - .8f / (.8f + compression);
@@ -1084,7 +1085,7 @@ void init(dt_iop_module_t *module)
   module->params = calloc(1, sizeof(dt_iop_graduatednd_params_t));
   module->default_params = calloc(1, sizeof(dt_iop_graduatednd_params_t));
   module->default_enabled = 0;
-    module->priority = 289; // module order created by iop_dependencies.py, do not edit!
+  module->priority = 289; // module order created by iop_dependencies.py, do not edit!
   module->params_size = sizeof(dt_iop_graduatednd_params_t);
   module->gui_data = NULL;
   dt_iop_graduatednd_params_t tmp = (dt_iop_graduatednd_params_t){ 1.0, 0, 0, 50, 0, 0 };

@@ -200,8 +200,7 @@ int dt_film_new(dt_film_t *film, const char *directory)
     dt_pthread_mutex_lock(&darktable.db_insert);
     rc = sqlite3_step(stmt);
     if(rc != SQLITE_DONE)
-      fprintf(stderr, "[film_new] failed to insert film roll! %s\n",
-              sqlite3_errmsg(dt_database_get(darktable.db)));
+      fprintf(stderr, "[film_new] failed to insert film roll! %s\n", sqlite3_errmsg(dt_database_get(darktable.db)));
     sqlite3_finalize(stmt);
     DT_DEBUG_SQLITE3_PREPARE_V2(dt_database_get(darktable.db), "SELECT id FROM main.film_rolls WHERE folder=?1",
                                 -1, &stmt, NULL);
@@ -325,8 +324,8 @@ static gboolean ask_and_delete(gpointer user_data)
   GtkWidget *tree = gtk_tree_view_new_with_model(GTK_TREE_MODEL(store));
   gtk_tree_view_set_headers_visible(GTK_TREE_VIEW(tree), FALSE);
 
-  GtkTreeViewColumn *column = gtk_tree_view_column_new_with_attributes(_("name"), gtk_cell_renderer_text_new(),
-                                                                       "text", 0, NULL);
+  GtkTreeViewColumn *column
+      = gtk_tree_view_column_new_with_attributes(_("name"), gtk_cell_renderer_text_new(), "text", 0, NULL);
   gtk_tree_view_append_column(GTK_TREE_VIEW(tree), column);
 
   gtk_container_add(GTK_CONTAINER(scroll), tree);
@@ -339,8 +338,7 @@ static gboolean ask_and_delete(gpointer user_data)
   gint res = gtk_dialog_run(GTK_DIALOG(dialog));
   gtk_widget_destroy(dialog);
   if(res == GTK_RESPONSE_YES)
-    for(GList *iter = empty_dirs; iter; iter = g_list_next(iter))
-      rmdir((char *)iter->data);
+    for(GList *iter = empty_dirs; iter; iter = g_list_next(iter)) rmdir((char *)iter->data);
 
   g_list_free_full(empty_dirs, g_free);
   g_object_unref(store);
@@ -373,16 +371,17 @@ void dt_film_remove_empty()
 
     if(dt_util_is_dir_empty(folder))
     {
-      if(ask_before_rmdir) empty_dirs = g_list_append(empty_dirs, g_strdup(folder));
-      else rmdir(folder);
+      if(ask_before_rmdir)
+        empty_dirs = g_list_append(empty_dirs, g_strdup(folder));
+      else
+        rmdir(folder);
     }
   }
   sqlite3_finalize(stmt);
   if(raise_signal) dt_control_signal_raise(darktable.signals, DT_SIGNAL_FILMROLLS_REMOVED);
 
   // dispatch asking for deletion (and subsequent deletion) to the gui thread
-  if(empty_dirs)
-    g_idle_add(ask_and_delete, empty_dirs);
+  if(empty_dirs) g_idle_add(ask_and_delete, empty_dirs);
 }
 
 int dt_film_is_empty(const int id)
@@ -493,8 +492,8 @@ GList *dt_film_get_image_ids(const int filmid)
 {
   GList *result = NULL;
   sqlite3_stmt *stmt;
-  DT_DEBUG_SQLITE3_PREPARE_V2(dt_database_get(darktable.db), "SELECT id FROM main.images WHERE film_id = ?1",
-                              -1, &stmt, NULL);
+  DT_DEBUG_SQLITE3_PREPARE_V2(dt_database_get(darktable.db), "SELECT id FROM main.images WHERE film_id = ?1", -1,
+                              &stmt, NULL);
   DT_DEBUG_SQLITE3_BIND_INT(stmt, 1, filmid);
   while(sqlite3_step(stmt) == SQLITE_ROW)
   {

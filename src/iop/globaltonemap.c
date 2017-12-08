@@ -111,8 +111,8 @@ int groups()
   return IOP_GROUP_TONE;
 }
 
-int legacy_params(dt_iop_module_t *self, const void *const old_params, const int old_version,
-                  void *new_params, const int new_version)
+int legacy_params(dt_iop_module_t *self, const void *const old_params, const int old_version, void *new_params,
+                  const int new_version)
 {
   if(old_version < 3 && new_version == 3)
   {
@@ -128,9 +128,8 @@ int legacy_params(dt_iop_module_t *self, const void *const old_params, const int
 }
 
 static inline void process_reinhard(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece,
-                                    const void *const ivoid, void *const ovoid,
-                                    const dt_iop_roi_t *const roi_in, const dt_iop_roi_t *const roi_out,
-                                    dt_iop_global_tonemap_data_t *data)
+                                    const void *const ivoid, void *const ovoid, const dt_iop_roi_t *const roi_in,
+                                    const dt_iop_roi_t *const roi_out, dt_iop_global_tonemap_data_t *data)
 {
   float *in = (float *)ivoid;
   float *out = (float *)ovoid;
@@ -229,9 +228,8 @@ static inline void process_drago(struct dt_iop_module_t *self, dt_dev_pixelpipe_
 }
 
 static inline void process_filmic(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece,
-                                  const void *const ivoid, void *const ovoid,
-                                  const dt_iop_roi_t *const roi_in, const dt_iop_roi_t *const roi_out,
-                                  dt_iop_global_tonemap_data_t *data)
+                                  const void *const ivoid, void *const ovoid, const dt_iop_roi_t *const roi_in,
+                                  const dt_iop_roi_t *const roi_out, dt_iop_global_tonemap_data_t *data)
 {
   float *in = (float *)ivoid;
   float *out = (float *)ovoid;
@@ -290,7 +288,8 @@ void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const 
     dt_bilateral_free(b);
   }
 
-  if(piece->pipe->mask_display & DT_DEV_PIXELPIPE_DISPLAY_MASK) dt_iop_alpha_copy(ivoid, ovoid, roi_out->width, roi_out->height);
+  if(piece->pipe->mask_display & DT_DEV_PIXELPIPE_DISPLAY_MASK)
+    dt_iop_alpha_copy(ivoid, ovoid, roi_out->width, roi_out->height);
 }
 
 #ifdef HAVE_OPENCL
@@ -348,26 +347,32 @@ int process_cl(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, cl_m
 
     if(isnan(tmp_lwmax))
     {
-      dt_opencl_local_buffer_t flocopt
-        = (dt_opencl_local_buffer_t){ .xoffset = 0, .xfactor = 1, .yoffset = 0, .yfactor = 1,
-                                      .cellsize = sizeof(float), .overhead = 0,
-                                      .sizex = 1 << 4, .sizey = 1 << 4 };
+      dt_opencl_local_buffer_t flocopt = (dt_opencl_local_buffer_t){.xoffset = 0,
+                                                                    .xfactor = 1,
+                                                                    .yoffset = 0,
+                                                                    .yfactor = 1,
+                                                                    .cellsize = sizeof(float),
+                                                                    .overhead = 0,
+                                                                    .sizex = 1 << 4,
+                                                                    .sizey = 1 << 4 };
 
-      if(!dt_opencl_local_buffer_opt(devid, gd->kernel_pixelmax_first, &flocopt))
-        goto error;
+      if(!dt_opencl_local_buffer_opt(devid, gd->kernel_pixelmax_first, &flocopt)) goto error;
 
       const size_t bwidth = ROUNDUP(width, flocopt.sizex);
       const size_t bheight = ROUNDUP(height, flocopt.sizey);
 
       const int bufsize = (bwidth / flocopt.sizex) * (bheight / flocopt.sizey);
 
-      dt_opencl_local_buffer_t slocopt
-        = (dt_opencl_local_buffer_t){ .xoffset = 0, .xfactor = 1, .yoffset = 0, .yfactor = 1,
-                                      .cellsize = sizeof(float), .overhead = 0,
-                                      .sizex = 1 << 16, .sizey = 1 };
+      dt_opencl_local_buffer_t slocopt = (dt_opencl_local_buffer_t){.xoffset = 0,
+                                                                    .xfactor = 1,
+                                                                    .yoffset = 0,
+                                                                    .yfactor = 1,
+                                                                    .cellsize = sizeof(float),
+                                                                    .overhead = 0,
+                                                                    .sizex = 1 << 16,
+                                                                    .sizey = 1 };
 
-      if(!dt_opencl_local_buffer_opt(devid, gd->kernel_pixelmax_second, &slocopt))
-        goto error;
+      if(!dt_opencl_local_buffer_opt(devid, gd->kernel_pixelmax_second, &slocopt)) goto error;
 
       const int reducesize = MIN(REDUCESIZE, ROUNDUP(bufsize, slocopt.sizex) / slocopt.sizex);
 
@@ -390,7 +395,8 @@ int process_cl(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, cl_m
       dt_opencl_set_kernel_arg(devid, gd->kernel_pixelmax_first, 1, sizeof(int), &width);
       dt_opencl_set_kernel_arg(devid, gd->kernel_pixelmax_first, 2, sizeof(int), &height);
       dt_opencl_set_kernel_arg(devid, gd->kernel_pixelmax_first, 3, sizeof(cl_mem), &dev_m);
-      dt_opencl_set_kernel_arg(devid, gd->kernel_pixelmax_first, 4, flocopt.sizex * flocopt.sizey * sizeof(float), NULL);
+      dt_opencl_set_kernel_arg(devid, gd->kernel_pixelmax_first, 4, flocopt.sizex * flocopt.sizey * sizeof(float),
+                               NULL);
       err = dt_opencl_enqueue_kernel_2d_with_local(devid, gd->kernel_pixelmax_first, sizes, local);
       if(err != CL_SUCCESS) goto error;
 
@@ -408,8 +414,8 @@ int process_cl(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, cl_m
       if(err != CL_SUCCESS) goto error;
 
       maximum = dt_alloc_align(16, reducesize * sizeof(float));
-      err = dt_opencl_read_buffer_from_device(devid, (void *)maximum, dev_r, 0,
-                                            (size_t)reducesize * sizeof(float), CL_TRUE);
+      err = dt_opencl_read_buffer_from_device(devid, (void *)maximum, dev_r, 0, (size_t)reducesize * sizeof(float),
+                                              CL_TRUE);
       if(err != CL_SUCCESS) goto error;
 
       dt_opencl_release_mem_object(dev_r);
@@ -496,8 +502,7 @@ error:
 
 
 void tiling_callback(struct dt_iop_module_t *self, struct dt_dev_pixelpipe_iop_t *piece,
-                     const dt_iop_roi_t *roi_in, const dt_iop_roi_t *roi_out,
-                     struct dt_develop_tiling_t *tiling)
+                     const dt_iop_roi_t *roi_in, const dt_iop_roi_t *roi_out, struct dt_develop_tiling_t *tiling)
 {
   dt_iop_global_tonemap_data_t *d = (dt_iop_global_tonemap_data_t *)piece->data;
 
@@ -514,9 +519,11 @@ void tiling_callback(struct dt_iop_module_t *self, struct dt_dev_pixelpipe_iop_t
 
   const size_t basebuffer = width * height * channels * sizeof(float);
 
-  tiling->factor = 2.0f + (detail ? (float)dt_bilateral_memory_use2(width, height, sigma_s, sigma_r) / basebuffer : 0.0f);
+  tiling->factor
+      = 2.0f + (detail ? (float)dt_bilateral_memory_use2(width, height, sigma_s, sigma_r) / basebuffer : 0.0f);
   tiling->maxbuf
-      = (detail ? MAX(1.0f, (float)dt_bilateral_singlebuffer_size2(width, height, sigma_s, sigma_r) / basebuffer) : 1.0f);
+      = (detail ? MAX(1.0f, (float)dt_bilateral_singlebuffer_size2(width, height, sigma_s, sigma_r) / basebuffer)
+                : 1.0f);
   tiling->overhead = 0;
   tiling->overlap = (detail ? ceilf(4 * sigma_s) : 0);
   tiling->xalign = 1;
@@ -536,11 +543,10 @@ void commit_params(struct dt_iop_module_t *self, dt_iop_params_t *p1, dt_dev_pix
   d->detail = p->detail;
 
   // drago needs the maximum L-value of the whole image so it must not use tiling
-  if(d->operator == OPERATOR_DRAGO) piece->process_tiling_ready = 0;
+  if(d->operator== OPERATOR_DRAGO) piece->process_tiling_ready = 0;
 
 #ifdef HAVE_OPENCL
-  if(d->detail != 0.0f)
-    piece->process_cl_ready = (piece->process_cl_ready && !(darktable.opencl->avoid_atomics));
+  if(d->detail != 0.0f) piece->process_cl_ready = (piece->process_cl_ready && !(darktable.opencl->avoid_atomics));
 #endif
 }
 
@@ -654,7 +660,6 @@ void gui_update(struct dt_iop_module_t *self)
   g->lwmax = NAN;
   g->hash = 0;
   dt_pthread_mutex_unlock(&g->lock);
-
 }
 
 void init(dt_iop_module_t *module)
@@ -662,11 +667,10 @@ void init(dt_iop_module_t *module)
   module->params = calloc(1, sizeof(dt_iop_global_tonemap_params_t));
   module->default_params = calloc(1, sizeof(dt_iop_global_tonemap_params_t));
   module->default_enabled = 0;
-    module->priority = 550; // module order created by iop_dependencies.py, do not edit!
+  module->priority = 550; // module order created by iop_dependencies.py, do not edit!
   module->params_size = sizeof(dt_iop_global_tonemap_params_t);
   module->gui_data = NULL;
-  dt_iop_global_tonemap_params_t tmp
-      = (dt_iop_global_tonemap_params_t){ OPERATOR_DRAGO, { 0.85f, 100.0f }, 0.0f };
+  dt_iop_global_tonemap_params_t tmp = (dt_iop_global_tonemap_params_t){ OPERATOR_DRAGO, { 0.85f, 100.0f }, 0.0f };
   memcpy(module->params, &tmp, sizeof(dt_iop_global_tonemap_params_t));
   memcpy(module->default_params, &tmp, sizeof(dt_iop_global_tonemap_params_t));
 }

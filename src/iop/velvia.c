@@ -110,8 +110,8 @@ void connect_key_accels(dt_iop_module_t *self)
 }
 #endif
 
-int legacy_params(dt_iop_module_t *self, const void *const old_params, const int old_version,
-                  void *new_params, const int new_version)
+int legacy_params(dt_iop_module_t *self, const void *const old_params, const int old_version, void *new_params,
+                  const int new_version)
 {
   if(old_version == 1 && new_version == 2)
   {
@@ -165,7 +165,8 @@ void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const 
     }
   }
 
-  if(piece->pipe->mask_display & DT_DEV_PIXELPIPE_DISPLAY_MASK) dt_iop_alpha_copy(ivoid, ovoid, roi_out->width, roi_out->height);
+  if(piece->pipe->mask_display & DT_DEV_PIXELPIPE_DISPLAY_MASK)
+    dt_iop_alpha_copy(ivoid, ovoid, roi_out->width, roi_out->height);
 }
 
 #if defined(__SSE__)
@@ -199,7 +200,7 @@ void process_sse2(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, c
 
       float pweight
           = CLAMPS(((1.0f - (1.5f * psat)) + ((1.0f + (fabsf(plum - 0.5f) * 2.0f)) * (1.0f - data->bias)))
-                   / (1.0f + (1.0f - data->bias)),
+                       / (1.0f + (1.0f - data->bias)),
                    0.0f, 1.0f);              // The weight of pixel
       float saturation = strength * pweight; // So lets calculate the final affection of filter on pixel
 
@@ -209,15 +210,14 @@ void process_sse2(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, c
       const __m128 min_m = _mm_set1_ps(0.0f);
       const __m128 max_m = _mm_set1_ps(1.0f);
 
-      const __m128 inp_shuffled
-          = _mm_mul_ps(_mm_add_ps(_mm_shuffle_ps(inp_m, inp_m, _MM_SHUFFLE(3, 0, 2, 1)),
-                                  _mm_shuffle_ps(inp_m, inp_m, _MM_SHUFFLE(3, 1, 0, 2))),
-                       _mm_set1_ps(0.5f));
+      const __m128 inp_shuffled = _mm_mul_ps(_mm_add_ps(_mm_shuffle_ps(inp_m, inp_m, _MM_SHUFFLE(3, 0, 2, 1)),
+                                                        _mm_shuffle_ps(inp_m, inp_m, _MM_SHUFFLE(3, 1, 0, 2))),
+                                             _mm_set1_ps(0.5f));
 
       _mm_stream_ps(
-          outp, _mm_min_ps(
-                    max_m,
-                    _mm_max_ps(min_m, _mm_add_ps(inp_m, _mm_mul_ps(boost, _mm_sub_ps(inp_m, inp_shuffled))))));
+          outp,
+          _mm_min_ps(max_m,
+                     _mm_max_ps(min_m, _mm_add_ps(inp_m, _mm_mul_ps(boost, _mm_sub_ps(inp_m, inp_shuffled))))));
 
       // equivalent to:
       /*
@@ -229,7 +229,8 @@ void process_sse2(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, c
   }
   _mm_sfence();
 
-  if(piece->pipe->mask_display & DT_DEV_PIXELPIPE_DISPLAY_MASK) dt_iop_alpha_copy(ivoid, ovoid, roi_out->width, roi_out->height);
+  if(piece->pipe->mask_display & DT_DEV_PIXELPIPE_DISPLAY_MASK)
+    dt_iop_alpha_copy(ivoid, ovoid, roi_out->width, roi_out->height);
 }
 #endif
 
@@ -281,8 +282,7 @@ error:
 void init_global(dt_iop_module_so_t *module)
 {
   const int program = 8; // extended.cl, from programs.conf
-  dt_iop_velvia_global_data_t *gd
-      = (dt_iop_velvia_global_data_t *)malloc(sizeof(dt_iop_velvia_global_data_t));
+  dt_iop_velvia_global_data_t *gd = (dt_iop_velvia_global_data_t *)malloc(sizeof(dt_iop_velvia_global_data_t));
   module->data = gd;
   gd->kernel_velvia = dt_opencl_create_kernel(program, "velvia");
 }
@@ -350,7 +350,7 @@ void init(dt_iop_module_t *module)
   module->params = calloc(1, sizeof(dt_iop_velvia_params_t));
   module->default_params = calloc(1, sizeof(dt_iop_velvia_params_t));
   module->default_enabled = 0;
-    module->priority = 884; // module order created by iop_dependencies.py, do not edit!
+  module->priority = 884; // module order created by iop_dependencies.py, do not edit!
   module->params_size = sizeof(dt_iop_velvia_params_t);
   module->gui_data = NULL;
   dt_iop_velvia_params_t tmp = (dt_iop_velvia_params_t){ 25, 1.0 };

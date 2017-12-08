@@ -70,10 +70,7 @@ size_t dt_bilateral_memory_use(const int width,     // width of input image
 
 // modules that want to use dt_bilateral_slice_to_output_cl() ought to take this one;
 // takes account of an additional temp buffer needed in the OpenCL code path
-size_t dt_bilateral_memory_use2(const int width,
-                                const int height,
-                                const float sigma_s,
-                                const float sigma_r)
+size_t dt_bilateral_memory_use2(const int width, const int height, const float sigma_s, const float sigma_r)
 {
   return dt_bilateral_memory_use(width, height, sigma_s, sigma_r) + (size_t)width * height * 4 * sizeof(float);
 }
@@ -96,12 +93,10 @@ size_t dt_bilateral_singlebuffer_size(const int width,     // width of input ima
 
 // modules that want to use dt_bilateral_slice_to_output_cl() ought to take this one;
 // takes account of an additional temp buffer needed in the OpenCL code path
-size_t dt_bilateral_singlebuffer_size2(const int width,
-                                       const int height,
-                                       const float sigma_s,
-                                       const float sigma_r)
+size_t dt_bilateral_singlebuffer_size2(const int width, const int height, const float sigma_s, const float sigma_r)
 {
-  return MAX(dt_bilateral_singlebuffer_size(width, height, sigma_s, sigma_r), (size_t)width * height * 4 * sizeof(float));
+  return MAX(dt_bilateral_singlebuffer_size(width, height, sigma_s, sigma_r),
+             (size_t)width * height * 4 * sizeof(float));
 }
 
 
@@ -111,10 +106,14 @@ dt_bilateral_cl_t *dt_bilateral_init_cl(const int devid,
                                         const float sigma_s, // spatial sigma (blur pixel coords)
                                         const float sigma_r) // range sigma (blur luma values)
 {
-  dt_opencl_local_buffer_t locopt
-    = (dt_opencl_local_buffer_t){ .xoffset = 0, .xfactor = 1, .yoffset = 0, .yfactor = 1,
-                                  .cellsize = 8 * sizeof(float) + sizeof(int), .overhead = 0,
-                                  .sizex = 1 << 6, .sizey = 1 << 6 };
+  dt_opencl_local_buffer_t locopt = (dt_opencl_local_buffer_t){.xoffset = 0,
+                                                               .xfactor = 1,
+                                                               .yoffset = 0,
+                                                               .yfactor = 1,
+                                                               .cellsize = 8 * sizeof(float) + sizeof(int),
+                                                               .overhead = 0,
+                                                               .sizex = 1 << 6,
+                                                               .sizey = 1 << 6 };
 
   if(!dt_opencl_local_buffer_opt(devid, darktable.opencl->bilateral->kernel_splat, &locopt))
   {
@@ -126,8 +125,7 @@ dt_bilateral_cl_t *dt_bilateral_init_cl(const int devid,
   if(locopt.sizex * locopt.sizey < 16 * 16)
   {
     dt_print(DT_DEBUG_OPENCL,
-             "[opencl_bilateral] device %d does not offer sufficient resources to run bilateral grid\n",
-             devid);
+             "[opencl_bilateral] device %d does not offer sufficient resources to run bilateral grid\n", devid);
     return NULL;
   }
 
@@ -152,8 +150,7 @@ dt_bilateral_cl_t *dt_bilateral_init_cl(const int devid,
   b->dev_grid_tmp = NULL;
 
   // alloc grid buffer:
-  b->dev_grid
-      = dt_opencl_alloc_device_buffer(b->devid, (size_t)b->size_x * b->size_y * b->size_z * sizeof(float));
+  b->dev_grid = dt_opencl_alloc_device_buffer(b->devid, (size_t)b->size_x * b->size_y * b->size_z * sizeof(float));
   if(!b->dev_grid)
   {
     dt_bilateral_free_cl(b);
@@ -205,8 +202,7 @@ cl_int dt_bilateral_splat_cl(dt_bilateral_cl_t *b, cl_mem in)
   dt_opencl_set_kernel_arg(b->devid, b->global->kernel_splat, 6, sizeof(int), (void *)&b->size_z);
   dt_opencl_set_kernel_arg(b->devid, b->global->kernel_splat, 7, sizeof(float), (void *)&b->sigma_s);
   dt_opencl_set_kernel_arg(b->devid, b->global->kernel_splat, 8, sizeof(float), (void *)&b->sigma_r);
-  dt_opencl_set_kernel_arg(b->devid, b->global->kernel_splat, 9, b->blocksizex * b->blocksizey * sizeof(int),
-                           NULL);
+  dt_opencl_set_kernel_arg(b->devid, b->global->kernel_splat, 9, b->blocksizex * b->blocksizey * sizeof(int), NULL);
   dt_opencl_set_kernel_arg(b->devid, b->global->kernel_splat, 10,
                            b->blocksizex * b->blocksizey * 8 * sizeof(float), NULL);
   err = dt_opencl_enqueue_kernel_2d_with_local(b->devid, b->global->kernel_splat, sizes, local);
@@ -260,8 +256,7 @@ cl_int dt_bilateral_blur_cl(dt_bilateral_cl_t *b)
   stride3 = b->size_x * b->size_y;
   sizes[0] = ROUNDUPWD(b->size_x);
   sizes[1] = ROUNDUPHT(b->size_y);
-  dt_opencl_set_kernel_arg(b->devid, b->global->kernel_blur_line_z, 0, sizeof(cl_mem),
-                           (void *)&b->dev_grid_tmp);
+  dt_opencl_set_kernel_arg(b->devid, b->global->kernel_blur_line_z, 0, sizeof(cl_mem), (void *)&b->dev_grid_tmp);
   dt_opencl_set_kernel_arg(b->devid, b->global->kernel_blur_line_z, 1, sizeof(cl_mem), (void *)&b->dev_grid);
   dt_opencl_set_kernel_arg(b->devid, b->global->kernel_blur_line_z, 2, sizeof(int), (void *)&stride1);
   dt_opencl_set_kernel_arg(b->devid, b->global->kernel_blur_line_z, 3, sizeof(int), (void *)&stride2);

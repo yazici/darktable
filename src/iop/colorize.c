@@ -59,7 +59,7 @@ typedef struct dt_iop_colorize_params_t
 
 typedef struct dt_iop_colorize_gui_data_t
 {
-  GtkWidget *scale1, *scale2; //  lightness, source_lightnessmix
+  GtkWidget *scale1, *scale2;     //  lightness, source_lightnessmix
   GtkWidget *gslider1, *gslider2; // hue, saturation
 } dt_iop_colorize_gui_data_t;
 
@@ -92,8 +92,8 @@ int groups()
   return IOP_GROUP_EFFECT;
 }
 
-int legacy_params(dt_iop_module_t *self, const void *const old_params, const int old_version,
-                  void *new_params, const int new_version)
+int legacy_params(dt_iop_module_t *self, const void *const old_params, const int old_version, void *new_params,
+                  const int new_version)
 {
   if(old_version == 1 && new_version == 2)
   {
@@ -398,7 +398,7 @@ void init(dt_iop_module_t *module)
   module->params = calloc(1, sizeof(dt_iop_colorize_params_t));
   module->default_params = calloc(1, sizeof(dt_iop_colorize_params_t));
   module->default_enabled = 0;
-    module->priority = 478; // module order created by iop_dependencies.py, do not edit!
+  module->priority = 478; // module order created by iop_dependencies.py, do not edit!
   module->params_size = sizeof(dt_iop_colorize_params_t);
   module->gui_data = NULL;
   dt_iop_colorize_params_t tmp = (dt_iop_colorize_params_t){ 0, 0.5, 50, 50, module->version() };

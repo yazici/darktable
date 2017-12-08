@@ -254,8 +254,8 @@ static void _reload_button_clicked(GtkButton *button, gpointer user_data)
     gboolean selected;
     int id;
     gchar *xmp_path;
-    gtk_tree_model_get(gui->model, &iter, DT_CONTROL_CRAWLER_COL_SELECTED, &selected,
-                       DT_CONTROL_CRAWLER_COL_ID, &id, DT_CONTROL_CRAWLER_COL_XMP_PATH, &xmp_path, -1);
+    gtk_tree_model_get(gui->model, &iter, DT_CONTROL_CRAWLER_COL_SELECTED, &selected, DT_CONTROL_CRAWLER_COL_ID,
+                       &id, DT_CONTROL_CRAWLER_COL_XMP_PATH, &xmp_path, -1);
     if(selected)
     {
       dt_history_load_and_apply(id, xmp_path, 0);
@@ -279,8 +279,8 @@ void _overwrite_button_clicked(GtkButton *button, gpointer user_data)
   {
     gboolean selected;
     int id;
-    gtk_tree_model_get(gui->model, &iter, DT_CONTROL_CRAWLER_COL_SELECTED, &selected,
-                       DT_CONTROL_CRAWLER_COL_ID, &id, -1);
+    gtk_tree_model_get(gui->model, &iter, DT_CONTROL_CRAWLER_COL_SELECTED, &selected, DT_CONTROL_CRAWLER_COL_ID,
+                       &id, -1);
     if(selected)
     {
       dt_image_write_sidecar_file(id);
@@ -327,8 +327,8 @@ void dt_control_crawler_show_image_list(GList *images)
     gtk_list_store_append(store, &iter);
     gtk_list_store_set(store, &iter, DT_CONTROL_CRAWLER_COL_SELECTED, 0, DT_CONTROL_CRAWLER_COL_ID, item->id,
                        DT_CONTROL_CRAWLER_COL_IMAGE_PATH, item->image_path, DT_CONTROL_CRAWLER_COL_XMP_PATH,
-                       item->xmp_path, DT_CONTROL_CRAWLER_COL_TS_XMP, timestamp_xmp,
-                       DT_CONTROL_CRAWLER_COL_TS_DB, timestamp_db, -1);
+                       item->xmp_path, DT_CONTROL_CRAWLER_COL_TS_XMP, timestamp_xmp, DT_CONTROL_CRAWLER_COL_TS_DB,
+                       timestamp_db, -1);
     g_free(item->image_path);
     g_free(item->xmp_path);
     list_iter = g_list_next(list_iter);
@@ -351,8 +351,8 @@ void dt_control_crawler_show_image_list(GList *images)
                                                     DT_CONTROL_CRAWLER_COL_TS_XMP, NULL);
   gtk_tree_view_append_column(GTK_TREE_VIEW(tree), column);
 
-  column = gtk_tree_view_column_new_with_attributes(_("database timestamp"), gtk_cell_renderer_text_new(),
-                                                    "text", DT_CONTROL_CRAWLER_COL_TS_DB, NULL);
+  column = gtk_tree_view_column_new_with_attributes(_("database timestamp"), gtk_cell_renderer_text_new(), "text",
+                                                    DT_CONTROL_CRAWLER_COL_TS_DB, NULL);
   gtk_tree_view_append_column(GTK_TREE_VIEW(tree), column);
 
   gtk_container_add(GTK_CONTAINER(scroll), tree);
@@ -361,8 +361,8 @@ void dt_control_crawler_show_image_list(GList *images)
   // build a dialog window that contains the list of images
   GtkWidget *win = dt_ui_main_window(darktable.gui->ui);
   GtkWidget *dialog = gtk_dialog_new_with_buttons(_("updated xmp sidecar files found"), GTK_WINDOW(win),
-                                                  GTK_DIALOG_DESTROY_WITH_PARENT | GTK_DIALOG_MODAL,
-                                                  _("_close"), GTK_RESPONSE_CLOSE, NULL);
+                                                  GTK_DIALOG_DESTROY_WITH_PARENT | GTK_DIALOG_MODAL, _("_close"),
+                                                  GTK_RESPONSE_CLOSE, NULL);
 #ifdef GDK_WINDOWING_QUARTZ
   dt_osx_disallow_fullscreen(dialog);
 #endif

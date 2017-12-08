@@ -85,8 +85,8 @@ void dt_colorlabels_toggle_label_selection(const int color)
     // none or only part of images have that color label, so label them all
     DT_DEBUG_SQLITE3_PREPARE_V2(
         dt_database_get(darktable.db),
-        "INSERT OR IGNORE INTO main.color_labels (imgid, color) SELECT imgid, ?1 FROM main.selected_images",
-        -1, &stmt2, NULL);
+        "INSERT OR IGNORE INTO main.color_labels (imgid, color) SELECT imgid, ?1 FROM main.selected_images", -1,
+        &stmt2, NULL);
     DT_DEBUG_SQLITE3_BIND_INT(stmt2, 1, color);
     sqlite3_step(stmt2);
     sqlite3_finalize(stmt2);
@@ -112,8 +112,8 @@ void dt_colorlabels_toggle_label(const int imgid, const int color)
   if(imgid <= 0) return;
   sqlite3_stmt *stmt, *stmt2;
   DT_DEBUG_SQLITE3_PREPARE_V2(dt_database_get(darktable.db),
-                              "SELECT * FROM main.color_labels WHERE imgid=?1 AND color=?2 LIMIT 1",
-                              -1, &stmt, NULL);
+                              "SELECT * FROM main.color_labels WHERE imgid=?1 AND color=?2 LIMIT 1", -1, &stmt,
+                              NULL);
   DT_DEBUG_SQLITE3_BIND_INT(stmt, 1, imgid);
   DT_DEBUG_SQLITE3_BIND_INT(stmt, 2, color);
   if(sqlite3_step(stmt) == SQLITE_ROW)
@@ -144,8 +144,8 @@ int dt_colorlabels_check_label(const int imgid, const int color)
   if(imgid <= 0) return 0;
   sqlite3_stmt *stmt;
   DT_DEBUG_SQLITE3_PREPARE_V2(dt_database_get(darktable.db),
-                              "SELECT * FROM main.color_labels WHERE imgid=?1 AND color=?2 LIMIT 1",
-                              -1, &stmt, NULL);
+                              "SELECT * FROM main.color_labels WHERE imgid=?1 AND color=?2 LIMIT 1", -1, &stmt,
+                              NULL);
   DT_DEBUG_SQLITE3_BIND_INT(stmt, 1, imgid);
   DT_DEBUG_SQLITE3_BIND_INT(stmt, 2, color);
   if(sqlite3_step(stmt) == SQLITE_ROW)

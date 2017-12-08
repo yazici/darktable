@@ -22,9 +22,9 @@
 #include <gtk/gtk.h>
 
 G_BEGIN_DECLS
-#define DTGTK_RESET_LABEL(obj)                                                                               \
+#define DTGTK_RESET_LABEL(obj)                                                                                    \
   G_TYPE_CHECK_INSTANCE_CAST(obj, dtgtk_reset_label_get_type(), GtkDarktableResetLabel)
-#define DTGTK_RESET_LABEL_CLASS(klass)                                                                       \
+#define DTGTK_RESET_LABEL_CLASS(klass)                                                                            \
   G_TYPE_CHECK_CLASS_CAST(klass, dtgtk_reset_label_get_type(), GtkDarktableButtonClass)
 #define DTGTK_IS_RESET_LABEL(obj) G_TYPE_CHECK_INSTANCE_TYPE(obj, dtgtk_reset_label_get_type())
 #define DTGTK_IS_RESET_LABEL_CLASS(klass) G_TYPE_CHECK_CLASS_TYPE(obj, dtgtk_reset_label_get_type())

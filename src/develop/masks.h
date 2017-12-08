@@ -230,8 +230,8 @@ int dt_masks_get_points_border(dt_develop_t *dev, dt_masks_form_t *form, float *
                                float **border, int *border_count, int source);
 
 /** get the rectangle which include the form and his border */
-int dt_masks_get_area(dt_iop_module_t *module, dt_dev_pixelpipe_iop_t *piece, dt_masks_form_t *form,
-                      int *width, int *height, int *posx, int *posy);
+int dt_masks_get_area(dt_iop_module_t *module, dt_dev_pixelpipe_iop_t *piece, dt_masks_form_t *form, int *width,
+                      int *height, int *posx, int *posy);
 int dt_masks_get_source_area(dt_iop_module_t *module, dt_dev_pixelpipe_iop_t *piece, dt_masks_form_t *form,
                              int *width, int *height, int *posx, int *posy);
 /** get the transparency mask of the form and his border */
@@ -279,12 +279,10 @@ void dt_masks_clear_form_gui(dt_develop_t *dev);
 void dt_masks_reset_form_gui(void);
 void dt_masks_reset_show_masks_icons(void);
 
-int dt_masks_events_mouse_moved(struct dt_iop_module_t *module, double x, double y, double pressure,
-                                int which);
-int dt_masks_events_button_released(struct dt_iop_module_t *module, double x, double y, int which,
-                                    uint32_t state);
-int dt_masks_events_button_pressed(struct dt_iop_module_t *module, double x, double y, double pressure,
-                                   int which, int type, uint32_t state);
+int dt_masks_events_mouse_moved(struct dt_iop_module_t *module, double x, double y, double pressure, int which);
+int dt_masks_events_button_released(struct dt_iop_module_t *module, double x, double y, int which, uint32_t state);
+int dt_masks_events_button_pressed(struct dt_iop_module_t *module, double x, double y, double pressure, int which,
+                                   int type, uint32_t state);
 int dt_masks_events_mouse_scrolled(struct dt_iop_module_t *module, double x, double y, int up, uint32_t state);
 void dt_masks_events_post_expose(struct dt_iop_module_t *module, cairo_t *cr, int32_t width, int32_t height,
                                  int32_t pointerx, int32_t pointery);
@@ -314,25 +312,25 @@ int dt_masks_form_duplicate(dt_develop_t *dev, int formid);
 
 /** utils functions */
 int dt_masks_point_in_form_exact(float x, float y, float *points, int points_start, int points_count);
-int dt_masks_point_in_form_near(float x, float y, float *points, int points_start, int points_count, float distance, int *near);
+int dt_masks_point_in_form_near(float x, float y, float *points, int points_start, int points_count,
+                                float distance, int *near);
 
 
 /** code for dynamic handling of intermediate buffers */
-static inline
-dt_masks_dynbuf_t *dt_masks_dynbuf_init(size_t size, const char *tag)
+static inline dt_masks_dynbuf_t *dt_masks_dynbuf_init(size_t size, const char *tag)
 {
   assert(size > 0);
   dt_masks_dynbuf_t *a = (dt_masks_dynbuf_t *)calloc(1, sizeof(dt_masks_dynbuf_t));
 
   if(a != NULL)
   {
-    strncpy(a->tag, tag, sizeof(a->tag)); //only for debugging purposes
-    a->tag[sizeof(a->tag)-1] = '\0';
+    strncpy(a->tag, tag, sizeof(a->tag)); // only for debugging purposes
+    a->tag[sizeof(a->tag) - 1] = '\0';
     a->pos = 0;
     a->size = size;
     a->buffer = (float *)malloc(size * sizeof(float));
-    dt_print(DT_DEBUG_MASKS, "[masks dynbuf '%s'] with initial size %lu (is %p)\n", a->tag,
-             (unsigned long)a->size, a->buffer);
+    dt_print(DT_DEBUG_MASKS, "[masks dynbuf '%s'] with initial size %lu (is %p)\n", a->tag, (unsigned long)a->size,
+             a->buffer);
     if(a->buffer == NULL)
     {
       free(a);
@@ -342,8 +340,7 @@ dt_masks_dynbuf_t *dt_masks_dynbuf_init(size_t size, const char *tag)
   return a;
 }
 
-static inline
-void dt_masks_dynbuf_add(dt_masks_dynbuf_t *a, float value)
+static inline void dt_masks_dynbuf_add(dt_masks_dynbuf_t *a, float value)
 {
   assert(a != NULL);
   assert(a->pos <= a->size);
@@ -369,8 +366,7 @@ void dt_masks_dynbuf_add(dt_masks_dynbuf_t *a, float value)
   a->buffer[a->pos++] = value;
 }
 
-static inline
-float dt_masks_dynbuf_get(dt_masks_dynbuf_t *a, int offset)
+static inline float dt_masks_dynbuf_get(dt_masks_dynbuf_t *a, int offset)
 {
   assert(a != NULL);
   // offset: must be negative distance relative to end of buffer
@@ -379,8 +375,7 @@ float dt_masks_dynbuf_get(dt_masks_dynbuf_t *a, int offset)
   return (a->buffer[a->pos + offset]);
 }
 
-static inline
-void dt_masks_dynbuf_set(dt_masks_dynbuf_t *a, int offset, float value)
+static inline void dt_masks_dynbuf_set(dt_masks_dynbuf_t *a, int offset, float value)
 {
   assert(a != NULL);
   // offset: must be negative distance relative to end of buffer
@@ -389,29 +384,25 @@ void dt_masks_dynbuf_set(dt_masks_dynbuf_t *a, int offset, float value)
   a->buffer[a->pos + offset] = value;
 }
 
-static inline
-float *dt_masks_dynbuf_buffer(dt_masks_dynbuf_t *a)
+static inline float *dt_masks_dynbuf_buffer(dt_masks_dynbuf_t *a)
 {
   assert(a != NULL);
   return a->buffer;
 }
 
-static inline
-size_t dt_masks_dynbuf_position(dt_masks_dynbuf_t *a)
+static inline size_t dt_masks_dynbuf_position(dt_masks_dynbuf_t *a)
 {
   assert(a != NULL);
   return a->pos;
 }
 
-static inline
-void dt_masks_dynbuf_reset(dt_masks_dynbuf_t *a)
+static inline void dt_masks_dynbuf_reset(dt_masks_dynbuf_t *a)
 {
   assert(a != NULL);
   a->pos = 0;
 }
 
-static inline
-float *dt_masks_dynbuf_harvest(dt_masks_dynbuf_t *a)
+static inline float *dt_masks_dynbuf_harvest(dt_masks_dynbuf_t *a)
 {
   // take out data buffer and make dynamic buffer obsolete
   if(a == NULL) return NULL;
@@ -421,12 +412,10 @@ float *dt_masks_dynbuf_harvest(dt_masks_dynbuf_t *a)
   return r;
 }
 
-static inline
-void dt_masks_dynbuf_free(dt_masks_dynbuf_t *a)
+static inline void dt_masks_dynbuf_free(dt_masks_dynbuf_t *a)
 {
   if(a == NULL) return;
-  dt_print(DT_DEBUG_MASKS, "[masks dynbuf '%s'] freed (was %p)\n", a->tag,
-          a->buffer);
+  dt_print(DT_DEBUG_MASKS, "[masks dynbuf '%s'] freed (was %p)\n", a->tag, a->buffer);
   free(a->buffer);
   free(a);
 }

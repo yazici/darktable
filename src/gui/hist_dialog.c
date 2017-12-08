@@ -154,8 +154,7 @@ int dt_gui_hist_dialog_new(dt_gui_hist_dialog_t *d, int imgid, gboolean iscopy)
 
   /* create the list of items */
   d->items = GTK_TREE_VIEW(gtk_tree_view_new());
-  GtkListStore *liststore
-      = gtk_list_store_new(DT_HIST_ITEMS_NUM_COLS, G_TYPE_BOOLEAN, G_TYPE_STRING, G_TYPE_UINT);
+  GtkListStore *liststore = gtk_list_store_new(DT_HIST_ITEMS_NUM_COLS, G_TYPE_BOOLEAN, G_TYPE_STRING, G_TYPE_UINT);
 
   /* enabled */
   GtkCellRenderer *renderer = gtk_cell_renderer_toggle_new();
@@ -190,8 +189,8 @@ int dt_gui_hist_dialog_new(dt_gui_hist_dialog_t *d, int imgid, gboolean iscopy)
 
       gtk_list_store_append(GTK_LIST_STORE(liststore), &iter);
       gtk_list_store_set(GTK_LIST_STORE(liststore), &iter, DT_HIST_ITEMS_COL_ENABLED,
-                         iscopy ? TRUE : _gui_is_set(d->selops, item->num), DT_HIST_ITEMS_COL_NAME,
-                         item->name, DT_HIST_ITEMS_COL_NUM, (guint)item->num, -1);
+                         iscopy ? TRUE : _gui_is_set(d->selops, item->num), DT_HIST_ITEMS_COL_NAME, item->name,
+                         DT_HIST_ITEMS_COL_NUM, (guint)item->num, -1);
 
     } while((items = g_list_next(items)));
     g_list_free_full(items, dt_history_item_free);

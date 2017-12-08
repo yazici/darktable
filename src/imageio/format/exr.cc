@@ -101,8 +101,8 @@ void cleanup(dt_imageio_module_format_t *self)
 {
 }
 
-int write_image(dt_imageio_module_data_t *tmp, const char *filename, const void *in_tmp, void *exif,
-                int exif_len, int imgid, int num, int total)
+int write_image(dt_imageio_module_data_t *tmp, const char *filename, const void *in_tmp, void *exif, int exif_len,
+                int imgid, int num, int total)
 {
   const dt_imageio_exr_t *exr = (dt_imageio_exr_t *)tmp;
 
@@ -130,13 +130,8 @@ int write_image(dt_imageio_module_data_t *tmp, const char *filename, const void 
   // try to add the chromaticities
   if(imgid > 0)
   {
-    cmsToneCurve *red_curve = NULL,
-                 *green_curve = NULL,
-                 *blue_curve = NULL;
-    cmsCIEXYZ *red_color = NULL,
-              *green_color = NULL,
-              *blue_color = NULL,
-              *white_point = NULL;
+    cmsToneCurve *red_curve = NULL, *green_curve = NULL, *blue_curve = NULL;
+    cmsCIEXYZ *red_color = NULL, *green_color = NULL, *blue_color = NULL, *white_point = NULL;
     cmsHPROFILE out_profile = dt_colorspaces_get_output_profile(imgid)->profile;
     float r[2], g[2], b[2], w[2];
     float sum;
@@ -159,10 +154,10 @@ int write_image(dt_imageio_module_data_t *tmp, const char *filename, const void 
     if(!cmsIsToneCurveLinear(red_curve) || !cmsIsToneCurveLinear(green_curve) || !cmsIsToneCurveLinear(blue_curve))
       goto icc_error;
 
-//     printf("r: %f %f %f\n", red_color->X, red_color->Y, red_color->Z);
-//     printf("g: %f %f %f\n", green_color->X, green_color->Y, green_color->Z);
-//     printf("b: %f %f %f\n", blue_color->X, blue_color->Y, blue_color->Z);
-//     printf("w: %f %f %f\n", white_point->X, white_point->Y, white_point->Z);
+    //     printf("r: %f %f %f\n", red_color->X, red_color->Y, red_color->Z);
+    //     printf("g: %f %f %f\n", green_color->X, green_color->Y, green_color->Z);
+    //     printf("b: %f %f %f\n", blue_color->X, blue_color->Y, blue_color->Z);
+    //     printf("w: %f %f %f\n", white_point->X, white_point->Y, white_point->Z);
 
     sum = red_color->X + red_color->Y + red_color->Z;
     r[0] = red_color->X / sum;
@@ -187,9 +182,10 @@ int write_image(dt_imageio_module_data_t *tmp, const char *filename, const void 
 
     goto icc_end;
 
-icc_error:
+  icc_error:
     dt_control_log("%s", _("the selected output profile doesn't work well with exr"));
-    fprintf(stderr, "[exr export] warning: exporting with anything but linear matrix profiles might lead to wrong results when opening the image\n");
+    fprintf(stderr, "[exr export] warning: exporting with anything but linear matrix profiles might lead to wrong "
+                    "results when opening the image\n");
   }
 icc_end:
 
@@ -206,14 +202,14 @@ icc_end:
 
   const float *in = (const float *)in_tmp;
 
-  data.insert("R", Imf::Slice(Imf::PixelType::FLOAT, (char *)(in + 0), 4 * sizeof(float),
-                              4 * sizeof(float) * exr->width));
+  data.insert(
+      "R", Imf::Slice(Imf::PixelType::FLOAT, (char *)(in + 0), 4 * sizeof(float), 4 * sizeof(float) * exr->width));
 
-  data.insert("G", Imf::Slice(Imf::PixelType::FLOAT, (char *)(in + 1), 4 * sizeof(float),
-                              4 * sizeof(float) * exr->width));
+  data.insert(
+      "G", Imf::Slice(Imf::PixelType::FLOAT, (char *)(in + 1), 4 * sizeof(float), 4 * sizeof(float) * exr->width));
 
-  data.insert("B", Imf::Slice(Imf::PixelType::FLOAT, (char *)(in + 2), 4 * sizeof(float),
-                              4 * sizeof(float) * exr->width));
+  data.insert(
+      "B", Imf::Slice(Imf::PixelType::FLOAT, (char *)(in + 2), 4 * sizeof(float), 4 * sizeof(float) * exr->width));
 
   file.setFrameBuffer(data);
   file.writeTiles(0, file.numXTiles() - 1, 0, file.numYTiles() - 1);
@@ -226,9 +222,8 @@ size_t params_size(dt_imageio_module_format_t *self)
   return sizeof(dt_imageio_exr_t);
 }
 
-void *legacy_params(dt_imageio_module_format_t *self, const void *const old_params,
-                    const size_t old_params_size, const int old_version, const int new_version,
-                    size_t *new_size)
+void *legacy_params(dt_imageio_module_format_t *self, const void *const old_params, const size_t old_params_size,
+                    const int old_version, const int new_version, size_t *new_size)
 {
   if(old_version == 1 && new_version == 4)
   {

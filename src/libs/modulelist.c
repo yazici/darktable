@@ -59,7 +59,7 @@ const char *name(dt_lib_module_t *self)
 
 const char **views(dt_lib_module_t *self)
 {
-  static const char *v[] = {"darkroom", NULL};
+  static const char *v[] = { "darkroom", NULL };
   return v;
 }
 
@@ -78,8 +78,8 @@ void gui_init(dt_lib_module_t *self)
   /* initialize ui widgets */
   dt_lib_modulelist_t *d = (dt_lib_modulelist_t *)g_malloc0(sizeof(dt_lib_modulelist_t));
   self->data = (void *)d;
-  self->widget = gtk_scrolled_window_new(
-      NULL, NULL); // GTK_ADJUSTMENT(gtk_adjustment_new(200, 100, 200, 10, 100, 100))
+  self->widget
+      = gtk_scrolled_window_new(NULL, NULL); // GTK_ADJUSTMENT(gtk_adjustment_new(200, 100, 200, 10, 100, 100))
   gtk_widget_set_size_request(self->widget, -1, DT_PIXEL_APPLY_DPI(208));
   gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(self->widget), GTK_POLICY_AUTOMATIC, GTK_POLICY_ALWAYS);
   d->tree = GTK_TREE_VIEW(gtk_tree_view_new());
@@ -91,8 +91,7 @@ void gui_init(dt_lib_module_t *self)
   dt_control_signal_connect(darktable.signals, DT_SIGNAL_DEVELOP_INITIALIZE,
                             G_CALLBACK(_lib_modulelist_populate_callback), self);
   g_signal_connect(GTK_WIDGET(d->tree), "style-set", G_CALLBACK(_lib_modulelist_style_set), self);
-  g_signal_connect(GTK_WIDGET(d->tree), "cursor-changed", G_CALLBACK(_lib_modulelist_row_changed_callback),
-                   NULL);
+  g_signal_connect(GTK_WIDGET(d->tree), "cursor-changed", G_CALLBACK(_lib_modulelist_row_changed_callback), NULL);
 
   darktable.view_manager->proxy.more_module.module = self;
   darktable.view_manager->proxy.more_module.update = _lib_modulelist_gui_update;
@@ -173,7 +172,7 @@ static void _lib_modulelist_populate_callback(gpointer instance, gpointer user_d
   GtkCellRenderer *pix_renderer, *fav_renderer, *text_renderer;
   GdkRGBA color;
   GtkStyleContext *context = gtk_widget_get_style_context(view);
-  gboolean color_found = gtk_style_context_lookup_color (context, "selected_bg_color", &color);
+  gboolean color_found = gtk_style_context_lookup_color(context, "selected_bg_color", &color);
   if(!color_found)
   {
     color.red = 1.0;
@@ -227,8 +226,8 @@ static void _lib_modulelist_populate_callback(gpointer instance, gpointer user_d
                                              image_renderer_function, NULL, NULL);
   col = gtk_tree_view_get_column(GTK_TREE_VIEW(view), 2);
   if(col) gtk_tree_view_remove_column(GTK_TREE_VIEW(view), col);
-  gtk_tree_view_insert_column_with_data_func(GTK_TREE_VIEW(view), 2, "name", text_renderer,
-                                             text_renderer_function, NULL, NULL);
+  gtk_tree_view_insert_column_with_data_func(GTK_TREE_VIEW(view), 2, "name", text_renderer, text_renderer_function,
+                                             NULL, NULL);
 
   /* go thru list of iop modules and add them to the list */
   GList *modules = g_list_last(darktable.iop);
@@ -265,8 +264,8 @@ static void _lib_modulelist_populate_callback(gpointer instance, gpointer user_d
 
     end:
       gtk_list_store_append(store, &iter);
-      gtk_list_store_set(store, &iter, COL_IMAGE, pixbuf, COL_MODULE, module,
-                         COL_DESCRIPTION, module->description ? module->description() : module->name(), -1);
+      gtk_list_store_set(store, &iter, COL_IMAGE, pixbuf, COL_MODULE, module, COL_DESCRIPTION,
+                         module->description ? module->description() : module->name(), -1);
       g_object_unref(pixbuf);
     }
 

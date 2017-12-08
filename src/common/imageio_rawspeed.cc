@@ -48,10 +48,11 @@ int rawspeed_get_number_of_processor_cores()
 
 using namespace rawspeed;
 
-static dt_imageio_retval_t dt_imageio_open_rawspeed_sraw (dt_image_t *img, RawImage r, dt_mipmap_buffer_t *buf);
+static dt_imageio_retval_t dt_imageio_open_rawspeed_sraw(dt_image_t *img, RawImage r, dt_mipmap_buffer_t *buf);
 static CameraMetaData *meta = NULL;
 
-static void dt_rawspeed_load_meta() {
+static void dt_rawspeed_load_meta()
+{
   /* Load rawspeed cameras.xml meta file once */
   if(meta == NULL)
   {
@@ -68,18 +69,17 @@ static void dt_rawspeed_load_meta() {
   }
 }
 
-void dt_rawspeed_lookup_makermodel(const char *maker, const char *model,
-                                   char *mk, int mk_len, char *md, int md_len,
-                                   char *al, int al_len)
+void dt_rawspeed_lookup_makermodel(const char *maker, const char *model, char *mk, int mk_len, char *md,
+                                   int md_len, char *al, int al_len)
 {
   int got_it_done = FALSE;
-  try {
+  try
+  {
     dt_rawspeed_load_meta();
     const Camera *cam = meta->getCamera(maker, model, "");
     // Also look for dng cameras
-    if (!cam)
-      cam = meta->getCamera(maker, model, "dng");
-    if (cam)
+    if(!cam) cam = meta->getCamera(maker, model, "dng");
+    if(cam)
     {
       g_strlcpy(mk, cam->canonical_make.c_str(), mk_len);
       g_strlcpy(md, cam->canonical_model.c_str(), md_len);
@@ -92,7 +92,7 @@ void dt_rawspeed_lookup_makermodel(const char *maker, const char *model,
     printf("[rawspeed] %s\n", exc.what());
   }
 
-  if (!got_it_done)
+  if(!got_it_done)
   {
     // We couldn't find the camera or caught some exception, just punt and pass
     // through the same values
@@ -109,8 +109,7 @@ uint32_t dt_rawspeed_crop_dcraw_filters(uint32_t filters, uint32_t crop_x, uint3
   return ColorFilterArray::shiftDcrawFilter(filters, crop_x, crop_y);
 }
 
-dt_imageio_retval_t dt_imageio_open_rawspeed(dt_image_t *img, const char *filename,
-                                             dt_mipmap_buffer_t *mbuf)
+dt_imageio_retval_t dt_imageio_open_rawspeed(dt_image_t *img, const char *filename, dt_mipmap_buffer_t *mbuf)
 {
   if(!img->exif_inited) (void)dt_exif_read(img, filename);
 
@@ -148,43 +147,46 @@ dt_imageio_retval_t dt_imageio_open_rawspeed(dt_image_t *img, const char *filena
 
     // We used to partial match the Canon local rebrandings so lets pass on
     // the value just in those cases to be able to fix old history stacks
-    static const struct {
+    static const struct
+    {
       const char *mungedname;
       const char *origname;
     } legacy_aliases[] = {
-      {"Canon EOS","Canon EOS REBEL SL1"},
-      {"Canon EOS","Canon EOS Kiss X7"},
-      {"Canon EOS","Canon EOS DIGITAL REBEL XT"},
-      {"Canon EOS","Canon EOS Kiss Digital N"},
-      {"Canon EOS","Canon EOS 350D"},
-      {"Canon EOS","Canon EOS DIGITAL REBEL XSi"},
-      {"Canon EOS","Canon EOS Kiss Digital X2"},
-      {"Canon EOS","Canon EOS Kiss X2"},
-      {"Canon EOS","Canon EOS REBEL T5i"},
-      {"Canon EOS","Canon EOS Kiss X7i"},
-      {"Canon EOS","Canon EOS Rebel T6i"},
-      {"Canon EOS","Canon EOS Kiss X8i"},
-      {"Canon EOS","Canon EOS Rebel T6s"},
-      {"Canon EOS","Canon EOS 8000D"},
-      {"Canon EOS","Canon EOS REBEL T1i"},
-      {"Canon EOS","Canon EOS Kiss X3"},
-      {"Canon EOS","Canon EOS REBEL T2i"},
-      {"Canon EOS","Canon EOS Kiss X4"},
-      {"Canon EOS REBEL T3","Canon EOS REBEL T3i"},
-      {"Canon EOS","Canon EOS Kiss X5"},
-      {"Canon EOS","Canon EOS REBEL T4i"},
-      {"Canon EOS","Canon EOS Kiss X6i"},
-      {"Canon EOS","Canon EOS DIGITAL REBEL XS"},
-      {"Canon EOS","Canon EOS Kiss Digital F"},
-      {"Canon EOS","Canon EOS REBEL T5"},
-      {"Canon EOS","Canon EOS Kiss X70"},
-      {"Canon EOS","Canon EOS DIGITAL REBEL XTi"},
-      {"Canon EOS","Canon EOS Kiss Digital X"},
+      { "Canon EOS", "Canon EOS REBEL SL1" },
+      { "Canon EOS", "Canon EOS Kiss X7" },
+      { "Canon EOS", "Canon EOS DIGITAL REBEL XT" },
+      { "Canon EOS", "Canon EOS Kiss Digital N" },
+      { "Canon EOS", "Canon EOS 350D" },
+      { "Canon EOS", "Canon EOS DIGITAL REBEL XSi" },
+      { "Canon EOS", "Canon EOS Kiss Digital X2" },
+      { "Canon EOS", "Canon EOS Kiss X2" },
+      { "Canon EOS", "Canon EOS REBEL T5i" },
+      { "Canon EOS", "Canon EOS Kiss X7i" },
+      { "Canon EOS", "Canon EOS Rebel T6i" },
+      { "Canon EOS", "Canon EOS Kiss X8i" },
+      { "Canon EOS", "Canon EOS Rebel T6s" },
+      { "Canon EOS", "Canon EOS 8000D" },
+      { "Canon EOS", "Canon EOS REBEL T1i" },
+      { "Canon EOS", "Canon EOS Kiss X3" },
+      { "Canon EOS", "Canon EOS REBEL T2i" },
+      { "Canon EOS", "Canon EOS Kiss X4" },
+      { "Canon EOS REBEL T3", "Canon EOS REBEL T3i" },
+      { "Canon EOS", "Canon EOS Kiss X5" },
+      { "Canon EOS", "Canon EOS REBEL T4i" },
+      { "Canon EOS", "Canon EOS Kiss X6i" },
+      { "Canon EOS", "Canon EOS DIGITAL REBEL XS" },
+      { "Canon EOS", "Canon EOS Kiss Digital F" },
+      { "Canon EOS", "Canon EOS REBEL T5" },
+      { "Canon EOS", "Canon EOS Kiss X70" },
+      { "Canon EOS", "Canon EOS DIGITAL REBEL XTi" },
+      { "Canon EOS", "Canon EOS Kiss Digital X" },
     };
 
-    for (uint32 i=0; i<(sizeof(legacy_aliases)/sizeof(legacy_aliases[1])); i++)
-      if (!strcmp(legacy_aliases[i].origname, r->metadata.model.c_str())) {
-        g_strlcpy(img->camera_legacy_makermodel, legacy_aliases[i].mungedname, sizeof(img->camera_legacy_makermodel));
+    for(uint32 i = 0; i < (sizeof(legacy_aliases) / sizeof(legacy_aliases[1])); i++)
+      if(!strcmp(legacy_aliases[i].origname, r->metadata.model.c_str()))
+      {
+        g_strlcpy(img->camera_legacy_makermodel, legacy_aliases[i].mungedname,
+                  sizeof(img->camera_legacy_makermodel));
         break;
       }
 
@@ -387,7 +389,7 @@ dt_imageio_retval_t dt_imageio_open_rawspeed_sraw(dt_image_t *img, RawImage r, d
 #endif
     for(int j = 0; j < img->height; j++)
     {
-      const uint16_t *in = (uint16_t *) r->getData(0, j);
+      const uint16_t *in = (uint16_t *)r->getData(0, j);
       float *out = ((float *)buf) + (size_t)4 * j * img->width;
 
       for(int i = 0; i < img->width; i++, in += cpp, out += 4)
@@ -411,7 +413,7 @@ dt_imageio_retval_t dt_imageio_open_rawspeed_sraw(dt_image_t *img, RawImage r, d
 #endif
     for(int j = 0; j < img->height; j++)
     {
-      const uint16_t *in = (uint16_t *) r->getData(0, j);
+      const uint16_t *in = (uint16_t *)r->getData(0, j);
       float *out = ((float *)buf) + (size_t)4 * j * img->width;
 
       for(int i = 0; i < img->width; i++, in += cpp, out += 4)

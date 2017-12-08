@@ -95,20 +95,20 @@ typedef struct dt_iop_watermark_data_t
 
 typedef struct dt_iop_watermark_gui_data_t
 {
-  GtkWidget *watermarks;                             // watermark
-  GList     *watermarks_filenames;                   // the actual filenames. the dropdown lacks file extensions
-  GtkWidget *refresh;                                // refresh watermarks...
-  GtkWidget *align[9];                               // Alignment buttons
-  GtkWidget *opacity, *scale, *x_offset, *y_offset;  // opacity, scale, xoffs, yoffs
-  GtkWidget *sizeto;                                 // relative size to
+  GtkWidget *watermarks;                            // watermark
+  GList *watermarks_filenames;                      // the actual filenames. the dropdown lacks file extensions
+  GtkWidget *refresh;                               // refresh watermarks...
+  GtkWidget *align[9];                              // Alignment buttons
+  GtkWidget *opacity, *scale, *x_offset, *y_offset; // opacity, scale, xoffs, yoffs
+  GtkWidget *sizeto;                                // relative size to
   GtkWidget *rotate;
   GtkWidget *text;
   GtkWidget *colorpick;
   GtkWidget *fontsel;
 } dt_iop_watermark_gui_data_t;
 
-int legacy_params(dt_iop_module_t *self, const void *const old_params, const int old_version,
-                  void *new_params, const int new_version)
+int legacy_params(dt_iop_module_t *self, const void *const old_params, const int old_version, void *new_params,
+                  const int new_version)
 {
   if(old_version == 1 && new_version == 4)
   {
@@ -300,8 +300,7 @@ static gchar *_string_substitute(gchar *string, const gchar *search, const gchar
   return result;
 }
 
-static gchar *_watermark_get_svgdoc(dt_iop_module_t *self, dt_iop_watermark_data_t *data,
-                                    const dt_image_t *image)
+static gchar *_watermark_get_svgdoc(dt_iop_module_t *self, dt_iop_watermark_data_t *data, const dt_image_t *image)
 {
   gsize length;
 
@@ -328,8 +327,8 @@ static gchar *_watermark_get_svgdoc(dt_iop_module_t *self, dt_iop_watermark_data
 
   // EXIF datetime
   struct tm tt_exif = { 0 };
-  if(sscanf(image->exif_datetime_taken, "%d:%d:%d %d:%d:%d", &tt_exif.tm_year, &tt_exif.tm_mon,
-            &tt_exif.tm_mday, &tt_exif.tm_hour, &tt_exif.tm_min, &tt_exif.tm_sec) == 6)
+  if(sscanf(image->exif_datetime_taken, "%d:%d:%d %d:%d:%d", &tt_exif.tm_year, &tt_exif.tm_mon, &tt_exif.tm_mday,
+            &tt_exif.tm_hour, &tt_exif.tm_min, &tt_exif.tm_sec) == 6)
   {
     tt_exif.tm_year -= 1900;
     tt_exif.tm_mon--;
@@ -361,7 +360,7 @@ static gchar *_watermark_get_svgdoc(dt_iop_module_t *self, dt_iop_watermark_data
     // Simple text from watermark module
     gchar buffer[1024];
 
-    if (data->font[0] && data->text[0])
+    if(data->font[0] && data->text[0])
     {
       g_snprintf(buffer, sizeof(buffer), "%s", data->text);
       svgdoc = _string_substitute(svgdata, "$(WATERMARK_TEXT)", buffer);
@@ -383,17 +382,17 @@ static gchar *_watermark_get_svgdoc(dt_iop_module_t *self, dt_iop_watermark_data
         svgdata = svgdoc;
       }
 
-      switch (font_style)
+      switch(font_style)
       {
-      case PANGO_STYLE_OBLIQUE:
-        g_strlcpy(buffer, "oblique", sizeof(buffer));
-        break;
-      case PANGO_STYLE_ITALIC:
-        g_strlcpy(buffer, "italic", sizeof(buffer));
-        break;
-      default:
-        g_strlcpy(buffer, "normal", sizeof(buffer));
-        break;
+        case PANGO_STYLE_OBLIQUE:
+          g_strlcpy(buffer, "oblique", sizeof(buffer));
+          break;
+        case PANGO_STYLE_ITALIC:
+          g_strlcpy(buffer, "italic", sizeof(buffer));
+          break;
+        default:
+          g_strlcpy(buffer, "normal", sizeof(buffer));
+          break;
       }
       svgdoc = _string_substitute(svgdata, "$(WATERMARK_FONT_STYLE)", buffer);
       if(svgdoc != svgdata)
@@ -768,7 +767,6 @@ static gchar *_watermark_get_svgdoc(dt_iop_module_t *self, dt_iop_watermark_data
     g_free(longitude);
     g_free(elevation);
     g_free(location);
-
   }
   return svgdoc;
 }
@@ -795,8 +793,8 @@ void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const 
 
   /* create cairo memory surface */
   guint8 *image = (guint8 *)g_malloc0_n(roi_out->height, stride);
-  cairo_surface_t *surface = cairo_image_surface_create_for_data(image, CAIRO_FORMAT_ARGB32, roi_out->width,
-                                                                 roi_out->height, stride);
+  cairo_surface_t *surface
+      = cairo_image_surface_create_for_data(image, CAIRO_FORMAT_ARGB32, roi_out->width, roi_out->height, stride);
   if(cairo_surface_status(surface) != CAIRO_STATUS_SUCCESS)
   {
     //   fprintf(stderr,"Cairo surface error: %s\n",cairo_status_to_string(cairo_surface_status(surface)));
@@ -1014,8 +1012,7 @@ static void load_watermarks(const char *basedir, dt_iop_watermark_gui_data_t *g)
   if(dir)
   {
     const gchar *d_name;
-    while((d_name = g_dir_read_name(dir)))
-      files = g_list_append(files, g_strdup(d_name));
+    while((d_name = g_dir_read_name(dir))) files = g_list_append(files, g_strdup(d_name));
     g_dir_close(dir);
   }
 
@@ -1211,12 +1208,11 @@ void commit_params(struct dt_iop_module_t *self, dt_iop_params_t *p1, dt_dev_pix
   snprintf(d->filename, sizeof(d->filename), "%s", p->filename);
   memset(d->text, 0, sizeof(d->text));
   snprintf(d->text, sizeof(d->text), "%s", p->text);
-  for (int k=0; k<3; k++)
-    d->color[k] = p->color[k];
+  for(int k = 0; k < 3; k++) d->color[k] = p->color[k];
   memset(d->font, 0, sizeof(d->font));
   snprintf(d->font, sizeof(d->font), "%s", p->font);
 
-// fprintf(stderr,"Commit params: %s...\n",d->filename);
+  // fprintf(stderr,"Commit params: %s...\n",d->filename);
 }
 
 void init_pipe(struct dt_iop_module_t *self, dt_dev_pixelpipe_t *pipe, dt_dev_pixelpipe_iop_t *piece)
@@ -1261,12 +1257,21 @@ void init(dt_iop_module_t *module)
   module->params_size = sizeof(dt_iop_watermark_params_t);
   module->default_params = calloc(1, sizeof(dt_iop_watermark_params_t));
   module->default_enabled = 0;
-    module->priority = 971; // module order created by iop_dependencies.py, do not edit!
+  module->priority = 971; // module order created by iop_dependencies.py, do not edit!
   module->params_size = sizeof(dt_iop_watermark_params_t);
   module->gui_data = NULL;
-  dt_iop_watermark_params_t tmp = (dt_iop_watermark_params_t){
-    100.0, 100.0, 0.0, 0.0, 4, 0.0, DT_SCALE_IMAGE, { "darktable.svg" }, { "" }, {0.0, 0.0, 0.0}, {"DejaVu Sans 10"}
-  }; // opacity,scale,xoffs,yoffs,alignment
+  dt_iop_watermark_params_t tmp
+      = (dt_iop_watermark_params_t){ 100.0,
+                                     100.0,
+                                     0.0,
+                                     0.0,
+                                     4,
+                                     0.0,
+                                     DT_SCALE_IMAGE,
+                                     { "darktable.svg" },
+                                     { "" },
+                                     { 0.0, 0.0, 0.0 },
+                                     { "DejaVu Sans 10" } }; // opacity,scale,xoffs,yoffs,alignment
   memcpy(module->params, &tmp, sizeof(dt_iop_watermark_params_t));
   memcpy(module->default_params, &tmp, sizeof(dt_iop_watermark_params_t));
 }
@@ -1340,13 +1345,13 @@ void gui_init(struct dt_iop_module_t *self)
   // Text font
   label = dtgtk_reset_label_new(_("font"), self, &p->font, sizeof(p->font));
   str = dt_conf_get_string("plugins/darkroom/watermark/font");
-  g->fontsel = gtk_font_button_new_with_font(str==NULL?"DejaVu Sans 10":str);
+  g->fontsel = gtk_font_button_new_with_font(str == NULL ? "DejaVu Sans 10" : str);
   GList *childs = gtk_container_get_children(GTK_CONTAINER(gtk_bin_get_child(GTK_BIN(g->fontsel))));
   gtk_label_set_ellipsize(GTK_LABEL(childs->data), PANGO_ELLIPSIZE_MIDDLE);
   g_list_free(childs);
   gtk_widget_set_tooltip_text(g->fontsel, _("text font, tags:\n$(WATERMARK_FONT_FAMILY)\n"
                                             "$(WATERMARK_FONT_STYLE)\n$(WATERMARK_FONT_WEIGHT)"));
-  gtk_font_button_set_show_size (GTK_FONT_BUTTON(g->fontsel), FALSE);
+  gtk_font_button_set_show_size(GTK_FONT_BUTTON(g->fontsel), FALSE);
   g_free(str);
   gtk_grid_attach(GTK_GRID(self->widget), label, 0, line++, 1, 1);
   gtk_grid_attach_next_to(GTK_GRID(self->widget), g->fontsel, label, GTK_POS_RIGHT, 2, 1);
@@ -1388,7 +1393,7 @@ void gui_init(struct dt_iop_module_t *self)
   {
     g->align[i] = dtgtk_togglebutton_new(dtgtk_cairo_paint_alignment, CPF_STYLE_FLAT | (CPF_SPECIAL_FLAG << i));
     gtk_widget_set_size_request(GTK_WIDGET(g->align[i]), DT_PIXEL_APPLY_DPI(16), DT_PIXEL_APPLY_DPI(16));
-    gtk_grid_attach(GTK_GRID(bat), GTK_WIDGET(g->align[i]), i%3, i/3, 1, 1);
+    gtk_grid_attach(GTK_GRID(bat), GTK_WIDGET(g->align[i]), i % 3, i / 3, 1, 1);
     g_signal_connect(G_OBJECT(g->align[i]), "toggled", G_CALLBACK(alignment_callback), self);
   }
   gtk_grid_attach(GTK_GRID(self->widget), label, 0, line++, 1, 1);

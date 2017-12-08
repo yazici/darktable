@@ -122,17 +122,15 @@ static int job_canceled(lua_State *L)
   lua_getuservalue(L, 1);
   lua_getfield(L, -1, "cancel_callback");
   lua_pushvalue(L, -3);
-  lua_call(L,1,0);
+  lua_call(L, 1, 0);
   lua_pop(L, 2);
   return 0;
 }
 
 static void lua_job_cancelled(dt_progress_t *progress, gpointer user_data)
 {
-  dt_lua_async_call_alien(job_canceled,
-      0, NULL,NULL,
-      LUA_ASYNC_TYPENAME,"dt_lua_backgroundjob_t",progress,
-      LUA_ASYNC_DONE);
+  dt_lua_async_call_alien(job_canceled, 0, NULL, NULL, LUA_ASYNC_TYPENAME, "dt_lua_backgroundjob_t", progress,
+                          LUA_ASYNC_DONE);
 }
 
 static int lua_create_job(lua_State *L)
@@ -216,17 +214,16 @@ static int lua_job_valid(lua_State *L)
 static void on_mouse_over_image_changed(gpointer instance, gpointer user_data)
 {
   int imgid = dt_control_get_mouse_over_id();
-  if(imgid != -1) {
-  dt_lua_async_call_alien(dt_lua_event_trigger_wrapper,
-      0, NULL,NULL,
-      LUA_ASYNC_TYPENAME,"char*","mouse-over-image-changed",
-      LUA_ASYNC_TYPENAME,"dt_lua_image_t",imgid,
-      LUA_ASYNC_DONE);
-  } else {
-  dt_lua_async_call_alien(dt_lua_event_trigger_wrapper,
-      0, NULL,NULL,
-      LUA_ASYNC_TYPENAME,"char*","mouse-over-image-changed",
-      LUA_ASYNC_DONE);
+  if(imgid != -1)
+  {
+    dt_lua_async_call_alien(dt_lua_event_trigger_wrapper, 0, NULL, NULL, LUA_ASYNC_TYPENAME, "char*",
+                            "mouse-over-image-changed", LUA_ASYNC_TYPENAME, "dt_lua_image_t", imgid,
+                            LUA_ASYNC_DONE);
+  }
+  else
+  {
+    dt_lua_async_call_alien(dt_lua_event_trigger_wrapper, 0, NULL, NULL, LUA_ASYNC_TYPENAME, "char*",
+                            "mouse-over-image-changed", LUA_ASYNC_DONE);
   }
 }
 
@@ -276,7 +273,8 @@ int dt_lua_init_gui(lua_State *L)
     lua_pushcfunction(L, dt_lua_event_multiinstance_register);
     lua_pushcfunction(L, dt_lua_event_multiinstance_trigger);
     dt_lua_event_add(L, "mouse-over-image-changed");
-    dt_control_signal_connect(darktable.signals, DT_SIGNAL_MOUSE_OVER_IMAGE_CHANGE, G_CALLBACK(on_mouse_over_image_changed), NULL);
+    dt_control_signal_connect(darktable.signals, DT_SIGNAL_MOUSE_OVER_IMAGE_CHANGE,
+                              G_CALLBACK(on_mouse_over_image_changed), NULL);
   }
   return 0;
 }

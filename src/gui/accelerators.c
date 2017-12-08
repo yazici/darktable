@@ -87,8 +87,7 @@ static void dt_accel_path_lib_translated(char *s, size_t n, dt_lib_module_t *mod
            g_dpgettext2(NULL, "accel", path));
 }
 
-static void dt_accel_paths_slider_iop_translated(char *s[], size_t n, dt_iop_module_so_t *module,
-                                                 const char *path)
+static void dt_accel_paths_slider_iop_translated(char *s[], size_t n, dt_iop_module_so_t *module, const char *path)
 {
   snprintf(s[0], n, "<Darktable>/%s/%s/%s/%s", C_("accel", "image operations"), module->name(),
            g_dpgettext2(NULL, "accel", path), C_("accel", "increase"));
@@ -320,8 +319,8 @@ static gboolean _press_button_callback(GtkAccelGroup *accel_group, GObject *acce
   return TRUE;
 }
 
-static gboolean _tooltip_callback(GtkWidget *widget, gint x, gint y, gboolean keyboard_mode,
-                                  GtkTooltip *tooltip, gpointer user_data)
+static gboolean _tooltip_callback(GtkWidget *widget, gint x, gint y, gboolean keyboard_mode, GtkTooltip *tooltip,
+                                  gpointer user_data)
 {
   char *text = gtk_widget_get_tooltip_text(widget);
 
@@ -374,8 +373,8 @@ static gboolean bauhaus_slider_edit_callback(GtkAccelGroup *accel_group, GObject
   return TRUE;
 }
 
-static gboolean bauhaus_slider_increase_callback(GtkAccelGroup *accel_group, GObject *acceleratable,
-                                                 guint keyval, GdkModifierType modifier, gpointer data)
+static gboolean bauhaus_slider_increase_callback(GtkAccelGroup *accel_group, GObject *acceleratable, guint keyval,
+                                                 GdkModifierType modifier, gpointer data)
 {
   GtkWidget *slider = GTK_WIDGET(data);
 
@@ -388,8 +387,8 @@ static gboolean bauhaus_slider_increase_callback(GtkAccelGroup *accel_group, GOb
   return TRUE;
 }
 
-static gboolean bauhaus_slider_decrease_callback(GtkAccelGroup *accel_group, GObject *acceleratable,
-                                                 guint keyval, GdkModifierType modifier, gpointer data)
+static gboolean bauhaus_slider_decrease_callback(GtkAccelGroup *accel_group, GObject *acceleratable, guint keyval,
+                                                 GdkModifierType modifier, gpointer data)
 {
   GtkWidget *slider = GTK_WIDGET(data);
 
@@ -402,8 +401,8 @@ static gboolean bauhaus_slider_decrease_callback(GtkAccelGroup *accel_group, GOb
   return TRUE;
 }
 
-static gboolean bauhaus_slider_reset_callback(GtkAccelGroup *accel_group, GObject *acceleratable,
-                                              guint keyval, GdkModifierType modifier, gpointer data)
+static gboolean bauhaus_slider_reset_callback(GtkAccelGroup *accel_group, GObject *acceleratable, guint keyval,
+                                              GdkModifierType modifier, gpointer data)
 {
   GtkWidget *slider = GTK_WIDGET(data);
 
@@ -562,8 +561,7 @@ typedef struct
 
 static void preset_iop_module_callback_destroyer(gpointer data, GClosure *closure)
 {
-  preset_iop_module_callback_description *callback_description
-      = (preset_iop_module_callback_description *)data;
+  preset_iop_module_callback_description *callback_description = (preset_iop_module_callback_description *)data;
   g_free(callback_description->name);
   g_free(data);
 }
@@ -571,8 +569,7 @@ static gboolean preset_iop_module_callback(GtkAccelGroup *accel_group, GObject *
                                            GdkModifierType modifier, gpointer data)
 
 {
-  preset_iop_module_callback_description *callback_description
-      = (preset_iop_module_callback_description *)data;
+  preset_iop_module_callback_description *callback_description = (preset_iop_module_callback_description *)data;
   dt_iop_module_t *module = callback_description->module;
   const char *name = callback_description->name;
 
@@ -646,8 +643,7 @@ typedef struct
 
 static void preset_lib_module_callback_destroyer(gpointer data, GClosure *closure)
 {
-  preset_lib_module_callback_description *callback_description
-      = (preset_lib_module_callback_description *)data;
+  preset_lib_module_callback_description *callback_description = (preset_lib_module_callback_description *)data;
   g_free(callback_description->name);
   g_free(data);
 }
@@ -655,8 +651,7 @@ static gboolean preset_lib_module_callback(GtkAccelGroup *accel_group, GObject *
                                            GdkModifierType modifier, gpointer data)
 
 {
-  preset_lib_module_callback_description *callback_description
-      = (preset_lib_module_callback_description *)data;
+  preset_lib_module_callback_description *callback_description = (preset_lib_module_callback_description *)data;
   dt_lib_module_t *module = callback_description->module;
   const char *pn = callback_description->name;
 

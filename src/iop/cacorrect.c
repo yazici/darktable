@@ -93,15 +93,15 @@ typedef __m128 vfloat;
 #define STVFU(x, y) _mm_storeu_ps(&x, y)
 #define LVFU(x) _mm_loadu_ps(&x)
 
-#define STC2VFU(a, v)                                                                                        \
-  {                                                                                                          \
-    __m128 TST1V = _mm_loadu_ps(&a);                                                                         \
-    __m128 TST2V = _mm_unpacklo_ps(v, v);                                                                    \
-    vmask cmask = _mm_set_epi32(0xffffffff, 0, 0xffffffff, 0);                                               \
-    _mm_storeu_ps(&a, vself(cmask, TST1V, TST2V));                                                           \
-    TST1V = _mm_loadu_ps((&a) + 4);                                                                          \
-    TST2V = _mm_unpackhi_ps(v, v);                                                                           \
-    _mm_storeu_ps((&a) + 4, vself(cmask, TST1V, TST2V));                                                     \
+#define STC2VFU(a, v)                                                                                             \
+  {                                                                                                               \
+    __m128 TST1V = _mm_loadu_ps(&a);                                                                              \
+    __m128 TST2V = _mm_unpacklo_ps(v, v);                                                                         \
+    vmask cmask = _mm_set_epi32(0xffffffff, 0, 0xffffffff, 0);                                                    \
+    _mm_storeu_ps(&a, vself(cmask, TST1V, TST2V));                                                                \
+    TST1V = _mm_loadu_ps((&a) + 4);                                                                               \
+    TST2V = _mm_unpackhi_ps(v, v);                                                                                \
+    _mm_storeu_ps((&a) + 4, vself(cmask, TST1V, TST2V));                                                          \
   }
 
 static INLINE vfloat LC2VFU(float *a)
@@ -602,8 +602,7 @@ static void CA_correct(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *pie
               // store in rgb array the interpolated G value at R/B grid points using directional weighted
               // average
               rgb[1][indx] = (wtu * rgb[1][indx - v1] + wtd * rgb[1][indx + v1] + wtl * rgb[1][indx - 1]
-                              + wtr * rgb[1][indx + 1])
-                             / (wtu + wtd + wtl + wtr);
+                              + wtr * rgb[1][indx + 1]) / (wtu + wtd + wtl + wtr);
             }
 
             if(row > -1 && row < height)
@@ -636,8 +635,8 @@ static void CA_correct(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *pie
               vfloat temp2v
                   = vabsf(vabsf((rgb1v - rgbcv) - (LC2VFU(&rgb[1][indx + 4]) - LC2VFU(&rgb[c][indx + 4])))
                           + vabsf(LC2VFU(&rgb[1][indx - 4]) - LC2VFU(&rgb[c][indx - 4]) - rgb1v + rgbcv)
-                          - vabsf(LC2VFU(&rgb[1][indx - 4]) - LC2VFU(&rgb[c][indx - 4])
-                                  - LC2VFU(&rgb[1][indx + 4]) + LC2VFU(&rgb[c][indx + 4])));
+                          - vabsf(LC2VFU(&rgb[1][indx - 4]) - LC2VFU(&rgb[c][indx - 4]) - LC2VFU(&rgb[1][indx + 4])
+                                  + LC2VFU(&rgb[c][indx + 4])));
               STVFU(rbhpfh[indx >> 1], temp2v);
 
               // low and high pass 1D filters of G in vertical/horizontal directions
@@ -649,8 +648,7 @@ static void CA_correct(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *pie
                     epsv + vabsf(glpfvv
                                  - zd25v * (rgbcv + LC2VFU(&rgb[c][indx + v2]) + LC2VFU(&rgb[c][indx - v2]))));
               STVFU(rblpfh[indx >> 1],
-                    epsv + vabsf(glpfhv
-                                 - zd25v * (rgbcv + LC2VFU(&rgb[c][indx + 2]) + LC2VFU(&rgb[c][indx - 2]))));
+                    epsv + vabsf(glpfhv - zd25v * (rgbcv + LC2VFU(&rgb[c][indx + 2]) + LC2VFU(&rgb[c][indx - 2]))));
               STVFU(grblpfv[indx >> 1],
                     glpfvv + zd25v * (rgbcv + LC2VFU(&rgb[c][indx + v2]) + LC2VFU(&rgb[c][indx - v2])));
               STVFU(grblpfh[indx >> 1],
@@ -664,10 +662,10 @@ static void CA_correct(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *pie
                   fabsf((rgb[1][indx] - rgb[c][indx]) - (rgb[1][indx + v4] - rgb[c][indx + v4]))
                   + fabsf((rgb[1][indx - v4] - rgb[c][indx - v4]) - (rgb[1][indx] - rgb[c][indx]))
                   - fabsf((rgb[1][indx - v4] - rgb[c][indx - v4]) - (rgb[1][indx + v4] - rgb[c][indx + v4])));
-              rbhpfh[indx >> 1] = fabsf(
-                  fabsf((rgb[1][indx] - rgb[c][indx]) - (rgb[1][indx + 4] - rgb[c][indx + 4]))
-                  + fabsf((rgb[1][indx - 4] - rgb[c][indx - 4]) - (rgb[1][indx] - rgb[c][indx]))
-                  - fabsf((rgb[1][indx - 4] - rgb[c][indx - 4]) - (rgb[1][indx + 4] - rgb[c][indx + 4])));
+              rbhpfh[indx >> 1]
+                  = fabsf(fabsf((rgb[1][indx] - rgb[c][indx]) - (rgb[1][indx + 4] - rgb[c][indx + 4]))
+                          + fabsf((rgb[1][indx - 4] - rgb[c][indx - 4]) - (rgb[1][indx] - rgb[c][indx]))
+                          - fabsf((rgb[1][indx - 4] - rgb[c][indx - 4]) - (rgb[1][indx + 4] - rgb[c][indx + 4])));
 
               // low and high pass 1D filters of G in vertical/horizontal directions
               float glpfv = 0.25f * (2.f * rgb[1][indx] + rgb[1][indx + v2] + rgb[1][indx - v2]);
@@ -676,8 +674,7 @@ static void CA_correct(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *pie
                   = eps + fabsf(glpfv - 0.25f * (2.f * rgb[c][indx] + rgb[c][indx + v2] + rgb[c][indx - v2]));
               rblpfh[indx >> 1]
                   = eps + fabsf(glpfh - 0.25f * (2.f * rgb[c][indx] + rgb[c][indx + 2] + rgb[c][indx - 2]));
-              grblpfv[indx >> 1]
-                  = glpfv + 0.25f * (2.f * rgb[c][indx] + rgb[c][indx + v2] + rgb[c][indx - v2]);
+              grblpfv[indx >> 1] = glpfv + 0.25f * (2.f * rgb[c][indx] + rgb[c][indx + v2] + rgb[c][indx - v2]);
               grblpfh[indx >> 1] = glpfh + 0.25f * (2.f * rgb[c][indx] + rgb[c][indx + 2] + rgb[c][indx - 2]);
             }
           }
@@ -722,18 +719,16 @@ static void CA_correct(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *pie
               // solve for the interpolation position that minimizes colour difference variance over the tile
 
               // vertical
-              vfloat gdiffv
-                  = zd3125v * (LC2VFU(&rgb[1][indx + ts]) - LC2VFU(&rgb[1][indx - ts]))
-                    + zd09375v * (LC2VFU(&rgb[1][indx + ts + 1]) - LC2VFU(&rgb[1][indx - ts + 1])
-                                  + LC2VFU(&rgb[1][indx + ts - 1]) - LC2VFU(&rgb[1][indx - ts - 1]));
+              vfloat gdiffv = zd3125v * (LC2VFU(&rgb[1][indx + ts]) - LC2VFU(&rgb[1][indx - ts]))
+                              + zd09375v * (LC2VFU(&rgb[1][indx + ts + 1]) - LC2VFU(&rgb[1][indx - ts + 1])
+                                            + LC2VFU(&rgb[1][indx + ts - 1]) - LC2VFU(&rgb[1][indx - ts - 1]));
               vfloat deltgrbv = LC2VFU(&rgb[c][indx]) - LC2VFU(&rgb[1][indx]);
 
-              vfloat gradwtv
-                  = vabsf(zd25v * LVFU(rbhpfv[indx >> 1])
-                          + zd125v * (LVFU(rbhpfv[(indx >> 1) + 1]) + LVFU(rbhpfv[(indx >> 1) - 1])))
-                    * (LVFU(grblpfv[(indx >> 1) - v1]) + LVFU(grblpfv[(indx >> 1) + v1]))
-                    / (epsv + zd1v * (LVFU(grblpfv[(indx >> 1) - v1]) + LVFU(grblpfv[(indx >> 1) + v1]))
-                       + LVFU(rblpfv[(indx >> 1) - v1]) + LVFU(rblpfv[(indx >> 1) + v1]));
+              vfloat gradwtv = vabsf(zd25v * LVFU(rbhpfv[indx >> 1])
+                                     + zd125v * (LVFU(rbhpfv[(indx >> 1) + 1]) + LVFU(rbhpfv[(indx >> 1) - 1])))
+                               * (LVFU(grblpfv[(indx >> 1) - v1]) + LVFU(grblpfv[(indx >> 1) + v1]))
+                               / (epsv + zd1v * (LVFU(grblpfv[(indx >> 1) - v1]) + LVFU(grblpfv[(indx >> 1) + v1]))
+                                  + LVFU(rblpfv[(indx >> 1) - v1]) + LVFU(rblpfv[(indx >> 1) + v1]));
 
               coeff00v += gradwtv * deltgrbv * deltgrbv;
               coeff01v += gradwtv * gdiffv * deltgrbv;
@@ -777,15 +772,15 @@ static void CA_correct(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *pie
 
               // vertical
               float gdiff = 0.3125f * (rgb[1][indx + ts] - rgb[1][indx - ts])
-                            + 0.09375f * (rgb[1][indx + ts + 1] - rgb[1][indx - ts + 1]
-                                          + rgb[1][indx + ts - 1] - rgb[1][indx - ts - 1]);
+                            + 0.09375f * (rgb[1][indx + ts + 1] - rgb[1][indx - ts + 1] + rgb[1][indx + ts - 1]
+                                          - rgb[1][indx - ts - 1]);
               float deltgrb = (rgb[c][indx] - rgb[1][indx]);
 
-              float gradwt = fabsf(0.25f * rbhpfv[indx >> 1]
-                                   + 0.125f * (rbhpfv[(indx >> 1) + 1] + rbhpfv[(indx >> 1) - 1]))
-                             * (grblpfv[(indx >> 1) - v1] + grblpfv[(indx >> 1) + v1])
-                             / (eps + 0.1f * (grblpfv[(indx >> 1) - v1] + grblpfv[(indx >> 1) + v1])
-                                + rblpfv[(indx >> 1) - v1] + rblpfv[(indx >> 1) + v1]);
+              float gradwt
+                  = fabsf(0.25f * rbhpfv[indx >> 1] + 0.125f * (rbhpfv[(indx >> 1) + 1] + rbhpfv[(indx >> 1) - 1]))
+                    * (grblpfv[(indx >> 1) - v1] + grblpfv[(indx >> 1) + v1])
+                    / (eps + 0.1f * (grblpfv[(indx >> 1) - v1] + grblpfv[(indx >> 1) + v1])
+                       + rblpfv[(indx >> 1) - v1] + rblpfv[(indx >> 1) + v1]);
 
               coeff[0][0][c >> 1] += gradwt * deltgrb * deltgrb;
               coeff[0][1][c >> 1] += gradwt * gdiff * deltgrb;
@@ -894,8 +889,8 @@ static void CA_correct(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *pie
           {
             if(blockdenom[dir][c])
             {
-              blockvar[dir][c]
-                  = blocksqave[dir][c] / blockdenom[dir][c] - SQR(blockave[dir][c] / blockdenom[dir][c]);
+              blockvar[dir][c] = blocksqave[dir][c] / blockdenom[dir][c]
+                                 - SQR(blockave[dir][c] / blockdenom[dir][c]);
             }
             else
             {
@@ -930,8 +925,7 @@ static void CA_correct(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *pie
               for(int i = 0; i < 2; i++)
               {
                 blockshifts[hblock][c][i] = blockshifts[2 * hblsz + hblock][c][i];
-                blockshifts[(vblsz - 1) * hblsz + hblock][c][i]
-                    = blockshifts[(vblsz - 3) * hblsz + hblock][c][i];
+                blockshifts[(vblsz - 1) * hblsz + hblock][c][i] = blockshifts[(vblsz - 3) * hblsz + hblock][c][i];
               }
             }
           }
@@ -1025,8 +1019,8 @@ static void CA_correct(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *pie
                         }
                         powVblock *= vblock;
                       }
-                      shiftmat[c][dir][(polyord * i + j)]
-                          += powVblockInit * powHblockInit * bstemp[dir] * blockwt[vblock * hblsz + hblock];
+                      shiftmat[c][dir][(polyord * i + j)] += powVblockInit * powHblockInit * bstemp[dir]
+                                                             * blockwt[vblock * hblsz + hblock];
                       powHblockInit *= hblock;
                     }
                     powVblockInit *= vblock;
@@ -1238,8 +1232,7 @@ static void CA_correct(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *pie
                   // store in rgb array the interpolated G value at R/B grid points using directional weighted
                   // average
                   rgb[1][indx] = (wtu * rgb[1][indx - v1] + wtd * rgb[1][indx + v1] + wtl * rgb[1][indx - 1]
-                                  + wtr * rgb[1][indx + 1])
-                                 / (wtu + wtd + wtl + wtr);
+                                  + wtr * rgb[1][indx + 1]) / (wtu + wtd + wtl + wtr);
                 }
 
                 if(row > -1 && row < height && col > -1 && col < width)
@@ -1353,8 +1346,8 @@ static void CA_correct(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *pie
           // this loop does not deserve vectorization in mainly because the most expensive part with the
           // divisions does not happen often (less than 1/10 in my tests)
           for(int rr = 8; rr < rr1 - 8; rr++)
-            for(int cc = 8 + (FC(rr, 2, filters) & 1), c = FC(rr, cc, filters), indx = rr * ts + cc;
-                cc < cc1 - 8; cc += 2, indx += 2)
+            for(int cc = 8 + (FC(rr, 2, filters) & 1), c = FC(rr, cc, filters), indx = rr * ts + cc; cc < cc1 - 8;
+                cc += 2, indx += 2)
             {
 
               float grbdiffold = rgb[1][indx] - rgb[c][indx];
@@ -1387,8 +1380,8 @@ static void CA_correct(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *pie
                 float p1 = 1.0f / (eps + fabsf(rgb[1][indx] - gshift[(indx - GRBdir[1][c]) >> 1]));
                 float p2 = 1.0f / (eps + fabsf(rgb[1][indx] - gshift[((rr - GRBdir[0][c]) * ts + cc) >> 1]));
                 float p3
-                    = 1.0f / (eps + fabsf(rgb[1][indx]
-                                          - gshift[((rr - GRBdir[0][c]) * ts + cc - GRBdir[1][c]) >> 1]));
+                    = 1.0f
+                      / (eps + fabsf(rgb[1][indx] - gshift[((rr - GRBdir[0][c]) * ts + cc - GRBdir[1][c]) >> 1]));
 
                 grbdiffint = (p0 * grbdiff[indx >> 1] + p1 * grbdiff[(indx - GRBdir[1][c]) >> 1]
                               + p2 * grbdiff[((rr - GRBdir[0][c]) * ts + cc) >> 1]
@@ -1415,8 +1408,7 @@ static void CA_correct(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *pie
           {
             int c = FC(rr + top, left + border + (FC(rr + top, 2, filters) & 1), filters);
 
-            for(int row = rr + top, cc = border + (FC(rr, 2, filters) & 1),
-                    indx = (row * width + cc + left) >> 1;
+            for(int row = rr + top, cc = border + (FC(rr, 2, filters) & 1), indx = (row * width + cc + left) >> 1;
                 cc < cc1 - border; cc += 2, indx++)
             {
               //               int col = cc + left;
@@ -1452,8 +1444,7 @@ static void CA_correct(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *pie
 #endif
 
       for(int row = 0; row < height; row++)
-        for(int col = 0 + (FC(row, 0, filters) & 1), indx = (row * width + col) >> 1; col < width;
-            col += 2, indx++)
+        for(int col = 0 + (FC(row, 0, filters) & 1), indx = (row * width + col) >> 1; col < width; col += 2, indx++)
         {
           out[row * width + col] = RawDataTmp[indx];
         }
@@ -1517,7 +1508,7 @@ void init(dt_iop_module_t *module)
   module->default_enabled = 0;
 
   // we come just before demosaicing.
-    module->priority = 72; // module order created by iop_dependencies.py, do not edit!
+  module->priority = 72; // module order created by iop_dependencies.py, do not edit!
   module->params_size = sizeof(dt_iop_cacorrect_params_t);
   module->gui_data = NULL;
 }

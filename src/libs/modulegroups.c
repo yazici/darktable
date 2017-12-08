@@ -61,8 +61,8 @@ static gboolean _lib_modulegroups_test(dt_lib_module_t *self, uint32_t group, ui
 static void _lib_modulegroups_switch_group(dt_lib_module_t *self, dt_iop_module_t *module);
 
 /* hook up with viewmanager view change to initialize modulegroup */
-static void _lib_modulegroups_viewchanged_callback(gpointer instance, dt_view_t *old_view,
-                                                   dt_view_t *new_view, gpointer data);
+static void _lib_modulegroups_viewchanged_callback(gpointer instance, dt_view_t *old_view, dt_view_t *new_view,
+                                                   gpointer data);
 
 const char *name(dt_lib_module_t *self)
 {
@@ -71,7 +71,7 @@ const char *name(dt_lib_module_t *self)
 
 const char **views(dt_lib_module_t *self)
 {
-  static const char *v[] = {"darkroom", NULL};
+  static const char *v[] = { "darkroom", NULL };
   return v;
 }
 
@@ -104,15 +104,13 @@ void gui_init(dt_lib_module_t *self)
 
   /* favorites */
   d->buttons[DT_MODULEGROUP_FAVORITES] = dtgtk_togglebutton_new(dtgtk_cairo_paint_modulegroup_favorites, pf);
-  g_signal_connect(d->buttons[DT_MODULEGROUP_FAVORITES], "toggled", G_CALLBACK(_lib_modulegroups_toggle),
-                   self);
+  g_signal_connect(d->buttons[DT_MODULEGROUP_FAVORITES], "toggled", G_CALLBACK(_lib_modulegroups_toggle), self);
   gtk_widget_set_tooltip_text(d->buttons[DT_MODULEGROUP_FAVORITES],
                               _("show only your favourite modules (selected in `more modules' below)"));
 
   /* active */
   d->buttons[DT_MODULEGROUP_ACTIVE_PIPE] = dtgtk_togglebutton_new(dtgtk_cairo_paint_modulegroup_active, pf);
-  g_signal_connect(d->buttons[DT_MODULEGROUP_ACTIVE_PIPE], "toggled", G_CALLBACK(_lib_modulegroups_toggle),
-                   self);
+  g_signal_connect(d->buttons[DT_MODULEGROUP_ACTIVE_PIPE], "toggled", G_CALLBACK(_lib_modulegroups_toggle), self);
   gtk_widget_set_tooltip_text(d->buttons[DT_MODULEGROUP_ACTIVE_PIPE], _("show only active modules"));
 
   /* basic */
@@ -185,8 +183,8 @@ void gui_cleanup(dt_lib_module_t *self)
   self->data = NULL;
 }
 
-static void _lib_modulegroups_viewchanged_callback(gpointer instance, dt_view_t *old_view,
-                                                   dt_view_t *new_view, gpointer data)
+static void _lib_modulegroups_viewchanged_callback(gpointer instance, dt_view_t *old_view, dt_view_t *new_view,
+                                                   gpointer data)
 {
 }
 
@@ -271,8 +269,7 @@ static void _lib_modulegroups_update_iop_visibility(dt_lib_module_t *self)
 
         default:
         {
-          if(_lib_modulegroups_test(self, d->current, module->groups())
-             && module->so->state != dt_iop_state_HIDDEN
+          if(_lib_modulegroups_test(self, d->current, module->groups()) && module->so->state != dt_iop_state_HIDDEN
              && (!(module->flags() & IOP_FLAGS_DEPRECATED) || module->enabled))
             gtk_widget_show(w);
           else
@@ -293,8 +290,7 @@ static void _lib_modulegroups_toggle(GtkWidget *button, gpointer user_data)
 
   /* block all button callbacks */
   for(int k = 0; k < DT_MODULEGROUP_SIZE; k++)
-    g_signal_handlers_block_matched(d->buttons[k], G_SIGNAL_MATCH_FUNC, 0, 0, NULL, _lib_modulegroups_toggle,
-                                    NULL);
+    g_signal_handlers_block_matched(d->buttons[k], G_SIGNAL_MATCH_FUNC, 0, 0, NULL, _lib_modulegroups_toggle, NULL);
 
   /* deactivate all buttons */
   uint32_t cb = 0;
@@ -316,8 +312,8 @@ static void _lib_modulegroups_toggle(GtkWidget *button, gpointer user_data)
 
   /* unblock all button callbacks */
   for(int k = 0; k < DT_MODULEGROUP_SIZE; k++)
-    g_signal_handlers_unblock_matched(d->buttons[k], G_SIGNAL_MATCH_FUNC, 0, 0, NULL,
-                                      _lib_modulegroups_toggle, NULL);
+    g_signal_handlers_unblock_matched(d->buttons[k], G_SIGNAL_MATCH_FUNC, 0, 0, NULL, _lib_modulegroups_toggle,
+                                      NULL);
 
   /* update visibility */
   _lib_modulegroups_update_iop_visibility(self);

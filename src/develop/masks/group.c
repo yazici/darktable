@@ -35,8 +35,7 @@ static int dt_group_events_mouse_scrolled(struct dt_iop_module_t *module, float 
       return dt_circle_events_mouse_scrolled(module, pzx, pzy, up, state, sel, fpt->parentid, gui,
                                              gui->group_edited);
     else if(sel->type & DT_MASKS_PATH)
-      return dt_path_events_mouse_scrolled(module, pzx, pzy, up, state, sel, fpt->parentid, gui,
-                                           gui->group_edited);
+      return dt_path_events_mouse_scrolled(module, pzx, pzy, up, state, sel, fpt->parentid, gui, gui->group_edited);
     else if(sel->type & DT_MASKS_GRADIENT)
       return dt_gradient_events_mouse_scrolled(module, pzx, pzy, up, state, sel, fpt->parentid, gui,
                                                gui->group_edited);
@@ -50,9 +49,9 @@ static int dt_group_events_mouse_scrolled(struct dt_iop_module_t *module, float 
   return 0;
 }
 
-static int dt_group_events_button_pressed(struct dt_iop_module_t *module, float pzx, float pzy,
-                                          double pressure, int which, int type, uint32_t state,
-                                          dt_masks_form_t *form, dt_masks_form_gui_t *gui)
+static int dt_group_events_button_pressed(struct dt_iop_module_t *module, float pzx, float pzy, double pressure,
+                                          int which, int type, uint32_t state, dt_masks_form_t *form,
+                                          dt_masks_form_gui_t *gui)
 {
   if(gui->group_edited != gui->group_selected)
   {
@@ -75,20 +74,20 @@ static int dt_group_events_button_pressed(struct dt_iop_module_t *module, float 
     dt_masks_form_t *sel = dt_masks_get_from_id(darktable.develop, fpt->formid);
     if(!sel) return 0;
     if(sel->type & DT_MASKS_CIRCLE)
-      return dt_circle_events_button_pressed(module, pzx, pzy, pressure, which, type, state, sel,
-                                             fpt->parentid, gui, gui->group_edited);
+      return dt_circle_events_button_pressed(module, pzx, pzy, pressure, which, type, state, sel, fpt->parentid,
+                                             gui, gui->group_edited);
     else if(sel->type & DT_MASKS_PATH)
-      return dt_path_events_button_pressed(module, pzx, pzy, pressure, which, type, state, sel, fpt->parentid,
-                                           gui, gui->group_edited);
+      return dt_path_events_button_pressed(module, pzx, pzy, pressure, which, type, state, sel, fpt->parentid, gui,
+                                           gui->group_edited);
     else if(sel->type & DT_MASKS_GRADIENT)
-      return dt_gradient_events_button_pressed(module, pzx, pzy, pressure, which, type, state, sel,
-                                               fpt->parentid, gui, gui->group_edited);
+      return dt_gradient_events_button_pressed(module, pzx, pzy, pressure, which, type, state, sel, fpt->parentid,
+                                               gui, gui->group_edited);
     else if(sel->type & DT_MASKS_ELLIPSE)
-      return dt_ellipse_events_button_pressed(module, pzx, pzy, pressure, which, type, state, sel,
-                                              fpt->parentid, gui, gui->group_edited);
+      return dt_ellipse_events_button_pressed(module, pzx, pzy, pressure, which, type, state, sel, fpt->parentid,
+                                              gui, gui->group_edited);
     else if(sel->type & DT_MASKS_BRUSH)
-      return dt_brush_events_button_pressed(module, pzx, pzy, pressure, which, type, state, sel,
-                                            fpt->parentid, gui, gui->group_edited);
+      return dt_brush_events_button_pressed(module, pzx, pzy, pressure, which, type, state, sel, fpt->parentid,
+                                            gui, gui->group_edited);
   }
   return 0;
 }
@@ -230,7 +229,7 @@ static void dt_group_events_post_expose(cairo_t *cr, float zoom_scale, dt_masks_
   {
     dt_masks_point_group_t *fpt = (dt_masks_point_group_t *)fpts->data;
     dt_masks_form_t *sel = dt_masks_get_from_id(darktable.develop, fpt->formid);
-    if (!sel) return;
+    if(!sel) return;
     if(sel->type & DT_MASKS_CIRCLE)
       dt_circle_events_post_expose(cr, zoom_scale, gui, pos);
     else if(sel->type & DT_MASKS_PATH)
@@ -316,7 +315,7 @@ static int dt_group_get_mask(dt_iop_module_t *module, dt_dev_pixelpipe_iop_t *pi
         _inverse_mask(module, piece, sel, &bufs[pos], &w[pos], &h[pos], &px[pos], &py[pos]);
         if(darktable.unmuted & DT_DEBUG_PERF)
           dt_print(DT_DEBUG_MASKS, "[masks %s] inverse took %0.04f sec\n", sel->name, dt_get_wtime() - start2);
-//         start2 = dt_get_wtime();
+        //         start2 = dt_get_wtime();
       }
       op[pos] = fpt->opacity;
       states[pos] = fpt->state;
@@ -422,7 +421,7 @@ static int dt_group_get_mask(dt_iop_module_t *module, dt_dev_pixelpipe_iop_t *pi
 
     if(darktable.unmuted & DT_DEBUG_PERF)
       dt_print(DT_DEBUG_MASKS, "[masks %d] combine took %0.04f sec\n", i, dt_get_wtime() - start2);
-//     start2 = dt_get_wtime();
+    //     start2 = dt_get_wtime();
   }
 
   free(op);
@@ -510,8 +509,8 @@ int dt_masks_group_render(dt_iop_module_t *module, dt_dev_pixelpipe_iop_t *piece
   return 1;
 }
 
-static int dt_group_get_mask_roi(dt_iop_module_t *module, dt_dev_pixelpipe_iop_t *piece,
-                                 dt_masks_form_t *form, const dt_iop_roi_t *roi, float *buffer)
+static int dt_group_get_mask_roi(dt_iop_module_t *module, dt_dev_pixelpipe_iop_t *piece, dt_masks_form_t *form,
+                                 const dt_iop_roi_t *roi, float *buffer)
 {
   double start2 = dt_get_wtime();
   const guint nb = g_list_length(form->points);

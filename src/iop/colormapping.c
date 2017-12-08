@@ -182,8 +182,7 @@ static void capture_histogram(const float *col, const int width, const int heigh
 
   // accumulated start distribution of G1 G2
   for(int k = 1; k < HISTN; k++) hist[k] += hist[k - 1];
-  for(int k = 0; k < HISTN; k++)
-    hist[k] = (int)CLAMP(hist[k] * (HISTN / (float)hist[HISTN - 1]), 0, HISTN - 1);
+  for(int k = 0; k < HISTN; k++) hist[k] = (int)CLAMP(hist[k] * (HISTN / (float)hist[HISTN - 1]), 0, HISTN - 1);
   // for(int i=0;i<100;i++) printf("#[%d] %d \n", (int)CLAMP(HISTN*i/100.0, 0, HISTN-1),
   // hist[(int)CLAMP(HISTN*i/100.0, 0, HISTN-1)]);
 }
@@ -266,8 +265,7 @@ static void get_clusters(const float *col, const int n, float mean[n][2], float 
     if(dist2 < mdist) mdist = dist2;
   }
   if(mdist < 1.0e-6f)
-    for(int k = 0; k < n; k++)
-      weight[k] = weight[k] < 0.0f ? 1.0f : 0.0f; // correction in case of direct hits
+    for(int k = 0; k < n; k++) weight[k] = weight[k] < 0.0f ? 1.0f : 0.0f; // correction in case of direct hits
   float sum = 0.0f;
   for(int k = 0; k < n; k++) sum += weight[k];
   if(sum > 0.0f)
@@ -298,8 +296,8 @@ static void kmeans(const float *col, const int width, const int height, const in
   const int nit = 40;                       // number of iterations
   const int samples = width * height * 0.2; // samples: only a fraction of the buffer.
 
-  float(*const mean)[2] = malloc(2 * n * sizeof(float));
-  float(*const var)[2] = malloc(2 * n * sizeof(float));
+  float (*const mean)[2] = malloc(2 * n * sizeof(float));
+  float (*const var)[2] = malloc(2 * n * sizeof(float));
   int *const cnt = malloc(n * sizeof(int));
   int count;
 
@@ -477,17 +475,17 @@ void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const 
     // get mapping from input clusters to target clusters
     int *const mapio = malloc(data->n * sizeof(int));
 
-    get_cluster_mapping(data->n, data->target_mean, data->target_weight, data->source_mean,
-                        data->source_weight, dominance, mapio);
+    get_cluster_mapping(data->n, data->target_mean, data->target_weight, data->source_mean, data->source_weight,
+                        dominance, mapio);
 
-    float(*const var_ratio)[2] = malloc(2 * data->n * sizeof(float));
+    float (*const var_ratio)[2] = malloc(2 * data->n * sizeof(float));
 
     for(int i = 0; i < data->n; i++)
     {
-      var_ratio[i][0]
-          = (data->target_var[i][0] > 0.0f) ? data->source_var[mapio[i]][0] / data->target_var[i][0] : 0.0f;
-      var_ratio[i][1]
-          = (data->target_var[i][1] > 0.0f) ? data->source_var[mapio[i]][1] / data->target_var[i][1] : 0.0f;
+      var_ratio[i][0] = (data->target_var[i][0] > 0.0f) ? data->source_var[mapio[i]][0] / data->target_var[i][0]
+                                                        : 0.0f;
+      var_ratio[i][1] = (data->target_var[i][1] > 0.0f) ? data->source_var[mapio[i]][1] / data->target_var[i][1]
+                                                        : 0.0f;
     }
 
 // first get delta L of equalized L minus original image L, scaled to fit into [0 .. 100]
@@ -502,7 +500,8 @@ void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const 
         const float L = in[j];
         out[j] = 0.5f * ((L * (1.0f - equalization)
                           + data->source_ihist[data->target_hist[(int)CLAMP(
-                                HISTN * L / 100.0f, 0.0f, (float)HISTN - 1.0f)]] * equalization) - L) + 50.0f;
+                                HISTN * L / 100.0f, 0.0f, (float)HISTN - 1.0f)]] * equalization) - L)
+                 + 50.0f;
         out[j] = CLAMP(out[j], 0.0f, 100.0f);
         j += ch;
       }
@@ -546,10 +545,10 @@ void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const 
         out[j + 1] = out[j + 2] = 0.0f;
         for(int c = 0; c < data->n; c++)
         {
-          out[j + 1] += weight[c] * ((Lab[1] - data->target_mean[c][0]) * var_ratio[c][0]
-                                     + data->source_mean[mapio[c]][0]);
-          out[j + 2] += weight[c] * ((Lab[2] - data->target_mean[c][1]) * var_ratio[c][1]
-                                     + data->source_mean[mapio[c]][1]);
+          out[j + 1] += weight[c]
+                        * ((Lab[1] - data->target_mean[c][0]) * var_ratio[c][0] + data->source_mean[mapio[c]][0]);
+          out[j + 2] += weight[c]
+                        * ((Lab[2] - data->target_mean[c][1]) * var_ratio[c][1] + data->source_mean[mapio[c]][1]);
         }
         out[j + 3] = in[j + 3];
         j += ch;
@@ -611,8 +610,7 @@ int process_cl(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, cl_m
     g->height = height;
     g->ch = ch;
 
-    if(g->buffer)
-      err = dt_opencl_copy_device_to_host(devid, g->buffer, dev_in, width, height, ch * sizeof(float));
+    if(g->buffer) err = dt_opencl_copy_device_to_host(devid, g->buffer, dev_in, width, height, ch * sizeof(float));
 
     dt_pthread_mutex_unlock(&g->lock);
 
@@ -625,16 +623,16 @@ int process_cl(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, cl_m
   {
     // get mapping from input clusters to target clusters
     int mapio[MAXN];
-    get_cluster_mapping(data->n, data->target_mean, data->target_weight, data->source_mean,
-                        data->source_weight, dominance, mapio);
+    get_cluster_mapping(data->n, data->target_mean, data->target_weight, data->source_mean, data->source_weight,
+                        dominance, mapio);
 
     float var_ratio[MAXN][2];
     for(int i = 0; i < data->n; i++)
     {
-      var_ratio[i][0]
-          = (data->target_var[i][0] > 0.0f) ? data->source_var[mapio[i]][0] / data->target_var[i][0] : 0.0f;
-      var_ratio[i][1]
-          = (data->target_var[i][1] > 0.0f) ? data->source_var[mapio[i]][1] / data->target_var[i][1] : 0.0f;
+      var_ratio[i][0] = (data->target_var[i][0] > 0.0f) ? data->source_var[mapio[i]][0] / data->target_var[i][0]
+                                                        : 0.0f;
+      var_ratio[i][1] = (data->target_var[i][1] > 0.0f) ? data->source_var[mapio[i]][1] / data->target_var[i][1]
+                                                        : 0.0f;
     }
 
     dev_tmp = dt_opencl_alloc_device(devid, width, height, 4 * sizeof(float));
@@ -643,16 +641,13 @@ int process_cl(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, cl_m
     dev_target_hist = dt_opencl_copy_host_to_device_constant(devid, sizeof(int) * HISTN, data->target_hist);
     if(dev_target_hist == NULL) goto error;
 
-    dev_source_ihist
-        = dt_opencl_copy_host_to_device_constant(devid, sizeof(float) * HISTN, data->source_ihist);
+    dev_source_ihist = dt_opencl_copy_host_to_device_constant(devid, sizeof(float) * HISTN, data->source_ihist);
     if(dev_source_ihist == NULL) goto error;
 
-    dev_target_mean
-        = dt_opencl_copy_host_to_device_constant(devid, sizeof(float) * MAXN * 2, data->target_mean);
+    dev_target_mean = dt_opencl_copy_host_to_device_constant(devid, sizeof(float) * MAXN * 2, data->target_mean);
     if(dev_target_mean == NULL) goto error;
 
-    dev_source_mean
-        = dt_opencl_copy_host_to_device_constant(devid, sizeof(float) * MAXN * 2, data->source_mean);
+    dev_source_mean = dt_opencl_copy_host_to_device_constant(devid, sizeof(float) * MAXN * 2, data->source_mean);
     if(dev_source_mean == NULL) goto error;
 
     dev_var_ratio = dt_opencl_copy_host_to_device_constant(devid, sizeof(float) * MAXN * 2, var_ratio);
@@ -741,8 +736,7 @@ error:
 
 
 void tiling_callback(struct dt_iop_module_t *self, struct dt_dev_pixelpipe_iop_t *piece,
-                     const dt_iop_roi_t *roi_in, const dt_iop_roi_t *roi_out,
-                     struct dt_develop_tiling_t *tiling)
+                     const dt_iop_roi_t *roi_in, const dt_iop_roi_t *roi_out, struct dt_develop_tiling_t *tiling)
 {
   const float scale = piece->iscale / roi_in->scale;
   const float sigma_s = 50.0f / scale;
@@ -755,8 +749,7 @@ void tiling_callback(struct dt_iop_module_t *self, struct dt_dev_pixelpipe_iop_t
   const size_t basebuffer = width * height * channels * sizeof(float);
 
   tiling->factor = 3.0f + (float)dt_bilateral_memory_use(width, height, sigma_s, sigma_r) / basebuffer;
-  tiling->maxbuf
-      = fmax(1.0f, (float)dt_bilateral_singlebuffer_size(width, height, sigma_s, sigma_r) / basebuffer);
+  tiling->maxbuf = fmax(1.0f, (float)dt_bilateral_singlebuffer_size(width, height, sigma_s, sigma_r) / basebuffer);
   tiling->overhead = 0;
   tiling->overlap = ceilf(4 * sigma_s);
   tiling->xalign = 1;
@@ -868,7 +861,7 @@ void init(dt_iop_module_t *module)
   module->params = calloc(1, sizeof(dt_iop_colormapping_params_t));
   module->default_params = calloc(1, sizeof(dt_iop_colormapping_params_t));
   module->default_enabled = 0;
-    module->priority = 507; // module order created by iop_dependencies.py, do not edit!
+  module->priority = 507; // module order created by iop_dependencies.py, do not edit!
   module->params_size = sizeof(dt_iop_colormapping_params_t);
   module->gui_data = NULL;
 }
@@ -901,7 +894,7 @@ void cleanup_global(dt_iop_module_so_t *module)
 void reload_defaults(dt_iop_module_t *module)
 {
   dt_iop_colormapping_params_t tmp
-      = (dt_iop_colormapping_params_t){ .flag = NEUTRAL, .n = 3, .dominance = 100.0f, .equalization = 50.0f };
+      = (dt_iop_colormapping_params_t){.flag = NEUTRAL, .n = 3, .dominance = 100.0f, .equalization = 50.0f };
 
   // we might be called from presets update infrastructure => there is no image
   if(!module->dev) goto end;
@@ -969,7 +962,7 @@ static gboolean cluster_preview_draw(GtkWidget *widget, cairo_t *crf, dt_iop_mod
         // draw 9x9 grid showing mean and variance of this cluster.
         double rgb[3] = { 0.5, 0.5, 0.5 };
         cmsCIELab Lab;
-        Lab.L = 5.0; // 53.390011;
+        Lab.L = 5.0;                            // 53.390011;
         Lab.a = (mean[cl][0] + i * var[cl][0]); // / Lab.L;
         Lab.b = (mean[cl][1] + j * var[cl][1]); // / Lab.L;
         Lab.L = 53.390011;
@@ -1129,7 +1122,8 @@ void gui_init(struct dt_iop_module_t *self)
   g->clusters = dt_bauhaus_slider_new_with_range(self, 1.0f, 5.0f, 1., p->n, 0);
   dt_bauhaus_widget_set_label(g->clusters, NULL, _("number of clusters"));
   dt_bauhaus_slider_set_format(g->clusters, "%.0f");
-  gtk_widget_set_tooltip_text(g->clusters, _("number of clusters to find in image. value change resets all clusters"));
+  gtk_widget_set_tooltip_text(g->clusters,
+                              _("number of clusters to find in image. value change resets all clusters"));
   gtk_box_pack_start(GTK_BOX(self->widget), GTK_WIDGET(g->clusters), TRUE, TRUE, 0);
   g_signal_connect(G_OBJECT(g->clusters), "value-changed", G_CALLBACK(clusters_changed), (gpointer)self);
 

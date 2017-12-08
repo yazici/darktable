@@ -50,7 +50,8 @@ static const struct
 
 typedef struct dt_iop_rawprepare_params_t
 {
-  union {
+  union
+  {
     struct
     {
       int32_t x, y, width, height;
@@ -186,8 +187,7 @@ int distort_transform(dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, floa
   return 1;
 }
 
-int distort_backtransform(dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, float *points,
-                          size_t points_count)
+int distort_backtransform(dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, float *points, size_t points_count)
 {
   dt_iop_rawprepare_data_t *d = (dt_iop_rawprepare_data_t *)piece->data;
 
@@ -244,8 +244,7 @@ void output_format(dt_iop_module_t *self, dt_dev_pixelpipe_t *pipe, dt_dev_pixel
   dsc->rawprepare.raw_white_point = d->rawprepare.raw_white_point;
 }
 
-static void adjust_xtrans_filters(dt_dev_pixelpipe_t *pipe,
-                                  uint32_t crop_x, uint32_t crop_y)
+static void adjust_xtrans_filters(dt_dev_pixelpipe_t *pipe, uint32_t crop_x, uint32_t crop_y)
 {
   for(int i = 0; i < 6; ++i)
   {
@@ -372,8 +371,8 @@ void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const 
 }
 
 #if defined(__SSE2__)
-void process_sse2(dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const void *const ivoid,
-                  void *const ovoid, const dt_iop_roi_t *const roi_in, const dt_iop_roi_t *const roi_out)
+void process_sse2(dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const void *const ivoid, void *const ovoid,
+                  const dt_iop_roi_t *const roi_in, const dt_iop_roi_t *const roi_out)
 {
   const dt_iop_rawprepare_data_t *const d = (dt_iop_rawprepare_data_t *)piece->data;
 
@@ -781,8 +780,7 @@ static void callback(GtkWidget *widget, gpointer *user_data)
   dt_iop_rawprepare_gui_data_t *g = (dt_iop_rawprepare_gui_data_t *)self->gui_data;
   dt_iop_rawprepare_params_t *p = (dt_iop_rawprepare_params_t *)self->params;
 
-  for(int i = 0; i < 4; i++)
-    p->raw_black_level_separate[i] = dt_bauhaus_slider_get(g->black_level_separate[i]);
+  for(int i = 0; i < 4; i++) p->raw_black_level_separate[i] = dt_bauhaus_slider_get(g->black_level_separate[i]);
   p->raw_white_point = dt_bauhaus_slider_get(g->white_point);
 
   if(dt_conf_get_bool("plugins/darkroom/rawprepare/allow_editing_crop"))

@@ -119,8 +119,8 @@ static dt_image_orientation_t merge_two_orientations(dt_image_orientation_t raw_
   return raw_orientation_corrected ^ user_orientation;
 }
 
-int legacy_params(dt_iop_module_t *self, const void *const old_params, const int old_version,
-                  void *new_params, const int new_version)
+int legacy_params(dt_iop_module_t *self, const void *const old_params, const int old_version, void *new_params,
+                  const int new_version)
 {
   if(old_version == 1 && new_version == 2)
   {
@@ -138,11 +138,9 @@ int legacy_params(dt_iop_module_t *self, const void *const old_params, const int
     // we might be called from presets update infrastructure => there is no image
     dt_image_orientation_t image_orientation = ORIENTATION_NONE;
 
-    if(self->dev)
-      image_orientation = dt_image_orientation(&self->dev->image_storage);
+    if(self->dev) image_orientation = dt_image_orientation(&self->dev->image_storage);
 
-    n->orientation = merge_two_orientations(image_orientation,
-                                            (dt_image_orientation_t)(old->orientation));
+    n->orientation = merge_two_orientations(image_orientation, (dt_image_orientation_t)(old->orientation));
 
     return 0;
   }
@@ -200,8 +198,7 @@ int distort_transform(dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, floa
 
   return 1;
 }
-int distort_backtransform(dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, float *points,
-                          size_t points_count)
+int distort_backtransform(dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, float *points, size_t points_count)
 {
   // if (!self->enabled) return 2;
   const dt_iop_flip_data_t *d = (dt_iop_flip_data_t *)piece->data;
@@ -246,8 +243,8 @@ void modify_roi_out(struct dt_iop_module_t *self, struct dt_dev_pixelpipe_iop_t 
 }
 
 // 2nd pass: which roi would this operation need as input to fill the given output region?
-void modify_roi_in(struct dt_iop_module_t *self, struct dt_dev_pixelpipe_iop_t *piece,
-                   const dt_iop_roi_t *roi_out, dt_iop_roi_t *roi_in)
+void modify_roi_in(struct dt_iop_module_t *self, struct dt_dev_pixelpipe_iop_t *piece, const dt_iop_roi_t *roi_out,
+                   dt_iop_roi_t *roi_in)
 {
   const dt_iop_flip_data_t *d = (dt_iop_flip_data_t *)piece->data;
   *roi_in = *roi_out;
@@ -293,8 +290,8 @@ void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const 
   const int bpp = sizeof(float) * piece->colors;
   const int stride = bpp * roi_in->width;
 
-  dt_imageio_flip_buffers((char *)ovoid, (const char *)ivoid, bpp, roi_in->width, roi_in->height,
-                          roi_in->width, roi_in->height, stride, d->orientation);
+  dt_imageio_flip_buffers((char *)ovoid, (const char *)ivoid, bpp, roi_in->width, roi_in->height, roi_in->width,
+                          roi_in->height, stride, d->orientation);
 }
 
 #ifdef HAVE_OPENCL
@@ -398,15 +395,14 @@ void init_presets(dt_iop_module_so_t *self)
 
 void reload_defaults(dt_iop_module_t *self)
 {
-  dt_iop_flip_params_t tmp = (dt_iop_flip_params_t){ .orientation = ORIENTATION_NULL };
+  dt_iop_flip_params_t tmp = (dt_iop_flip_params_t){.orientation = ORIENTATION_NULL };
 
   // we might be called from presets update infrastructure => there is no image
   if(!self->dev) goto end;
 
   self->default_enabled = 1;
 
-  if(self->dev->image_storage.legacy_flip.user_flip != 0
-     && self->dev->image_storage.legacy_flip.user_flip != 0xff)
+  if(self->dev->image_storage.legacy_flip.user_flip != 0 && self->dev->image_storage.legacy_flip.user_flip != 0xff)
   {
     sqlite3_stmt *stmt;
     DT_DEBUG_SQLITE3_PREPARE_V2(dt_database_get(darktable.db),
@@ -442,7 +438,7 @@ void init(dt_iop_module_t *module)
   module->default_enabled = 1;
   module->params_size = sizeof(dt_iop_flip_params_t);
   module->gui_data = NULL;
-    module->priority = 275; // module order created by iop_dependencies.py, do not edit!
+  module->priority = 275; // module order created by iop_dependencies.py, do not edit!
 }
 
 void cleanup(dt_iop_module_t *module)

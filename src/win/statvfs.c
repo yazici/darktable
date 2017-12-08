@@ -66,7 +66,7 @@ int statvfs(const char *path, struct statvfs *buf)
   wchar_t *wszDrive = g_utf8_to_utf16(szDrive, -1, NULL, NULL, NULL);
 
   res = GetDiskFreeSpaceW(wszDrive, &lpSectorsPerCluster, &lpBytesPerSector, &lpNumberOfFreeClusters,
-                         &lpTotalNumberOfClusters);
+                          &lpTotalNumberOfClusters);
 
   g_free(wszDrive);
 

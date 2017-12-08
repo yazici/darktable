@@ -165,8 +165,7 @@ static void wavelet_denoise(const float *const in, float *const out, const dt_io
 #endif
       for(int col = 0; col < halfwidth; col++)
       {
-        hat_transform(fimg + pass2 + (size_t)col * halfheight, fimg + pass1 + col, halfwidth, halfheight,
-                      1 << lev);
+        hat_transform(fimg + pass2 + (size_t)col * halfheight, fimg + pass1 + col, halfwidth, halfheight, 1 << lev);
       }
 // filter vertically and transpose back
 #ifdef _OPENMP
@@ -174,8 +173,7 @@ static void wavelet_denoise(const float *const in, float *const out, const dt_io
 #endif
       for(int row = 0; row < halfheight; row++)
       {
-        hat_transform(fimg + pass3 + (size_t)row * halfwidth, fimg + pass2 + row, halfheight, halfwidth,
-                      1 << lev);
+        hat_transform(fimg + pass3 + (size_t)row * halfwidth, fimg + pass2 + row, halfheight, halfwidth, 1 << lev);
       }
 
       const float thold = threshold * noise[lev];
@@ -202,7 +200,7 @@ static void wavelet_denoise(const float *const in, float *const out, const dt_io
       for(; col < roi->width; col += 2, fimgp++, outp += 2)
       {
         float d = fimgp[0] + fimgp[lastpass];
-        *outp = d * d;
+        *outp = d *d;
       }
     }
   }
@@ -335,7 +333,7 @@ static void wavelet_denoise_xtrans(const float *const in, float *out, const dt_i
         if(FCxtrans(row, col, roi, xtrans) == c)
         {
           float d = fimgp[0] + fimgp[lastpass];
-          *outp = d * d;
+          *outp = d *d;
         }
     }
   }
@@ -353,13 +351,13 @@ void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const 
 
   if(!(d->threshold > 0.0f))
   {
-    memcpy(ovoid, ivoid, (size_t)sizeof(float)*width*height);
+    memcpy(ovoid, ivoid, (size_t)sizeof(float) * width * height);
   }
   else
   {
     const uint32_t filters = piece->pipe->dsc.filters;
-    const uint8_t(*const xtrans)[6] = (const uint8_t(*const)[6])piece->pipe->dsc.xtrans;
-    if (filters != 9u)
+    const uint8_t (*const xtrans)[6] = (const uint8_t (*const)[6])piece->pipe->dsc.xtrans;
+    if(filters != 9u)
       wavelet_denoise(ivoid, ovoid, roi_in, d->threshold, filters);
     else
       wavelet_denoise_xtrans(ivoid, ovoid, roi_in, d->threshold, xtrans);
@@ -369,7 +367,7 @@ void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const 
 void reload_defaults(dt_iop_module_t *module)
 {
   // init defaults:
-  dt_iop_rawdenoise_params_t tmp = (dt_iop_rawdenoise_params_t){ .threshold = 0.01 };
+  dt_iop_rawdenoise_params_t tmp = (dt_iop_rawdenoise_params_t){.threshold = 0.01 };
 
   // we might be called from presets update infrastructure => there is no image
   if(!module->dev) goto end;
@@ -394,7 +392,7 @@ void init(dt_iop_module_t *module)
   module->default_enabled = 0;
 
   // raw denoise must come just before demosaicing.
-    module->priority = 101; // module order created by iop_dependencies.py, do not edit!
+  module->priority = 101; // module order created by iop_dependencies.py, do not edit!
   module->params_size = sizeof(dt_iop_rawdenoise_params_t);
   module->gui_data = NULL;
 }
@@ -415,8 +413,7 @@ void commit_params(struct dt_iop_module_t *self, dt_iop_params_t *params, dt_dev
 
   d->threshold = p->threshold;
 
-  if (!(pipe->image.flags & DT_IMAGE_RAW))
-    piece->enabled = 0;
+  if(!(pipe->image.flags & DT_IMAGE_RAW)) piece->enabled = 0;
 }
 
 void init_pipe(struct dt_iop_module_t *self, dt_dev_pixelpipe_t *pipe, dt_dev_pixelpipe_iop_t *piece)

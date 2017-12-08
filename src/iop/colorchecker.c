@@ -42,32 +42,32 @@
 DT_MODULE_INTROSPECTION(2, dt_iop_colorchecker_params_t)
 
 static const int colorchecker_patches = 24;
-static const float colorchecker_Lab[] =
-{ // from argyll ColorChecker.cie
- 37.99,   13.56,  14.06, // dark skin
- 65.71,   18.13,  17.81, // light skin
- 49.93,   -4.88, -21.93, // blue sky
- 43.14,  -13.10,  21.91, // foliage
- 55.11,    8.84, -25.40, // blue flower
- 70.72,  -33.40, -0.20 , // bluish green  
- 62.66,   36.07,  57.10, // orange
- 40.02,   10.41, -45.96, // purple red
- 51.12,   48.24,  16.25, // moderate red  
- 30.33,   22.98, -21.59, // purple
- 72.53,  -23.71,  57.26, // yellow green  
- 71.94,  19.36 ,  67.86, // orange yellow 
- 28.78,  14.18 , -50.30, // blue
- 55.26,  -38.34,  31.37, // green
- 42.10,  53.38 ,  28.19, // red
- 81.73,  4.04  ,  79.82, // yellow
- 51.94,  49.99 , -14.57, // magenta
- 51.04,  -28.63, -28.64, // cyan
- 96.54,  -0.43 ,  1.19 , // white
- 81.26,  -0.64 , -0.34 , // neutral 8
- 66.77,  -0.73 , -0.50 , // neutral 65
- 50.87,  -0.15 , -0.27 , // neutral 5
- 35.66,  -0.42 , -1.23 , // neutral 35
- 20.46,  -0.08 , -0.97   // black
+static const float colorchecker_Lab[] = {
+  // from argyll ColorChecker.cie
+  37.99, 13.56,  14.06,  // dark skin
+  65.71, 18.13,  17.81,  // light skin
+  49.93, -4.88,  -21.93, // blue sky
+  43.14, -13.10, 21.91,  // foliage
+  55.11, 8.84,   -25.40, // blue flower
+  70.72, -33.40, -0.20,  // bluish green
+  62.66, 36.07,  57.10,  // orange
+  40.02, 10.41,  -45.96, // purple red
+  51.12, 48.24,  16.25,  // moderate red
+  30.33, 22.98,  -21.59, // purple
+  72.53, -23.71, 57.26,  // yellow green
+  71.94, 19.36,  67.86,  // orange yellow
+  28.78, 14.18,  -50.30, // blue
+  55.26, -38.34, 31.37,  // green
+  42.10, 53.38,  28.19,  // red
+  81.73, 4.04,   79.82,  // yellow
+  51.94, 49.99,  -14.57, // magenta
+  51.04, -28.63, -28.64, // cyan
+  96.54, -0.43,  1.19,   // white
+  81.26, -0.64,  -0.34,  // neutral 8
+  66.77, -0.73,  -0.50,  // neutral 65
+  50.87, -0.15,  -0.27,  // neutral 5
+  35.66, -0.42,  -1.23,  // neutral 35
+  20.46, -0.08,  -0.97   // black
 };
 
 // we came to the conclusion that more than 7x7 patches will not be
@@ -97,10 +97,10 @@ typedef struct dt_iop_colorchecker_gui_data_t
 typedef struct dt_iop_colorchecker_data_t
 {
   int32_t num_patches;
-  float source_Lab[3*MAX_PATCHES];
-  float coeff_L[MAX_PATCHES+4];
-  float coeff_a[MAX_PATCHES+4];
-  float coeff_b[MAX_PATCHES+4];
+  float source_Lab[3 * MAX_PATCHES];
+  float coeff_L[MAX_PATCHES + 4];
+  float coeff_a[MAX_PATCHES + 4];
+  float coeff_b[MAX_PATCHES + 4];
 } dt_iop_colorchecker_data_t;
 
 typedef struct dt_iop_colorchecker_global_data_t
@@ -123,12 +123,8 @@ int flags()
   return IOP_FLAGS_SUPPORTS_BLENDING | IOP_FLAGS_ALLOW_TILING;
 }
 
-int legacy_params(
-    dt_iop_module_t  *self,
-    const void *const old_params,
-    const int         old_version,
-    void             *new_params,
-    const int         new_version)
+int legacy_params(dt_iop_module_t *self, const void *const old_params, const int old_version, void *new_params,
+                  const int new_version)
 {
   static const float colorchecker_Lab_v1[] = {
     39.19, 13.76,  14.29,  // dark skin
@@ -167,10 +163,10 @@ int legacy_params(
   if(old_version == 1 && new_version == 2)
   {
     dt_iop_colorchecker_params_v1_t *p1 = (dt_iop_colorchecker_params_v1_t *)old_params;
-    dt_iop_colorchecker_params_t  *p2 = (dt_iop_colorchecker_params_t  *)new_params;
+    dt_iop_colorchecker_params_t *p2 = (dt_iop_colorchecker_params_t *)new_params;
 
     p2->num_patches = 24;
-    for(int k=0;k<24;k++)
+    for(int k = 0; k < 24; k++)
     {
       p2->target_L[k] = p1->target_L[k];
       p2->target_a[k] = p1->target_a[k];
@@ -189,16 +185,16 @@ void init_presets(dt_iop_module_so_t *self)
   dt_iop_colorchecker_params_t p;
   memset(&p, 0, sizeof(p));
   p.num_patches = 24;
-  p.target_L[ 0] = p.source_L[ 0] = 17.460945129394531;
-  p.target_L[ 1] = p.source_L[ 1] = 26.878498077392578;
-  p.target_L[ 2] = p.source_L[ 2] = 34.900054931640625;
-  p.target_L[ 3] = p.source_L[ 3] = 21.692604064941406;
-  p.target_L[ 4] = p.source_L[ 4] = 32.18853759765625;
-  p.target_L[ 5] = p.source_L[ 5] = 62.531227111816406;
-  p.target_L[ 6] = p.source_L[ 6] = 18.933284759521484;
-  p.target_L[ 7] = p.source_L[ 7] = 53.936111450195312;
-  p.target_L[ 8] = p.source_L[ 8] = 69.154266357421875;
-  p.target_L[ 9] = p.source_L[ 9] = 43.381229400634766;
+  p.target_L[0] = p.source_L[0] = 17.460945129394531;
+  p.target_L[1] = p.source_L[1] = 26.878498077392578;
+  p.target_L[2] = p.source_L[2] = 34.900054931640625;
+  p.target_L[3] = p.source_L[3] = 21.692604064941406;
+  p.target_L[4] = p.source_L[4] = 32.18853759765625;
+  p.target_L[5] = p.source_L[5] = 62.531227111816406;
+  p.target_L[6] = p.source_L[6] = 18.933284759521484;
+  p.target_L[7] = p.source_L[7] = 53.936111450195312;
+  p.target_L[8] = p.source_L[8] = 69.154266357421875;
+  p.target_L[9] = p.source_L[9] = 43.381229400634766;
   p.target_L[10] = p.source_L[10] = 57.797889709472656;
   p.target_L[11] = p.source_L[11] = 73.27630615234375;
   p.target_L[12] = p.source_L[12] = 53.175498962402344;
@@ -213,16 +209,16 @@ void init_presets(dt_iop_module_so_t *self)
   p.target_L[21] = p.source_L[21] = 76.070747375488281;
   p.target_L[22] = p.source_L[22] = 68.645004272460938;
   p.target_L[23] = p.source_L[23] = 74.502906799316406;
-  p.target_a[ 0] = p.source_a[ 0] = 8.4928874969482422;
-  p.target_a[ 1] = p.source_a[ 1] = 27.94782829284668;
-  p.target_a[ 2] = p.source_a[ 2] = 43.8824462890625;
-  p.target_a[ 3] = p.source_a[ 3] = 16.723676681518555;
-  p.target_a[ 4] = p.source_a[ 4] = 39.174972534179688;
-  p.target_a[ 5] = p.source_a[ 5] = 24.966419219970703;
-  p.target_a[ 6] = p.source_a[ 6] = 8.8226642608642578;
-  p.target_a[ 7] = p.source_a[ 7] = 34.451812744140625;
-  p.target_a[ 8] = p.source_a[ 8] = 18.39008903503418;
-  p.target_a[ 9] = p.source_a[ 9] = 28.272598266601562;
+  p.target_a[0] = p.source_a[0] = 8.4928874969482422;
+  p.target_a[1] = p.source_a[1] = 27.94782829284668;
+  p.target_a[2] = p.source_a[2] = 43.8824462890625;
+  p.target_a[3] = p.source_a[3] = 16.723676681518555;
+  p.target_a[4] = p.source_a[4] = 39.174972534179688;
+  p.target_a[5] = p.source_a[5] = 24.966419219970703;
+  p.target_a[6] = p.source_a[6] = 8.8226642608642578;
+  p.target_a[7] = p.source_a[7] = 34.451812744140625;
+  p.target_a[8] = p.source_a[8] = 18.39008903503418;
+  p.target_a[9] = p.source_a[9] = 28.272598266601562;
   p.target_a[10] = p.source_a[10] = 10.193824768066406;
   p.target_a[11] = p.source_a[11] = 13.241470336914062;
   p.target_a[12] = p.source_a[12] = 43.655307769775391;
@@ -237,16 +233,16 @@ void init_presets(dt_iop_module_so_t *self)
   p.target_a[21] = p.source_a[21] = 4.7686996459960938;
   p.target_a[22] = p.source_a[22] = 3.0603706836700439;
   p.target_a[23] = p.source_a[23] = -3.687053918838501;
-  p.target_b[ 0] = p.source_b[ 0] = -0.023579597473144531;
-  p.target_b[ 1] = p.source_b[ 1] = 14.991056442260742;
-  p.target_b[ 2] = p.source_b[ 2] = 26.443553924560547;
-  p.target_b[ 3] = p.source_b[ 3] = 7.3905587196350098;
-  p.target_b[ 4] = p.source_b[ 4] = 23.309671401977539;
-  p.target_b[ 5] = p.source_b[ 5] = 19.262432098388672;
-  p.target_b[ 6] = p.source_b[ 6] = 3.136211633682251;
-  p.target_b[ 7] = p.source_b[ 7] = 31.949621200561523;
-  p.target_b[ 8] = p.source_b[ 8] = 16.144514083862305;
-  p.target_b[ 9] = p.source_b[ 9] = 25.893926620483398;
+  p.target_b[0] = p.source_b[0] = -0.023579597473144531;
+  p.target_b[1] = p.source_b[1] = 14.991056442260742;
+  p.target_b[2] = p.source_b[2] = 26.443553924560547;
+  p.target_b[3] = p.source_b[3] = 7.3905587196350098;
+  p.target_b[4] = p.source_b[4] = 23.309671401977539;
+  p.target_b[5] = p.source_b[5] = 19.262432098388672;
+  p.target_b[6] = p.source_b[6] = 3.136211633682251;
+  p.target_b[7] = p.source_b[7] = 31.949621200561523;
+  p.target_b[8] = p.source_b[8] = 16.144514083862305;
+  p.target_b[9] = p.source_b[9] = 25.893926620483398;
   p.target_b[10] = p.source_b[10] = 12.271202087402344;
   p.target_b[11] = p.source_b[11] = 16.763805389404297;
   p.target_b[12] = p.source_b[12] = 53.904998779296875;
@@ -267,19 +263,42 @@ void init_presets(dt_iop_module_so_t *self)
   // implemented by wmader as an iop and matched as a clut for increased
   // flexibility. this was done using darktable-chart and this is copied
   // from the resulting dtstyle output file:
-  const char *hk_params_input =
-    "9738b84231c098426fb8814234a82d422ac41d422e3fa04100004843f7daa24257e09a422a1a984225113842f89cc9410836ca4295049542ad1c9242887370427cb32b427c512242b5a40742545bd141808740412cc6964262e484429604c44100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000ef6d3bc152c2acc1ef6566c093a522c2e7d4e4c1a87c7cc100000000b4c4dd407af09e40d060df418afc7d421dadd0413ec5124097d79041fcba2642fc9f484183eb92415d6b7040fcdcdc41b8fe2f42b64a1740fc8612c1276defc144432ec100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000d237eb4022a72842f5639742396d1442a2660d411c338b40000000006e35ca408df2054289658d4132327a4118427741d4cf08c0f8a4d5c03abed7c13fac36c23b41a6c03c2230c07d5088c26caff7c1e0e9c6bff14ecec073b028c29e0accc10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000085f2b642a4ba9a423c9a8442a6493c428baf28425667b64100004843a836a142a84e9b4226719d421cb15d424c22ee4175fcca4211ae96426e6d9a4243878142ef45354222f82542629527420280ff416c2066417e3996420d838e424182e3410000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000fa370000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c8b700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000004837000000000000c8b60000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000018000000";
+  const char *hk_params_input
+      = "9738b84231c098426fb8814234a82d422ac41d422e3fa04100004843f7daa24257e09a422a1a984225113842f89cc9410836ca429"
+        "5049542ad1c9242887370427cb32b427c512242b5a40742545bd141808740412cc6964262e484429604c441000000000000000000"
+        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+        "00000000000000000000000000000000000000000000000000000000000000000000000000000ef6d3bc152c2acc1ef6566c093a5"
+        "22c2e7d4e4c1a87c7cc100000000b4c4dd407af09e40d060df418afc7d421dadd0413ec5124097d79041fcba2642fc9f484183eb9"
+        "2415d6b7040fcdcdc41b8fe2f42b64a1740fc8612c1276defc144432ec10000000000000000000000000000000000000000000000"
+        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+        "0000000000000000000000000000000000000000000000000d237eb4022a72842f5639742396d1442a2660d411c338b4000000000"
+        "6e35ca408df2054289658d4132327a4118427741d4cf08c0f8a4d5c03abed7c13fac36c23b41a6c03c2230c07d5088c26caff7c1e"
+        "0e9c6bff14ecec073b028c29e0accc100000000000000000000000000000000000000000000000000000000000000000000000000"
+        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+        "00000000000000000000085f2b642a4ba9a423c9a8442a6493c428baf28425667b64100004843a836a142a84e9b4226719d421cb1"
+        "5d424c22ee4175fcca4211ae96426e6d9a4243878142ef45354222f82542629527420280ff416c2066417e3996420d838e424182e"
+        "341000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+        "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000fa370000000000000000"
+        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+        "000000000000000000000000000000000c8b700000000000000000000000000000000000000000000000000000000000000000000"
+        "000000000000000000000000000000004837000000000000c8b600000000000000000000000000000000000000000000000000000"
+        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+        "00000000000000000000000000000000000000000018000000";
   int params_len = 0;
-  uint8_t *hk_params = dt_exif_xmp_decode(
-      hk_params_input, strlen(hk_params_input), &params_len);
+  uint8_t *hk_params = dt_exif_xmp_decode(hk_params_input, strlen(hk_params_input), &params_len);
   assert(params_len == sizeof(dt_iop_colorchecker_params_t));
   assert(hk_params);
-  dt_gui_presets_add_generic(_("helmholtz/kohlrausch monochrome"), self->op, self->version(), hk_params, params_len, 1);
+  dt_gui_presets_add_generic(_("helmholtz/kohlrausch monochrome"), self->op, self->version(), hk_params,
+                             params_len, 1);
   free(hk_params);
 }
 
-// fast logarithms stolen from paul mineiro http://fastapprox.googlecode.com/svn/trunk/fastapprox/src/fastonebigheader.h
-#if 0//def __SSE2__
+// fast logarithms stolen from paul mineiro
+// http://fastapprox.googlecode.com/svn/trunk/fastapprox/src/fastonebigheader.h
+#if 0 // def __SSE2__
 #include <xmmintrin.h>
 
 typedef __m128 v4sf;
@@ -288,9 +307,9 @@ typedef __m128i v4si;
 #define v4si_to_v4sf _mm_cvtepi32_ps
 #define v4sf_to_v4si _mm_cvttps_epi32
 
-#define v4sfl(x) ((const v4sf) { (x), (x), (x), (x) })
-#define v2dil(x) ((const v4si) { (x), (x) })
-#define v4sil(x) v2dil((((unsigned long long) (x)) << 32) | (x))
+#define v4sfl(x) ((const v4sf){ (x), (x), (x), (x) })
+#define v2dil(x) ((const v4si){ (x), (x) })
+#define v4sil(x) v2dil((((unsigned long long)(x)) << 32) | (x))
 static inline v4sf
 vfastlog2 (v4sf x)
 {
@@ -327,23 +346,27 @@ static inline v4sf kerneldist4(const float *x, const float *y)
 }
 #endif
 
-static inline float 
-fastlog2 (float x)
+static inline float fastlog2(float x)
 {
-  union { float f; uint32_t i; } vx = { x };
-  union { uint32_t i; float f; } mx = { (vx.i & 0x007FFFFF) | 0x3f000000 };
+  union
+  {
+    float f;
+    uint32_t i;
+  } vx = { x };
+  union
+  {
+    uint32_t i;
+    float f;
+  } mx = { (vx.i & 0x007FFFFF) | 0x3f000000 };
   float y = vx.i;
   y *= 1.1920928955078125e-7f;
 
-  return y - 124.22551499f
-    - 1.498030302f * mx.f 
-    - 1.72587999f / (0.3520887068f + mx.f);
+  return y - 124.22551499f - 1.498030302f * mx.f - 1.72587999f / (0.3520887068f + mx.f);
 }
 
-static inline float
-fastlog (float x)
+static inline float fastlog(float x)
 {
-  return 0.69314718f * fastlog2 (x);
+  return 0.69314718f * fastlog2(x);
 }
 
 // static inline float
@@ -365,11 +388,8 @@ static inline float kernel(const float *x, const float *y)
   // well damnit, this speedup thing unfortunately shows severe artifacts.
   // return r*r*fasterlog(MAX(1e-8f,r));
   // this one seems to be a lot better, let's see how it goes:
-  const float r2 = 
-      (x[0]-y[0])*(x[0]-y[0])+
-      (x[1]-y[1])*(x[1]-y[1])+
-      (x[2]-y[2])*(x[2]-y[2]);
-  return r2*fastlog(MAX(1e-8f,r2));
+  const float r2 = (x[0] - y[0]) * (x[0] - y[0]) + (x[1] - y[1]) * (x[1] - y[1]) + (x[2] - y[2]) * (x[2] - y[2]);
+  return r2 * fastlog(MAX(1e-8f, r2));
 }
 
 void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const void *const ivoid,
@@ -380,9 +400,9 @@ void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const 
 #ifdef _OPENMP
 #pragma omp parallel for default(none) schedule(static) collapse(2)
 #endif
-  for(int j=0;j<roi_out->height;j++)
+  for(int j = 0; j < roi_out->height; j++)
   {
-    for(int i=0;i<roi_out->width;i++)
+    for(int i = 0; i < roi_out->width; i++)
     {
       const float *in = ((float *)ivoid) + (size_t)ch * (j * roi_in->width + i);
       float *out = ((float *)ovoid) + (size_t)ch * (j * roi_in->width + i);
@@ -390,28 +410,26 @@ void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const 
       out[1] = data->coeff_a[data->num_patches];
       out[2] = data->coeff_b[data->num_patches];
       // polynomial part:
-      out[0] += data->coeff_L[data->num_patches+1] * in[0] +
-                data->coeff_L[data->num_patches+2] * in[1] +
-                data->coeff_L[data->num_patches+3] * in[2];
-      out[1] += data->coeff_a[data->num_patches+1] * in[0] +
-                data->coeff_a[data->num_patches+2] * in[1] +
-                data->coeff_a[data->num_patches+3] * in[2];
-      out[2] += data->coeff_b[data->num_patches+1] * in[0] +
-                data->coeff_b[data->num_patches+2] * in[1] +
-                data->coeff_b[data->num_patches+3] * in[2];
+      out[0] += data->coeff_L[data->num_patches + 1] * in[0] + data->coeff_L[data->num_patches + 2] * in[1]
+                + data->coeff_L[data->num_patches + 3] * in[2];
+      out[1] += data->coeff_a[data->num_patches + 1] * in[0] + data->coeff_a[data->num_patches + 2] * in[1]
+                + data->coeff_a[data->num_patches + 3] * in[2];
+      out[2] += data->coeff_b[data->num_patches + 1] * in[0] + data->coeff_b[data->num_patches + 2] * in[1]
+                + data->coeff_b[data->num_patches + 3] * in[2];
 #if defined(_OPENMP) && defined(OPENMP_SIMD_) // <== nice try, i don't think this does anything here
 #pragma omp SIMD()
 #endif
-      for(int k=0;k<data->num_patches;k++)
+      for(int k = 0; k < data->num_patches; k++)
       { // rbf from thin plate spline
-        const float phi = kernel(in, data->source_Lab + 3*k);
+        const float phi = kernel(in, data->source_Lab + 3 * k);
         out[0] += data->coeff_L[k] * phi;
         out[1] += data->coeff_a[k] * phi;
         out[2] += data->coeff_b[k] * phi;
       }
     }
   }
-  if(piece->pipe->mask_display & DT_DEV_PIXELPIPE_DISPLAY_MASK) dt_iop_alpha_copy(ivoid, ovoid, roi_out->width, roi_out->height);
+  if(piece->pipe->mask_display & DT_DEV_PIXELPIPE_DISPLAY_MASK)
+    dt_iop_alpha_copy(ivoid, ovoid, roi_out->width, roi_out->height);
 }
 
 #if 0 // TODO:
@@ -537,14 +555,14 @@ void commit_params(struct dt_iop_module_t *self, dt_iop_params_t *p1, dt_dev_pix
   const int N = d->num_patches, N4 = N + 4;
   for(int k = 0; k < N; k++)
   {
-    d->source_Lab[3*k+0] = p->source_L[k];
-    d->source_Lab[3*k+1] = p->source_a[k];
-    d->source_Lab[3*k+2] = p->source_b[k];
+    d->source_Lab[3 * k + 0] = p->source_L[k];
+    d->source_Lab[3 * k + 1] = p->source_a[k];
+    d->source_Lab[3 * k + 2] = p->source_b[k];
   }
 
   // initialize coefficients with default values that will be
   // used for N<=4 and if coefficient matrix A is singular
-  for(int i=0;i<4+N;i++)
+  for(int i = 0; i < 4 + N; i++)
   {
     d->coeff_L[i] = 0;
     d->coeff_a[i] = 0;
@@ -582,158 +600,150 @@ void commit_params(struct dt_iop_module_t *self, dt_iop_params_t *p1, dt_dev_pix
   */
   switch(N)
   {
-  case 0:
-    break;
-  case 1:
-    // interpolation via constant function
-    d->coeff_L[N + 1] = p->target_L[0] / p->source_L[0];
-    d->coeff_a[N + 2] = p->target_a[0] / p->source_a[0];
-    d->coeff_b[N + 3] = p->target_b[0] / p->source_b[0];
-    break;
-  case 2:
-    // interpolation via single constant function and the linear
-    // function of the corresponding color channel
+    case 0:
+      break;
+    case 1:
+      // interpolation via constant function
+      d->coeff_L[N + 1] = p->target_L[0] / p->source_L[0];
+      d->coeff_a[N + 2] = p->target_a[0] / p->source_a[0];
+      d->coeff_b[N + 3] = p->target_b[0] / p->source_b[0];
+      break;
+    case 2:
+      // interpolation via single constant function and the linear
+      // function of the corresponding color channel
+      {
+        double A[2 * 2] = { 1, p->source_L[0], 1, p->source_L[1] };
+        double b[2] = { p->target_L[0], p->target_L[1] };
+        if(!gauss_solve(A, b, 2)) break;
+        d->coeff_L[N + 0] = b[0];
+        d->coeff_L[N + 1] = b[1];
+      }
+      {
+        double A[2 * 2] = { 1, p->source_a[0], 1, p->source_a[1] };
+        double b[2] = { p->target_a[0], p->target_a[1] };
+        if(!gauss_solve(A, b, 2)) break;
+        d->coeff_a[N + 0] = b[0];
+        d->coeff_a[N + 2] = b[1];
+      }
+      {
+        double A[2 * 2] = { 1, p->source_b[0], 1, p->source_b[1] };
+        double b[2] = { p->target_b[0], p->target_b[1] };
+        if(!gauss_solve(A, b, 2)) break;
+        d->coeff_b[N + 0] = b[0];
+        d->coeff_b[N + 3] = b[1];
+      }
+      break;
+    case 3:
+      // interpolation via single constant function, the linear function
+      // of the corresponding color channel and the linear functions
+      // of the other two color channels having both the same weight
+      {
+        double A[3 * 3] = { 1, p->source_L[0], p->source_a[0] + p->source_b[0], 1, p->source_L[1],
+                            p->source_a[1] + p->source_b[1], 1, p->source_L[2], p->source_a[2] + p->source_b[2] };
+        double b[3] = { p->target_L[0], p->target_L[1], p->target_L[2] };
+        if(!gauss_solve(A, b, 3)) break;
+        d->coeff_L[N + 0] = b[0];
+        d->coeff_L[N + 1] = b[1];
+        d->coeff_L[N + 2] = b[2];
+        d->coeff_L[N + 3] = b[2];
+      }
+      {
+        double A[3 * 3] = { 1, p->source_a[0], p->source_L[0] + p->source_b[0], 1, p->source_a[1],
+                            p->source_L[1] + p->source_b[1], 1, p->source_a[2], p->source_L[2] + p->source_b[2] };
+        double b[3] = { p->target_a[0], p->target_a[1], p->target_a[2] };
+        if(!gauss_solve(A, b, 3)) break;
+        d->coeff_a[N + 0] = b[0];
+        d->coeff_a[N + 1] = b[2];
+        d->coeff_a[N + 2] = b[1];
+        d->coeff_a[N + 3] = b[2];
+      }
+      {
+        double A[3 * 3] = { 1, p->source_b[0], p->source_L[0] + p->source_a[0], 1, p->source_b[1],
+                            p->source_L[1] + p->source_a[1], 1, p->source_b[2], p->source_L[2] + p->source_a[2] };
+        double b[3] = { p->target_b[0], p->target_b[1], p->target_b[2] };
+        if(!gauss_solve(A, b, 3)) break;
+        d->coeff_b[N + 0] = b[0];
+        d->coeff_b[N + 1] = b[2];
+        d->coeff_b[N + 2] = b[2];
+        d->coeff_b[N + 3] = b[1];
+      }
+      break;
+    case 4:
     {
-      double A[2 * 2] = { 1, p->source_L[0],
-                          1, p->source_L[1] };
-      double b[2] = { p->target_L[0], p->target_L[1] };
-      if(!gauss_solve(A, b, 2)) break;
-      d->coeff_L[N + 0] = b[0];
-      d->coeff_L[N + 1] = b[1];
+      // interpolation via constant function and 3 linear functions
+      double A[4 * 4] = { 1, p->source_L[0], p->source_a[0], p->source_b[0], 1, p->source_L[1], p->source_a[1],
+                          p->source_b[1], 1, p->source_L[2], p->source_a[2], p->source_b[2], 1, p->source_L[3],
+                          p->source_a[3], p->source_b[3] };
+      int pivot[4];
+      if(!gauss_make_triangular(A, pivot, 4)) break;
+      {
+        double b[4] = { p->target_L[0], p->target_L[1], p->target_L[2], p->target_L[3] };
+        gauss_solve_triangular(A, pivot, b, 4);
+        d->coeff_L[N + 0] = b[0];
+        d->coeff_L[N + 1] = b[1];
+        d->coeff_L[N + 2] = b[2];
+        d->coeff_L[N + 3] = b[3];
+      }
+      {
+        double b[4] = { p->target_a[0], p->target_a[1], p->target_a[2], p->target_a[3] };
+        gauss_solve_triangular(A, pivot, b, 4);
+        d->coeff_a[N + 0] = b[0];
+        d->coeff_a[N + 1] = b[1];
+        d->coeff_a[N + 2] = b[2];
+        d->coeff_a[N + 3] = b[3];
+      }
+      {
+        double b[4] = { p->target_b[0], p->target_b[1], p->target_b[2], p->target_b[3] };
+        gauss_solve_triangular(A, pivot, b, 4);
+        d->coeff_b[N + 0] = b[0];
+        d->coeff_b[N + 1] = b[1];
+        d->coeff_b[N + 2] = b[2];
+        d->coeff_b[N + 3] = b[3];
+      }
+      break;
     }
+    default:
     {
-      double A[2 * 2] = { 1, p->source_a[0],
-                          1, p->source_a[1] };
-      double b[2] = { p->target_a[0], p->target_a[1] };
-      if(!gauss_solve(A, b, 2)) break;
-      d->coeff_a[N + 0] = b[0];
-      d->coeff_a[N + 2] = b[1];
+      // setup linear system of equations
+      double *A = malloc(N4 * N4 * sizeof(*A));
+      double *b = malloc(N4 * sizeof(*b));
+      // coefficients from nonlinear radial kernel functions
+      for(int j = 0; j < N; j++)
+        for(int i = j; i < N; i++)
+          A[j * N4 + i] = A[i * N4 + j] = kernel(d->source_Lab + 3 * i, d->source_Lab + 3 * j);
+      // coefficients from constant and linear functions
+      for(int i = 0; i < N; i++) A[i * N4 + N + 0] = A[(N + 0) * N4 + i] = 1;
+      for(int i = 0; i < N; i++) A[i * N4 + N + 1] = A[(N + 1) * N4 + i] = d->source_Lab[3 * i + 0];
+      for(int i = 0; i < N; i++) A[i * N4 + N + 2] = A[(N + 2) * N4 + i] = d->source_Lab[3 * i + 1];
+      for(int i = 0; i < N; i++) A[i * N4 + N + 3] = A[(N + 3) * N4 + i] = d->source_Lab[3 * i + 2];
+      // lower-right zero block
+      for(int j = N; j < N4; j++)
+        for(int i = N; i < N4; i++) A[j * N4 + i] = 0;
+      // make coefficient matrix triangular
+      int *pivot = malloc(N4 * sizeof(*pivot));
+      if(gauss_make_triangular(A, pivot, N4))
+      {
+        // calculate coefficients for L channel
+        for(int i = 0; i < N; i++) b[i] = p->target_L[i];
+        for(int i = N; i < N + 4; i++) b[i] = 0;
+        gauss_solve_triangular(A, pivot, b, N4);
+        for(int i = 0; i < N + 4; i++) d->coeff_L[i] = b[i];
+        // calculate coefficients for a channel
+        for(int i = 0; i < N; i++) b[i] = p->target_a[i];
+        for(int i = N; i < N + 4; i++) b[i] = 0;
+        gauss_solve_triangular(A, pivot, b, N4);
+        for(int i = 0; i < N + 4; i++) d->coeff_a[i] = b[i];
+        // calculate coefficients for b channel
+        for(int i = 0; i < N; i++) b[i] = p->target_b[i];
+        for(int i = N; i < N + 4; i++) b[i] = 0;
+        gauss_solve_triangular(A, pivot, b, N4);
+        for(int i = 0; i < N + 4; i++) d->coeff_b[i] = b[i];
+      }
+      // free resources
+      free(pivot);
+      free(b);
+      free(A);
     }
-    {
-      double A[2 * 2] = { 1, p->source_b[0],
-                          1, p->source_b[1] };
-      double b[2] = { p->target_b[0], p->target_b[1] };
-      if(!gauss_solve(A, b, 2)) break;
-      d->coeff_b[N + 0] = b[0];
-      d->coeff_b[N + 3] = b[1];
-    }
-    break;
-  case 3:
-    // interpolation via single constant function, the linear function
-    // of the corresponding color channel and the linear functions
-    // of the other two color channels having both the same weight
-    {
-      double A[3 * 3] = { 1, p->source_L[0], p->source_a[0] + p->source_b[0],
-                          1, p->source_L[1], p->source_a[1] + p->source_b[1],
-                          1, p->source_L[2], p->source_a[2] + p->source_b[2] };
-      double b[3] = { p->target_L[0], p->target_L[1], p->target_L[2] };
-      if(!gauss_solve(A, b, 3)) break;
-      d->coeff_L[N + 0] = b[0];
-      d->coeff_L[N + 1] = b[1];
-      d->coeff_L[N + 2] = b[2];
-      d->coeff_L[N + 3] = b[2];
-    }
-    {
-      double A[3 * 3] = { 1, p->source_a[0], p->source_L[0] + p->source_b[0],
-                          1, p->source_a[1], p->source_L[1] + p->source_b[1],
-                          1, p->source_a[2], p->source_L[2] + p->source_b[2] };
-      double b[3] = { p->target_a[0], p->target_a[1], p->target_a[2] };
-      if(!gauss_solve(A, b, 3)) break;
-      d->coeff_a[N + 0] = b[0];
-      d->coeff_a[N + 1] = b[2];
-      d->coeff_a[N + 2] = b[1];
-      d->coeff_a[N + 3] = b[2];
-    }
-    {
-      double A[3 * 3] = { 1, p->source_b[0], p->source_L[0] + p->source_a[0],
-                          1, p->source_b[1], p->source_L[1] + p->source_a[1],
-                          1, p->source_b[2], p->source_L[2] + p->source_a[2] };
-      double b[3] = { p->target_b[0], p->target_b[1], p->target_b[2] };
-      if(!gauss_solve(A, b, 3)) break;
-      d->coeff_b[N + 0] = b[0];
-      d->coeff_b[N + 1] = b[2];
-      d->coeff_b[N + 2] = b[2];
-      d->coeff_b[N + 3] = b[1];
-    }
-    break;
-  case 4:
-  {
-    // interpolation via constant function and 3 linear functions
-    double A[4 * 4] = { 1, p->source_L[0], p->source_a[0], p->source_b[0],
-                        1, p->source_L[1], p->source_a[1], p->source_b[1],
-                        1, p->source_L[2], p->source_a[2], p->source_b[2],
-                        1, p->source_L[3], p->source_a[3], p->source_b[3] };
-    int pivot[4];
-    if(!gauss_make_triangular(A, pivot, 4)) break;
-    {
-      double b[4] = { p->target_L[0], p->target_L[1], p->target_L[2], p->target_L[3] };
-      gauss_solve_triangular(A, pivot, b, 4);
-      d->coeff_L[N + 0] = b[0];
-      d->coeff_L[N + 1] = b[1];
-      d->coeff_L[N + 2] = b[2];
-      d->coeff_L[N + 3] = b[3];
-    }
-    {
-      double b[4] = { p->target_a[0], p->target_a[1], p->target_a[2], p->target_a[3] };
-      gauss_solve_triangular(A, pivot, b, 4);
-      d->coeff_a[N + 0] = b[0];
-      d->coeff_a[N + 1] = b[1];
-      d->coeff_a[N + 2] = b[2];
-      d->coeff_a[N + 3] = b[3];
-    }
-    {
-      double b[4] = { p->target_b[0], p->target_b[1], p->target_b[2], p->target_b[3] };
-      gauss_solve_triangular(A, pivot, b, 4);
-      d->coeff_b[N + 0] = b[0];
-      d->coeff_b[N + 1] = b[1];
-      d->coeff_b[N + 2] = b[2];
-      d->coeff_b[N + 3] = b[3];
-    }
-    break;
-  }
-  default:
-  {
-    // setup linear system of equations
-    double *A = malloc(N4 * N4 * sizeof(*A));
-    double *b = malloc(N4 * sizeof(*b));
-    // coefficients from nonlinear radial kernel functions
-    for(int j=0;j<N;j++)
-      for(int i=j;i<N;i++)
-        A[j*N4+i] = A[i*N4+j] = kernel(d->source_Lab+3*i, d->source_Lab+3*j);
-    // coefficients from constant and linear functions
-    for(int i=0;i<N;i++) A[i*N4+N+0] = A[(N+0)*N4+i] = 1;
-    for(int i=0;i<N;i++) A[i*N4+N+1] = A[(N+1)*N4+i] = d->source_Lab[3*i+0];
-    for(int i=0;i<N;i++) A[i*N4+N+2] = A[(N+2)*N4+i] = d->source_Lab[3*i+1];
-    for(int i=0;i<N;i++) A[i*N4+N+3] = A[(N+3)*N4+i] = d->source_Lab[3*i+2];
-    // lower-right zero block
-    for(int j=N;j<N4;j++)
-      for(int i=N;i<N4;i++)
-        A[j*N4+i] = 0;
-    // make coefficient matrix triangular
-    int *pivot = malloc(N4 * sizeof(*pivot));
-    if (gauss_make_triangular(A, pivot, N4))
-    {
-      // calculate coefficients for L channel
-      for(int i=0;i<N;i++) b[i] = p->target_L[i];
-      for(int i=N;i<N+4;i++) b[i] = 0;
-      gauss_solve_triangular(A, pivot, b, N4);
-      for(int i=0;i<N+4;i++) d->coeff_L[i] = b[i];
-      // calculate coefficients for a channel
-      for(int i=0;i<N;i++) b[i] = p->target_a[i];
-      for(int i=N;i<N+4;i++) b[i] = 0;
-      gauss_solve_triangular(A, pivot, b, N4);
-      for(int i=0;i<N+4;i++) d->coeff_a[i] = b[i];
-      // calculate coefficients for b channel
-      for(int i=0;i<N;i++) b[i] = p->target_b[i];
-      for(int i=N;i<N+4;i++) b[i] = 0;
-      gauss_solve_triangular(A, pivot, b, N4);
-      for(int i=0;i<N+4;i++) d->coeff_b[i] = b[i];
-    }
-    // free resources
-    free(pivot);
-    free(b);
-    free(A);
-  }
   }
 }
 
@@ -759,13 +769,13 @@ void gui_update(struct dt_iop_module_t *self)
   {
     dt_bauhaus_combobox_clear(g->combobox_patch);
     char cboxentry[1024];
-    for(int k=0;k<p->num_patches;k++)
+    for(int k = 0; k < p->num_patches; k++)
     {
       snprintf(cboxentry, sizeof(cboxentry), _("patch #%d"), k);
       dt_bauhaus_combobox_add(g->combobox_patch, cboxentry);
     }
     if(p->num_patches <= 24)
-      dtgtk_drawing_area_set_aspect_ratio(g->area, 2.0/3.0);
+      dtgtk_drawing_area_set_aspect_ratio(g->area, 2.0 / 3.0);
     else
       dtgtk_drawing_area_set_aspect_ratio(g->area, 1.0);
   }
@@ -774,9 +784,8 @@ void gui_update(struct dt_iop_module_t *self)
     dt_bauhaus_slider_set(g->scale_L, p->target_L[g->patch]);
     dt_bauhaus_slider_set(g->scale_a, p->target_a[g->patch]);
     dt_bauhaus_slider_set(g->scale_b, p->target_b[g->patch]);
-    const float Cout = sqrtf(
-        p->target_a[g->patch]*p->target_a[g->patch]+
-        p->target_b[g->patch]*p->target_b[g->patch]);
+    const float Cout
+        = sqrtf(p->target_a[g->patch] * p->target_a[g->patch] + p->target_b[g->patch] * p->target_b[g->patch]);
     dt_bauhaus_slider_set(g->scale_C, Cout);
   }
   else
@@ -784,13 +793,11 @@ void gui_update(struct dt_iop_module_t *self)
     dt_bauhaus_slider_set(g->scale_L, p->target_L[g->patch] - p->source_L[g->patch]);
     dt_bauhaus_slider_set(g->scale_a, p->target_a[g->patch] - p->source_a[g->patch]);
     dt_bauhaus_slider_set(g->scale_b, p->target_b[g->patch] - p->source_b[g->patch]);
-    const float Cin = sqrtf(
-        p->source_a[g->patch]*p->source_a[g->patch] +
-        p->source_b[g->patch]*p->source_b[g->patch]);
-    const float Cout = sqrtf(
-        p->target_a[g->patch]*p->target_a[g->patch]+
-        p->target_b[g->patch]*p->target_b[g->patch]);
-    dt_bauhaus_slider_set(g->scale_C, Cout-Cin);
+    const float Cin
+        = sqrtf(p->source_a[g->patch] * p->source_a[g->patch] + p->source_b[g->patch] * p->source_b[g->patch]);
+    const float Cout
+        = sqrtf(p->target_a[g->patch] * p->target_a[g->patch] + p->target_b[g->patch] * p->target_b[g->patch]);
+    dt_bauhaus_slider_set(g->scale_C, Cout - Cin);
   }
   gtk_widget_queue_draw(g->area);
 }
@@ -800,17 +807,17 @@ void init(dt_iop_module_t *module)
   module->params = calloc(1, sizeof(dt_iop_colorchecker_params_t));
   module->default_params = calloc(1, sizeof(dt_iop_colorchecker_params_t));
   module->default_enabled = 0;
-    module->priority = 391; // module order created by iop_dependencies.py, do not edit!
+  module->priority = 391; // module order created by iop_dependencies.py, do not edit!
   module->params_size = sizeof(dt_iop_colorchecker_params_t);
   module->gui_data = NULL;
   dt_iop_colorchecker_params_t tmp;
   tmp.num_patches = 24;
-  for(int k=0;k<tmp.num_patches;k++) tmp.source_L[k] = colorchecker_Lab[3*k+0];
-  for(int k=0;k<tmp.num_patches;k++) tmp.source_a[k] = colorchecker_Lab[3*k+1];
-  for(int k=0;k<tmp.num_patches;k++) tmp.source_b[k] = colorchecker_Lab[3*k+2];
-  for(int k=0;k<tmp.num_patches;k++) tmp.target_L[k] = colorchecker_Lab[3*k+0];
-  for(int k=0;k<tmp.num_patches;k++) tmp.target_a[k] = colorchecker_Lab[3*k+1];
-  for(int k=0;k<tmp.num_patches;k++) tmp.target_b[k] = colorchecker_Lab[3*k+2];
+  for(int k = 0; k < tmp.num_patches; k++) tmp.source_L[k] = colorchecker_Lab[3 * k + 0];
+  for(int k = 0; k < tmp.num_patches; k++) tmp.source_a[k] = colorchecker_Lab[3 * k + 1];
+  for(int k = 0; k < tmp.num_patches; k++) tmp.source_b[k] = colorchecker_Lab[3 * k + 2];
+  for(int k = 0; k < tmp.num_patches; k++) tmp.target_L[k] = colorchecker_Lab[3 * k + 0];
+  for(int k = 0; k < tmp.num_patches; k++) tmp.target_a[k] = colorchecker_Lab[3 * k + 1];
+  for(int k = 0; k < tmp.num_patches; k++) tmp.target_b[k] = colorchecker_Lab[3 * k + 2];
   memcpy(module->params, &tmp, sizeof(dt_iop_colorchecker_params_t));
   memcpy(module->default_params, &tmp, sizeof(dt_iop_colorchecker_params_t));
 }
@@ -881,9 +888,8 @@ static void target_a_callback(GtkWidget *slider, gpointer user_data)
   if(g->absolute_target)
   {
     p->target_a[g->patch] = CLAMP(dt_bauhaus_slider_get(slider), -128.0, 128.0);
-    const float Cout = sqrtf(
-        p->target_a[g->patch]*p->target_a[g->patch]+
-        p->target_b[g->patch]*p->target_b[g->patch]);
+    const float Cout
+        = sqrtf(p->target_a[g->patch] * p->target_a[g->patch] + p->target_b[g->patch] * p->target_b[g->patch]);
     const int reset = darktable.gui->reset;
     darktable.gui->reset = 1; // avoid history item
     dt_bauhaus_slider_set(g->scale_C, Cout);
@@ -892,15 +898,13 @@ static void target_a_callback(GtkWidget *slider, gpointer user_data)
   else
   {
     p->target_a[g->patch] = CLAMP(p->source_a[g->patch] + dt_bauhaus_slider_get(slider), -128.0, 128.0);
-    const float Cin = sqrtf(
-        p->source_a[g->patch]*p->source_a[g->patch] +
-        p->source_b[g->patch]*p->source_b[g->patch]);
-    const float Cout = sqrtf(
-        p->target_a[g->patch]*p->target_a[g->patch]+
-        p->target_b[g->patch]*p->target_b[g->patch]);
+    const float Cin
+        = sqrtf(p->source_a[g->patch] * p->source_a[g->patch] + p->source_b[g->patch] * p->source_b[g->patch]);
+    const float Cout
+        = sqrtf(p->target_a[g->patch] * p->target_a[g->patch] + p->target_b[g->patch] * p->target_b[g->patch]);
     const int reset = darktable.gui->reset;
     darktable.gui->reset = 1; // avoid history item
-    dt_bauhaus_slider_set(g->scale_C, Cout-Cin);
+    dt_bauhaus_slider_set(g->scale_C, Cout - Cin);
     darktable.gui->reset = reset;
   }
   dt_dev_add_history_item(darktable.develop, self, TRUE);
@@ -915,9 +919,8 @@ static void target_b_callback(GtkWidget *slider, gpointer user_data)
   if(g->absolute_target)
   {
     p->target_b[g->patch] = CLAMP(dt_bauhaus_slider_get(slider), -128.0, 128.0);
-    const float Cout = sqrtf(
-        p->target_a[g->patch]*p->target_a[g->patch]+
-        p->target_b[g->patch]*p->target_b[g->patch]);
+    const float Cout
+        = sqrtf(p->target_a[g->patch] * p->target_a[g->patch] + p->target_b[g->patch] * p->target_b[g->patch]);
     const int reset = darktable.gui->reset;
     darktable.gui->reset = 1; // avoid history item
     dt_bauhaus_slider_set(g->scale_C, Cout);
@@ -926,15 +929,13 @@ static void target_b_callback(GtkWidget *slider, gpointer user_data)
   else
   {
     p->target_b[g->patch] = CLAMP(p->source_b[g->patch] + dt_bauhaus_slider_get(slider), -128.0, 128.0);
-    const float Cin = sqrtf(
-        p->source_a[g->patch]*p->source_a[g->patch] +
-        p->source_b[g->patch]*p->source_b[g->patch]);
-    const float Cout = sqrtf(
-        p->target_a[g->patch]*p->target_a[g->patch]+
-        p->target_b[g->patch]*p->target_b[g->patch]);
+    const float Cin
+        = sqrtf(p->source_a[g->patch] * p->source_a[g->patch] + p->source_b[g->patch] * p->source_b[g->patch]);
+    const float Cout
+        = sqrtf(p->target_a[g->patch] * p->target_a[g->patch] + p->target_b[g->patch] * p->target_b[g->patch]);
     const int reset = darktable.gui->reset;
     darktable.gui->reset = 1; // avoid history item
-    dt_bauhaus_slider_set(g->scale_C, Cout-Cin);
+    dt_bauhaus_slider_set(g->scale_C, Cout - Cin);
     darktable.gui->reset = reset;
   }
   dt_dev_add_history_item(darktable.develop, self, TRUE);
@@ -946,18 +947,16 @@ static void target_C_callback(GtkWidget *slider, gpointer user_data)
   dt_iop_colorchecker_params_t *p = (dt_iop_colorchecker_params_t *)self->params;
   dt_iop_colorchecker_gui_data_t *g = (dt_iop_colorchecker_gui_data_t *)self->gui_data;
   if(g->patch >= p->num_patches || g->patch < 0) return;
-  const float Cin = sqrtf(
-      p->source_a[g->patch]*p->source_a[g->patch] +
-      p->source_b[g->patch]*p->source_b[g->patch]);
-  const float Cout = MAX(1e-4f, sqrtf(
-      p->target_a[g->patch]*p->target_a[g->patch]+
-      p->target_b[g->patch]*p->target_b[g->patch]));
+  const float Cin
+      = sqrtf(p->source_a[g->patch] * p->source_a[g->patch] + p->source_b[g->patch] * p->source_b[g->patch]);
+  const float Cout = MAX(
+      1e-4f, sqrtf(p->target_a[g->patch] * p->target_a[g->patch] + p->target_b[g->patch] * p->target_b[g->patch]));
 
   if(g->absolute_target)
   {
     const float Cnew = CLAMP(dt_bauhaus_slider_get(slider), 0.01, 128.0);
-    p->target_a[g->patch] = CLAMP(p->target_a[g->patch]*Cnew/Cout, -128.0, 128.0);
-    p->target_b[g->patch] = CLAMP(p->target_b[g->patch]*Cnew/Cout, -128.0, 128.0);
+    p->target_a[g->patch] = CLAMP(p->target_a[g->patch] * Cnew / Cout, -128.0, 128.0);
+    p->target_b[g->patch] = CLAMP(p->target_b[g->patch] * Cnew / Cout, -128.0, 128.0);
     const int reset = darktable.gui->reset;
     darktable.gui->reset = 1; // avoid history item
     dt_bauhaus_slider_set(g->scale_a, p->target_a[g->patch]);
@@ -967,8 +966,8 @@ static void target_C_callback(GtkWidget *slider, gpointer user_data)
   else
   {
     const float Cnew = CLAMP(Cin + dt_bauhaus_slider_get(slider), 0.01, 128.0);
-    p->target_a[g->patch] = CLAMP(p->target_a[g->patch]*Cnew/Cout, -128.0, 128.0);
-    p->target_b[g->patch] = CLAMP(p->target_b[g->patch]*Cnew/Cout, -128.0, 128.0);
+    p->target_a[g->patch] = CLAMP(p->target_a[g->patch] * Cnew / Cout, -128.0, 128.0);
+    p->target_b[g->patch] = CLAMP(p->target_b[g->patch] * Cnew / Cout, -128.0, 128.0);
     const int reset = darktable.gui->reset;
     darktable.gui->reset = 1; // avoid history item
     dt_bauhaus_slider_set(g->scale_a, p->target_a[g->patch] - p->source_a[g->patch]);
@@ -1028,7 +1027,7 @@ static gboolean checker_draw(GtkWidget *widget, cairo_t *crf, gpointer user_data
     {
       double rgb[3] = { 0.5, 0.5, 0.5 }; // Lab: rgb grey converted to Lab
       cmsCIELab Lab;
-      const int patch = i + j*cells_x;
+      const int patch = i + j * cells_x;
       if(patch >= p->num_patches) continue;
       Lab.L = p->source_L[patch];
       Lab.a = p->source_a[patch];
@@ -1050,28 +1049,26 @@ static gboolean checker_draw(GtkWidget *widget, cairo_t *crf, gpointer user_data
       cmsDoTransform(g->xform, &Lab, rgb, 1);
       cairo_set_source_rgb(cr, rgb[0], rgb[1], rgb[2]);
       cairo_rectangle(cr, width * i / (float)cells_x, height * j / (float)cells_y,
-          width / (float)cells_x - DT_PIXEL_APPLY_DPI(1),
-          height / (float)cells_y - DT_PIXEL_APPLY_DPI(1));
+                      width / (float)cells_x - DT_PIXEL_APPLY_DPI(1),
+                      height / (float)cells_y - DT_PIXEL_APPLY_DPI(1));
       cairo_fill(cr);
-      if(fabsf(p->target_L[patch] - p->source_L[patch]) > 1e-5f ||
-         fabsf(p->target_a[patch] - p->source_a[patch]) > 1e-5f ||
-         fabsf(p->target_b[patch] - p->source_b[patch]) > 1e-5f)
+      if(fabsf(p->target_L[patch] - p->source_L[patch]) > 1e-5f
+         || fabsf(p->target_a[patch] - p->source_a[patch]) > 1e-5f
+         || fabsf(p->target_b[patch] - p->source_b[patch]) > 1e-5f)
       {
         cairo_set_line_width(cr, DT_PIXEL_APPLY_DPI(2.));
         cairo_set_source_rgb(cr, 0.8, 0.8, 0.8);
-        cairo_rectangle(cr,
-            width * i / (float)cells_x + DT_PIXEL_APPLY_DPI(1),
-            height * j / (float)cells_y + DT_PIXEL_APPLY_DPI(1),
-            width / (float)cells_x - DT_PIXEL_APPLY_DPI(3),
-            height / (float)cells_y - DT_PIXEL_APPLY_DPI(3));
+        cairo_rectangle(cr, width * i / (float)cells_x + DT_PIXEL_APPLY_DPI(1),
+                        height * j / (float)cells_y + DT_PIXEL_APPLY_DPI(1),
+                        width / (float)cells_x - DT_PIXEL_APPLY_DPI(3),
+                        height / (float)cells_y - DT_PIXEL_APPLY_DPI(3));
         cairo_stroke(cr);
         cairo_set_line_width(cr, DT_PIXEL_APPLY_DPI(1.));
         cairo_set_source_rgb(cr, 0.2, 0.2, 0.2);
-        cairo_rectangle(cr,
-            width * i / (float)cells_x + DT_PIXEL_APPLY_DPI(2),
-            height * j / (float)cells_y + DT_PIXEL_APPLY_DPI(2),
-            width / (float)cells_x - DT_PIXEL_APPLY_DPI(5),
-            height / (float)cells_y - DT_PIXEL_APPLY_DPI(5));
+        cairo_rectangle(cr, width * i / (float)cells_x + DT_PIXEL_APPLY_DPI(2),
+                        height * j / (float)cells_y + DT_PIXEL_APPLY_DPI(2),
+                        width / (float)cells_x - DT_PIXEL_APPLY_DPI(5),
+                        height / (float)cells_y - DT_PIXEL_APPLY_DPI(5));
         cairo_stroke(cr);
       }
     }
@@ -1104,11 +1101,10 @@ static gboolean checker_draw(GtkWidget *widget, cairo_t *crf, gpointer user_data
   }
   cairo_set_line_width(cr, DT_PIXEL_APPLY_DPI(2.));
   cairo_set_source_rgb(cr, 1.0, 1.0, 1.0);
-  cairo_rectangle(cr,
-      width * besti / (float)cells_x + DT_PIXEL_APPLY_DPI(5),
-      height * bestj / (float)cells_y + DT_PIXEL_APPLY_DPI(5),
-      width / (float)cells_x - DT_PIXEL_APPLY_DPI(11),
-      height / (float)cells_y - DT_PIXEL_APPLY_DPI(11));
+  cairo_rectangle(cr, width * besti / (float)cells_x + DT_PIXEL_APPLY_DPI(5),
+                  height * bestj / (float)cells_y + DT_PIXEL_APPLY_DPI(5),
+                  width / (float)cells_x - DT_PIXEL_APPLY_DPI(11),
+                  height / (float)cells_y - DT_PIXEL_APPLY_DPI(11));
   cairo_stroke(cr);
 
   cairo_destroy(cr);
@@ -1118,8 +1114,7 @@ static gboolean checker_draw(GtkWidget *widget, cairo_t *crf, gpointer user_data
   return TRUE;
 }
 
-static gboolean checker_motion_notify(GtkWidget *widget, GdkEventMotion *event,
-    gpointer user_data)
+static gboolean checker_motion_notify(GtkWidget *widget, GdkEventMotion *event, gpointer user_data)
 {
   // highlight?
   dt_iop_module_t *self = (dt_iop_module_t *)user_data;
@@ -1141,20 +1136,18 @@ static gboolean checker_motion_notify(GtkWidget *widget, GdkEventMotion *event,
   const int patch = (int)mx + cells_x * (int)my;
   if(patch < 0 || patch >= p->num_patches) return FALSE;
   char tooltip[1024];
-  snprintf(tooltip, sizeof(tooltip),
-      _("(%2.2f %2.2f %2.2f)\n"
-        "altered patches are marked with an outline\n"
-        "click to select\n"
-        "double click to reset\n"
-        "right click to delete patch\n"
-        "shift-click while color picking to replace patch"),
-      p->source_L[patch], p->source_a[patch], p->source_b[patch]);
+  snprintf(tooltip, sizeof(tooltip), _("(%2.2f %2.2f %2.2f)\n"
+                                       "altered patches are marked with an outline\n"
+                                       "click to select\n"
+                                       "double click to reset\n"
+                                       "right click to delete patch\n"
+                                       "shift-click while color picking to replace patch"),
+           p->source_L[patch], p->source_a[patch], p->source_b[patch]);
   gtk_widget_set_tooltip_text(g->area, tooltip);
   return TRUE;
 }
 
-static gboolean checker_button_press(GtkWidget *widget, GdkEventButton *event,
-                                                    gpointer user_data)
+static gboolean checker_button_press(GtkWidget *widget, GdkEventButton *event, gpointer user_data)
 {
   dt_iop_module_t *self = (dt_iop_module_t *)user_data;
   dt_iop_colorchecker_gui_data_t *g = (dt_iop_colorchecker_gui_data_t *)self->gui_data;
@@ -1172,7 +1165,7 @@ static gboolean checker_button_press(GtkWidget *widget, GdkEventButton *event,
   }
   const float mx = mouse_x * cells_x / (float)width;
   const float my = mouse_y * cells_y / (float)height;
-  int patch = (int)mx + cells_x*(int)my;
+  int patch = (int)mx + cells_x * (int)my;
   if(event->button == 1 && event->type == GDK_2BUTTON_PRESS)
   { // reset on double click
     if(patch < 0 || patch >= p->num_patches) return FALSE;
@@ -1187,30 +1180,28 @@ static gboolean checker_button_press(GtkWidget *widget, GdkEventButton *event,
   {
     // right click: delete patch, move others up
     if(patch < 0 || patch >= p->num_patches) return FALSE;
-    memmove(p->target_L+patch, p->target_L+patch+1, sizeof(float)*(p->num_patches-1-patch));
-    memmove(p->target_a+patch, p->target_a+patch+1, sizeof(float)*(p->num_patches-1-patch));
-    memmove(p->target_b+patch, p->target_b+patch+1, sizeof(float)*(p->num_patches-1-patch));
-    memmove(p->source_L+patch, p->source_L+patch+1, sizeof(float)*(p->num_patches-1-patch));
-    memmove(p->source_a+patch, p->source_a+patch+1, sizeof(float)*(p->num_patches-1-patch));
-    memmove(p->source_b+patch, p->source_b+patch+1, sizeof(float)*(p->num_patches-1-patch));
+    memmove(p->target_L + patch, p->target_L + patch + 1, sizeof(float) * (p->num_patches - 1 - patch));
+    memmove(p->target_a + patch, p->target_a + patch + 1, sizeof(float) * (p->num_patches - 1 - patch));
+    memmove(p->target_b + patch, p->target_b + patch + 1, sizeof(float) * (p->num_patches - 1 - patch));
+    memmove(p->source_L + patch, p->source_L + patch + 1, sizeof(float) * (p->num_patches - 1 - patch));
+    memmove(p->source_a + patch, p->source_a + patch + 1, sizeof(float) * (p->num_patches - 1 - patch));
+    memmove(p->source_b + patch, p->source_b + patch + 1, sizeof(float) * (p->num_patches - 1 - patch));
     p->num_patches--;
     dt_dev_add_history_item(darktable.develop, self, TRUE);
     self->gui_update(self);
     return TRUE;
   }
-  else if((event->button == 1) &&
-          ((event->state & GDK_SHIFT_MASK) == GDK_SHIFT_MASK) &&
-          (self->request_color_pick == DT_REQUEST_COLORPICK_MODULE))
+  else if((event->button == 1) && ((event->state & GDK_SHIFT_MASK) == GDK_SHIFT_MASK)
+          && (self->request_color_pick == DT_REQUEST_COLORPICK_MODULE))
   {
     // shift-left while colour picking: replace source colour
     // if clicked outside the valid patches: add new one
 
     // color channels should be nonzero to avoid numerical issues
-    int new_color_valid = fabsf(self->picked_color[0]) > 1.e-3f &&
-                          fabsf(self->picked_color[1]) > 1.e-3f &&
-                          fabsf(self->picked_color[2]) > 1.e-3f;
+    int new_color_valid = fabsf(self->picked_color[0]) > 1.e-3f && fabsf(self->picked_color[1]) > 1.e-3f
+                          && fabsf(self->picked_color[2]) > 1.e-3f;
     // check if the new color is very close to some color already in the colorchecker
-    for(int i=0;i<p->num_patches;++i)
+    for(int i = 0; i < p->num_patches; ++i)
     {
       float color[] = { p->source_L[i], p->source_a[i], p->source_b[i] };
       if(fabsf(self->picked_color[0] - color[0]) < 1.e-3f && fabsf(self->picked_color[1] - color[1]) < 1.e-3f
@@ -1232,13 +1223,12 @@ static gboolean checker_button_press(GtkWidget *widget, GdkEventButton *event,
     }
     return TRUE;
   }
-  if(patch >= p->num_patches) patch = p->num_patches-1;
+  if(patch >= p->num_patches) patch = p->num_patches - 1;
   dt_bauhaus_combobox_set(g->combobox_patch, patch);
   return FALSE;
 }
 
-static gboolean checker_leave_notify(GtkWidget *widget, GdkEventCrossing *event,
-                                                    gpointer user_data)
+static gboolean checker_leave_notify(GtkWidget *widget, GdkEventCrossing *event, gpointer user_data)
 {
   return FALSE; // ?
 }
@@ -1252,12 +1242,12 @@ void gui_init(struct dt_iop_module_t *self)
   self->widget = gtk_box_new(GTK_ORIENTATION_VERTICAL, DT_BAUHAUS_SPACE);
 
   // custom 24-patch widget in addition to combo box
-  g->area = dtgtk_drawing_area_new_with_aspect_ratio(4.0/6.0);
+  g->area = dtgtk_drawing_area_new_with_aspect_ratio(4.0 / 6.0);
   gtk_box_pack_start(GTK_BOX(self->widget), g->area, TRUE, TRUE, 0);
 
   gtk_widget_add_events(GTK_WIDGET(g->area), GDK_POINTER_MOTION_MASK | GDK_POINTER_MOTION_HINT_MASK
-                                             | GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK
-                                             | GDK_LEAVE_NOTIFY_MASK | GDK_SCROLL_MASK);
+                                                 | GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK
+                                                 | GDK_LEAVE_NOTIFY_MASK | GDK_SCROLL_MASK);
   g_signal_connect(G_OBJECT(g->area), "draw", G_CALLBACK(checker_draw), self);
   g_signal_connect(G_OBJECT(g->area), "button-press-event", G_CALLBACK(checker_button_press), self);
   g_signal_connect(G_OBJECT(g->area), "motion-notify-event", G_CALLBACK(checker_motion_notify), self);
@@ -1269,7 +1259,7 @@ void gui_init(struct dt_iop_module_t *self)
   dt_bauhaus_widget_set_label(g->combobox_patch, NULL, _("patch"));
   gtk_widget_set_tooltip_text(g->combobox_patch, _("color checker patch"));
   char cboxentry[1024];
-  for(int k=0;k<p->num_patches;k++)
+  for(int k = 0; k < p->num_patches; k++)
   {
     snprintf(cboxentry, sizeof(cboxentry), _("patch #%d"), k);
     dt_bauhaus_combobox_add(g->combobox_patch, cboxentry);
@@ -1302,7 +1292,9 @@ void gui_init(struct dt_iop_module_t *self)
   g->absolute_target = 0;
   g->combobox_target = dt_bauhaus_combobox_new(self);
   dt_bauhaus_widget_set_label(g->combobox_target, 0, _("target color"));
-  gtk_widget_set_tooltip_text(g->combobox_target, _("control target color of the patches via relative offsets or via absolute Lab values"));
+  gtk_widget_set_tooltip_text(
+      g->combobox_target,
+      _("control target color of the patches via relative offsets or via absolute Lab values"));
   dt_bauhaus_combobox_add(g->combobox_target, _("relative"));
   dt_bauhaus_combobox_add(g->combobox_target, _("absolute"));
 

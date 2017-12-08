@@ -231,8 +231,7 @@ void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const 
 
   const float *const m = piece->pipe->dsc.processed_maximum;
 
-  const float film_rgb_f[4]
-      = { d->color[0] * m[0], d->color[1] * m[1], d->color[2] * m[2], d->color[3] * m[3] };
+  const float film_rgb_f[4] = { d->color[0] * m[0], d->color[1] * m[1], d->color[2] * m[2], d->color[3] * m[3] };
 
   // FIXME: it could be wise to make this a NOP when picking colors. not sure about that though.
   //   if(self->request_color_pick){
@@ -240,7 +239,7 @@ void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const 
   //   }
 
   const uint32_t filters = piece->pipe->dsc.filters;
-  const uint8_t(*const xtrans)[6] = (const uint8_t(*const)[6])piece->pipe->dsc.xtrans;
+  const uint8_t (*const xtrans)[6] = (const uint8_t (*const)[6])piece->pipe->dsc.xtrans;
 
   const float *const in = (const float *const)ivoid;
   float *const out = (float *const)ovoid;
@@ -294,7 +293,8 @@ void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const 
       }
     }
 
-    if(piece->pipe->mask_display & DT_DEV_PIXELPIPE_DISPLAY_MASK) dt_iop_alpha_copy(ivoid, ovoid, roi_out->width, roi_out->height);
+    if(piece->pipe->mask_display & DT_DEV_PIXELPIPE_DISPLAY_MASK)
+      dt_iop_alpha_copy(ivoid, ovoid, roi_out->width, roi_out->height);
   }
 }
 
@@ -306,8 +306,7 @@ void process_sse2(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, c
 
   const float *const m = piece->pipe->dsc.processed_maximum;
 
-  const float film_rgb_f[4]
-      = { d->color[0] * m[0], d->color[1] * m[1], d->color[2] * m[2], d->color[3] * m[3] };
+  const float film_rgb_f[4] = { d->color[0] * m[0], d->color[1] * m[1], d->color[2] * m[2], d->color[3] * m[3] };
 
   // FIXME: it could be wise to make this a NOP when picking colors. not sure about that though.
   //   if(self->request_color_pick){
@@ -315,7 +314,7 @@ void process_sse2(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, c
   //   }
 
   const uint32_t filters = piece->pipe->dsc.filters;
-  const uint8_t(*const xtrans)[6] = (const uint8_t(*const)[6])piece->pipe->dsc.xtrans;
+  const uint8_t (*const xtrans)[6] = (const uint8_t (*const)[6])piece->pipe->dsc.xtrans;
 
   if(filters == 9u)
   { // xtrans float mosaiced
@@ -436,7 +435,8 @@ void process_sse2(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, c
     }
     _mm_sfence();
 
-    if(piece->pipe->mask_display & DT_DEV_PIXELPIPE_DISPLAY_MASK) dt_iop_alpha_copy(ivoid, ovoid, roi_out->width, roi_out->height);
+    if(piece->pipe->mask_display & DT_DEV_PIXELPIPE_DISPLAY_MASK)
+      dt_iop_alpha_copy(ivoid, ovoid, roi_out->width, roi_out->height);
   }
 }
 #endif
@@ -537,7 +537,7 @@ void init(dt_iop_module_t *module)
   module->default_enabled = 0;
   module->params_size = sizeof(dt_iop_invert_params_t);
   module->gui_data = NULL;
-    module->priority = 28; // module order created by iop_dependencies.py, do not edit!
+  module->priority = 28; // module order created by iop_dependencies.py, do not edit!
 }
 
 void cleanup(dt_iop_module_t *module)

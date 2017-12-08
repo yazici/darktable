@@ -112,8 +112,7 @@ const dt_pwstorage_t *dt_pwstorage_new()
       }
       break;
 #else
-      dt_print(DT_DEBUG_PWSTORAGE,
-               "[pwstorage_new] libsecret backend not available. using no storage backend.\n");
+      dt_print(DT_DEBUG_PWSTORAGE, "[pwstorage_new] libsecret backend not available. using no storage backend.\n");
       pwstorage->backend_context = NULL;
       pwstorage->pw_storage_backend = PW_STORAGE_BACKEND_NONE;
 #endif
@@ -134,8 +133,7 @@ const dt_pwstorage_t *dt_pwstorage_new()
       dt_print(DT_DEBUG_PWSTORAGE, "  done.\n");
       break;
 #else
-      dt_print(DT_DEBUG_PWSTORAGE,
-               "[pwstorage_new] kwallet backend not available. using no storage backend.\n");
+      dt_print(DT_DEBUG_PWSTORAGE, "[pwstorage_new] kwallet backend not available. using no storage backend.\n");
       pwstorage->backend_context = NULL;
       pwstorage->pw_storage_backend = PW_STORAGE_BACKEND_NONE;
 #endif
@@ -189,8 +187,8 @@ gboolean dt_pwstorage_set(const gchar *slot, GHashTable *table)
       break;
     case PW_STORAGE_BACKEND_LIBSECRET:
 #if HAVE_LIBSECRET
-      return dt_pwstorage_libsecret_set((backend_libsecret_context_t *)darktable.pwstorage->backend_context,
-                                        slot, table);
+      return dt_pwstorage_libsecret_set((backend_libsecret_context_t *)darktable.pwstorage->backend_context, slot,
+                                        table);
 #endif
       break;
     case PW_STORAGE_BACKEND_KWALLET:
@@ -213,8 +211,7 @@ GHashTable *dt_pwstorage_get(const gchar *slot)
       break;
     case PW_STORAGE_BACKEND_LIBSECRET:
 #if HAVE_LIBSECRET
-      return dt_pwstorage_libsecret_get((backend_libsecret_context_t *)darktable.pwstorage->backend_context,
-                                        slot);
+      return dt_pwstorage_libsecret_get((backend_libsecret_context_t *)darktable.pwstorage->backend_context, slot);
 #endif
       break;
     case PW_STORAGE_BACKEND_KWALLET:

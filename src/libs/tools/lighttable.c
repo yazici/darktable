@@ -42,21 +42,16 @@ static void _lib_lighttable_layout_changed(GtkComboBox *widget, gpointer user_da
 /* zoom slider change callback */
 static void _lib_lighttable_zoom_slider_changed(GtkRange *range, gpointer user_data);
 /* zoom entry change callback */
-static gboolean _lib_lighttable_zoom_entry_changed(GtkWidget *entry, GdkEventKey *event,
-                                                   dt_lib_module_t *self);
+static gboolean _lib_lighttable_zoom_entry_changed(GtkWidget *entry, GdkEventKey *event, dt_lib_module_t *self);
 /* zoom key accel callback */
-static gboolean _lib_lighttable_key_accel_zoom_max_callback(GtkAccelGroup *accel_group,
-                                                            GObject *acceleratable, guint keyval,
-                                                            GdkModifierType modifier, gpointer data);
-static gboolean _lib_lighttable_key_accel_zoom_min_callback(GtkAccelGroup *accel_group,
-                                                            GObject *acceleratable, guint keyval,
-                                                            GdkModifierType modifier, gpointer data);
+static gboolean _lib_lighttable_key_accel_zoom_max_callback(GtkAccelGroup *accel_group, GObject *acceleratable,
+                                                            guint keyval, GdkModifierType modifier, gpointer data);
+static gboolean _lib_lighttable_key_accel_zoom_min_callback(GtkAccelGroup *accel_group, GObject *acceleratable,
+                                                            guint keyval, GdkModifierType modifier, gpointer data);
 static gboolean _lib_lighttable_key_accel_zoom_in_callback(GtkAccelGroup *accel_group, GObject *acceleratable,
-                                                           guint keyval, GdkModifierType modifier,
-                                                           gpointer data);
-static gboolean _lib_lighttable_key_accel_zoom_out_callback(GtkAccelGroup *accel_group,
-                                                            GObject *acceleratable, guint keyval,
-                                                            GdkModifierType modifier, gpointer data);
+                                                           guint keyval, GdkModifierType modifier, gpointer data);
+static gboolean _lib_lighttable_key_accel_zoom_out_callback(GtkAccelGroup *accel_group, GObject *acceleratable,
+                                                            guint keyval, GdkModifierType modifier, gpointer data);
 
 
 const char *name(dt_lib_module_t *self)
@@ -66,7 +61,7 @@ const char *name(dt_lib_module_t *self)
 
 const char **views(dt_lib_module_t *self)
 {
-  static const char *v[] = {"lighttable", NULL};
+  static const char *v[] = { "lighttable", NULL };
   return v;
 }
 
@@ -255,9 +250,8 @@ static void _lib_lighttable_set_zoom(dt_lib_module_t *self, gint zoom)
   gtk_range_set_value(GTK_RANGE(d->zoom), zoom);
 }
 
-static gboolean _lib_lighttable_key_accel_zoom_max_callback(GtkAccelGroup *accel_group,
-                                                            GObject *acceleratable, guint keyval,
-                                                            GdkModifierType modifier, gpointer data)
+static gboolean _lib_lighttable_key_accel_zoom_max_callback(GtkAccelGroup *accel_group, GObject *acceleratable,
+                                                            guint keyval, GdkModifierType modifier, gpointer data)
 {
   dt_lib_module_t *self = (dt_lib_module_t *)data;
   dt_lib_tool_lighttable_t *d = (dt_lib_tool_lighttable_t *)self->data;
@@ -266,9 +260,8 @@ static gboolean _lib_lighttable_key_accel_zoom_max_callback(GtkAccelGroup *accel
   return TRUE;
 }
 
-static gboolean _lib_lighttable_key_accel_zoom_min_callback(GtkAccelGroup *accel_group,
-                                                            GObject *acceleratable, guint keyval,
-                                                            GdkModifierType modifier, gpointer data)
+static gboolean _lib_lighttable_key_accel_zoom_min_callback(GtkAccelGroup *accel_group, GObject *acceleratable,
+                                                            guint keyval, GdkModifierType modifier, gpointer data)
 {
   dt_lib_module_t *self = (dt_lib_module_t *)data;
   dt_lib_tool_lighttable_t *d = (dt_lib_tool_lighttable_t *)self->data;
@@ -277,8 +270,7 @@ static gboolean _lib_lighttable_key_accel_zoom_min_callback(GtkAccelGroup *accel
 }
 
 static gboolean _lib_lighttable_key_accel_zoom_in_callback(GtkAccelGroup *accel_group, GObject *acceleratable,
-                                                           guint keyval, GdkModifierType modifier,
-                                                           gpointer data)
+                                                           guint keyval, GdkModifierType modifier, gpointer data)
 {
   dt_lib_module_t *self = (dt_lib_module_t *)data;
   dt_lib_tool_lighttable_t *d = (dt_lib_tool_lighttable_t *)self->data;
@@ -291,9 +283,8 @@ static gboolean _lib_lighttable_key_accel_zoom_in_callback(GtkAccelGroup *accel_
   return TRUE;
 }
 
-static gboolean _lib_lighttable_key_accel_zoom_out_callback(GtkAccelGroup *accel_group,
-                                                            GObject *acceleratable, guint keyval,
-                                                            GdkModifierType modifier, gpointer data)
+static gboolean _lib_lighttable_key_accel_zoom_out_callback(GtkAccelGroup *accel_group, GObject *acceleratable,
+                                                            guint keyval, GdkModifierType modifier, gpointer data)
 {
   dt_lib_module_t *self = (dt_lib_module_t *)data;
   dt_lib_tool_lighttable_t *d = (dt_lib_tool_lighttable_t *)self->data;

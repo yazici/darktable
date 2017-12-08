@@ -102,8 +102,7 @@ void connect_key_accels(dt_iop_module_t *self)
  * the maximum produces fewer artifacts when inadvertently replacing
  * non-hot pixels.
  * This is the Bayer sensor variant. */
-static int process_bayer(const dt_iop_hotpixels_data_t *data,
-                         const void *const ivoid, void *const ovoid,
+static int process_bayer(const dt_iop_hotpixels_data_t *data, const void *const ivoid, void *const ovoid,
                          const dt_iop_roi_t *const roi_out)
 {
   const float threshold = data->threshold;
@@ -129,12 +128,12 @@ static int process_bayer(const dt_iop_hotpixels_data_t *data,
         int count = 0;
         float maxin = 0.0;
         float other;
-#define TESTONE(OFFSET)                                                                                      \
-  other = in[OFFSET];                                                                                        \
-  if(mid > other)                                                                                            \
-  {                                                                                                          \
-    count++;                                                                                                 \
-    if(other > maxin) maxin = other;                                                                         \
+#define TESTONE(OFFSET)                                                                                           \
+  other = in[OFFSET];                                                                                             \
+  if(mid > other)                                                                                                 \
+  {                                                                                                               \
+    count++;                                                                                                      \
+    if(other > maxin) maxin = other;                                                                              \
   }
         TESTONE(-2);
         TESTONE(-widthx2);
@@ -159,8 +158,7 @@ static int process_bayer(const dt_iop_hotpixels_data_t *data,
 }
 
 /* X-Trans sensor equivalent of process_bayer(). */
-static int process_xtrans(const dt_iop_hotpixels_data_t *data,
-                          const void *const ivoid, void *const ovoid,
+static int process_xtrans(const dt_iop_hotpixels_data_t *data, const void *const ivoid, void *const ovoid,
                           const dt_iop_roi_t *const roi_out, const uint8_t (*const xtrans)[6])
 {
   // for each cell of sensor array, pre-calculate, a list of the x/y
@@ -246,14 +244,14 @@ static int process_xtrans(const dt_iop_hotpixels_data_t *data,
             const uint8_t c = FCxtrans(row, col, roi_out, xtrans);
             for(int i = -2; i >= -10 && i >= -col; --i)
             {
-              if(c == FCxtrans(row, col+i, roi_out, xtrans))
+              if(c == FCxtrans(row, col + i, roi_out, xtrans))
               {
                 out[i] = *in;
               }
             }
             for(int i = 2; i <= 10 && i < width - col; ++i)
             {
-              if(c == FCxtrans(row, col+i, roi_out, xtrans))
+              if(c == FCxtrans(row, col + i, roi_out, xtrans))
               {
                 out[i] = *in;
               }
@@ -279,7 +277,7 @@ void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const 
   int fixed;
   if(piece->pipe->dsc.filters == 9u)
   {
-    fixed = process_xtrans(data, ivoid, ovoid, roi_out, (const uint8_t(*const)[6])piece->pipe->dsc.xtrans);
+    fixed = process_xtrans(data, ivoid, ovoid, roi_out, (const uint8_t (*const)[6])piece->pipe->dsc.xtrans);
   }
   else
   {
@@ -317,7 +315,7 @@ void init(dt_iop_module_t *module)
   module->params = calloc(1, sizeof(dt_iop_hotpixels_params_t));
   module->default_params = calloc(1, sizeof(dt_iop_hotpixels_params_t));
   module->default_enabled = 0;
-    module->priority = 86; // module order created by iop_dependencies.py, do not edit!
+  module->priority = 86; // module order created by iop_dependencies.py, do not edit!
   module->params_size = sizeof(dt_iop_hotpixels_params_t);
   module->gui_data = NULL;
 }

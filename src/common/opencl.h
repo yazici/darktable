@@ -43,7 +43,7 @@
 #include <CL/cl.h>
 // #pragma GCC diagnostic
 
-#define ROUNDUP(a, n) ((a) % (n) == 0 ? (a) : ((a) / (n)+1) * (n))
+#define ROUNDUP(a, n) ((a) % (n) == 0 ? (a) : ((a) / (n) + 1) * (n))
 #define ROUNDUPWD(a) dt_opencl_roundup(a)
 #define ROUNDUPHT(a) dt_opencl_roundup(a)
 
@@ -169,8 +169,8 @@ typedef struct dt_opencl_local_buffer_t
   const int yfactor;
   const size_t cellsize;
   const size_t overhead;
-  int sizex;  // initial value and final values after optimization
-  int sizey;  // initial value and final values after optimization
+  int sizex; // initial value and final values after optimization
+  int sizey; // initial value and final values after optimization
 } dt_opencl_local_buffer_t;
 
 /** internally calls dt_clGetDeviceInfo, and takes care of memory allocation
@@ -205,8 +205,8 @@ int dt_opencl_load_program(const int dev, const int prog, const char *filename, 
                            const char *cachedir, char *md5sum, char **includemd5, int *loaded_cached);
 
 /** builds the given program. */
-int dt_opencl_build_program(const int dev, const int prog, const char *binname, const char *cachedir,
-                            char *md5sum, int loaded_cached);
+int dt_opencl_build_program(const int dev, const int prog, const char *binname, const char *cachedir, char *md5sum,
+                            int loaded_cached);
 
 /** inits a kernel. returns the index or -1 if fail. */
 int dt_opencl_create_kernel(const int program, const char *name);
@@ -225,8 +225,7 @@ int dt_opencl_get_work_group_limits(const int dev, size_t *sizes, size_t *workgr
 int dt_opencl_get_kernel_work_group_size(const int dev, const int kernel, size_t *kernelworkgroupsize);
 
 /** attach arg. */
-int dt_opencl_set_kernel_arg(const int dev, const int kernel, const int num, const size_t size,
-                             const void *arg);
+int dt_opencl_set_kernel_arg(const int dev, const int kernel, const int num, const size_t size, const void *arg);
 
 /** launch kernel! */
 int dt_opencl_enqueue_kernel_2d(const int dev, const int kernel, const size_t *sizes);
@@ -248,11 +247,11 @@ void dt_opencl_disable(void);
 int dt_opencl_update_settings(void);
 
 /** HAVE_OPENCL mode only: copy and alloc buffers. */
-int dt_opencl_copy_device_to_host(const int devid, void *host, void *device, const int width,
-                                  const int height, const int bpp);
+int dt_opencl_copy_device_to_host(const int devid, void *host, void *device, const int width, const int height,
+                                  const int bpp);
 
-int dt_opencl_read_host_from_device(const int devid, void *host, void *device, const int width,
-                                    const int height, const int bpp);
+int dt_opencl_read_host_from_device(const int devid, void *host, void *device, const int width, const int height,
+                                    const int bpp);
 
 int dt_opencl_read_host_from_device_rowpitch(const int devid, void *host, void *device, const int width,
                                              const int height, const int rowpitch);
@@ -261,14 +260,13 @@ int dt_opencl_read_host_from_device_non_blocking(const int devid, void *host, vo
                                                  const int height, const int bpp);
 
 int dt_opencl_read_host_from_device_rowpitch_non_blocking(const int devid, void *host, void *device,
-                                                          const int width, const int height,
-                                                          const int rowpitch);
+                                                          const int width, const int height, const int rowpitch);
 
 int dt_opencl_read_host_from_device_raw(const int devid, void *host, void *device, const size_t *origin,
                                         const size_t *region, const int rowpitch, const int blocking);
 
-int dt_opencl_write_host_to_device(const int devid, void *host, void *device, const int width,
-                                   const int height, const int bpp);
+int dt_opencl_write_host_to_device(const int devid, void *host, void *device, const int width, const int height,
+                                   const int bpp);
 
 int dt_opencl_write_host_to_device_rowpitch(const int devid, void *host, void *device, const int width,
                                             const int height, const int rowpitch);
@@ -277,14 +275,12 @@ int dt_opencl_write_host_to_device_non_blocking(const int devid, void *host, voi
                                                 const int height, const int bpp);
 
 int dt_opencl_write_host_to_device_rowpitch_non_blocking(const int devid, void *host, void *device,
-                                                         const int width, const int height,
-                                                         const int rowpitch);
+                                                         const int width, const int height, const int rowpitch);
 
 int dt_opencl_write_host_to_device_raw(const int devid, void *host, void *device, const size_t *origin,
                                        const size_t *region, const int rowpitch, const int blocking);
 
-void *dt_opencl_copy_host_to_device(const int devid, void *host, const int width, const int height,
-                                    const int bpp);
+void *dt_opencl_copy_host_to_device(const int devid, void *host, const int width, const int height, const int bpp);
 
 void *dt_opencl_copy_host_to_device_rowpitch(const int devid, void *host, const int width, const int height,
                                              const int bpp, const int rowpitch);
@@ -296,14 +292,14 @@ int dt_opencl_enqueue_copy_image(const int devid, cl_mem src, cl_mem dst, size_t
 
 void *dt_opencl_alloc_device(const int devid, const int width, const int height, const int bpp);
 
-void *dt_opencl_alloc_device_use_host_pointer(const int devid, const int width, const int height,
-                                              const int bpp, const int rowpitch, void *host);
+void *dt_opencl_alloc_device_use_host_pointer(const int devid, const int width, const int height, const int bpp,
+                                              const int rowpitch, void *host);
 
-int dt_opencl_enqueue_copy_image_to_buffer(const int devid, cl_mem src_image, cl_mem dst_buffer,
-                                           size_t *origin, size_t *region, size_t offset);
+int dt_opencl_enqueue_copy_image_to_buffer(const int devid, cl_mem src_image, cl_mem dst_buffer, size_t *origin,
+                                           size_t *region, size_t offset);
 
-int dt_opencl_enqueue_copy_buffer_to_image(const int devid, cl_mem src_buffer, cl_mem dst_image,
-                                           size_t offset, size_t *origin, size_t *region);
+int dt_opencl_enqueue_copy_buffer_to_image(const int devid, cl_mem src_buffer, cl_mem dst_image, size_t offset,
+                                           size_t *origin, size_t *region);
 
 int dt_opencl_enqueue_copy_buffer_to_buffer(const int devid, cl_mem src_buffer, cl_mem dst_buffer,
                                             size_t srcoffset, size_t dstoffset, size_t size);
@@ -422,8 +418,7 @@ static inline int dt_opencl_get_work_group_limits(const int dev, size_t *sizes, 
 {
   return -1;
 }
-static inline int dt_opencl_get_kernel_work_group_size(const int dev, const int kernel,
-                                                       size_t *kernelworkgroupsize)
+static inline int dt_opencl_get_kernel_work_group_size(const int dev, const int kernel, size_t *kernelworkgroupsize)
 {
   return -1;
 }

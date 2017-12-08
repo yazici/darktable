@@ -113,8 +113,7 @@ static void dt_control_image_enumerator_job_selected_init(dt_control_image_enume
 }
 
 static int32_t _generic_dt_control_fileop_images_job_run(dt_job_t *job,
-                                                         int32_t (*fileop_callback)(const int32_t,
-                                                                                    const int32_t),
+                                                         int32_t (*fileop_callback)(const int32_t, const int32_t),
                                                          const char *desc, const char *desc_pl)
 {
   dt_control_image_enumerator_t *params = (dt_control_image_enumerator_t *)dt_control_job_get_params(job);
@@ -173,7 +172,12 @@ static void dt_control_image_enumerator_cleanup(void *p)
   free(params);
 }
 
-typedef enum {PROGRESS_NONE, PROGRESS_SIMPLE, PROGRESS_CANCELLABLE} progress_type_t;
+typedef enum
+{
+  PROGRESS_NONE,
+  PROGRESS_SIMPLE,
+  PROGRESS_CANCELLABLE
+} progress_type_t;
 
 static dt_job_t *dt_control_generic_images_job_create(dt_job_execute_callback execute, const char *message,
                                                       int flag, gpointer data, progress_type_t progress_type)
@@ -312,10 +316,10 @@ static int dt_control_merge_hdr_process(dt_imageio_module_data_t *datai, const c
     // need to load in the FCxtrans dependency into the dng writer.
     // for some stupid reason the dng needs this layout wrt cropped
     // offsets, not globally.
-    dt_iop_roi_t roi = {0};
+    dt_iop_roi_t roi = { 0 };
     roi.x = image.crop_x;
     roi.y = image.crop_y;
-    for(int j=0;j<6;j++)
+    for(int j = 0; j < 6; j++)
       for(int i = 0; i < 6; i++) d->first_xtrans[j][i] = FCxtrans(j, i, &roi, image.buf_dsc.xtrans);
     d->pixels = calloc(datai->width * datai->height, sizeof(float));
     d->weight = calloc(datai->width * datai->height, sizeof(float));
@@ -446,7 +450,8 @@ static int32_t dt_control_merge_hdr_job_run(dt_job_t *job)
     const uint32_t imgid = GPOINTER_TO_INT(t->data);
 
     dt_imageio_export_with_flags(imgid, "unused", &buf, (dt_imageio_module_data_t *)&dat, 1, 0, 0, 1, 0,
-                                 "pre:rawprepare", 0, DT_COLORSPACE_NONE, NULL, DT_INTENT_LAST, NULL, NULL, num, total);
+                                 "pre:rawprepare", 0, DT_COLORSPACE_NONE, NULL, DT_INTENT_LAST, NULL, NULL, num,
+                                 total);
 
     t = g_list_delete_link(t, t);
 
@@ -480,7 +485,8 @@ static int32_t dt_control_merge_hdr_job_run(dt_job_t *job)
   char *c = pathname + strlen(pathname);
   while(*c != '.' && c > pathname) c--;
   g_strlcpy(c, "-hdr.dng", sizeof(pathname) - (c - pathname));
-  dt_imageio_write_dng(pathname, d.pixels, d.wd, d.ht, exif, exif_len, d.first_filter, (const uint8_t (*)[6])d.first_xtrans, 1.0f);
+  dt_imageio_write_dng(pathname, d.pixels, d.wd, d.ht, exif, exif_len, d.first_filter,
+                       (const uint8_t(*)[6])d.first_xtrans, 1.0f);
   free(exif);
 
   dt_control_job_set_progress(job, 1.0);
@@ -703,32 +709,24 @@ enum _dt_delete_dialog_choice
 
 static gboolean _dt_delete_dialog_main_thread(gpointer user_data)
 {
-  _dt_delete_modal_dialog_t* modal_dialog = (_dt_delete_modal_dialog_t*)user_data;
+  _dt_delete_modal_dialog_t *modal_dialog = (_dt_delete_modal_dialog_t *)user_data;
   dt_pthread_mutex_lock(&modal_dialog->mutex);
 
   GtkWidget *dialog = gtk_message_dialog_new(
-      GTK_WINDOW(dt_ui_main_window(darktable.gui->ui)),
-      GTK_DIALOG_DESTROY_WITH_PARENT,
-      GTK_MESSAGE_QUESTION,
+      GTK_WINDOW(dt_ui_main_window(darktable.gui->ui)), GTK_DIALOG_DESTROY_WITH_PARENT, GTK_MESSAGE_QUESTION,
       GTK_BUTTONS_NONE,
-      modal_dialog->send_to_trash
-        ? _("could not send %s to trash%s%s")
-        : _("could not physically delete %s%s%s"),
-      modal_dialog->filename,
-      modal_dialog->error_message != NULL ? ": " : "",
+      modal_dialog->send_to_trash ? _("could not send %s to trash%s%s") : _("could not physically delete %s%s%s"),
+      modal_dialog->filename, modal_dialog->error_message != NULL ? ": " : "",
       modal_dialog->error_message != NULL ? modal_dialog->error_message : "");
 
-  if (modal_dialog->send_to_trash)
+  if(modal_dialog->send_to_trash)
     gtk_dialog_add_button(GTK_DIALOG(dialog), _("physically delete"), _DT_DELETE_DIALOG_CHOICE_DELETE);
   gtk_dialog_add_button(GTK_DIALOG(dialog), _("only remove from the collection"), _DT_DELETE_DIALOG_CHOICE_REMOVE);
   gtk_dialog_add_button(GTK_DIALOG(dialog), _("skip to next file"), _DT_DELETE_DIALOG_CHOICE_CONTINUE);
   gtk_dialog_add_button(GTK_DIALOG(dialog), _("stop process"), _DT_DELETE_DIALOG_CHOICE_STOP);
 
-  gtk_window_set_title(
-      GTK_WINDOW(dialog),
-      modal_dialog->send_to_trash
-        ? _("trashing error")
-        : _("deletion error"));
+  gtk_window_set_title(GTK_WINDOW(dialog),
+                       modal_dialog->send_to_trash ? _("trashing error") : _("deletion error"));
   modal_dialog->dialog_result = gtk_dialog_run(GTK_DIALOG(dialog));
   gtk_widget_destroy(dialog);
 
@@ -755,7 +753,7 @@ static gint _dt_delete_file_display_modal_dialog(int send_to_trash, const char *
   dt_pthread_mutex_lock(&modal_dialog.mutex);
 
   gdk_threads_add_idle(_dt_delete_dialog_main_thread, &modal_dialog);
-  while (modal_dialog.dialog_result == GTK_RESPONSE_NONE)
+  while(modal_dialog.dialog_result == GTK_RESPONSE_NONE)
     dt_pthread_cond_wait(&modal_dialog.cond, &modal_dialog.mutex);
 
   dt_pthread_mutex_unlock(&modal_dialog.mutex);
@@ -772,17 +770,17 @@ static enum _dt_delete_status delete_file_from_disk(const char *filename)
   GFile *gfile = g_file_new_for_path(filename);
   int send_to_trash = dt_conf_get_bool("send_to_trash");
 
-  while (delete_status == _DT_DELETE_STATUS_UNKNOWN)
+  while(delete_status == _DT_DELETE_STATUS_UNKNOWN)
   {
     gboolean delete_success = FALSE;
     GError *gerror = NULL;
-    if (send_to_trash)
+    if(send_to_trash)
     {
-      #ifdef __APPLE__
+#ifdef __APPLE__
       delete_success = dt_osx_file_trash(filename, &gerror);
-      #else
+#else
       delete_success = g_file_trash(gfile, NULL /*cancellable*/, &gerror);
-      #endif
+#endif
     }
     else
     {
@@ -790,41 +788,33 @@ static enum _dt_delete_status delete_file_from_disk(const char *filename)
     }
 
     // Delete is a success or the file does not exists: OK to remove from collection
-    if (delete_success
-        || g_error_matches(gerror, G_IO_ERROR, G_IO_ERROR_NOT_FOUND))
+    if(delete_success || g_error_matches(gerror, G_IO_ERROR, G_IO_ERROR_NOT_FOUND))
     {
       delete_status = _DT_DELETE_STATUS_OK_TO_REMOVE;
     }
     else
     {
       const char *filename_display = NULL;
-      GFileInfo *gfileinfo = g_file_query_info(
-          gfile,
-          G_FILE_ATTRIBUTE_STANDARD_DISPLAY_NAME,
-          G_FILE_QUERY_INFO_NONE,
-          NULL /*cancellable*/,
-          NULL /*error*/);
-      if (gfileinfo != NULL)
-        filename_display = g_file_info_get_attribute_string(
-            gfileinfo,
-            G_FILE_ATTRIBUTE_STANDARD_DISPLAY_NAME);
+      GFileInfo *gfileinfo = g_file_query_info(gfile, G_FILE_ATTRIBUTE_STANDARD_DISPLAY_NAME,
+                                               G_FILE_QUERY_INFO_NONE, NULL /*cancellable*/, NULL /*error*/);
+      if(gfileinfo != NULL)
+        filename_display = g_file_info_get_attribute_string(gfileinfo, G_FILE_ATTRIBUTE_STANDARD_DISPLAY_NAME);
 
-      gint res = _dt_delete_file_display_modal_dialog(
-          send_to_trash,
-          filename_display == NULL ? filename : filename_display,
-          gerror == NULL ? NULL : gerror->message);
+      gint res = _dt_delete_file_display_modal_dialog(send_to_trash,
+                                                      filename_display == NULL ? filename : filename_display,
+                                                      gerror == NULL ? NULL : gerror->message);
 
-      if (send_to_trash && res == _DT_DELETE_DIALOG_CHOICE_DELETE)
+      if(send_to_trash && res == _DT_DELETE_DIALOG_CHOICE_DELETE)
       {
         // Loop again, this time delete instead of trashing
         delete_status = _DT_DELETE_STATUS_UNKNOWN;
         send_to_trash = FALSE;
       }
-      else if (res == _DT_DELETE_DIALOG_CHOICE_REMOVE)
+      else if(res == _DT_DELETE_DIALOG_CHOICE_REMOVE)
       {
         delete_status = _DT_DELETE_STATUS_OK_TO_REMOVE;
       }
-      else if (res == _DT_DELETE_DIALOG_CHOICE_CONTINUE)
+      else if(res == _DT_DELETE_DIALOG_CHOICE_CONTINUE)
       {
         delete_status = _DT_DELETE_STATUS_SKIP_FILE;
       }
@@ -833,12 +823,10 @@ static enum _dt_delete_status delete_file_from_disk(const char *filename)
         delete_status = _DT_DELETE_STATUS_STOP_PROCESSING;
       }
     }
-    if (gerror != NULL)
-      g_error_free(gerror);
+    if(gerror != NULL) g_error_free(gerror);
   }
 
-  if (gfile != NULL)
-    g_object_unref(gfile);
+  if(gfile != NULL) g_object_unref(gfile);
 
   return delete_status;
 }
@@ -854,7 +842,7 @@ static int32_t dt_control_delete_images_job_run(dt_job_t *job)
   guint total = g_list_length(t);
   char message[512] = { 0 };
   double fraction = 0;
-  if (dt_conf_get_bool("send_to_trash"))
+  if(dt_conf_get_bool("send_to_trash"))
     snprintf(message, sizeof(message), ngettext("trashing %d image", "trashing %d images", total), total);
   else
     snprintf(message, sizeof(message), ngettext("deleting %d image", "deleting %d images", total), total);
@@ -872,7 +860,8 @@ static int32_t dt_control_delete_images_job_run(dt_job_t *job)
   DT_DEBUG_SQLITE3_PREPARE_V2(dt_database_get(darktable.db),
                               "SELECT COUNT(*) FROM main.images WHERE filename IN (SELECT filename FROM "
                               "main.images WHERE id = ?1) AND film_id IN (SELECT film_id FROM main.images WHERE "
-                              "id = ?1)", -1, &stmt, NULL);
+                              "id = ?1)",
+                              -1, &stmt, NULL);
   while(t)
   {
     enum _dt_delete_status delete_status = _DT_DELETE_STATUS_UNKNOWN;
@@ -895,8 +884,7 @@ static int32_t dt_control_delete_images_job_run(dt_job_t *job)
     if(duplicates == 1)
     {
       // first check for local copies, never delete a file whose original file is not accessible
-      if (dt_image_local_copy_reset(imgid))
-        goto delete_next_file;
+      if(dt_image_local_copy_reset(imgid)) goto delete_next_file;
 
       snprintf(imgidstr, sizeof(imgidstr), "%d", imgid);
       _set_remove_flag(imgidstr);
@@ -904,8 +892,7 @@ static int32_t dt_control_delete_images_job_run(dt_job_t *job)
 
       // there are no further duplicates so we can remove the source data file
       delete_status = delete_file_from_disk(filename);
-      if (delete_status != _DT_DELETE_STATUS_OK_TO_REMOVE)
-        goto delete_next_file;
+      if(delete_status != _DT_DELETE_STATUS_OK_TO_REMOVE) goto delete_next_file;
 
       // all sidecar files - including left-overs - can be deleted;
       // left-overs can result when previously duplicates have been REMOVED;
@@ -926,8 +913,7 @@ static int32_t dt_control_delete_images_job_run(dt_job_t *job)
         snprintf(c1, pattern + sizeof(pattern) - c1, "%s", *glob_pattern);
         const gchar *c2 = filename + strlen(filename);
         while(*c2 != '.' && c2 > filename) c2--;
-        snprintf(c1 + strlen(*glob_pattern), pattern + sizeof(pattern) - c1 - strlen(*glob_pattern), "%s.xmp",
-                 c2);
+        snprintf(c1 + strlen(*glob_pattern), pattern + sizeof(pattern) - c1 - strlen(*glob_pattern), "%s.xmp", c2);
 
 #ifdef _WIN32
         wchar_t *wpattern = g_utf8_to_utf16(pattern, -1, NULL, NULL, NULL);
@@ -941,15 +927,13 @@ static int32_t dt_control_delete_images_job_run(dt_job_t *job)
             char *xmp_filename = g_utf16_to_utf8(data.cFileName, -1, NULL, NULL, NULL);
             files = g_list_append(files, g_build_filename(dirname, xmp_filename));
             g_free(xmp_filename);
-          }
-          while(FindNextFileW(handle, &data));
+          } while(FindNextFileW(handle, &data));
         }
 #else
         glob_t globbuf;
         if(!glob(pattern, 0, NULL, &globbuf))
         {
-          for(size_t i = 0; i < globbuf.gl_pathc; i++)
-            files = g_list_append(files, g_strdup(globbuf.gl_pathv[i]));
+          for(size_t i = 0; i < globbuf.gl_pathc; i++) files = g_list_append(files, g_strdup(globbuf.gl_pathv[i]));
           globfree(&globbuf);
         }
 #endif
@@ -961,8 +945,7 @@ static int32_t dt_control_delete_images_job_run(dt_job_t *job)
       while(file_iter != NULL)
       {
         delete_status = delete_file_from_disk(file_iter->data);
-        if (delete_status != _DT_DELETE_STATUS_OK_TO_REMOVE)
-          break;
+        if(delete_status != _DT_DELETE_STATUS_OK_TO_REMOVE) break;
         file_iter = g_list_next(file_iter);
       }
 
@@ -985,18 +968,16 @@ static int32_t dt_control_delete_images_job_run(dt_job_t *job)
       delete_file_from_disk(filename);
     }
 
-delete_next_file:
+  delete_next_file:
 #ifdef _WIN32
     g_free(dirname);
 #endif
     t = g_list_delete_link(t, t);
     fraction = 1.0 / total;
     dt_control_job_set_progress(job, fraction);
-    if (delete_status == _DT_DELETE_STATUS_STOP_PROCESSING)
-      break;
+    if(delete_status == _DT_DELETE_STATUS_STOP_PROCESSING) break;
   }
-  while (t)
-    t = g_list_delete_link(t, t);
+  while(t) t = g_list_delete_link(t, t);
   params->index = NULL;
   sqlite3_finalize(stmt);
 
@@ -1091,7 +1072,9 @@ static int32_t dt_control_gpx_apply_job_run(dt_job_t *job)
 
   } while((t = g_list_next(t)) != NULL);
 
-  dt_control_log(ngettext("applied matched GPX location onto %d image", "applied matched GPX location onto %d images", cntr), cntr);
+  dt_control_log(
+      ngettext("applied matched GPX location onto %d image", "applied matched GPX location onto %d images", cntr),
+      cntr);
 
   g_time_zone_unref(tz_camera);
   g_time_zone_unref(tz_utc);
@@ -1144,13 +1127,11 @@ static int32_t dt_control_local_copy_images_job_run(dt_job_t *job)
     imgid = GPOINTER_TO_INT(t->data);
     if(is_copy)
     {
-      if (dt_image_local_copy_set(imgid) == 0)
-        dt_tag_attach(tagid, imgid);
+      if(dt_image_local_copy_set(imgid) == 0) dt_tag_attach(tagid, imgid);
     }
     else
     {
-      if (dt_image_local_copy_reset(imgid) == 0)
-        dt_tag_detach(tagid, imgid);
+      if(dt_image_local_copy_reset(imgid) == 0) dt_tag_detach(tagid, imgid);
     }
     t = g_list_delete_link(t, t);
 
@@ -1216,8 +1197,10 @@ static int32_t dt_control_export_job_run(dt_job_t *job)
   double fraction = 0;
 
   // set up the fdata struct
-  fdata->max_width = (settings->max_width != 0 && w != 0) ? MIN(w, settings->max_width) : MAX(w, settings->max_width);
-  fdata->max_height = (settings->max_height != 0 && h != 0) ? MIN(h, settings->max_height) : MAX(h, settings->max_height);
+  fdata->max_width = (settings->max_width != 0 && w != 0) ? MIN(w, settings->max_width)
+                                                          : MAX(w, settings->max_width);
+  fdata->max_height = (settings->max_height != 0 && h != 0) ? MIN(h, settings->max_height)
+                                                            : MAX(h, settings->max_height);
   g_strlcpy(fdata->style, settings->style, sizeof(fdata->style));
   fdata->style_append = settings->style_append;
   guint num = 0;
@@ -1260,7 +1243,8 @@ static int32_t dt_control_export_job_run(dt_job_t *job)
       {
         dt_image_cache_read_release(darktable.image_cache, image);
         if(mstorage->store(mstorage, sdata, imgid, mformat, fdata, num, total, settings->high_quality,
-                           settings->upscale, settings->icc_type, settings->icc_filename, settings->icc_intent) != 0)
+                           settings->upscale, settings->icc_type, settings->icc_filename, settings->icc_intent)
+           != 0)
           dt_control_job_cancel(job);
       }
     }
@@ -1337,10 +1321,9 @@ static dt_job_t *dt_control_gpx_apply_job_create(const gchar *filename, int32_t 
 
 void dt_control_merge_hdr()
 {
-  dt_control_add_job(
-      darktable.control, DT_JOB_QUEUE_USER_FG,
-      dt_control_generic_images_job_create(&dt_control_merge_hdr_job_run, N_("merge hdr image"), 0, NULL,
-                                           PROGRESS_CANCELLABLE));
+  dt_control_add_job(darktable.control, DT_JOB_QUEUE_USER_FG,
+                     dt_control_generic_images_job_create(&dt_control_merge_hdr_job_run, N_("merge hdr image"), 0,
+                                                          NULL, PROGRESS_CANCELLABLE));
 }
 
 void dt_control_gpx_apply(const gchar *filename, int32_t filmid, const gchar *tz)
@@ -1358,28 +1341,27 @@ void dt_control_duplicate_images()
 
 void dt_control_flip_images(const int32_t cw)
 {
-  dt_control_add_job(
-      darktable.control, DT_JOB_QUEUE_USER_FG,
-      dt_control_generic_images_job_create(&dt_control_flip_images_job_run, N_("flip images"), cw, NULL,
-                                           PROGRESS_SIMPLE));
+  dt_control_add_job(darktable.control, DT_JOB_QUEUE_USER_FG,
+                     dt_control_generic_images_job_create(&dt_control_flip_images_job_run, N_("flip images"), cw,
+                                                          NULL, PROGRESS_SIMPLE));
 }
 
 gboolean dt_control_remove_images()
 {
   // get all selected images now, to avoid the set changing during ui interaction
-  dt_job_t *job = dt_control_generic_images_job_create(&dt_control_remove_images_job_run, N_("remove images"), 0, NULL,
-                                                       PROGRESS_SIMPLE);
+  dt_job_t *job = dt_control_generic_images_job_create(&dt_control_remove_images_job_run, N_("remove images"), 0,
+                                                       NULL, PROGRESS_SIMPLE);
   if(dt_conf_get_bool("ask_before_remove"))
   {
     GtkWidget *dialog;
     GtkWidget *win = dt_ui_main_window(darktable.gui->ui);
 
     int number;
-    if (dt_view_get_image_to_act_on() != -1)
+    if(dt_view_get_image_to_act_on() != -1)
       number = 1;
     else
       number = dt_collection_get_selected_count(darktable.collection);
-    
+
     // Do not show the dialog if no image is selected:
     if(number == 0)
     {
@@ -1409,8 +1391,8 @@ gboolean dt_control_remove_images()
 void dt_control_delete_images()
 {
   // first get all selected images, to avoid the set changing during ui interaction
-  dt_job_t *job = dt_control_generic_images_job_create(&dt_control_delete_images_job_run, N_("delete images"), 0, NULL,
-                                                       PROGRESS_SIMPLE);
+  dt_job_t *job = dt_control_generic_images_job_create(&dt_control_delete_images_job_run, N_("delete images"), 0,
+                                                       NULL, PROGRESS_SIMPLE);
   int send_to_trash = dt_conf_get_bool("send_to_trash");
   if(dt_conf_get_bool("ask_before_delete"))
   {
@@ -1418,7 +1400,7 @@ void dt_control_delete_images()
     GtkWidget *win = dt_ui_main_window(darktable.gui->ui);
 
     int number;
-    if (dt_view_get_image_to_act_on() != -1)
+    if(dt_view_get_image_to_act_on() != -1)
       number = 1;
     else
       number = dt_collection_get_selected_count(darktable.collection);
@@ -1432,11 +1414,10 @@ void dt_control_delete_images()
 
     dialog = gtk_message_dialog_new(
         GTK_WINDOW(win), GTK_DIALOG_DESTROY_WITH_PARENT, GTK_MESSAGE_QUESTION, GTK_BUTTONS_YES_NO,
-        send_to_trash
-        ? ngettext("do you really want to send %d selected image to trash?",
-          "do you really want to send %d selected images to trash?", number)
-        : ngettext("do you really want to physically delete %d selected image from disk?",
-          "do you really want to physically delete %d selected images from disk?", number),
+        send_to_trash ? ngettext("do you really want to send %d selected image to trash?",
+                                 "do you really want to send %d selected images to trash?", number)
+                      : ngettext("do you really want to physically delete %d selected image from disk?",
+                                 "do you really want to physically delete %d selected images from disk?", number),
         number);
 
     gtk_window_set_title(GTK_WINDOW(dialog), send_to_trash ? _("trash images?") : _("delete images?"));
@@ -1744,8 +1725,7 @@ static dt_job_t *dt_control_time_offset_job_create(const long int offset, int im
 
 void dt_control_time_offset(const long int offset, int imgid)
 {
-  dt_control_add_job(darktable.control, DT_JOB_QUEUE_USER_FG,
-                     dt_control_time_offset_job_create(offset, imgid));
+  dt_control_add_job(darktable.control, DT_JOB_QUEUE_USER_FG, dt_control_time_offset_job_create(offset, imgid));
 }
 
 void dt_control_write_sidecar_files()

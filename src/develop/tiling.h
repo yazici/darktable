@@ -43,17 +43,17 @@ int default_process_tiling_cl(struct dt_iop_module_t *self, struct dt_dev_pixelp
                               const void *const ivoid, void *const ovoid, const dt_iop_roi_t *const roi_in,
                               const dt_iop_roi_t *const roi_out, const int bpp);
 
-int process_tiling_cl(struct dt_iop_module_t *self, struct dt_dev_pixelpipe_iop_t *piece,
-                      const void *const ivoid, void *const ovoid, const dt_iop_roi_t *const roi_in,
-                      const dt_iop_roi_t *const roi_out, const int bpp);
+int process_tiling_cl(struct dt_iop_module_t *self, struct dt_dev_pixelpipe_iop_t *piece, const void *const ivoid,
+                      void *const ovoid, const dt_iop_roi_t *const roi_in, const dt_iop_roi_t *const roi_out,
+                      const int bpp);
 
 void default_process_tiling(struct dt_iop_module_t *self, struct dt_dev_pixelpipe_iop_t *piece,
                             const void *const ivoid, void *const ovid, const dt_iop_roi_t *const roi_in,
                             const dt_iop_roi_t *const roi_out, const int bpp);
 
-void process_tiling(struct dt_iop_module_t *self, struct dt_dev_pixelpipe_iop_t *piece,
-                    const void *const ivoid, void *const ovoid, const dt_iop_roi_t *const roi_in,
-                    const dt_iop_roi_t *const roi_out, const int bpp);
+void process_tiling(struct dt_iop_module_t *self, struct dt_dev_pixelpipe_iop_t *piece, const void *const ivoid,
+                    void *const ovoid, const dt_iop_roi_t *const roi_in, const dt_iop_roi_t *const roi_out,
+                    const int bpp);
 
 void default_tiling_callback(struct dt_iop_module_t *self, struct dt_dev_pixelpipe_iop_t *piece,
                              const dt_iop_roi_t *roi_in, const dt_iop_roi_t *roi_out,
@@ -64,8 +64,7 @@ void tiling_callback_blendop(struct dt_iop_module_t *self, struct dt_dev_pixelpi
                              struct dt_develop_tiling_t *tiling);
 
 void tiling_callback(struct dt_iop_module_t *self, struct dt_dev_pixelpipe_iop_t *piece,
-                     const dt_iop_roi_t *roi_in, const dt_iop_roi_t *roi_out,
-                     struct dt_develop_tiling_t *tiling);
+                     const dt_iop_roi_t *roi_in, const dt_iop_roi_t *roi_out, struct dt_develop_tiling_t *tiling);
 
 int dt_tiling_piece_fits_host_memory(const size_t width, const size_t height, const unsigned bpp,
                                      const float factor, const size_t overhead);

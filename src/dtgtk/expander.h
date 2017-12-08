@@ -26,10 +26,10 @@ G_BEGIN_DECLS
 #define DTGTK_TYPE_EXPANDER (dtgtk_expander_get_type())
 #define DTGTK_EXPANDER(obj) (G_TYPE_CHECK_INSTANCE_CAST((obj), DTGTK_TYPE_EXPANDER, GtkDarktableExpander))
 #define DTGTK_IS_EXPANDER(obj) (G_TYPE_CHECK_INSTANCE_TYPE((obj), DTGTK_TYPE_EXPANDER))
-#define DTGTK_EXPANDER_CLASS(klass)                                                                          \
+#define DTGTK_EXPANDER_CLASS(klass)                                                                               \
   (G_TYPE_CHECK_CLASS_CAST((klass), DTGTK_TYPE_EXPANDER, GtkDarktableExpanderClass))
 #define DTGTK_IS_EXPANDER_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE((klass), DTGTK_TYPE_EXPANDER))
-#define DTGTK_EXPANDER_GET_CLASS(obj)                                                                        \
+#define DTGTK_EXPANDER_GET_CLASS(obj)                                                                             \
   (G_TYPE_INSTANCE_GET_CLASS((obj), DTGTK_TYPE_EXPANDER, GtkDarktableExpanderClass))
 
 typedef struct _GtkDarktableExpander

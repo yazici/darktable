@@ -63,9 +63,8 @@ const char *name(const struct dt_imageio_module_storage_t *self)
   return _("file on disk");
 }
 
-void *legacy_params(dt_imageio_module_storage_t *self, const void *const old_params,
-                    const size_t old_params_size, const int old_version, const int new_version,
-                    size_t *new_size)
+void *legacy_params(dt_imageio_module_storage_t *self, const void *const old_params, const size_t old_params_size,
+                    const int old_version, const int new_version, size_t *new_size)
 {
   if(old_version == 1 && new_version == 2)
   {
@@ -212,7 +211,7 @@ int store(dt_imageio_module_storage_t *self, dt_imageio_module_data_t *sdata, co
     // about a potentially added "_$(SEQUENCE)"
     char *original_filename = g_strdup(d->filename);
 
-try_again:
+  try_again:
     // avoid braindead export which is bound to overwrite at random:
     if(total > 1 && !g_strrstr(d->filename, "$"))
     {
@@ -314,8 +313,8 @@ try_again:
   printf("[export_job] exported to `%s'\n", filename);
   char *trunc = filename + strlen(filename) - 32;
   if(trunc < filename) trunc = filename;
-  dt_control_log(ngettext("%d/%d exported to `%s%s'", "%d/%d exported to `%s%s'", num),
-                 num, total, trunc != filename ? ".." : "", trunc);
+  dt_control_log(ngettext("%d/%d exported to `%s%s'", "%d/%d exported to `%s%s'", num), num, total,
+                 trunc != filename ? ".." : "", trunc);
   return 0;
 }
 
@@ -327,8 +326,7 @@ size_t params_size(dt_imageio_module_storage_t *self)
 void init(dt_imageio_module_storage_t *self)
 {
 #ifdef USE_LUA
-  dt_lua_register_module_member(darktable.lua_state.state, self, dt_imageio_disk_t, filename,
-                                char_path_length);
+  dt_lua_register_module_member(darktable.lua_state.state, self, dt_imageio_disk_t, filename, char_path_length);
 #endif
 }
 

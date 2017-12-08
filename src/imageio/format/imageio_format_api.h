@@ -54,8 +54,7 @@ void cleanup(struct dt_imageio_module_format_t *self);
 
 /* gets the current export parameters from gui/conf and stores in this struct for later use. */
 void *legacy_params(struct dt_imageio_module_format_t *self, const void *const old_params,
-                    const size_t old_params_size, const int old_version, const int new_version,
-                    size_t *new_size);
+                    const size_t old_params_size, const int old_version, const int new_version, size_t *new_size);
 size_t params_size(struct dt_imageio_module_format_t *self);
 void *get_params(struct dt_imageio_module_format_t *self);
 void free_params(struct dt_imageio_module_format_t *self, struct dt_imageio_module_data_t *data);

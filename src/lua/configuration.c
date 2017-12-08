@@ -26,7 +26,7 @@
 static int check_version(lua_State *L)
 {
   const char *module_name = "<unnamed module>";
-  if(!lua_isnil(L,1)) module_name = luaL_checkstring(L, 1);
+  if(!lua_isnil(L, 1)) module_name = luaL_checkstring(L, 1);
   gboolean valid = false;
   for(int i = 2; i <= lua_gettop(L); i++)
   {

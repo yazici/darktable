@@ -22,11 +22,11 @@
 
 #include <glib.h>
 
-#if defined (_WIN32)
+#if defined(_WIN32)
 #ifdef interface
 #undef interface
 #endif
-#endif //defined (_WIN32)
+#endif // defined (_WIN32)
 #include <gphoto2/gphoto2.h>
 #include <gtk/gtk.h>
 
@@ -182,11 +182,10 @@ typedef struct dt_camctl_listener_t
                                        CameraFile *exif, void *data);
 
   /** Invoked when a value of a property is changed. */
-  void (*camera_property_value_changed)(const dt_camera_t *camera, const char *name, const char *value,
-                                        void *data);
+  void (*camera_property_value_changed)(const dt_camera_t *camera, const char *name, const char *value, void *data);
   /** Invoked when accessibility of a property is changed. */
-  void (*camera_property_accessibility_changed)(const dt_camera_t *camera, const char *name,
-                                                gboolean read_only, void *data);
+  void (*camera_property_accessibility_changed)(const dt_camera_t *camera, const char *name, gboolean read_only,
+                                                void *data);
 
   /** Invoked from dt_camctl_detect_cameras() when a new camera is connected */
   void (*camera_connected)(const dt_camera_t *camera, void *data);
@@ -242,16 +241,15 @@ void dt_camctl_camera_stop_live_view(const dt_camctl_t *c);
 const char *dt_camctl_camera_get_model(const dt_camctl_t *c, const dt_camera_t *cam);
 
 /** Set a property value \param cam Pointer to dt_camera_t if NULL the camctl->active_camera is used. */
-void dt_camctl_camera_set_property_string(const dt_camctl_t *c, const dt_camera_t *cam,
-                                          const char *property_name, const char *value);
-void dt_camctl_camera_set_property_choice(const dt_camctl_t *c, const dt_camera_t *cam,
-                                          const char *property_name, const int value);
-void dt_camctl_camera_set_property_int(const dt_camctl_t *c, const dt_camera_t *cam,
-                                       const char *property_name, const int value);
+void dt_camctl_camera_set_property_string(const dt_camctl_t *c, const dt_camera_t *cam, const char *property_name,
+                                          const char *value);
+void dt_camctl_camera_set_property_choice(const dt_camctl_t *c, const dt_camera_t *cam, const char *property_name,
+                                          const int value);
+void dt_camctl_camera_set_property_int(const dt_camctl_t *c, const dt_camera_t *cam, const char *property_name,
+                                       const int value);
 /** Get a property value from cached configuration. \param cam Pointer to dt_camera_t if NULL the
  * camctl->active_camera is used. */
-const char *dt_camctl_camera_get_property(const dt_camctl_t *c, const dt_camera_t *cam,
-                                          const char *property_name);
+const char *dt_camctl_camera_get_property(const dt_camctl_t *c, const dt_camera_t *cam, const char *property_name);
 /** Check if property exists. */
 int dt_camctl_camera_property_exists(const dt_camctl_t *c, const dt_camera_t *cam, const char *property_name);
 /** Get first choice available for named property. */

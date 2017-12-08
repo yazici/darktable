@@ -68,8 +68,8 @@ void view_leave(struct dt_lib_module_t *self, struct dt_view_t *old_view, struct
 
 /** optional event callbacks for big center widget. */
 /** optional method called after lighttable expose. */
-void gui_post_expose(struct dt_lib_module_t *self, cairo_t *cr, int32_t width, int32_t height,
-                     int32_t pointerx, int32_t pointery);
+void gui_post_expose(struct dt_lib_module_t *self, cairo_t *cr, int32_t width, int32_t height, int32_t pointerx,
+                     int32_t pointery);
 int mouse_leave(struct dt_lib_module_t *self);
 int mouse_moved(struct dt_lib_module_t *self, double x, double y, double pressure, int which);
 int button_released(struct dt_lib_module_t *self, double x, double y, int which, uint32_t state);

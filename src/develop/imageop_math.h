@@ -43,12 +43,10 @@ void dt_iop_clip_and_zoom_roi(float *out, const float *const in, const struct dt
                               const struct dt_iop_roi_t *const roi_in, const int32_t out_stride,
                               const int32_t in_stride);
 #ifdef HAVE_OPENCL
-int dt_iop_clip_and_zoom_cl(int devid, cl_mem dev_out, cl_mem dev_in,
-                            const struct dt_iop_roi_t *const roi_out,
+int dt_iop_clip_and_zoom_cl(int devid, cl_mem dev_out, cl_mem dev_in, const struct dt_iop_roi_t *const roi_out,
                             const struct dt_iop_roi_t *const roi_in);
 
-int dt_iop_clip_and_zoom_roi_cl(int devid, cl_mem dev_out, cl_mem dev_in,
-                                const struct dt_iop_roi_t *const roi_out,
+int dt_iop_clip_and_zoom_roi_cl(int devid, cl_mem dev_out, cl_mem dev_in, const struct dt_iop_roi_t *const roi_out,
                                 const struct dt_iop_roi_t *const roi_in);
 #endif
 
@@ -75,8 +73,7 @@ void dt_iop_clip_and_zoom_mosaic_third_size_xtrans_f(float *const out, const flo
 void dt_iop_clip_and_zoom_demosaic_passthrough_monochrome_f(float *out, const float *const in,
                                                             const struct dt_iop_roi_t *const roi_out,
                                                             const struct dt_iop_roi_t *const roi_in,
-                                                            const int32_t out_stride,
-                                                            const int32_t in_stride);
+                                                            const int32_t out_stride, const int32_t in_stride);
 
 void dt_iop_clip_and_zoom_demosaic_half_size_f(float *out, const float *const in,
                                                const struct dt_iop_roi_t *const roi_out,
@@ -93,8 +90,8 @@ void dt_iop_clip_and_zoom_demosaic_third_size_xtrans_f(float *out, const float *
 
 /** as dt_iop_clip_and_zoom, but for rgba 8-bit channels. */
 void dt_iop_clip_and_zoom_8(const uint8_t *i, int32_t ix, int32_t iy, int32_t iw, int32_t ih, int32_t ibw,
-                            int32_t ibh, uint8_t *o, int32_t ox, int32_t oy, int32_t ow, int32_t oh,
-                            int32_t obw, int32_t obh);
+                            int32_t ibh, uint8_t *o, int32_t ox, int32_t oy, int32_t ow, int32_t oh, int32_t obw,
+                            int32_t obh);
 
 void dt_iop_YCbCr_to_RGB(const float *yuv, float *rgb);
 void dt_iop_RGB_to_YCbCr(const float *rgb, float *yuv);

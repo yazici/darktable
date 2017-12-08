@@ -159,8 +159,8 @@ static int write_image(lua_State *L)
   dt_lua_unlock();
   gboolean high_quality = dt_conf_get_bool("plugins/lighttable/export/high_quality_processing");
   // TODO: expose icc overwrites to the user!
-  gboolean result = dt_imageio_export(imgid, filename, format, fdata, high_quality, upscale, FALSE, DT_COLORSPACE_NONE,
-                                      NULL, DT_INTENT_LAST, NULL, NULL, 1, 1);
+  gboolean result = dt_imageio_export(imgid, filename, format, fdata, high_quality, upscale, FALSE,
+                                      DT_COLORSPACE_NONE, NULL, DT_INTENT_LAST, NULL, NULL, 1, 1);
   dt_lua_lock();
   lua_pushboolean(L, result);
   format->free_params(format, fdata);
@@ -171,7 +171,7 @@ void dt_lua_register_format_type(lua_State *L, dt_imageio_module_format_t *modul
 {
   dt_lua_type_register_parent_type(L, type_id, luaA_type_find(L, "dt_imageio_module_format_t"));
   lua_pushlightuserdata(L, module);
-  dt_lua_type_setmetafield_type(L,type_id,"__associated_object");
+  dt_lua_type_setmetafield_type(L, type_id, "__associated_object");
   // add to the table
   lua_pushlightuserdata(L, module);
   lua_pushcclosure(L, get_format_params, 1);

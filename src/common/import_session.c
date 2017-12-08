@@ -204,8 +204,7 @@ void dt_import_session_set_time(struct dt_import_session_t *self, time_t time)
 }
 
 
-void
-dt_import_session_set_exif_time(struct dt_import_session_t *self, time_t exif_time)
+void dt_import_session_set_exif_time(struct dt_import_session_t *self, time_t exif_time)
 {
   dt_variables_set_exif_time(self->vp, exif_time);
 }
@@ -268,8 +267,8 @@ const char *dt_import_session_filename(struct dt_import_session_t *self, gboolea
       {
         g_free(previous_fname);
         g_free(fname);
-        dt_control_log(_(
-            "couldn't expand to a unique filename for session, please check your import session settings."));
+        dt_control_log(
+            _("couldn't expand to a unique filename for session, please check your import session settings."));
         return NULL;
       }
 

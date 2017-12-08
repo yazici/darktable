@@ -44,7 +44,8 @@ typedef struct dt_iop_scalepixels_gui_data_t
   GtkWidget *pixel_aspect_ratio;
 } dt_iop_scalepixels_gui_data_t;
 
-typedef struct dt_iop_scalepixels_data_t {
+typedef struct dt_iop_scalepixels_data_t
+{
   float pixel_aspect_ratio;
   float x_scale;
   float y_scale;
@@ -103,14 +104,13 @@ int distort_transform(dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, floa
   for(size_t i = 0; i < points_count * 2; i += 2)
   {
     points[i] /= d->x_scale;
-    points[i+1] /= d->y_scale;
+    points[i + 1] /= d->y_scale;
   }
 
   return 1;
 }
 
-int distort_backtransform(dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, float *points,
-                          size_t points_count)
+int distort_backtransform(dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, float *points, size_t points_count)
 {
   precalculate_scale(self, piece);
   dt_iop_scalepixels_data_t *d = piece->data;
@@ -118,7 +118,7 @@ int distort_backtransform(dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, 
   for(size_t i = 0; i < points_count * 2; i += 2)
   {
     points[i] *= d->x_scale;
-    points[i+1] *= d->y_scale;
+    points[i + 1] *= d->y_scale;
   }
 
   return 1;
@@ -153,13 +153,13 @@ void modify_roi_in(dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const d
   *roi_in = *roi_out;
 
   // If possible try to get an image that's strictly larger than what we want to output
-  float hw[2] = {roi_out->height, roi_out->width};
+  float hw[2] = { roi_out->height, roi_out->width };
   transform(piece, hw); // transform() is used reversed here intentionally
   roi_in->height = hw[0];
   roi_in->width = hw[1];
 
   float reduction_ratio = MAX(hw[0] / (piece->buf_in.height * 1.0f), hw[1] / (piece->buf_in.width * 1.0f));
-  if (reduction_ratio > 1.0f)
+  if(reduction_ratio > 1.0f)
   {
     roi_in->height /= reduction_ratio;
     roi_in->width /= reduction_ratio;
@@ -180,7 +180,7 @@ void process(dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const void *c
   const int ch = piece->colors;
   const int ch_width = ch * roi_in->width;
   const struct dt_interpolation *interpolation = dt_interpolation_new(DT_INTERPOLATION_USERPREF);
-  const dt_iop_scalepixels_data_t * const d = piece->data;
+  const dt_iop_scalepixels_data_t *const d = piece->data;
 
 #ifdef _OPENMP
 #pragma omp parallel for schedule(static) default(none) shared(interpolation)
@@ -192,11 +192,11 @@ void process(dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const void *c
     float *out = ((float *)ovoid) + (size_t)4 * j * roi_out->width;
     for(int i = 0; i < roi_out->width; i++, out += 4)
     {
-      float x = i*d->x_scale;
-      float y = j*d->y_scale;
+      float x = i * d->x_scale;
+      float y = j * d->y_scale;
 
-      dt_interpolation_compute_pixel4c(interpolation, (float *)ivoid, out, x, y, roi_in->width,
-                                       roi_in->height, ch_width);
+      dt_interpolation_compute_pixel4c(interpolation, (float *)ivoid, out, x, y, roi_in->width, roi_in->height,
+                                       ch_width);
     }
   }
 }
@@ -229,7 +229,7 @@ void cleanup_pipe(dt_iop_module_t *self, dt_dev_pixelpipe_t *pipe, dt_dev_pixelp
 
 void reload_defaults(dt_iop_module_t *self)
 {
-  dt_iop_scalepixels_params_t tmp = (dt_iop_scalepixels_params_t){ .pixel_aspect_ratio = 1.0f };
+  dt_iop_scalepixels_params_t tmp = (dt_iop_scalepixels_params_t){.pixel_aspect_ratio = 1.0f };
 
   // we might be called from presets update infrastructure => there is no image
   if(!self->dev) goto end;
@@ -266,7 +266,7 @@ void init(dt_iop_module_t *self)
   self->default_params = calloc(1, sizeof(dt_iop_scalepixels_params_t));
   self->default_enabled = (!isnan(image->pixel_aspect_ratio) && image->pixel_aspect_ratio > 0.0f
                            && image->pixel_aspect_ratio != 1.0f);
-    self->priority = 260; // module order created by iop_dependencies.py, do not edit!
+  self->priority = 260; // module order created by iop_dependencies.py, do not edit!
   self->params_size = sizeof(dt_iop_scalepixels_params_t);
   self->gui_data = NULL;
 }

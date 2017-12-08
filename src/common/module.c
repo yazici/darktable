@@ -62,7 +62,7 @@ GList *dt_module_load_modules(const char *subdir, size_t module_size,
 
   if(sort_modules) plugin_list = g_list_sort(plugin_list, sort_modules);
 
- return plugin_list;
+  return plugin_list;
 }
 
 // modelines: These editor modelines have been set for all relevant files by tools/update_modelines.sh

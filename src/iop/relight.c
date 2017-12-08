@@ -52,11 +52,9 @@ void init_presets(dt_iop_module_so_t *self)
   DT_DEBUG_SQLITE3_EXEC(dt_database_get(darktable.db), "BEGIN", NULL, NULL, NULL);
 
   dt_gui_presets_add_generic(_("fill-light 0.25EV with 4 zones"), self->op, self->version(),
-                             &(dt_iop_relight_params_t){ 0.25, 0.25, 4.0 }, sizeof(dt_iop_relight_params_t),
-                             1);
+                             &(dt_iop_relight_params_t){ 0.25, 0.25, 4.0 }, sizeof(dt_iop_relight_params_t), 1);
   dt_gui_presets_add_generic(_("fill-shadow -0.25EV with 4 zones"), self->op, self->version(),
-                             &(dt_iop_relight_params_t){ -0.25, 0.25, 4.0 }, sizeof(dt_iop_relight_params_t),
-                             1);
+                             &(dt_iop_relight_params_t){ -0.25, 0.25, 4.0 }, sizeof(dt_iop_relight_params_t), 1);
 
   DT_DEBUG_SQLITE3_EXEC(dt_database_get(darktable.db), "COMMIT", NULL, NULL, NULL);
 }
@@ -191,8 +189,7 @@ error:
 void init_global(dt_iop_module_so_t *module)
 {
   const int program = 8; // extended.cl, from programs.conf
-  dt_iop_relight_global_data_t *gd
-      = (dt_iop_relight_global_data_t *)malloc(sizeof(dt_iop_relight_global_data_t));
+  dt_iop_relight_global_data_t *gd = (dt_iop_relight_global_data_t *)malloc(sizeof(dt_iop_relight_global_data_t));
   module->data = gd;
   gd->kernel_relight = dt_opencl_create_kernel(program, "relight");
 }
@@ -210,9 +207,8 @@ static void picker_callback(GtkDarktableToggleButton *button, gpointer user_data
   dt_iop_module_t *self = (dt_iop_module_t *)user_data;
   if(darktable.gui->reset) return;
 
-  self->request_color_pick
-      = (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(button)) ? DT_REQUEST_COLORPICK_MODULE
-                                                                 : DT_REQUEST_COLORPICK_OFF);
+  self->request_color_pick = (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(button)) ? DT_REQUEST_COLORPICK_MODULE
+                                                                                      : DT_REQUEST_COLORPICK_OFF);
 
   /* set the area sample size*/
   if(self->request_color_pick != DT_REQUEST_COLORPICK_OFF)
@@ -297,7 +293,7 @@ void init(dt_iop_module_t *module)
   module->params = calloc(1, sizeof(dt_iop_relight_params_t));
   module->default_params = calloc(1, sizeof(dt_iop_relight_params_t));
   module->default_enabled = 0;
-    module->priority = 710; // module order created by iop_dependencies.py, do not edit!
+  module->priority = 710; // module order created by iop_dependencies.py, do not edit!
   module->params_size = sizeof(dt_iop_relight_params_t);
   module->gui_data = NULL;
   dt_iop_relight_params_t tmp = (dt_iop_relight_params_t){ 0.33, 0, 4 };
@@ -366,8 +362,7 @@ void gui_init(struct dt_iop_module_t *self)
   GtkBox *hbox = GTK_BOX(gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 2));
 
 #define NEUTRAL_GRAY 0.5
-  static const GdkRGBA _gradient_L[]
-      = { { 0, 0, 0, 1.0 }, { NEUTRAL_GRAY, NEUTRAL_GRAY, NEUTRAL_GRAY, 1.0 } };
+  static const GdkRGBA _gradient_L[] = { { 0, 0, 0, 1.0 }, { NEUTRAL_GRAY, NEUTRAL_GRAY, NEUTRAL_GRAY, 1.0 } };
   g->gslider1 = DTGTK_GRADIENT_SLIDER(dtgtk_gradient_slider_new_with_color(_gradient_L[0], _gradient_L[1]));
 
   gtk_widget_set_tooltip_text(GTK_WIDGET(g->gslider1), _("select the center of fill-light"));

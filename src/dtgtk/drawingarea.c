@@ -25,8 +25,8 @@ static GtkSizeRequestMode dtgtk_drawing_area_get_request_mode(GtkWidget *widget)
   return GTK_SIZE_REQUEST_HEIGHT_FOR_WIDTH;
 };
 
-static void dtgtk_drawing_area_get_preferred_height_for_width(GtkWidget *widget, gint for_width,
-                                                              gint *min_height, gint *nat_height)
+static void dtgtk_drawing_area_get_preferred_height_for_width(GtkWidget *widget, gint for_width, gint *min_height,
+                                                              gint *nat_height)
 {
   GtkDarktableDrawingArea *da = DTGTK_DRAWING_AREA(widget);
 

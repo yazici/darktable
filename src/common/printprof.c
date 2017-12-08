@@ -22,20 +22,22 @@
 #include <glib.h>
 #include <unistd.h>
 
-static cmsUInt32Number ComputeOutputFormatDescriptor (cmsUInt32Number dwInput, int OutColorSpace, int bps)
+static cmsUInt32Number ComputeOutputFormatDescriptor(cmsUInt32Number dwInput, int OutColorSpace, int bps)
 {
-    int IsPlanar  = T_PLANAR(dwInput);
-    int Channels  = 3;
-    int IsFlt     = 0;
-    return (FLOAT_SH(IsFlt)|COLORSPACE_SH(OutColorSpace)|PLANAR_SH(IsPlanar)|CHANNELS_SH(Channels)|BYTES_SH(bps));
+  int IsPlanar = T_PLANAR(dwInput);
+  int Channels = 3;
+  int IsFlt = 0;
+  return (FLOAT_SH(IsFlt) | COLORSPACE_SH(OutColorSpace) | PLANAR_SH(IsPlanar) | CHANNELS_SH(Channels)
+          | BYTES_SH(bps));
 }
 
-static cmsUInt32Number ComputeFormatDescriptor (int OutColorSpace, int bps)
+static cmsUInt32Number ComputeFormatDescriptor(int OutColorSpace, int bps)
 {
-  int IsPlanar  = 0;
-  int Channels  = 3;
+  int IsPlanar = 0;
+  int Channels = 3;
   int IsFlt = 0;
-  return (FLOAT_SH(IsFlt)|COLORSPACE_SH(OutColorSpace)|PLANAR_SH(IsPlanar)|CHANNELS_SH(Channels)|BYTES_SH(bps));
+  return (FLOAT_SH(IsFlt) | COLORSPACE_SH(OutColorSpace) | PLANAR_SH(IsPlanar) | CHANNELS_SH(Channels)
+          | BYTES_SH(bps));
 }
 
 int dt_apply_printer_profile(int imgid, void **in, uint32_t width, uint32_t height, int bpp,
@@ -46,8 +48,7 @@ int dt_apply_printer_profile(int imgid, void **in, uint32_t width, uint32_t heig
   cmsUInt32Number wInput, wOutput;
   int OutputColorSpace;
 
-  if(!hOutProfile)
-    return 1;
+  if(!hOutProfile) return 1;
 
   const dt_colorspaces_color_profile_t *in_profile = dt_colorspaces_get_output_profile(imgid);
   if(!in_profile || !in_profile->profile)
@@ -57,26 +58,23 @@ int dt_apply_printer_profile(int imgid, void **in, uint32_t width, uint32_t heig
   }
   hInProfile = in_profile->profile;
 
-  wInput = ComputeFormatDescriptor (PT_RGB, (bpp==8?1:2));
+  wInput = ComputeFormatDescriptor(PT_RGB, (bpp == 8 ? 1 : 2));
 
   OutputColorSpace = _cmsLCMScolorSpace(cmsGetColorSpace(hOutProfile));
   wOutput = ComputeOutputFormatDescriptor(wInput, OutputColorSpace, 1);
 
-  hTransform = cmsCreateTransform
-    (hInProfile,  wInput,
-     hOutProfile, wOutput,
-     intent,
-     black_point_compensation ? cmsFLAGS_BLACKPOINTCOMPENSATION : 0);
+  hTransform = cmsCreateTransform(hInProfile, wInput, hOutProfile, wOutput, intent,
+                                  black_point_compensation ? cmsFLAGS_BLACKPOINTCOMPENSATION : 0);
 
-  if (!hTransform)
+  if(!hTransform)
   {
     fprintf(stderr, "error printer profile may be corrupted\n");
     return 1;
   }
 
-  void *out = (void *)malloc(width*height*3);
+  void *out = (void *)malloc(width * height * 3);
 
-  if (bpp == 8)
+  if(bpp == 8)
   {
     const uint8_t *ptr_in = (uint8_t *)*in;
     uint8_t *ptr_out = (uint8_t *)out;
@@ -84,8 +82,8 @@ int dt_apply_printer_profile(int imgid, void **in, uint32_t width, uint32_t heig
 #ifdef _OPENMP
 #pragma omp parallel for schedule(static) default(none) shared(ptr_in, ptr_out, hTransform, height, width)
 #endif
-    for (int k=0; k<height; k++)
-      cmsDoTransform(hTransform, (const void *)&ptr_in[k*width*3], (void *)&ptr_out[k*width*3], width);
+    for(int k = 0; k < height; k++)
+      cmsDoTransform(hTransform, (const void *)&ptr_in[k * width * 3], (void *)&ptr_out[k * width * 3], width);
   }
   else
   {
@@ -95,8 +93,8 @@ int dt_apply_printer_profile(int imgid, void **in, uint32_t width, uint32_t heig
 #ifdef _OPENMP
 #pragma omp parallel for schedule(static) default(none) shared(ptr_in, ptr_out, hTransform, height, width)
 #endif
-    for (int k=0; k<height; k++)
-      cmsDoTransform(hTransform, (const void *)&ptr_in[k*width*3], (void *)&ptr_out[k*width*3], width);
+    for(int k = 0; k < height; k++)
+      cmsDoTransform(hTransform, (const void *)&ptr_in[k * width * 3], (void *)&ptr_out[k * width * 3], width);
   }
 
   cmsDeleteTransform(hTransform);

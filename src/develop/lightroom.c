@@ -245,17 +245,14 @@ char *dt_get_lightroom_xmp(int imgid)
   // Look for extension
   char *pos = strrchr(pathname, '.');
 
-  if(pos == NULL)
-    return NULL;
+  if(pos == NULL) return NULL;
 
   // If found, replace extension with xmp
   strncpy(pos + 1, "xmp", 4);
-  if(g_file_test(pathname, G_FILE_TEST_EXISTS))
-    return g_strdup(pathname);
+  if(g_file_test(pathname, G_FILE_TEST_EXISTS)) return g_strdup(pathname);
 
   strncpy(pos + 1, "XMP", 4);
-  if(g_file_test(pathname, G_FILE_TEST_EXISTS))
-    return g_strdup(pathname);
+  if(g_file_test(pathname, G_FILE_TEST_EXISTS)) return g_strdup(pathname);
 
   return NULL;
 }
@@ -268,13 +265,12 @@ static float get_interpolate(lr2dt_t lr2dt_table[], float value)
 
   return lr2dt_table[k].dt
          + ((value - lr2dt_table[k].lr) / (lr2dt_table[k + 1].lr - lr2dt_table[k].lr))
-           * (lr2dt_table[k + 1].dt - lr2dt_table[k].dt);
+               * (lr2dt_table[k + 1].dt - lr2dt_table[k].dt);
 }
 
 static float lr2dt_blacks(float value)
 {
-  lr2dt_t lr2dt_blacks_table[]
-      = { { -100, 0.020 }, { -50, 0.005 }, { 0, 0 }, { 50, -0.005 }, { 100, -0.010 } };
+  lr2dt_t lr2dt_blacks_table[] = { { -100, 0.020 }, { -50, 0.005 }, { 0, 0 }, { 50, -0.005 }, { 100, -0.010 } };
 
   return get_interpolate(lr2dt_blacks_table, value);
 }
@@ -329,8 +325,8 @@ static void dt_add_hist(int imgid, char *operation, dt_iop_params_t *params, int
 
   //  get current num if any
   sqlite3_stmt *stmt;
-  DT_DEBUG_SQLITE3_PREPARE_V2(dt_database_get(darktable.db),
-                              "SELECT COUNT(*) FROM main.history WHERE imgid = ?1", -1, &stmt, NULL);
+  DT_DEBUG_SQLITE3_PREPARE_V2(dt_database_get(darktable.db), "SELECT COUNT(*) FROM main.history WHERE imgid = ?1",
+                              -1, &stmt, NULL);
   DT_DEBUG_SQLITE3_BIND_INT(stmt, 1, imgid);
   if(sqlite3_step(stmt) == SQLITE_ROW)
   {
@@ -358,7 +354,8 @@ static void dt_add_hist(int imgid, char *operation, dt_iop_params_t *params, int
   // also bump history_end
   DT_DEBUG_SQLITE3_PREPARE_V2(dt_database_get(darktable.db),
                               "UPDATE main.images SET history_end = (SELECT IFNULL(MAX(num) + 1, 0) FROM "
-                              "main.history WHERE imgid = ?1) WHERE id = ?1", -1, &stmt, NULL);
+                              "main.history WHERE imgid = ?1) WHERE id = ?1",
+                              -1, &stmt, NULL);
   DT_DEBUG_SQLITE3_BIND_INT(stmt, 1, imgid);
   sqlite3_step(stmt);
   sqlite3_finalize(stmt);
@@ -458,16 +455,16 @@ void dt_lightroom_import(int imgid, dt_develop_t *dev, gboolean iauto)
     }
     xmlFree(value);
   }
-// we could bail out here if we ONLY wanted to load a file known to be from lightroom.
-// if we don't know who created it we will just import it however.
-//   else
-//   {
-//     xmlXPathFreeObject(xpathObj);
-//     xmlXPathFreeContext(xpathCtx);
-//     if(!iauto) dt_control_log(_("`%s' not a lightroom XMP!"), pathname);
-//     g_free(pathname);
-//     return;
-//   }
+  // we could bail out here if we ONLY wanted to load a file known to be from lightroom.
+  // if we don't know who created it we will just import it however.
+  //   else
+  //   {
+  //     xmlXPathFreeObject(xpathObj);
+  //     xmlXPathFreeContext(xpathCtx);
+  //     if(!iauto) dt_control_log(_("`%s' not a lightroom XMP!"), pathname);
+  //     g_free(pathname);
+  //     return;
+  //   }
 
   xmlXPathFreeObject(xpathObj);
   xmlXPathFreeContext(xpathCtx);
@@ -1208,8 +1205,8 @@ void dt_lightroom_import(int imgid, dt_develop_t *dev, gboolean iauto)
           break;
       }
 
-    dt_add_hist(imgid, "flip", (dt_iop_params_t *)&pf, sizeof(dt_iop_flip_params_t), imported,
-                sizeof(imported), LRDT_FLIP_VERSION, &n_import);
+    dt_add_hist(imgid, "flip", (dt_iop_params_t *)&pf, sizeof(dt_iop_flip_params_t), imported, sizeof(imported),
+                LRDT_FLIP_VERSION, &n_import);
     refresh_needed = TRUE;
   }
 
@@ -1224,8 +1221,8 @@ void dt_lightroom_import(int imgid, dt_develop_t *dev, gboolean iauto)
   {
     pg.channel = 0;
 
-    dt_add_hist(imgid, "grain", (dt_iop_params_t *)&pg, sizeof(dt_iop_grain_params_t), imported,
-                sizeof(imported), LRDT_GRAIN_VERSION, &n_import);
+    dt_add_hist(imgid, "grain", (dt_iop_params_t *)&pg, sizeof(dt_iop_grain_params_t), imported, sizeof(imported),
+                LRDT_GRAIN_VERSION, &n_import);
     refresh_needed = TRUE;
   }
 
@@ -1279,14 +1276,13 @@ void dt_lightroom_import(int imgid, dt_develop_t *dev, gboolean iauto)
         ps.spot[k].xc = tmp;
       }
 
-    dt_add_hist(imgid, "spots", (dt_iop_params_t *)&ps, sizeof(dt_iop_spots_params_t), imported,
-                sizeof(imported), LRDT_SPOTS_VERSION, &n_import);
+    dt_add_hist(imgid, "spots", (dt_iop_params_t *)&ps, sizeof(dt_iop_spots_params_t), imported, sizeof(imported),
+                LRDT_SPOTS_VERSION, &n_import);
     refresh_needed = TRUE;
   }
 
-  if(dev != NULL &&
-     (curve_kind != linear
-      || ptc_value[0] != 0 || ptc_value[1] != 0 || ptc_value[2] != 0 || ptc_value[3] != 0))
+  if(dev != NULL
+     && (curve_kind != linear || ptc_value[0] != 0 || ptc_value[1] != 0 || ptc_value[2] != 0 || ptc_value[3] != 0))
   {
     const int total_pts = (curve_kind == custom) ? n_pts : 6;
     ptc.tonecurve_nodes[ch_L] = total_pts;
@@ -1341,10 +1337,8 @@ void dt_lightroom_import(int imgid, dt_develop_t *dev, gboolean iauto)
       ptc.tonecurve[ch_L][3].y += ptc.tonecurve[ch_L][3].y * ((float)ptc_value[2] / 100.0);
       ptc.tonecurve[ch_L][4].y += ptc.tonecurve[ch_L][4].y * ((float)ptc_value[3] / 100.0);
 
-      if(ptc.tonecurve[ch_L][1].y > ptc.tonecurve[ch_L][2].y)
-        ptc.tonecurve[ch_L][1].y = ptc.tonecurve[ch_L][2].y;
-      if(ptc.tonecurve[ch_L][3].y > ptc.tonecurve[ch_L][4].y)
-        ptc.tonecurve[ch_L][4].y = ptc.tonecurve[ch_L][3].y;
+      if(ptc.tonecurve[ch_L][1].y > ptc.tonecurve[ch_L][2].y) ptc.tonecurve[ch_L][1].y = ptc.tonecurve[ch_L][2].y;
+      if(ptc.tonecurve[ch_L][3].y > ptc.tonecurve[ch_L][4].y) ptc.tonecurve[ch_L][4].y = ptc.tonecurve[ch_L][3].y;
     }
 
     dt_add_hist(imgid, "tonecurve", (dt_iop_params_t *)&ptc, sizeof(dt_iop_tonecurve_params_t), imported,
@@ -1378,8 +1372,8 @@ void dt_lightroom_import(int imgid, dt_develop_t *dev, gboolean iauto)
     pbl.sigma_r = 100.0;
     pbl.sigma_s = 100.0;
 
-    dt_add_hist(imgid, "bilat", (dt_iop_params_t *)&pbl, sizeof(dt_iop_bilat_params_t), imported,
-                sizeof(imported), LRDT_BILAT_VERSION, &n_import);
+    dt_add_hist(imgid, "bilat", (dt_iop_params_t *)&pbl, sizeof(dt_iop_bilat_params_t), imported, sizeof(imported),
+                LRDT_BILAT_VERSION, &n_import);
     refresh_needed = TRUE;
   }
 

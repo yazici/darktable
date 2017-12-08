@@ -78,13 +78,13 @@ void dt_pthread_setname(const char *name)
 #if defined __linux__
   pthread_setname_np(pthread_self(), name);
 #elif defined __FreeBSD__ || defined __DragonFly__
-  // TODO: is this the right syntax?
-  // pthread_setname_np(pthread_self(), name, 0);
+// TODO: is this the right syntax?
+// pthread_setname_np(pthread_self(), name, 0);
 #elif defined __NetBSD__
-  // TODO: is this the right syntax?
-  // pthread_setname_np(pthread_self(), name, NULL);
+// TODO: is this the right syntax?
+// pthread_setname_np(pthread_self(), name, NULL);
 #elif defined __OpenBSD__
-  // TODO: find out if there is pthread_setname_np() on OpenBSD and how to call it
+// TODO: find out if there is pthread_setname_np() on OpenBSD and how to call it
 #elif defined __APPLE__
   pthread_setname_np(name);
 #elif defined _WIN32

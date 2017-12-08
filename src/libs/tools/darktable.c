@@ -46,8 +46,7 @@ typedef struct dt_lib_darktable_t
 /* expose function for darktable module */
 static gboolean _lib_darktable_draw_callback(GtkWidget *widget, cairo_t *cr, gpointer user_data);
 /* button press callback */
-static gboolean _lib_darktable_button_press_callback(GtkWidget *widget, GdkEventButton *event,
-                                                     gpointer user_data);
+static gboolean _lib_darktable_button_press_callback(GtkWidget *widget, GdkEventButton *event, gpointer user_data);
 /* show the about dialog */
 static void _lib_darktable_show_about_dialog();
 
@@ -58,7 +57,7 @@ const char *name(dt_lib_module_t *self)
 
 const char **views(dt_lib_module_t *self)
 {
-  static const char *v[] = {"*", NULL};
+  static const char *v[] = { "*", NULL };
   return v;
 }
 
@@ -88,8 +87,8 @@ void gui_init(dt_lib_module_t *self)
 
   /* connect callbacks */
   g_signal_connect(G_OBJECT(self->widget), "draw", G_CALLBACK(_lib_darktable_draw_callback), self);
-  g_signal_connect(G_OBJECT(self->widget), "button-press-event",
-                   G_CALLBACK(_lib_darktable_button_press_callback), self);
+  g_signal_connect(G_OBJECT(self->widget), "button-press-event", G_CALLBACK(_lib_darktable_button_press_callback),
+                   self);
 
   /* create a cairo surface of dt icon */
 
@@ -122,8 +121,7 @@ void gui_init(dt_lib_module_t *self)
       d->image = NULL;
       goto done;
     }
-    int png_width = cairo_image_surface_get_width(surface),
-        png_height = cairo_image_surface_get_height(surface);
+    int png_width = cairo_image_surface_get_width(surface), png_height = cairo_image_surface_get_height(surface);
 
     // blow up the PNG. Ugly, but at least it has the correct size afterwards :-/
     int width = DT_PIXEL_APPLY_DPI(png_width) * darktable.gui->ppd,
@@ -131,8 +129,7 @@ void gui_init(dt_lib_module_t *self)
     int stride = cairo_format_stride_for_width(CAIRO_FORMAT_ARGB32, width);
 
     d->image_buffer = (guint8 *)calloc(stride * height, sizeof(guint8));
-    d->image
-        = dt_cairo_image_surface_create_for_data(d->image_buffer, CAIRO_FORMAT_ARGB32, width, height, stride);
+    d->image = dt_cairo_image_surface_create_for_data(d->image_buffer, CAIRO_FORMAT_ARGB32, width, height, stride);
     if(cairo_surface_status(d->image) != CAIRO_STATUS_SUCCESS)
     {
       free(d->image_buffer);
@@ -226,8 +223,7 @@ static gboolean _lib_darktable_draw_callback(GtkWidget *widget, cairo_t *cr, gpo
   return TRUE;
 }
 
-static gboolean _lib_darktable_button_press_callback(GtkWidget *widget, GdkEventButton *event,
-                                                     gpointer user_data)
+static gboolean _lib_darktable_button_press_callback(GtkWidget *widget, GdkEventButton *event, gpointer user_data)
 {
   /* show about box */
   _lib_darktable_show_about_dialog();
@@ -242,8 +238,7 @@ static void _lib_darktable_show_about_dialog()
   char *copyright = g_strdup_printf(_("copyright (c) the authors 2009-%s"), darktable_last_commit_year);
   gtk_about_dialog_set_copyright(GTK_ABOUT_DIALOG(dialog), copyright);
   g_free(copyright);
-  gtk_about_dialog_set_comments(GTK_ABOUT_DIALOG(dialog),
-                                _("organize and develop images from digital cameras"));
+  gtk_about_dialog_set_comments(GTK_ABOUT_DIALOG(dialog), _("organize and develop images from digital cameras"));
   gtk_about_dialog_set_website(GTK_ABOUT_DIALOG(dialog), "https://www.darktable.org/");
   dt_logo_season_t season = dt_util_get_logo_season();
   char *icon;

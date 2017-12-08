@@ -99,8 +99,7 @@ static void _view_map_collection_changed(gpointer instance, gpointer user_data);
 static void _view_map_filmstrip_activate_callback(gpointer instance, gpointer user_data);
 /* callback when an image is dropped from filmstrip */
 static void drag_and_drop_received(GtkWidget *widget, GdkDragContext *context, gint x, gint y,
-                                   GtkSelectionData *selection_data, guint target_type, guint time,
-                                   gpointer data);
+                                   GtkSelectionData *selection_data, guint target_type, guint time, gpointer data);
 /* callback when the user drags images FROM the map */
 static void _view_map_dnd_get_callback(GtkWidget *widget, GdkDragContext *context,
                                        GtkSelectionData *selection_data, guint target_type, guint time,
@@ -255,9 +254,9 @@ static int zoom_member(lua_State *L)
 // Copyright (C) 2014 Martijn Goedhart <goedhart.martijn@gmail.com>
 
 #if FLT_RADIX == 2
-  #define LOG2(x) (ilogb(x))
+#define LOG2(x) (ilogb(x))
 #else
-  #define LOG2(x) ((int)floor(log2(abs(x))))
+#define LOG2(x) ((int)floor(log2(abs(x))))
 #endif
 
 #define TILESIZE 256
@@ -286,12 +285,14 @@ static int latlon2zoom(int pix_height, int pix_width, float lat1, float lat2, fl
 //
 //  Contributions by
 //  Everaldo Canuto 2009 <everaldo.canuto@gmail.com>
-static void osm_gps_map_zoom_fit_bbox(OsmGpsMap *map, float latitude1, float latitude2, float longitude1, float longitude2)
+static void osm_gps_map_zoom_fit_bbox(OsmGpsMap *map, float latitude1, float latitude2, float longitude1,
+                                      float longitude2)
 {
   GtkAllocation allocation;
   int zoom;
-  gtk_widget_get_allocation(GTK_WIDGET (map), &allocation);
-  zoom = latlon2zoom(allocation.height, allocation.width, deg2rad(latitude1), deg2rad(latitude2), deg2rad(longitude1), deg2rad(longitude2));
+  gtk_widget_get_allocation(GTK_WIDGET(map), &allocation);
+  zoom = latlon2zoom(allocation.height, allocation.width, deg2rad(latitude1), deg2rad(latitude2),
+                     deg2rad(longitude1), deg2rad(longitude2));
   osm_gps_map_set_center(map, (latitude1 + latitude2) / 2, (longitude1 + longitude2) / 2);
   osm_gps_map_set_zoom(map, zoom);
 }
@@ -410,8 +411,8 @@ void init(dt_view_t *self)
     GtkWidget *parent = gtk_widget_get_parent(dt_ui_center(darktable.gui->ui));
     gtk_box_pack_start(GTK_BOX(parent), GTK_WIDGET(lib->map), TRUE, TRUE, 0);
 
-    lib->osd = g_object_new(OSM_TYPE_GPS_MAP_OSD, "show-scale", TRUE, "show-coordinates", TRUE, "show-dpad",
-                            TRUE, "show-zoom", TRUE, NULL);
+    lib->osd = g_object_new(OSM_TYPE_GPS_MAP_OSD, "show-scale", TRUE, "show-coordinates", TRUE, "show-dpad", TRUE,
+                            "show-zoom", TRUE, NULL);
 
     if(dt_conf_get_bool("plugins/map/show_map_osd"))
     {
@@ -423,10 +424,9 @@ void init(dt_view_t *self)
                       GDK_ACTION_COPY);
     g_signal_connect(GTK_WIDGET(lib->map), "drag-data-received", G_CALLBACK(drag_and_drop_received), self);
     g_signal_connect(GTK_WIDGET(lib->map), "changed", G_CALLBACK(_view_map_changed_callback), self);
-    g_signal_connect_after(G_OBJECT(lib->map), "button-press-event",
-                           G_CALLBACK(_view_map_button_press_callback), self);
-    g_signal_connect(G_OBJECT(lib->map), "motion-notify-event", G_CALLBACK(_view_map_motion_notify_callback),
-                     self);
+    g_signal_connect_after(G_OBJECT(lib->map), "button-press-event", G_CALLBACK(_view_map_button_press_callback),
+                           self);
+    g_signal_connect(G_OBJECT(lib->map), "motion-notify-event", G_CALLBACK(_view_map_motion_notify_callback), self);
 
     /* allow drag&drop of images from the map, too */
     g_signal_connect(GTK_WIDGET(lib->map), "drag-data-get", G_CALLBACK(_view_map_dnd_get_callback), self);
@@ -517,8 +517,7 @@ static void _view_map_changed_callback(OsmGpsMap *map, dt_view_t *self)
 
   /* make the bounding box a little bigger to the west and south */
   float lat0 = 0.0, lon0 = 0.0, lat1 = 0.0, lon1 = 0.0;
-  OsmGpsMapPoint *pt0 = osm_gps_map_point_new_degrees(0.0, 0.0),
-                 *pt1 = osm_gps_map_point_new_degrees(0.0, 0.0);
+  OsmGpsMapPoint *pt0 = osm_gps_map_point_new_degrees(0.0, 0.0), *pt1 = osm_gps_map_point_new_degrees(0.0, 0.0);
   osm_gps_map_convert_screen_to_geographic(map, 0, 0, pt0);
   osm_gps_map_convert_screen_to_geographic(map, 1.5 * thumb_size, 1.5 * thumb_size, pt1);
   osm_gps_map_point_get_degrees(pt0, &lat0, &lon0);
@@ -587,13 +586,13 @@ static void _view_map_changed_callback(OsmGpsMap *map, dt_view_t *self)
         h = (buf.height * _thumb_size) / buf.width; // landscape
 
       // next we get a pixbuf for the image
-      source = gdk_pixbuf_new_from_data(buf.buf, GDK_COLORSPACE_RGB, TRUE, 8, buf.width, buf.height,
-                                        buf.width * 4, NULL, NULL);
+      source = gdk_pixbuf_new_from_data(buf.buf, GDK_COLORSPACE_RGB, TRUE, 8, buf.width, buf.height, buf.width * 4,
+                                        NULL, NULL);
       if(!source) goto map_changed_failure;
 
       // now we want a slightly larger pixbuf that we can put the image on
-      thumb = gdk_pixbuf_new(GDK_COLORSPACE_RGB, TRUE, 8, w + 2 * _thumb_border,
-                             h + 2 * _thumb_border + _pin_size);
+      thumb
+          = gdk_pixbuf_new(GDK_COLORSPACE_RGB, TRUE, 8, w + 2 * _thumb_border, h + 2 * _thumb_border + _pin_size);
       if(!thumb) goto map_changed_failure;
       gdk_pixbuf_fill(thumb, thumb_frame_color);
 
@@ -640,9 +639,8 @@ static void _view_map_changed_callback(OsmGpsMap *map, dt_view_t *self)
   // case in the initialization phase.
   if(!lib->drop_filmstrip_activated && darktable.view_manager->proxy.filmstrip.module)
   {
-    g_signal_connect(
-        darktable.view_manager->proxy.filmstrip.widget(darktable.view_manager->proxy.filmstrip.module),
-        "drag-data-received", G_CALLBACK(_view_map_dnd_remove_callback), self);
+    g_signal_connect(darktable.view_manager->proxy.filmstrip.widget(darktable.view_manager->proxy.filmstrip.module),
+                     "drag-data-received", G_CALLBACK(_view_map_dnd_remove_callback), self);
     lib->drop_filmstrip_activated = TRUE;
   }
 }
@@ -660,8 +658,7 @@ static int _view_map_get_img_at_pos(dt_view_t *self, double x, double y)
     gint img_x = 0, img_y = 0;
     osm_gps_map_convert_geographic_to_screen(lib->map, pt, &img_x, &img_y);
     img_y -= DT_PIXEL_APPLY_DPI(image_pin_size);
-    if(x >= img_x && x <= img_x + entry->width && y <= img_y && y >= img_y - entry->height)
-      return entry->imgid;
+    if(x >= img_x && x <= img_x + entry->width && y <= img_y && y >= img_y - entry->height) return entry->imgid;
   }
 
   return 0;
@@ -708,8 +705,8 @@ static gboolean _view_map_motion_notify_callback(GtkWidget *widget, GdkEventMoti
         h = (buf.height * _thumb_size) / buf.width; // landscape
 
       // next we get a pixbuf for the image
-      source = gdk_pixbuf_new_from_data(buf.buf, GDK_COLORSPACE_RGB, TRUE, 8, buf.width, buf.height,
-                                        buf.width * 4, NULL, NULL);
+      source = gdk_pixbuf_new_from_data(buf.buf, GDK_COLORSPACE_RGB, TRUE, 8, buf.width, buf.height, buf.width * 4,
+                                        NULL, NULL);
 
       // now we want a slightly larger pixbuf that we can put the image on
       thumb = gdk_pixbuf_new(GDK_COLORSPACE_RGB, TRUE, 8, w + 2 * _thumb_border, h + 2 * _thumb_border);
@@ -719,8 +716,8 @@ static gboolean _view_map_motion_notify_callback(GtkWidget *widget, GdkEventMoti
       gdk_pixbuf_scale(source, thumb, _thumb_border, _thumb_border, w, h, _thumb_border, _thumb_border,
                        (1.0 * w) / buf.width, (1.0 * h) / buf.height, GDK_INTERP_HYPER);
 
-      GdkDragContext *context = gtk_drag_begin_with_coordinates(GTK_WIDGET(lib->map), targets,
-                                                                GDK_ACTION_COPY, 1, (GdkEvent *)e, -1, -1);
+      GdkDragContext *context = gtk_drag_begin_with_coordinates(GTK_WIDGET(lib->map), targets, GDK_ACTION_COPY, 1,
+                                                                (GdkEvent *)e, -1, -1);
 
       gtk_drag_set_icon_pixbuf(context, thumb, 0, h + 2 * _thumb_border);
 
@@ -962,12 +959,12 @@ static OsmGpsMapPolygon *_view_map_add_polygon(const dt_view_t *view, GList *poi
   dt_map_t *lib = (dt_map_t *)view->data;
 
   OsmGpsMapPolygon *poly = osm_gps_map_polygon_new();
-  OsmGpsMapTrack* track = osm_gps_map_track_new();
+  OsmGpsMapTrack *track = osm_gps_map_track_new();
 
   for(GList *iter = g_list_first(points); iter; iter = g_list_next(iter))
   {
     dt_geo_map_display_point_t *p = (dt_geo_map_display_point_t *)iter->data;
-    OsmGpsMapPoint* point = osm_gps_map_point_new_degrees(p->lat, p->lon);
+    OsmGpsMapPoint *point = osm_gps_map_point_new_degrees(p->lat, p->lon);
     osm_gps_map_track_add_point(track, point);
   }
 
@@ -990,12 +987,12 @@ static OsmGpsMapTrack *_view_map_add_track(const dt_view_t *view, GList *points)
 {
   dt_map_t *lib = (dt_map_t *)view->data;
 
-  OsmGpsMapTrack* track = osm_gps_map_track_new();
+  OsmGpsMapTrack *track = osm_gps_map_track_new();
 
   for(GList *iter = g_list_first(points); iter; iter = g_list_next(iter))
   {
     dt_geo_map_display_point_t *p = (dt_geo_map_display_point_t *)iter->data;
-    OsmGpsMapPoint* point = osm_gps_map_point_new_degrees(p->lat, p->lon);
+    OsmGpsMapPoint *point = osm_gps_map_point_new_degrees(p->lat, p->lon);
     osm_gps_map_track_add_point(track, point);
   }
 
@@ -1016,12 +1013,16 @@ static GObject *_view_map_add_marker(const dt_view_t *view, dt_geo_map_display_t
 {
   switch(type)
   {
-    case MAP_DISPLAY_POINT: return G_OBJECT(_view_map_add_pin(view, points));
-    case MAP_DISPLAY_TRACK: return G_OBJECT(_view_map_add_track(view, points));
+    case MAP_DISPLAY_POINT:
+      return G_OBJECT(_view_map_add_pin(view, points));
+    case MAP_DISPLAY_TRACK:
+      return G_OBJECT(_view_map_add_track(view, points));
 #ifdef HAVE_OSMGPSMAP_110_OR_NEWER
-    case MAP_DISPLAY_POLYGON: return G_OBJECT(_view_map_add_polygon(view, points));
+    case MAP_DISPLAY_POLYGON:
+      return G_OBJECT(_view_map_add_polygon(view, points));
 #endif
-    default: return NULL;
+    default:
+      return NULL;
   }
 }
 
@@ -1031,12 +1032,16 @@ static gboolean _view_map_remove_marker(const dt_view_t *view, dt_geo_map_displa
 
   switch(type)
   {
-    case MAP_DISPLAY_POINT: return _view_map_remove_pin(view, OSM_GPS_MAP_IMAGE(marker));
-    case MAP_DISPLAY_TRACK: return _view_map_remove_track(view, OSM_GPS_MAP_TRACK(marker));
+    case MAP_DISPLAY_POINT:
+      return _view_map_remove_pin(view, OSM_GPS_MAP_IMAGE(marker));
+    case MAP_DISPLAY_TRACK:
+      return _view_map_remove_track(view, OSM_GPS_MAP_TRACK(marker));
 #ifdef HAVE_OSMGPSMAP_110_OR_NEWER
-    case MAP_DISPLAY_POLYGON: return _view_map_remove_polygon(view, OSM_GPS_MAP_POLYGON(marker));
+    case MAP_DISPLAY_POLYGON:
+      return _view_map_remove_polygon(view, OSM_GPS_MAP_POLYGON(marker));
 #endif
-    default: return FALSE;
+    default:
+      return FALSE;
   }
 }
 
@@ -1122,8 +1127,7 @@ static void _check_imgid(gpointer user_data, dt_undo_type_t type, dt_undo_data_t
 {
   dt_undo_geotag_t *geotag = (dt_undo_geotag_t *)item;
   int *state = (int *)user_data;
-  if (geotag->imgid == state[0])
-    state[1] = 1;
+  if(geotag->imgid == state[0]) state[1] = 1;
 }
 
 static gboolean _in_undo(int imgid)
@@ -1167,13 +1171,11 @@ static void _view_map_record_current_location(dt_view_t *self, int imgid)
 {
   float longitude, latitude, elevation;
   _get_image_location(self, imgid, &longitude, &latitude, &elevation);
-  if (!_in_undo(imgid))
-    _push_position(self, imgid, longitude, latitude, elevation);
+  if(!_in_undo(imgid)) _push_position(self, imgid, longitude, latitude, elevation);
 }
 
 static void drag_and_drop_received(GtkWidget *widget, GdkDragContext *context, gint x, gint y,
-                                   GtkSelectionData *selection_data, guint target_type, guint time,
-                                   gpointer data)
+                                   GtkSelectionData *selection_data, guint target_type, guint time, gpointer data)
 {
   dt_view_t *self = (dt_view_t *)data;
   dt_map_t *lib = (dt_map_t *)self->data;
@@ -1201,13 +1203,11 @@ static void drag_and_drop_received(GtkWidget *widget, GdkDragContext *context, g
 
       // create an undo group for current image position
 
-      while(sqlite3_step(stmt) == SQLITE_ROW)
-        _view_map_record_current_location(self, sqlite3_column_int(stmt, 0));
+      while(sqlite3_step(stmt) == SQLITE_ROW) _view_map_record_current_location(self, sqlite3_column_int(stmt, 0));
 
       DT_DEBUG_SQLITE3_PREPARE_V2(dt_database_get(darktable.db), "SELECT DISTINCT imgid FROM main.selected_images",
                                   -1, &stmt, NULL);
-      while(sqlite3_step(stmt) == SQLITE_ROW)
-        _view_map_add_image_to_map(self, sqlite3_column_int(stmt, 0), x, y);
+      while(sqlite3_step(stmt) == SQLITE_ROW) _view_map_add_image_to_map(self, sqlite3_column_int(stmt, 0), x, y);
       sqlite3_finalize(stmt);
       success = TRUE;
     }
@@ -1239,8 +1239,8 @@ static void _view_map_dnd_get_callback(GtkWidget *widget, GdkDragContext *contex
       gboolean from_cache = TRUE;
       dt_image_full_path(imgid, pathname, sizeof(pathname), &from_cache);
       gchar *uri = g_strdup_printf("file://%s", pathname); // TODO: should we add the host?
-      gtk_selection_data_set(selection_data, gtk_selection_data_get_target(selection_data), _BYTE,
-                             (guchar *)uri, strlen(uri));
+      gtk_selection_data_set(selection_data, gtk_selection_data_get_target(selection_data), _BYTE, (guchar *)uri,
+                             strlen(uri));
       g_free(uri);
       break;
     }
@@ -1307,8 +1307,8 @@ static void _view_map_build_main_query(dt_map_t *lib)
                               "latitude NOT NULL ORDER BY ABS(latitude - ?5), ABS(longitude - ?6) LIMIT 0, %d) "
                               "ORDER BY (180 - latitude), id",
                               lib->filter_images_drawn
-                              ? "main.images i INNER JOIN memory.collected_images c ON i.id = c.imgid"
-                              : "main.images",
+                                  ? "main.images i INNER JOIN memory.collected_images c ON i.id = c.imgid"
+                                  : "main.images",
                               lib->max_images_drawn);
 
   /* prepare the main query statement */

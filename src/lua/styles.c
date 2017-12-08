@@ -307,9 +307,9 @@ int dt_lua_init_styles(lua_State *L)
   lua_pushcclosure(L, dt_lua_type_member_common, 1);
   dt_lua_type_register_const(L, dt_style_t, "export");
   lua_pushcfunction(L, style_gc);
-  dt_lua_type_setmetafield(L,dt_style_t,"__gc");
+  dt_lua_type_setmetafield(L, dt_style_t, "__gc");
   lua_pushcfunction(L, style_tostring);
-  dt_lua_type_setmetafield(L,dt_style_t,"__tostring");
+  dt_lua_type_setmetafield(L, dt_style_t, "__tostring");
 
   // dt_style_item_t
   dt_lua_init_type(L, dt_style_item_t);
@@ -319,9 +319,9 @@ int dt_lua_init_styles(lua_State *L)
   lua_pushcfunction(L, dt_lua_type_member_luaautoc);
   dt_lua_type_register_struct(L, dt_style_item_t);
   lua_pushcfunction(L, style_item_gc);
-  dt_lua_type_setmetafield(L,dt_style_item_t,"__gc");
+  dt_lua_type_setmetafield(L, dt_style_item_t, "__gc");
   lua_pushcfunction(L, style_item_tostring);
-  dt_lua_type_setmetafield(L,dt_style_item_t,"__tostring");
+  dt_lua_type_setmetafield(L, dt_style_item_t, "__tostring");
 
 
 

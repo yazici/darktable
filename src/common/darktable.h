@@ -86,24 +86,24 @@ typedef unsigned int u_int;
 
 // every module has to define this:
 #ifdef _DEBUG
-#define DT_MODULE(MODVER)                                                                                    \
-  int dt_module_dt_version()                                                                                 \
-  {                                                                                                          \
-    return -DT_MODULE_VERSION;                                                                               \
-  }                                                                                                          \
-  int dt_module_mod_version()                                                                                \
-  {                                                                                                          \
-    return MODVER;                                                                                           \
+#define DT_MODULE(MODVER)                                                                                         \
+  int dt_module_dt_version()                                                                                      \
+  {                                                                                                               \
+    return -DT_MODULE_VERSION;                                                                                    \
+  }                                                                                                               \
+  int dt_module_mod_version()                                                                                     \
+  {                                                                                                               \
+    return MODVER;                                                                                                \
   }
 #else
-#define DT_MODULE(MODVER)                                                                                    \
-  int dt_module_dt_version()                                                                                 \
-  {                                                                                                          \
-    return DT_MODULE_VERSION;                                                                                \
-  }                                                                                                          \
-  int dt_module_mod_version()                                                                                \
-  {                                                                                                          \
-    return MODVER;                                                                                           \
+#define DT_MODULE(MODVER)                                                                                         \
+  int dt_module_dt_version()                                                                                      \
+  {                                                                                                               \
+    return DT_MODULE_VERSION;                                                                                     \
+  }                                                                                                               \
+  int dt_module_mod_version()                                                                                     \
+  {                                                                                                               \
+    return MODVER;                                                                                                \
   }
 #endif
 
@@ -249,7 +249,7 @@ void dt_free_align(void *mem);
 
 static inline gboolean dt_is_aligned(const void *pointer, size_t byte_count)
 {
-    return (uintptr_t)pointer % byte_count == 0;
+  return (uintptr_t)pointer % byte_count == 0;
 }
 
 int dt_capabilities_check(char *capability);
@@ -273,7 +273,8 @@ static inline void dt_get_times(dt_times_t *t)
   t->user = ru.ru_utime.tv_sec + ru.ru_utime.tv_usec * (1.0 / 1000000.0);
 }
 
-void dt_show_times(const dt_times_t *start, const char *prefix, const char *suffix, ...) __attribute__((format(printf, 3, 4)));
+void dt_show_times(const dt_times_t *start, const char *prefix, const char *suffix, ...)
+    __attribute__((format(printf, 3, 4)));
 
 /** \brief check if file is a supported image */
 gboolean dt_supported_image(const gchar *filename);
@@ -374,8 +375,9 @@ static inline void dt_print_mem_usage()
                   "[memory] max used memory   (vmhwm ): %15s\n"
                   "[memory] cur used memory   (vmrss ): %12llu kB\n",
           "unknown", (uint64_t)t_info.virtual_size / 1024, "unknown", (uint64_t)t_info.resident_size / 1024);
-#elif defined (_WIN32)
-  //Based on: http://stackoverflow.com/questions/63166/how-to-determine-cpu-and-memory-consumption-from-inside-a-process
+#elif defined(_WIN32)
+  // Based on:
+  // http://stackoverflow.com/questions/63166/how-to-determine-cpu-and-memory-consumption-from-inside-a-process
   MEMORYSTATUSEX memInfo;
   memInfo.dwLength = sizeof(MEMORYSTATUSEX);
   GlobalMemoryStatusEx(&memInfo);
@@ -501,7 +503,7 @@ static inline size_t dt_get_total_memory()
   fclose(f);
   if(len > 0) free(line);
   return mem;
-#elif defined(__APPLE__) || defined(__DragonFly__) || defined(__FreeBSD__) || defined(__NetBSD__)            \
+#elif defined(__APPLE__) || defined(__DragonFly__) || defined(__FreeBSD__) || defined(__NetBSD__)                 \
     || defined(__OpenBSD__)
 #if defined(__APPLE__)
   int mib[2] = { CTL_HW, HW_MEMSIZE };
@@ -532,11 +534,11 @@ void dt_configure_defaults();
 // it tells you if it was a single image or a directory in single_image (when it's not NULL)
 int dt_load_from_string(const gchar *image_to_load, gboolean open_image_in_dr, gboolean *single_image);
 
-#define dt_unreachable_codepath_with_desc(D)                                                                 \
+#define dt_unreachable_codepath_with_desc(D)                                                                      \
   dt_unreachable_codepath_with_caller(D, __FILE__, __LINE__, __FUNCTION__)
 #define dt_unreachable_codepath() dt_unreachable_codepath_with_caller(NULL, __FILE__, __LINE__, __FUNCTION__)
-static inline void dt_unreachable_codepath_with_caller(const char *description, const char *file,
-                                                       const int line, const char *function)
+static inline void dt_unreachable_codepath_with_caller(const char *description, const char *file, const int line,
+                                                       const char *function)
 {
   fprintf(stderr, "[dt_unreachable_codepath] {%s} %s:%d (%s) - we should not be here. please report this to "
                   "the developers.",

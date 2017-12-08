@@ -135,7 +135,7 @@ const char *name(dt_lib_module_t *self)
 
 const char **views(dt_lib_module_t *self)
 {
-  static const char *v[] = {"*", NULL};
+  static const char *v[] = { "*", NULL };
   return v;
 }
 
@@ -193,7 +193,7 @@ static void _metadata_update_value_end(GtkLabel *label, const char *value)
 
 
 #ifdef USE_LUA
-static int lua_update_metadata(lua_State*L);
+static int lua_update_metadata(lua_State *L);
 #endif
 /* update all values to reflect mouse over image id or no data at all */
 static void _metadata_view_update_values(dt_lib_module_t *self)
@@ -257,28 +257,20 @@ static void _metadata_view_update_values(dt_lib_module_t *self)
     snprintf(value, sizeof(value), "%s", (img->flags & DT_IMAGE_LOCAL_COPY) ? _("yes") : _("no"));
     _metadata_update_value(d->metadata[md_internal_local_copy], value);
 
-    // TODO: decide if this should be removed for a release. maybe #ifdef'ing to only add it to git compiles?
+// TODO: decide if this should be removed for a release. maybe #ifdef'ing to only add it to git compiles?
 
-    // the bits of the flags
+// the bits of the flags
 #if SHOW_FLAGS
     {
-      #define EMPTY_FIELD '.'
-      #define FALSE_FIELD '.'
-      #define TRUE_FIELD '!'
+#define EMPTY_FIELD '.'
+#define FALSE_FIELD '.'
+#define TRUE_FIELD '!'
 
       char *flags_tooltip = NULL;
-      char *flag_descriptions[] = { N_("unused"),
-                                    N_("unused/deprecated"),
-                                    N_("ldr"),
-                                    N_("raw"),
-                                    N_("hdr"),
-                                    N_("marked for deletion"),
-                                    N_("auto-applying presets applied"),
-                                    N_("legacy flag. set for all new images"),
-                                    N_("local copy"),
-                                    N_("has .txt"),
-                                    N_("has .wav")
-      };
+      char *flag_descriptions[]
+          = { N_("unused"), N_("unused/deprecated"), N_("ldr"), N_("raw"), N_("hdr"), N_("marked for deletion"),
+              N_("auto-applying presets applied"), N_("legacy flag. set for all new images"), N_("local copy"),
+              N_("has .txt"), N_("has .wav") };
       char *tooltip_parts[14] = { 0 };
       int next_tooltip_part = 0;
 
@@ -294,7 +286,8 @@ static void _metadata_view_update_values(dt_lib_module_t *self)
       else
       {
         value[0] = '0' + stars;
-        tooltip_parts[next_tooltip_part++] = star_string = g_strdup_printf(ngettext("image has %d star", "image has %d stars", stars), stars);
+        tooltip_parts[next_tooltip_part++] = star_string
+            = g_strdup_printf(ngettext("image has %d star", "image has %d stars", stars), stars);
       }
 
 
@@ -372,19 +365,16 @@ static void _metadata_view_update_values(dt_lib_module_t *self)
       {
         char *tooltip;
         char flag;
-      } loaders[] =
-      {
-        { N_("unknown"), EMPTY_FIELD},
-        { N_("tiff"), 't'},
-        { N_("png"), 'p'},
-        { N_("j2k"), 'J'},
-        { N_("jpeg"), 'j'},
-        { N_("exr"), 'e'},
-        { N_("rgbe"), 'R'},
-        { N_("pfm"), 'P'},
-        { N_("GraphicsMagick"), 'g'},
-        { N_("rawspeed"), 'r'}
-      };
+      } loaders[] = { { N_("unknown"), EMPTY_FIELD },
+                      { N_("tiff"), 't' },
+                      { N_("png"), 'p' },
+                      { N_("j2k"), 'J' },
+                      { N_("jpeg"), 'j' },
+                      { N_("exr"), 'e' },
+                      { N_("rgbe"), 'R' },
+                      { N_("pfm"), 'P' },
+                      { N_("GraphicsMagick"), 'g' },
+                      { N_("rawspeed"), 'r' } };
 
       int loader = (unsigned int)img->loader < sizeof(loaders) / sizeof(*loaders) ? img->loader : 0;
       value[12] = loaders[loader].flag;
@@ -402,9 +392,9 @@ static void _metadata_view_update_values(dt_lib_module_t *self)
       g_free(star_string);
       g_free(flags_tooltip);
 
-      #undef EMPTY_FIELD
-      #undef FALSE_FIELD
-      #undef TRUE_FIELD
+#undef EMPTY_FIELD
+#undef FALSE_FIELD
+#undef TRUE_FIELD
     }
 #endif // SHOW_FLAGS
 
@@ -439,8 +429,8 @@ static void _metadata_view_update_values(dt_lib_module_t *self)
     _metadata_update_value(d->metadata[md_exif_iso], value);
 
     struct tm tt_exif = { 0 };
-    if(sscanf(img->exif_datetime_taken, "%d:%d:%d %d:%d:%d", &tt_exif.tm_year, &tt_exif.tm_mon,
-      &tt_exif.tm_mday, &tt_exif.tm_hour, &tt_exif.tm_min, &tt_exif.tm_sec) == 6)
+    if(sscanf(img->exif_datetime_taken, "%d:%d:%d %d:%d:%d", &tt_exif.tm_year, &tt_exif.tm_mon, &tt_exif.tm_mday,
+              &tt_exif.tm_hour, &tt_exif.tm_min, &tt_exif.tm_sec) == 6)
     {
       char datetime[200];
       tt_exif.tm_year -= 1900;
@@ -556,10 +546,8 @@ static void _metadata_view_update_values(dt_lib_module_t *self)
     dt_image_cache_read_release(darktable.image_cache, img);
 
 #ifdef USE_LUA
-    dt_lua_async_call_alien(lua_update_metadata,
-        0,NULL,NULL,
-        LUA_ASYNC_TYPENAME,"void*",self,
-        LUA_ASYNC_TYPENAME,"int32_t",mouse_over_id,LUA_ASYNC_DONE);
+    dt_lua_async_call_alien(lua_update_metadata, 0, NULL, NULL, LUA_ASYNC_TYPENAME, "void*", self,
+                            LUA_ASYNC_TYPENAME, "int32_t", mouse_over_id, LUA_ASYNC_DONE);
 #endif
   }
 
@@ -569,10 +557,8 @@ static void _metadata_view_update_values(dt_lib_module_t *self)
 fill_minuses:
   for(int k = 0; k < md_size; k++) _metadata_update_value(d->metadata[k], NODATA_STRING);
 #ifdef USE_LUA
-  dt_lua_async_call_alien(lua_update_metadata,
-      0,NULL,NULL,
-        LUA_ASYNC_TYPENAME,"void*",self,
-        LUA_ASYNC_TYPENAME,"int32_t",-1,LUA_ASYNC_DONE);
+  dt_lua_async_call_alien(lua_update_metadata, 0, NULL, NULL, LUA_ASYNC_TYPENAME, "void*", self,
+                          LUA_ASYNC_TYPENAME, "int32_t", -1, LUA_ASYNC_DONE);
 #endif
 }
 
@@ -642,7 +628,7 @@ void gui_init(dt_lib_module_t *self)
 
   self->widget = gtk_grid_new();
   gtk_grid_set_column_spacing(GTK_GRID(self->widget), DT_PIXEL_APPLY_DPI(5));
-//   GtkWidget *last = NULL;
+  //   GtkWidget *last = NULL;
 
   /* initialize the metadata name/value labels */
   for(int k = 0; k < md_size; k++)
@@ -685,69 +671,69 @@ void gui_cleanup(dt_lib_module_t *self)
   self->data = NULL;
 }
 #ifdef USE_LUA
-static int lua_update_widgets(lua_State*L)
+static int lua_update_widgets(lua_State *L)
 {
   dt_lib_module_t *self = lua_touserdata(L, 1);
-  dt_lua_module_entry_push(L,"lib",self->plugin_name);
-  lua_getuservalue(L,2);
-  lua_getfield(L,3,"values");
-  lua_getfield(L,3,"widgets");
+  dt_lua_module_entry_push(L, "lib", self->plugin_name);
+  lua_getuservalue(L, 2);
+  lua_getfield(L, 3, "values");
+  lua_getfield(L, 3, "widgets");
   lua_pushnil(L);
   while(lua_next(L, 4) != 0)
   {
-    lua_getfield(L,5,lua_tostring(L,-2));
-    GtkLabel *widget = lua_touserdata(L,-1);
-    _metadata_update_value_end(widget,luaL_checkstring(L,7));
-    lua_pop(L,2);
+    lua_getfield(L, 5, lua_tostring(L, -2));
+    GtkLabel *widget = lua_touserdata(L, -1);
+    _metadata_update_value_end(widget, luaL_checkstring(L, 7));
+    lua_pop(L, 2);
   }
   return 0;
 }
-static int lua_update_metadata(lua_State*L)
+static int lua_update_metadata(lua_State *L)
 {
   dt_lib_module_t *self = lua_touserdata(L, 1);
-  int32_t imgid = lua_tointeger(L,2);
-  dt_lua_module_entry_push(L,"lib",self->plugin_name);
-  lua_getuservalue(L,-1);
-  lua_getfield(L,4,"callbacks");
-  lua_getfield(L,4,"values");
+  int32_t imgid = lua_tointeger(L, 2);
+  dt_lua_module_entry_push(L, "lib", self->plugin_name);
+  lua_getuservalue(L, -1);
+  lua_getfield(L, 4, "callbacks");
+  lua_getfield(L, 4, "values");
   lua_pushnil(L);
   while(lua_next(L, 5) != 0)
   {
-    lua_pushvalue(L,-1);
-    luaA_push(L,dt_lua_image_t,&imgid);
-    lua_call(L,1,1);
-    lua_pushvalue(L,7);
-    lua_pushvalue(L,9);
-    lua_settable(L,6);
+    lua_pushvalue(L, -1);
+    luaA_push(L, dt_lua_image_t, &imgid);
+    lua_call(L, 1, 1);
+    lua_pushvalue(L, 7);
+    lua_pushvalue(L, 9);
+    lua_settable(L, 6);
     lua_pop(L, 2);
   }
-  lua_pushcfunction(L,lua_update_widgets);
+  lua_pushcfunction(L, lua_update_widgets);
   dt_lua_gtk_wrap(L);
-  lua_pushlightuserdata(L,self);
-  lua_call(L,1,0);
+  lua_pushlightuserdata(L, self);
+  lua_call(L, 1, 0);
   return 0;
 }
 
 static int lua_register_info(lua_State *L)
 {
   dt_lib_module_t *self = lua_touserdata(L, lua_upvalueindex(1));
-  dt_lua_module_entry_push(L,"lib",self->plugin_name);
-  lua_getuservalue(L,-1);
-  const char* key = luaL_checkstring(L,1);
-  luaL_checktype(L,2,LUA_TFUNCTION);
+  dt_lua_module_entry_push(L, "lib", self->plugin_name);
+  lua_getuservalue(L, -1);
+  const char *key = luaL_checkstring(L, 1);
+  luaL_checktype(L, 2, LUA_TFUNCTION);
   {
-    lua_getfield(L,-1,"callbacks");
-    lua_pushstring(L,key);
-    lua_pushvalue(L,2);
-    lua_settable(L,5);
-    lua_pop(L,1);
+    lua_getfield(L, -1, "callbacks");
+    lua_pushstring(L, key);
+    lua_pushvalue(L, 2);
+    lua_settable(L, 5);
+    lua_pop(L, 1);
   }
   {
-    lua_getfield(L,-1,"values");
-    lua_pushstring(L,key);
-    lua_pushstring(L,"-");
-    lua_settable(L,5);
-    lua_pop(L,1);
+    lua_getfield(L, -1, "values");
+    lua_pushstring(L, key);
+    lua_pushstring(L, "-");
+    lua_settable(L, 5);
+    lua_pop(L, 1);
   }
   {
     GtkWidget *evb = gtk_event_box_new();
@@ -762,11 +748,11 @@ static int lua_register_info(lua_State *L)
     gtk_grid_attach_next_to(GTK_GRID(self->widget), GTK_WIDGET(evb), GTK_WIDGET(name), GTK_POS_RIGHT, 1, 1);
     gtk_widget_show_all(self->widget);
     {
-      lua_getfield(L,-1,"widgets");
-      lua_pushstring(L,key);
-      lua_pushlightuserdata(L,value);
-      lua_settable(L,5);
-      lua_pop(L,1);
+      lua_getfield(L, -1, "widgets");
+      lua_pushstring(L, key);
+      lua_pushlightuserdata(L, value);
+      lua_settable(L, 5);
+      lua_pop(L, 1);
     }
   }
   return 0;
@@ -778,20 +764,20 @@ void init(struct dt_lib_module_t *self)
   lua_State *L = darktable.lua_state.state;
   int my_type = dt_lua_module_entry_get_type(L, "lib", self->plugin_name);
   lua_pushlightuserdata(L, self);
-  lua_pushcclosure(L, lua_register_info,1);
+  lua_pushcclosure(L, lua_register_info, 1);
   dt_lua_gtk_wrap(L);
   lua_pushcclosure(L, dt_lua_type_member_common, 1);
   dt_lua_type_register_const_type(L, my_type, "register_info");
 
-  dt_lua_module_entry_push(L,"lib",self->plugin_name);
-  lua_getuservalue(L,-1);
+  dt_lua_module_entry_push(L, "lib", self->plugin_name);
+  lua_getuservalue(L, -1);
   lua_newtable(L);
-  lua_setfield(L,-2,"callbacks");
+  lua_setfield(L, -2, "callbacks");
   lua_newtable(L);
-  lua_setfield(L,-2,"values");
+  lua_setfield(L, -2, "values");
   lua_newtable(L);
-  lua_setfield(L,-2,"widgets");
-  lua_pop(L,2);
+  lua_setfield(L, -2, "widgets");
+  lua_pop(L, 2);
 }
 #endif
 // modelines: These editor modelines have been set for all relevant files by tools/update_modelines.sh

@@ -157,10 +157,9 @@ int dt_imageio_large_thumbnail(const char *filename, uint8_t **buffer, int32_t *
 
   if(res)
   {
-    fprintf(
-        stderr,
-        "[dt_imageio_large_thumbnail] error: Not a supported thumbnail image format or broken thumbnail: %s\n",
-        mime_type);
+    fprintf(stderr,
+            "[dt_imageio_large_thumbnail] error: Not a supported thumbnail image format or broken thumbnail: %s\n",
+            mime_type);
     goto error;
   }
 
@@ -215,10 +214,9 @@ void dt_imageio_flip_buffers(char *out, const char *in, const size_t bpp, const 
   }
 }
 
-void dt_imageio_flip_buffers_ui16_to_float(float *out, const uint16_t *in, const float black,
-                                           const float white, const int ch, const int wd, const int ht,
-                                           const int fwd, const int fht, const int stride,
-                                           const dt_image_orientation_t orientation)
+void dt_imageio_flip_buffers_ui16_to_float(float *out, const uint16_t *in, const float black, const float white,
+                                           const int ch, const int wd, const int ht, const int fwd, const int fht,
+                                           const int stride, const dt_image_orientation_t orientation)
 {
   const float scale = 1.0f / (white - black);
   if(!orientation)
@@ -266,9 +264,8 @@ void dt_imageio_flip_buffers_ui16_to_float(float *out, const uint16_t *in, const
 }
 
 void dt_imageio_flip_buffers_ui8_to_float(float *out, const uint8_t *in, const float black, const float white,
-                                          const int ch, const int wd, const int ht, const int fwd,
-                                          const int fht, const int stride,
-                                          const dt_image_orientation_t orientation)
+                                          const int ch, const int wd, const int ht, const int fwd, const int fht,
+                                          const int stride, const dt_image_orientation_t orientation)
 {
   const float scale = 1.0f / (white - black);
   if(!orientation)
@@ -315,8 +312,7 @@ void dt_imageio_flip_buffers_ui8_to_float(float *out, const uint8_t *in, const f
   }
 }
 
-size_t dt_imageio_write_pos(int i, int j, int wd, int ht, float fwd, float fht,
-                            dt_image_orientation_t orientation)
+size_t dt_imageio_write_pos(int i, int j, int wd, int ht, float fwd, float fht, dt_image_orientation_t orientation)
 {
   int ii = i, jj = j, w = wd, fw = fwd, fh = fht;
   if(orientation & ORIENTATION_SWAP_XY)
@@ -531,25 +527,23 @@ int dt_imageio_export(const uint32_t imgid, const char *filename, dt_imageio_mod
                       dt_imageio_module_storage_t *storage, dt_imageio_module_data_t *storage_params, int num,
                       int total)
 {
-  if(strcmp(format->mime(format_params), "x-copy") == 0)
-    /* This is a just a copy, skip process and just export */
+  if(strcmp(format->mime(format_params), "x-copy") == 0) /* This is a just a copy, skip process and just export */
     return format->write_image(format_params, filename, NULL, NULL, 0, imgid, num, total);
   else
-    return dt_imageio_export_with_flags(imgid, filename, format, format_params, 0, 0, high_quality, upscale,
-                                        0, NULL, copy_metadata, icc_type, icc_filename, icc_intent, storage,
+    return dt_imageio_export_with_flags(imgid, filename, format, format_params, 0, 0, high_quality, upscale, 0,
+                                        NULL, copy_metadata, icc_type, icc_filename, icc_intent, storage,
                                         storage_params, num, total);
 }
 
 // internal function: to avoid exif blob reading + 8-bit byteorder flag + high-quality override
-int dt_imageio_export_with_flags(const uint32_t imgid, const char *filename,
-                                 dt_imageio_module_format_t *format, dt_imageio_module_data_t *format_params,
-                                 const int32_t ignore_exif, const int32_t display_byteorder,
-                                 const gboolean high_quality, const gboolean upscale, const int32_t thumbnail_export,
-                                 const char *filter, const gboolean copy_metadata,
-                                 dt_colorspaces_color_profile_type_t icc_type, const gchar *icc_filename,
-                                 dt_iop_color_intent_t icc_intent,
-                                 dt_imageio_module_storage_t *storage,
-                                 dt_imageio_module_data_t *storage_params, int num, int total)
+int dt_imageio_export_with_flags(const uint32_t imgid, const char *filename, dt_imageio_module_format_t *format,
+                                 dt_imageio_module_data_t *format_params, const int32_t ignore_exif,
+                                 const int32_t display_byteorder, const gboolean high_quality,
+                                 const gboolean upscale, const int32_t thumbnail_export, const char *filter,
+                                 const gboolean copy_metadata, dt_colorspaces_color_profile_type_t icc_type,
+                                 const gchar *icc_filename, dt_iop_color_intent_t icc_intent,
+                                 dt_imageio_module_storage_t *storage, dt_imageio_module_data_t *storage_params,
+                                 int num, int total)
 {
   dt_develop_t dev;
   dt_dev_init(&dev, 0);
@@ -629,7 +623,8 @@ int dt_imageio_export_with_flags(const uint32_t imgid, const char *filename,
           dt_dev_history_item_t *h = malloc(sizeof(dt_dev_history_item_t));
           dt_iop_module_t *style_module = m;
 
-          if((format_params->style_append && !(m->flags() & IOP_FLAGS_ONE_INSTANCE)) || m->multi_priority != s->multi_priority)
+          if((format_params->style_append && !(m->flags() & IOP_FLAGS_ONE_INSTANCE))
+             || m->multi_priority != s->multi_priority)
           {
             // dt_dev_module_duplicate() doesn't work here, it's trying too hard to be clever
             style_module = (dt_iop_module_t *)calloc(1, sizeof(dt_iop_module_t));
@@ -890,7 +885,7 @@ int dt_imageio_export_with_flags(const uint32_t imgid, const char *filename,
   }
 
   if(!thumbnail_export && strcmp(format->mime(format_params), "memory")
-    && !(format->flags(format_params) & FORMAT_FLAGS_NO_TMPFILE))
+     && !(format->flags(format_params) & FORMAT_FLAGS_NO_TMPFILE))
   {
     dt_control_signal_raise(darktable.signals, DT_SIGNAL_IMAGE_EXPORT_TMPFILE, imgid, filename, format,
                             format_params, storage, storage_params);
@@ -909,8 +904,7 @@ error_early:
 
 // fallback read method in case file could not be opened yet.
 // use GraphicsMagick (if supported) to read exotic LDRs
-dt_imageio_retval_t dt_imageio_open_exotic(dt_image_t *img, const char *filename,
-                                           dt_mipmap_buffer_t *buf)
+dt_imageio_retval_t dt_imageio_open_exotic(dt_image_t *img, const char *filename, dt_mipmap_buffer_t *buf)
 {
 #ifdef HAVE_GRAPHICSMAGICK
   dt_imageio_retval_t ret = dt_imageio_open_gm(img, filename, buf);
@@ -933,8 +927,8 @@ dt_imageio_retval_t dt_imageio_open_exotic(dt_image_t *img, const char *filename
 //   combined reading
 // =================================================
 
-dt_imageio_retval_t dt_imageio_open(dt_image_t *img,               // non-const * means you hold a write lock!
-                                    const char *filename,          // full path
+dt_imageio_retval_t dt_imageio_open(dt_image_t *img,      // non-const * means you hold a write lock!
+                                    const char *filename, // full path
                                     dt_mipmap_buffer_t *buf)
 {
   /* first of all, check if file exists, don't bother to test loading if not exists */
@@ -949,7 +943,7 @@ dt_imageio_retval_t dt_imageio_open(dt_image_t *img,               // non-const 
   /* silly check using file extensions: */
   if(ret != DT_IMAGEIO_OK && ret != DT_IMAGEIO_CACHE_FULL && dt_imageio_is_hdr(filename))
     ret = dt_imageio_open_hdr(img, filename, buf);
-  
+
   /* use rawspeed to load the raw */
   if(ret != DT_IMAGEIO_OK && ret != DT_IMAGEIO_CACHE_FULL)
   {
@@ -958,8 +952,7 @@ dt_imageio_retval_t dt_imageio_open(dt_image_t *img,               // non-const 
   }
 
   /* fallback that tries to open file via GraphicsMagick */
-  if(ret != DT_IMAGEIO_OK && ret != DT_IMAGEIO_CACHE_FULL)
-    ret = dt_imageio_open_exotic(img, filename, buf);
+  if(ret != DT_IMAGEIO_OK && ret != DT_IMAGEIO_CACHE_FULL) ret = dt_imageio_open_exotic(img, filename, buf);
 
   return ret;
 }

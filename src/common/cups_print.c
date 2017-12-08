@@ -51,14 +51,14 @@ dt_printer_info_t *dt_get_printer_info(const char *printer_name)
   cups_dest_t *dest = cupsGetDest(printer_name, NULL, num_dests, dests);
   dt_printer_info_t *result = NULL;
 
-  if (dest)
+  if(dest)
   {
-    const char *PPDFile = cupsGetPPD (printer_name);
+    const char *PPDFile = cupsGetPPD(printer_name);
     result = (dt_printer_info_t *)malloc(sizeof(dt_printer_info_t));
     g_strlcpy(result->name, dest->name, MAX_NAME);
     ppd_file_t *ppd = ppdOpenFile(PPDFile);
 
-    if (ppd)
+    if(ppd)
     {
       ppdMarkDefaults(ppd);
       cupsMarkOptions(ppd, dest->num_options, dest->options);
@@ -67,36 +67,34 @@ dt_printer_info_t *dt_get_printer_info(const char *printer_name)
 
       ppd_attr_t *attr = ppdFindAttr(ppd, "HWMargins", NULL);
 
-      if (attr)
+      if(attr)
       {
-        sscanf(attr->value, "%lf %lf %lf %lf",
-               &result->hw_margin_left, &result->hw_margin_bottom,
+        sscanf(attr->value, "%lf %lf %lf %lf", &result->hw_margin_left, &result->hw_margin_bottom,
                &result->hw_margin_right, &result->hw_margin_top);
 
-        result->hw_margin_left   = dt_pdf_point_to_mm (result->hw_margin_left);
-        result->hw_margin_bottom = dt_pdf_point_to_mm (result->hw_margin_bottom);
-        result->hw_margin_right  = dt_pdf_point_to_mm (result->hw_margin_right);
-        result->hw_margin_top    = dt_pdf_point_to_mm (result->hw_margin_top);
+        result->hw_margin_left = dt_pdf_point_to_mm(result->hw_margin_left);
+        result->hw_margin_bottom = dt_pdf_point_to_mm(result->hw_margin_bottom);
+        result->hw_margin_right = dt_pdf_point_to_mm(result->hw_margin_right);
+        result->hw_margin_top = dt_pdf_point_to_mm(result->hw_margin_top);
       }
 
       // default resolution
 
       attr = ppdFindAttr(ppd, "DefaultResolution", NULL);
 
-      if (attr)
+      if(attr)
       {
         char *x = strstr(attr->value, "x");
 
-        if (x)
-          sscanf (x+1, "%ddpi", &result->resolution);
+        if(x)
+          sscanf(x + 1, "%ddpi", &result->resolution);
         else
-          sscanf (attr->value, "%ddpi", &result->resolution);
+          sscanf(attr->value, "%ddpi", &result->resolution);
       }
       else
         result->resolution = 300;
 
-      while(result->resolution>360)
-        result->resolution /= 2.0;
+      while(result->resolution > 360) result->resolution /= 2.0;
 
       ppdClose(ppd);
       g_unlink(PPDFile);
@@ -113,10 +111,10 @@ static int _dest_cb(void *user_data, unsigned flags, cups_dest_t *dest)
   const char *psvalue = cupsGetOption("printer-state", dest->num_options, dest->options);
 
   // check that the printer is ready
-  if (psvalue!=NULL && strtol(psvalue, NULL, 10) < IPP_PRINTER_STOPPED)
+  if(psvalue != NULL && strtol(psvalue, NULL, 10) < IPP_PRINTER_STOPPED)
   {
     dt_printer_info_t *pr = dt_get_printer_info(dest->name);
-    if (pctl->cb) pctl->cb(pr, pctl->user_data);
+    if(pctl->cb) pctl->cb(pr, pctl->user_data);
     free(pr);
   }
   else
@@ -131,25 +129,26 @@ static int _detect_printers_callback(dt_job_t *job)
 {
   dt_prtctl_t *pctl = dt_control_job_get_params(job);
   int res;
-#if ((CUPS_VERSION_MAJOR == 1) && (CUPS_VERSION_MINOR >= 6)) || CUPS_VERSION_MAJOR > 1
+#if((CUPS_VERSION_MAJOR == 1) && (CUPS_VERSION_MINOR >= 6)) || CUPS_VERSION_MAJOR > 1
 #if defined(__APPLE__) && MAC_OS_X_VERSION_MIN_REQUIRED < MAC_OS_X_VERSION_10_8
-  if (cupsEnumDests != NULL)
+  if(cupsEnumDests != NULL)
 #endif
     res = cupsEnumDests(CUPS_MEDIA_FLAGS_DEFAULT, 30000, &_cancel, 0, 0, _dest_cb, pctl);
 #if defined(__APPLE__) && MAC_OS_X_VERSION_MIN_REQUIRED < MAC_OS_X_VERSION_10_8
   else
 #endif
 #endif
-#if defined(__APPLE__) && MAC_OS_X_VERSION_MIN_REQUIRED < MAC_OS_X_VERSION_10_8 || !(((CUPS_VERSION_MAJOR == 1) && (CUPS_VERSION_MINOR >= 6)) || CUPS_VERSION_MAJOR > 1)
+#if defined(__APPLE__) && MAC_OS_X_VERSION_MIN_REQUIRED < MAC_OS_X_VERSION_10_8                                   \
+    || !(((CUPS_VERSION_MAJOR == 1) && (CUPS_VERSION_MINOR >= 6)) || CUPS_VERSION_MAJOR > 1)
   {
     cups_dest_t *dests;
     const int num_dests = cupsGetDests(&dests);
-    for (int k=0; k<num_dests; k++)
+    for(int k = 0; k < num_dests; k++)
     {
       _dest_cb((void *)pctl, 0, &dests[k]);
     }
     cupsFreeDests(num_dests, dests);
-    res=1;
+    res = 1;
   }
 #endif
   return !res;
@@ -178,16 +177,14 @@ void dt_printers_discovery(void (*cb)(dt_printer_info_t *pr, void *user_data), v
 
 static int paper_exists(GList *papers, const char *name)
 {
-  if (strstr(name,"custom_") == name)
-    return 1;
+  if(strstr(name, "custom_") == name) return 1;
 
   GList *p = papers;
-  while (p)
+  while(p)
   {
-    const dt_paper_info_t *pi = (dt_paper_info_t*)p->data;
-    if (!strcmp(pi->name,name) || !strcmp(pi->common_name,name))
-      return 1;
-    p = g_list_next (p);
+    const dt_paper_info_t *pi = (dt_paper_info_t *)p->data;
+    if(!strcmp(pi->name, name) || !strcmp(pi->common_name, name)) return 1;
+    p = g_list_next(p);
   }
   return 0;
 }
@@ -197,37 +194,36 @@ dt_paper_info_t *dt_get_paper(GList *papers, const char *name)
   GList *p = papers;
   dt_paper_info_t *result = NULL;
 
-  while (p)
+  while(p)
   {
-    dt_paper_info_t *pi = (dt_paper_info_t*)p->data;
-    if (!strcmp(pi->name,name) || !strcmp(pi->common_name,name))
+    dt_paper_info_t *pi = (dt_paper_info_t *)p->data;
+    if(!strcmp(pi->name, name) || !strcmp(pi->common_name, name))
     {
       result = pi;
       break;
     }
-    p = g_list_next (p);
+    p = g_list_next(p);
   }
   return result;
 }
 
-static gint
-sort_papers (gconstpointer p1, gconstpointer p2)
+static gint sort_papers(gconstpointer p1, gconstpointer p2)
 {
   const dt_paper_info_t *n1 = (dt_paper_info_t *)p1;
   const dt_paper_info_t *n2 = (dt_paper_info_t *)p2;
   const int l1 = strlen(n1->common_name);
   const int l2 = strlen(n2->common_name);
-  return l1==l2 ? strcmp(n1->common_name, n2->common_name) : (l1 < l2 ? -1 : +1);
+  return l1 == l2 ? strcmp(n1->common_name, n2->common_name) : (l1 < l2 ? -1 : +1);
 }
 
 GList *dt_get_papers(const char *printer_name)
 {
   GList *result = NULL;
 
-#if ((CUPS_VERSION_MAJOR == 1) && (CUPS_VERSION_MINOR >= 7)) || CUPS_VERSION_MAJOR > 1
+#if((CUPS_VERSION_MAJOR == 1) && (CUPS_VERSION_MINOR >= 7)) || CUPS_VERSION_MAJOR > 1
 #if defined(__APPLE__) && MAC_OS_X_VERSION_MIN_REQUIRED < MAC_OS_X_VERSION_10_9
-  if (cupsConnectDest != NULL && cupsCopyDestInfo != NULL && cupsGetDestMediaCount != NULL &&
-      cupsGetDestMediaByIndex != NULL && cupsFreeDestInfo != NULL)
+  if(cupsConnectDest != NULL && cupsCopyDestInfo != NULL && cupsGetDestMediaCount != NULL
+     && cupsGetDestMediaByIndex != NULL && cupsFreeDestInfo != NULL)
 #endif
   {
     cups_dest_t *dests;
@@ -238,35 +234,35 @@ GList *dt_get_papers(const char *printer_name)
 
     char resource[1024];
 
-    if (dest)
+    if(dest)
     {
       http_t *hcon = cupsConnectDest(dest, 0, 2000, &cancel, resource, sizeof(resource), NULL, (void *)NULL);
 
-      if (hcon)
+      if(hcon)
       {
         cups_size_t size;
-        cups_dinfo_t *info = cupsCopyDestInfo (hcon, dest);
+        cups_dinfo_t *info = cupsCopyDestInfo(hcon, dest);
         const int count = cupsGetDestMediaCount(hcon, dest, info, CUPS_MEDIA_FLAGS_DEFAULT);
-        for (int k=0; k<count; k++)
+        for(int k = 0; k < count; k++)
         {
-          if (cupsGetDestMediaByIndex(hcon, dest, info, k, CUPS_MEDIA_FLAGS_DEFAULT, &size))
+          if(cupsGetDestMediaByIndex(hcon, dest, info, k, CUPS_MEDIA_FLAGS_DEFAULT, &size))
           {
-            if (!paper_exists(result,size.media))
+            if(!paper_exists(result, size.media))
             {
-              pwg_media_t *med = pwgMediaForPWG (size.media);
+              pwg_media_t *med = pwgMediaForPWG(size.media);
               char common_name[MAX_NAME] = { 0 };
 
-              if (med->ppd)
+              if(med->ppd)
                 g_strlcpy(common_name, med->ppd, sizeof(common_name));
               else
                 g_strlcpy(common_name, size.media, sizeof(common_name));
 
-              dt_paper_info_t *paper = (dt_paper_info_t*)malloc(sizeof(dt_paper_info_t));
+              dt_paper_info_t *paper = (dt_paper_info_t *)malloc(sizeof(dt_paper_info_t));
               g_strlcpy(paper->name, size.media, sizeof(paper->name));
               g_strlcpy(paper->common_name, common_name, sizeof(paper->common_name));
               paper->width = (double)size.width / 100.0;
               paper->height = (double)size.length / 100.0;
-              result = g_list_append (result, paper);
+              result = g_list_append(result, paper);
             }
           }
         }
@@ -287,20 +283,20 @@ GList *dt_get_papers(const char *printer_name)
   const char *PPDFile = cupsGetPPD(printer_name);
   ppd_file_t *ppd = ppdOpenFile(PPDFile);
 
-  if (ppd)
+  if(ppd)
   {
     ppd_size_t *size = ppd->sizes;
 
-    for (int k=0; k<ppd->num_sizes; k++)
+    for(int k = 0; k < ppd->num_sizes; k++)
     {
-      if (!paper_exists(result,size->name))
+      if(!paper_exists(result, size->name))
       {
-        dt_paper_info_t *paper = (dt_paper_info_t*)malloc(sizeof(dt_paper_info_t));
+        dt_paper_info_t *paper = (dt_paper_info_t *)malloc(sizeof(dt_paper_info_t));
         g_strlcpy(paper->name, size->name, MAX_NAME);
         g_strlcpy(paper->common_name, size->name, MAX_NAME);
         paper->width = (double)dt_pdf_point_to_mm(size->width);
         paper->height = (double)dt_pdf_point_to_mm(size->length);
-        result = g_list_append (result, paper);
+        result = g_list_append(result, paper);
       }
       size++;
     }
@@ -309,7 +305,7 @@ GList *dt_get_papers(const char *printer_name)
     g_unlink(PPDFile);
   }
 
-  result = g_list_sort_with_data (result, (GCompareDataFunc)sort_papers, NULL);
+  result = g_list_sort_with_data(result, (GCompareDataFunc)sort_papers, NULL);
   return result;
 }
 
@@ -317,7 +313,7 @@ void dt_print_file(const int32_t imgid, const char *filename, const dt_print_inf
 {
   // first for safety check that filename exists and is readable
 
-  if (!g_file_test(filename, G_FILE_TEST_IS_REGULAR))
+  if(!g_file_test(filename, G_FILE_TEST_IS_REGULAR))
   {
     dt_control_log(_("file `%s' to print not found for image %d on `%s'"), filename, imgid, pinfo->printer.name);
     return;
@@ -330,19 +326,15 @@ void dt_print_file(const int32_t imgid, const char *filename, const dt_print_inf
   cups_option_t *options = NULL;
   int num_options = 0;
 
-  for (int j = 0; j < dest->num_options; j ++)
-    if (cupsGetOption(dest->options[j].name, num_options,
-                      options) == NULL)
-      num_options = cupsAddOption(dest->options[j].name,
-                                  dest->options[j].value,
-                                  num_options, &options);
+  for(int j = 0; j < dest->num_options; j++)
+    if(cupsGetOption(dest->options[j].name, num_options, options) == NULL)
+      num_options = cupsAddOption(dest->options[j].name, dest->options[j].value, num_options, &options);
 
   cupsFreeDests(num_dests, dests);
 
   // disable cm on CUPS, this is important as dt does the cm
 
-  if (*pinfo->printer.profile)
-    num_options = cupsAddOption("cm-calibration", "true", num_options, &options);
+  if(*pinfo->printer.profile) num_options = cupsAddOption("cm-calibration", "true", num_options, &options);
 
   // media to print on
 
@@ -358,8 +350,8 @@ void dt_print_file(const int32_t imgid, const char *filename, const dt_print_inf
 
   // if the printer has no hardward margins activate the borderless mode
 
-  if (pinfo->printer.hw_margin_top == 0 || pinfo->printer.hw_margin_bottom == 0
-      || pinfo->printer.hw_margin_left == 0 || pinfo->printer.hw_margin_right == 0)
+  if(pinfo->printer.hw_margin_top == 0 || pinfo->printer.hw_margin_bottom == 0
+     || pinfo->printer.hw_margin_left == 0 || pinfo->printer.hw_margin_right == 0)
   {
     // there is many variant for this parameter
     num_options = cupsAddOption("StpFullBleed", "true", num_options, &options);
@@ -367,7 +359,7 @@ void dt_print_file(const int32_t imgid, const char *filename, const dt_print_inf
     num_options = cupsAddOption("Borderless", "true", num_options, &options);
   }
 
-  if (pinfo->page.landscape)
+  if(pinfo->page.landscape)
     num_options = cupsAddOption("landscape", "true", num_options, &options);
   else
     num_options = cupsAddOption("landscape", "false", num_options, &options);
@@ -375,20 +367,20 @@ void dt_print_file(const int32_t imgid, const char *filename, const dt_print_inf
   // print lp options
 
   dt_print(DT_DEBUG_PRINT, "[print] printer options (%d)\n", num_options);
-  for (int k=0; k<num_options; k++)
+  for(int k = 0; k < num_options; k++)
     dt_print(DT_DEBUG_PRINT, "[print]   %s=%s\n", options[k].name, options[k].value);
 
-  const int job_id = cupsPrintFile(pinfo->printer.name, filename,  "darktable", num_options, options);
+  const int job_id = cupsPrintFile(pinfo->printer.name, filename, "darktable", num_options, options);
 
-  if (job_id == 0)
+  if(job_id == 0)
     dt_control_log(_("error while printing image %d on `%s'"), imgid, pinfo->printer.name);
   else
     dt_control_log(_("printing image %d on `%s'"), imgid, pinfo->printer.name);
 
-  cupsFreeOptions (num_options, options);
+  cupsFreeOptions(num_options, options);
 }
 
-static void _get_image_dimension (int32_t imgid, int32_t *iwidth, int32_t *iheight)
+static void _get_image_dimension(int32_t imgid, int32_t *iwidth, int32_t *iheight)
 {
   dt_develop_t dev;
 
@@ -417,12 +409,10 @@ static void _get_image_dimension (int32_t imgid, int32_t *iwidth, int32_t *iheig
   *iheight = ht;
 }
 
-void dt_get_print_layout(const int32_t imgid, const dt_print_info_t *prt,
-                         const int32_t area_width, const int32_t area_height,
-                         int32_t *iwpix, int32_t *ihpix,
-                         int32_t *px,    int32_t *py,    int32_t *pwidth, int32_t *pheight,
-                         int32_t *ax,    int32_t *ay,    int32_t *awidth, int32_t *aheight,
-                         int32_t *ix,    int32_t *iy,    int32_t *iwidth, int32_t *iheight)
+void dt_get_print_layout(const int32_t imgid, const dt_print_info_t *prt, const int32_t area_width,
+                         const int32_t area_height, int32_t *iwpix, int32_t *ihpix, int32_t *px, int32_t *py,
+                         int32_t *pwidth, int32_t *pheight, int32_t *ax, int32_t *ay, int32_t *awidth,
+                         int32_t *aheight, int32_t *ix, int32_t *iy, int32_t *iwidth, int32_t *iheight)
 {
   /* this is where the layout is done for the display and for the print too. So this routine is one
      of the most critical for the print circuitry. */
@@ -430,15 +420,15 @@ void dt_get_print_layout(const int32_t imgid, const dt_print_info_t *prt,
   double width, height;
 
   // page w/h
-  double pg_width  = prt->paper.width;
+  double pg_width = prt->paper.width;
   double pg_height = prt->paper.height;
 
-  if (area_width==0)
+  if(area_width == 0)
     width = pg_width;
   else
     width = area_width;
 
-  if (area_height==0)
+  if(area_height == 0)
     height = pg_height;
   else
     height = area_height;
@@ -453,14 +443,14 @@ void dt_get_print_layout(const int32_t imgid, const dt_print_info_t *prt,
 
   /* do some arrangements for the landscape mode. */
 
-  if (prt->page.landscape)
+  if(prt->page.landscape)
   {
     double tmp = pg_width;
     pg_width = pg_height;
     pg_height = tmp;
 
     //  only invert if we did not get a specific area
-    if (area_width == 0 && area_height == 0)
+    if(area_width == 0 && area_height == 0)
     {
       tmp = width;
       width = height;
@@ -468,11 +458,11 @@ void dt_get_print_layout(const int32_t imgid, const dt_print_info_t *prt,
     }
 
     // rotate the non-printable margins
-    tmp       = np_top;
-    np_top    = np_right;
-    np_right  = np_bottom;
+    tmp = np_top;
+    np_top = np_right;
+    np_right = np_bottom;
     np_bottom = np_left;
-    np_left   = tmp;
+    np_left = tmp;
   }
 
   // the image area aspect
@@ -484,7 +474,7 @@ void dt_get_print_layout(const int32_t imgid, const dt_print_info_t *prt,
   // display page
   int32_t p_bottom, p_right;
 
-  if (a_aspect > pg_aspect)
+  if(a_aspect > pg_aspect)
   {
     *px = (width - (height * pg_aspect)) / 2;
     *py = 0;
@@ -514,21 +504,20 @@ void dt_get_print_layout(const int32_t imgid, const dt_print_info_t *prt,
   // display picture area, that is removing the non printable areas and user's margins
 
   const int32_t bx = *px + ((np_left + border_left) / pg_width) * (*pwidth);
-  const int32_t by = *py + ((np_top + border_top)/ pg_height) * (*pheight);
+  const int32_t by = *py + ((np_top + border_top) / pg_height) * (*pheight);
   const int32_t bb = p_bottom - ((np_bottom + border_bottom) / pg_height) * (*pheight);
   const int32_t br = p_right - ((np_right + border_right) / pg_width) * (*pwidth);
 
   // now we have the printable area (ax, ay) -> (ax + awidth, ay + aheight)
 
-  *ax      = bx;
-  *ay      = by;
-  *awidth  = br - bx;
+  *ax = bx;
+  *ay = by;
+  *awidth = br - bx;
   *aheight = bb - by;
 
   // get the image dimensions if needed
 
-  if (*iwpix <= 0 || *ihpix <= 0)
-    _get_image_dimension (imgid, iwpix, ihpix);
+  if(*iwpix <= 0 || *ihpix <= 0) _get_image_dimension(imgid, iwpix, ihpix);
 
   // compute the scaling for the image to fit into the printable area
 
@@ -537,14 +526,14 @@ void dt_get_print_layout(const int32_t imgid, const dt_print_info_t *prt,
   *iwidth = *iwpix;
   *iheight = *ihpix;
 
-  if (*iwidth > *awidth)
+  if(*iwidth > *awidth)
   {
-    scale =  (double)(*awidth) / (double)*iwidth;
+    scale = (double)(*awidth) / (double)*iwidth;
     *iwidth = *awidth;
     *iheight = (int32_t)(((double)*iheight + 0.5) * scale);
   }
 
-  if (*iheight > *aheight)
+  if(*iheight > *aheight)
   {
     scale = (double)(*aheight) / (double)*iheight;
     *iheight = *aheight;
@@ -554,7 +543,7 @@ void dt_get_print_layout(const int32_t imgid, const dt_print_info_t *prt,
   // now the image position (top-left corner coordinates) in the display area depending on the page
   // alignment set by the user.
 
-  switch (prt->page.alignment)
+  switch(prt->page.alignment)
   {
     case ALIGNMENT_TOP_LEFT:
       *ix = bx;

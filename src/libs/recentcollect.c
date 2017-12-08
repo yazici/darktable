@@ -53,7 +53,7 @@ const char *name(dt_lib_module_t *self)
 
 const char **views(dt_lib_module_t *self)
 {
-  static const char *v[] = {"lighttable", "map", NULL};
+  static const char *v[] = { "lighttable", "map", NULL };
   return v;
 }
 
@@ -288,8 +288,7 @@ static void _lib_recentcollection_updated(gpointer instance, gpointer user_data)
       gtk_button_set_label(GTK_BUTTON(d->item[k].button), str);
     }
     GtkWidget *child = gtk_bin_get_child(GTK_BIN(d->item[k].button));
-    if(child)
-      gtk_widget_set_halign(child, GTK_ALIGN_START);
+    if(child) gtk_widget_set_halign(child, GTK_ALIGN_START);
     gtk_widget_set_no_show_all(d->item[k].button, TRUE);
     gtk_widget_set_visible(d->item[k].button, FALSE);
   }
@@ -298,8 +297,7 @@ static void _lib_recentcollection_updated(gpointer instance, gpointer user_data)
     gtk_widget_set_no_show_all(d->item[k].button, FALSE);
     gtk_widget_set_visible(d->item[k].button, TRUE);
   }
-  if((new_pos != -1) && (new_pos != curr_pos))
-    dt_view_lighttable_set_position(darktable.view_manager, new_pos);
+  if((new_pos != -1) && (new_pos != curr_pos)) dt_view_lighttable_set_position(darktable.view_manager, new_pos);
 }
 
 void gui_reset(dt_lib_module_t *self)
@@ -334,8 +332,7 @@ void gui_init(dt_lib_module_t *self)
     gtk_widget_set_no_show_all(d->item[k].button, TRUE);
     gtk_widget_set_visible(d->item[k].button, FALSE);
     GtkWidget *child = gtk_bin_get_child(GTK_BIN(d->item[k].button));
-    if(child)
-      gtk_widget_set_halign(child, GTK_ALIGN_START);
+    if(child) gtk_widget_set_halign(child, GTK_ALIGN_START);
   }
   _lib_recentcollection_updated(NULL, self);
 

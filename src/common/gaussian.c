@@ -33,8 +33,8 @@
 
 #define BLOCKSIZE (1 << 6)
 
-static void compute_gauss_params(const float sigma, dt_gaussian_order_t order, float *a0, float *a1,
-                                 float *a2, float *a3, float *b1, float *b2, float *coefp, float *coefn)
+static void compute_gauss_params(const float sigma, dt_gaussian_order_t order, float *a0, float *a1, float *a2,
+                                 float *a3, float *b1, float *b2, float *coefp, float *coefn)
 {
   const float alpha = 1.695f / sigma;
   const float ema = exp(-alpha);
@@ -55,9 +55,9 @@ static void compute_gauss_params(const float sigma, dt_gaussian_order_t order, f
     {
       const float k = (1.0f - ema) * (1.0f - ema) / (1.0f + (2.0f * alpha * ema) - ema2);
       *a0 = k;
-      *a1 = k * (alpha - 1.0f) * ema;
-      *a2 = k * (alpha + 1.0f) * ema;
-      *a3 = -k * ema2;
+      *a1 = k *(alpha - 1.0f) * ema;
+      *a2 = k *(alpha + 1.0f) * ema;
+      *a3 = -k *ema2;
     }
     break;
 
@@ -76,9 +76,9 @@ static void compute_gauss_params(const float sigma, dt_gaussian_order_t order, f
       float kn = -2.0f * (-1.0f + (3.0f * ema) - (3.0f * ema * ema) + (ema * ema * ema));
       kn /= ((3.0f * ema) + 1.0f + (3.0f * ema * ema) + (ema * ema * ema));
       *a0 = kn;
-      *a1 = -kn * (1.0f + (k * alpha)) * ema;
-      *a2 = kn * (1.0f - (k * alpha)) * ema;
-      *a3 = -kn * ema2;
+      *a1 = -kn *(1.0f + (k * alpha)) * ema;
+      *a2 = kn *(1.0f - (k * alpha)) * ema;
+      *a3 = -kn *ema2;
     }
   }
 
@@ -173,20 +173,20 @@ void dt_gaussian_blur(dt_gaussian_t *g, const float *const in, float *const out)
 
 // vertical blur column by column
 #ifdef _OPENMP
-#pragma omp parallel for default(none) shared(temp, Labmin, Labmax, a0, a1, a2, a3, b1, b2, coefp,           \
+#pragma omp parallel for default(none) shared(temp, Labmin, Labmax, a0, a1, a2, a3, b1, b2, coefp,                \
                                               coefn) schedule(static)
 #endif
   for(int i = 0; i < width; i++)
   {
-    float xp[4] = {0.0f};
-    float yb[4] = {0.0f};
-    float yp[4] = {0.0f};
-    float xc[4] = {0.0f};
-    float yc[4] = {0.0f};
-    float xn[4] = {0.0f};
-    float xa[4] = {0.0f};
-    float yn[4] = {0.0f};
-    float ya[4] = {0.0f};
+    float xp[4] = { 0.0f };
+    float yb[4] = { 0.0f };
+    float yp[4] = { 0.0f };
+    float xc[4] = { 0.0f };
+    float yc[4] = { 0.0f };
+    float xn[4] = { 0.0f };
+    float xa[4] = { 0.0f };
+    float yn[4] = { 0.0f };
+    float ya[4] = { 0.0f };
 
     // forward filter
     for(int k = 0; k < ch; k++)
@@ -245,20 +245,20 @@ void dt_gaussian_blur(dt_gaussian_t *g, const float *const in, float *const out)
 
 // horizontal blur line by line
 #ifdef _OPENMP
-#pragma omp parallel for default(none) shared(temp, Labmin, Labmax, a0, a1, a2, a3, b1, b2, coefp,           \
+#pragma omp parallel for default(none) shared(temp, Labmin, Labmax, a0, a1, a2, a3, b1, b2, coefp,                \
                                               coefn) schedule(static)
 #endif
   for(int j = 0; j < height; j++)
   {
-    float xp[4] = {0.0f};
-    float yb[4] = {0.0f};
-    float yp[4] = {0.0f};
-    float xc[4] = {0.0f};
-    float yc[4] = {0.0f};
-    float xn[4] = {0.0f};
-    float xa[4] = {0.0f};
-    float yn[4] = {0.0f};
-    float ya[4] = {0.0f};
+    float xp[4] = { 0.0f };
+    float yb[4] = { 0.0f };
+    float yp[4] = { 0.0f };
+    float xc[4] = { 0.0f };
+    float yc[4] = { 0.0f };
+    float xn[4] = { 0.0f };
+    float xa[4] = { 0.0f };
+    float yn[4] = { 0.0f };
+    float ya[4] = { 0.0f };
 
     // forward filter
     for(int k = 0; k < ch; k++)
@@ -367,10 +367,9 @@ static void dt_gaussian_blur_4c_sse(dt_gaussian_t *g, const float *const in, flo
       xc = MMCLAMPPS(_mm_load_ps(in + offset), Labmin, Labmax);
 
 
-      yc = _mm_add_ps(
-          _mm_mul_ps(xc, _mm_set_ps1(a0)),
-          _mm_sub_ps(_mm_mul_ps(xp, _mm_set_ps1(a1)),
-                     _mm_add_ps(_mm_mul_ps(yp, _mm_set_ps1(b1)), _mm_mul_ps(yb, _mm_set_ps1(b2)))));
+      yc = _mm_add_ps(_mm_mul_ps(xc, _mm_set_ps1(a0)),
+                      _mm_sub_ps(_mm_mul_ps(xp, _mm_set_ps1(a1)),
+                                 _mm_add_ps(_mm_mul_ps(yp, _mm_set_ps1(b1)), _mm_mul_ps(yb, _mm_set_ps1(b2)))));
 
       _mm_store_ps(temp + offset, yc);
 
@@ -391,10 +390,9 @@ static void dt_gaussian_blur_4c_sse(dt_gaussian_t *g, const float *const in, flo
 
       xc = MMCLAMPPS(_mm_load_ps(in + offset), Labmin, Labmax);
 
-      yc = _mm_add_ps(
-          _mm_mul_ps(xn, _mm_set_ps1(a2)),
-          _mm_sub_ps(_mm_mul_ps(xa, _mm_set_ps1(a3)),
-                     _mm_add_ps(_mm_mul_ps(yn, _mm_set_ps1(b1)), _mm_mul_ps(ya, _mm_set_ps1(b2)))));
+      yc = _mm_add_ps(_mm_mul_ps(xn, _mm_set_ps1(a2)),
+                      _mm_sub_ps(_mm_mul_ps(xa, _mm_set_ps1(a3)),
+                                 _mm_add_ps(_mm_mul_ps(yn, _mm_set_ps1(b1)), _mm_mul_ps(ya, _mm_set_ps1(b2)))));
 
 
       xa = xn;
@@ -434,10 +432,9 @@ static void dt_gaussian_blur_4c_sse(dt_gaussian_t *g, const float *const in, flo
 
       xc = MMCLAMPPS(_mm_load_ps(temp + offset), Labmin, Labmax);
 
-      yc = _mm_add_ps(
-          _mm_mul_ps(xc, _mm_set_ps1(a0)),
-          _mm_sub_ps(_mm_mul_ps(xp, _mm_set_ps1(a1)),
-                     _mm_add_ps(_mm_mul_ps(yp, _mm_set_ps1(b1)), _mm_mul_ps(yb, _mm_set_ps1(b2)))));
+      yc = _mm_add_ps(_mm_mul_ps(xc, _mm_set_ps1(a0)),
+                      _mm_sub_ps(_mm_mul_ps(xp, _mm_set_ps1(a1)),
+                                 _mm_add_ps(_mm_mul_ps(yp, _mm_set_ps1(b1)), _mm_mul_ps(yb, _mm_set_ps1(b2)))));
 
       _mm_store_ps(out + offset, yc);
 
@@ -459,10 +456,9 @@ static void dt_gaussian_blur_4c_sse(dt_gaussian_t *g, const float *const in, flo
 
       xc = MMCLAMPPS(_mm_load_ps(temp + offset), Labmin, Labmax);
 
-      yc = _mm_add_ps(
-          _mm_mul_ps(xn, _mm_set_ps1(a2)),
-          _mm_sub_ps(_mm_mul_ps(xa, _mm_set_ps1(a3)),
-                     _mm_add_ps(_mm_mul_ps(yn, _mm_set_ps1(b1)), _mm_mul_ps(ya, _mm_set_ps1(b2)))));
+      yc = _mm_add_ps(_mm_mul_ps(xn, _mm_set_ps1(a2)),
+                      _mm_sub_ps(_mm_mul_ps(xa, _mm_set_ps1(a3)),
+                                 _mm_add_ps(_mm_mul_ps(yn, _mm_set_ps1(b1)), _mm_mul_ps(ya, _mm_set_ps1(b2)))));
 
 
       xa = xn;
@@ -564,10 +560,14 @@ dt_gaussian_cl_t *dt_gaussian_init_cl(const int devid,
                                                   : g->global->kernel_gaussian_transpose_4c;
   int blocksize;
 
-  dt_opencl_local_buffer_t locopt
-    = (dt_opencl_local_buffer_t){ .xoffset = 1, .xfactor = 1, .yoffset = 0, .yfactor = 1,
-                                  .cellsize = channels * sizeof(float), .overhead = 0,
-                                  .sizex = BLOCKSIZE, .sizey = BLOCKSIZE };
+  dt_opencl_local_buffer_t locopt = (dt_opencl_local_buffer_t){.xoffset = 1,
+                                                               .xfactor = 1,
+                                                               .yoffset = 0,
+                                                               .yfactor = 1,
+                                                               .cellsize = channels * sizeof(float),
+                                                               .overhead = 0,
+                                                               .sizex = BLOCKSIZE,
+                                                               .sizey = BLOCKSIZE };
 
   if(dt_opencl_local_buffer_opt(devid, kernel_gaussian_transpose, &locopt))
     blocksize = MIN(locopt.sizex, locopt.sizey);

@@ -113,10 +113,12 @@ static const struct
 static const int dt_pdf_paper_sizes_n = sizeof(dt_pdf_paper_sizes) / sizeof(dt_pdf_paper_sizes[0]);
 
 // construction of the pdf
-dt_pdf_t *dt_pdf_start(const char *filename, float width, float height, float dpi, dt_pdf_stream_encoder_t default_encoder);
+dt_pdf_t *dt_pdf_start(const char *filename, float width, float height, float dpi,
+                       dt_pdf_stream_encoder_t default_encoder);
 int dt_pdf_add_icc(dt_pdf_t *pdf, const char *filename);
 int dt_pdf_add_icc_from_data(dt_pdf_t *pdf, const unsigned char *data, size_t size);
-dt_pdf_image_t *dt_pdf_add_image(dt_pdf_t *pdf, const unsigned char *image, int bpp, int width, int height, int icc_id, float border);
+dt_pdf_image_t *dt_pdf_add_image(dt_pdf_t *pdf, const unsigned char *image, int bpp, int width, int height,
+                                 int icc_id, float border);
 dt_pdf_page_t *dt_pdf_add_page(dt_pdf_t *pdf, dt_pdf_image_t **images, int n_images);
 void dt_pdf_finish(dt_pdf_t *pdf, dt_pdf_page_t **pages, int n_pages);
 

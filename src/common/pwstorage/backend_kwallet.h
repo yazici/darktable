@@ -38,8 +38,7 @@ const backend_kwallet_context_t *dt_pwstorage_kwallet_new();
 /** Cleanup and destroy kwallet backend context. */
 void dt_pwstorage_kwallet_destroy(const backend_kwallet_context_t *context);
 /** Store (key,value) pairs. */
-gboolean dt_pwstorage_kwallet_set(const backend_kwallet_context_t *context, const gchar *slot,
-                                  GHashTable *table);
+gboolean dt_pwstorage_kwallet_set(const backend_kwallet_context_t *context, const gchar *slot, GHashTable *table);
 /** Load (key,value) pairs. */
 GHashTable *dt_pwstorage_kwallet_get(const backend_kwallet_context_t *context, const gchar *slot);
 

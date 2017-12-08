@@ -87,18 +87,19 @@ static void _dt_history_cleanup_multi_instance(int imgid, int minnum)
   {
     const char *op = (const char *)sqlite3_column_text(stmt, 1);
     GList *modules = darktable.iop;
-    while (modules)
+    while(modules)
     {
       dt_iop_module_so_t *find_op = (dt_iop_module_so_t *)(modules->data);
-      if (!strcmp(find_op->op, op))
+      if(!strcmp(find_op->op, op))
       {
         break;
       }
       modules = g_list_next(modules);
     }
-    if (modules && (((dt_iop_module_so_t *)(modules->data))->flags() & IOP_FLAGS_ONE_INSTANCE))
+    if(modules && (((dt_iop_module_so_t *)(modules->data))->flags() & IOP_FLAGS_ONE_INSTANCE))
     {
-      // the current module is a single-instance one, so there's no point in trying to mess up our multi_priority value
+      // the current module is a single-instance one, so there's no point in trying to mess up our multi_priority
+      // value
       continue;
     }
 
@@ -197,8 +198,8 @@ void dt_history_delete_on_image(int32_t imgid)
 void dt_history_delete_on_selection()
 {
   sqlite3_stmt *stmt;
-  DT_DEBUG_SQLITE3_PREPARE_V2(dt_database_get(darktable.db), "SELECT imgid FROM main.selected_images",
-                              -1, &stmt, NULL);
+  DT_DEBUG_SQLITE3_PREPARE_V2(dt_database_get(darktable.db), "SELECT imgid FROM main.selected_images", -1, &stmt,
+                              NULL);
   while(sqlite3_step(stmt) == SQLITE_ROW)
   {
     int imgid = sqlite3_column_int(stmt, 0);
@@ -228,8 +229,8 @@ int dt_history_load_and_apply_on_selection(gchar *filename)
 {
   int res = 0;
   sqlite3_stmt *stmt;
-  DT_DEBUG_SQLITE3_PREPARE_V2(dt_database_get(darktable.db), "SELECT imgid FROM main.selected_images",
-                              -1, &stmt, NULL);
+  DT_DEBUG_SQLITE3_PREPARE_V2(dt_database_get(darktable.db), "SELECT imgid FROM main.selected_images", -1, &stmt,
+                              NULL);
   while(sqlite3_step(stmt) == SQLITE_ROW)
   {
     int imgid = sqlite3_column_int(stmt, 0);
@@ -262,14 +263,15 @@ int dt_history_copy_and_paste_on_image(int32_t imgid, int32_t dest_imgid, gboole
     // first trim the stack to get rid of whatever is above the selected entry
     DT_DEBUG_SQLITE3_PREPARE_V2(dt_database_get(darktable.db),
                                 "DELETE FROM main.history WHERE imgid = ?1 AND num >= (SELECT history_end "
-                                "FROM main.images WHERE id = imgid)", -1, &stmt, NULL);
+                                "FROM main.images WHERE id = imgid)",
+                                -1, &stmt, NULL);
     DT_DEBUG_SQLITE3_BIND_INT(stmt, 1, dest_imgid);
     sqlite3_step(stmt);
     sqlite3_finalize(stmt);
 
     DT_DEBUG_SQLITE3_PREPARE_V2(dt_database_get(darktable.db),
-                                "SELECT IFNULL(MAX(num), -1)+1 FROM main.history WHERE imgid = ?1",
-                                -1, &stmt, NULL);
+                                "SELECT IFNULL(MAX(num), -1)+1 FROM main.history WHERE imgid = ?1", -1, &stmt,
+                                NULL);
     DT_DEBUG_SQLITE3_BIND_INT(stmt, 1, dest_imgid);
     if(sqlite3_step(stmt) == SQLITE_ROW) offs = sqlite3_column_int(stmt, 0);
   }
@@ -415,11 +417,9 @@ GList *dt_history_get_items(int32_t imgid, gboolean enabled)
       if(enabled)
       {
         if(strcmp(mname, "0") == 0)
-          g_snprintf(name, sizeof(name), "%s",
-                     dt_iop_get_localized_name((char *)sqlite3_column_text(stmt, 1)));
+          g_snprintf(name, sizeof(name), "%s", dt_iop_get_localized_name((char *)sqlite3_column_text(stmt, 1)));
         else
-          g_snprintf(name, sizeof(name), "%s %s",
-                     dt_iop_get_localized_name((char *)sqlite3_column_text(stmt, 1)),
+          g_snprintf(name, sizeof(name), "%s %s", dt_iop_get_localized_name((char *)sqlite3_column_text(stmt, 1)),
                      (char *)sqlite3_column_text(stmt, 3));
       }
       else

@@ -65,7 +65,7 @@ const char **views(dt_lib_module_t *self)
            unloading/loading a module while switching views.
 
    */
-  static const char *v[] = {"*", NULL};
+  static const char *v[] = { "*", NULL };
   return v;
 }
 
@@ -150,8 +150,8 @@ void gui_init(dt_lib_module_t *self)
   g_signal_connect(G_OBJECT(widget), "changed", G_CALLBACK(_lib_filter_sort_combobox_changed), (gpointer)self);
 
   /* reverse order checkbutton */
-  d->reverse = widget
-      = dtgtk_togglebutton_new(dtgtk_cairo_paint_solid_arrow, CPF_DO_NOT_USE_BORDER | CPF_STYLE_BOX | CPF_DIRECTION_UP);
+  d->reverse = widget = dtgtk_togglebutton_new(dtgtk_cairo_paint_solid_arrow,
+                                               CPF_DO_NOT_USE_BORDER | CPF_STYLE_BOX | CPF_DIRECTION_UP);
   if(darktable.collection->params.descending)
     dtgtk_togglebutton_set_paint(DTGTK_TOGGLEBUTTON(widget), dtgtk_cairo_paint_solid_arrow,
                                  CPF_DO_NOT_USE_BORDER | CPF_STYLE_BOX | CPF_DIRECTION_DOWN);
@@ -159,18 +159,16 @@ void gui_init(dt_lib_module_t *self)
   gtk_box_pack_start(GTK_BOX(self->widget), widget, FALSE, FALSE, 0);
 
   /* select the last value and connect callback */
-  gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(widget),
-                               dt_collection_get_sort_descending(darktable.collection));
+  gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(widget), dt_collection_get_sort_descending(darktable.collection));
 
-  g_signal_connect(G_OBJECT(widget), "toggled", G_CALLBACK(_lib_filter_reverse_button_changed),
-                   (gpointer)self);
+  g_signal_connect(G_OBJECT(widget), "toggled", G_CALLBACK(_lib_filter_reverse_button_changed), (gpointer)self);
 
   /* initialize proxy */
   darktable.view_manager->proxy.filter.module = self;
   darktable.view_manager->proxy.filter.reset_filter = _lib_filter_reset;
 
-  g_signal_connect_swapped(G_OBJECT(d->comparator), "map",
-                           G_CALLBACK(_lib_filter_sync_combobox_and_comparator), self);
+  g_signal_connect_swapped(G_OBJECT(d->comparator), "map", G_CALLBACK(_lib_filter_sync_combobox_and_comparator),
+                           self);
 }
 
 void gui_cleanup(dt_lib_module_t *self)
@@ -212,20 +210,20 @@ static void _lib_filter_combobox_changed(GtkComboBox *widget, gpointer user_data
   if(i == 0) // all
     dt_collection_set_filter_flags(darktable.collection,
                                    dt_collection_get_filter_flags(darktable.collection)
-                                   & ~(COLLECTION_FILTER_ATLEAST_RATING | COLLECTION_FILTER_EQUAL_RATING
-                                       | COLLECTION_FILTER_CUSTOM_COMPARE));
+                                       & ~(COLLECTION_FILTER_ATLEAST_RATING | COLLECTION_FILTER_EQUAL_RATING
+                                           | COLLECTION_FILTER_CUSTOM_COMPARE));
   else if(i == 1 || i == 7) // unstarred only || rejected only
     dt_collection_set_filter_flags(
         darktable.collection,
         (dt_collection_get_filter_flags(darktable.collection) | COLLECTION_FILTER_EQUAL_RATING)
-        & ~(COLLECTION_FILTER_ATLEAST_RATING | COLLECTION_FILTER_CUSTOM_COMPARE));
+            & ~(COLLECTION_FILTER_ATLEAST_RATING | COLLECTION_FILTER_CUSTOM_COMPARE));
   else if(i == 8) // all except rejected
     dt_collection_set_filter_flags(darktable.collection,
                                    (dt_collection_get_filter_flags(darktable.collection)
                                     | COLLECTION_FILTER_ATLEAST_RATING) & ~COLLECTION_FILTER_CUSTOM_COMPARE);
   else // explicit stars
     dt_collection_set_filter_flags(darktable.collection, dt_collection_get_filter_flags(darktable.collection)
-                                                         | COLLECTION_FILTER_CUSTOM_COMPARE);
+                                                             | COLLECTION_FILTER_CUSTOM_COMPARE);
 
   /* set the star filter in collection */
   dt_collection_set_rating(darktable.collection, i);
@@ -243,9 +241,11 @@ static void _lib_filter_reverse_button_changed(GtkDarktableToggleButton *widget,
   gboolean reverse = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget));
 
   if(reverse)
-    dtgtk_togglebutton_set_paint(widget, dtgtk_cairo_paint_solid_arrow, CPF_DO_NOT_USE_BORDER | CPF_STYLE_BOX | CPF_DIRECTION_DOWN);
+    dtgtk_togglebutton_set_paint(widget, dtgtk_cairo_paint_solid_arrow,
+                                 CPF_DO_NOT_USE_BORDER | CPF_STYLE_BOX | CPF_DIRECTION_DOWN);
   else
-    dtgtk_togglebutton_set_paint(widget, dtgtk_cairo_paint_solid_arrow, CPF_DO_NOT_USE_BORDER | CPF_STYLE_BOX | CPF_DIRECTION_UP);
+    dtgtk_togglebutton_set_paint(widget, dtgtk_cairo_paint_solid_arrow,
+                                 CPF_DO_NOT_USE_BORDER | CPF_STYLE_BOX | CPF_DIRECTION_UP);
   gtk_widget_queue_draw(GTK_WIDGET(widget));
 
   /* update last settings */

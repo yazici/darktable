@@ -57,7 +57,7 @@ void dt_lua_event_trigger(lua_State *L, const char *event, int nargs);
   first parameter is the event name
   other parameters will be passed to the event handler
   */
-int dt_lua_event_trigger_wrapper(lua_State *L) ;
+int dt_lua_event_trigger_wrapper(lua_State *L);
 
 /////////////////////
 //    HELPERS      //

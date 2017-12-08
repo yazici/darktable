@@ -54,7 +54,7 @@ const char *name(dt_lib_module_t *self)
 
 const char **views(dt_lib_module_t *self)
 {
-  static const char *v[] = {"darkroom", NULL};
+  static const char *v[] = { "darkroom", NULL };
   return v;
 }
 
@@ -95,9 +95,9 @@ static gboolean main_draw_callback(GtkWidget *widget, cairo_t *cr, gpointer data
 
   width = gtk_widget_get_allocated_width(widget);
   height = gtk_widget_get_allocated_height(widget);
-  gdk_cairo_set_source_rgba (cr, &d->rgb);
+  gdk_cairo_set_source_rgba(cr, &d->rgb);
   cairo_rectangle(cr, 0, 0, width, height);
-  cairo_fill (cr);
+  cairo_fill(cr);
 
   return FALSE;
 }
@@ -111,7 +111,7 @@ static gboolean sample_draw_callback(GtkWidget *widget, cairo_t *cr, gpointer da
   height = gtk_widget_get_allocated_height(widget);
   gdk_cairo_set_source_rgba(cr, &sample->rgb);
   cairo_rectangle(cr, 0, 0, width, height);
-  cairo_fill (cr);
+  cairo_fill(cr);
 
   // if the sample is locked we want to add a lock
   if(sample->locked)
@@ -122,7 +122,8 @@ static gboolean sample_draw_callback(GtkWidget *widget, cairo_t *cr, gpointer da
     if(icon_width > 0 && icon_height > 0)
     {
       GdkRGBA fg_color;
-      gtk_style_context_get_color(gtk_widget_get_style_context(widget), gtk_widget_get_state_flags(widget), &fg_color);
+      gtk_style_context_get_color(gtk_widget_get_style_context(widget), gtk_widget_get_state_flags(widget),
+                                  &fg_color);
 
       gdk_cairo_set_source_rgba(cr, &fg_color);
       dtgtk_cairo_paint_lock(cr, border, border, icon_width, icon_height, 0);
@@ -361,15 +362,12 @@ static void _add_sample(GtkButton *widget, gpointer self)
   gtk_widget_set_size_request(sample->color_patch, DT_PIXEL_APPLY_DPI(40), -1);
   gtk_widget_set_events(sample->color_patch, GDK_ENTER_NOTIFY_MASK | GDK_LEAVE_NOTIFY_MASK | GDK_BUTTON_PRESS_MASK);
   gtk_widget_set_tooltip_text(sample->color_patch, _("hover to highlight sample on canvas, "
-                                                       "click to lock sample"));
+                                                     "click to lock sample"));
   gtk_box_pack_start(GTK_BOX(sample->container), sample->color_patch, FALSE, FALSE, 0);
 
-  g_signal_connect(G_OBJECT(sample->color_patch), "enter-notify-event", G_CALLBACK(_live_sample_enter),
-                   sample);
-  g_signal_connect(G_OBJECT(sample->color_patch), "leave-notify-event", G_CALLBACK(_live_sample_leave),
-                   sample);
-  g_signal_connect(G_OBJECT(sample->color_patch), "button-press-event", G_CALLBACK(_sample_lock_toggle),
-                   sample);
+  g_signal_connect(G_OBJECT(sample->color_patch), "enter-notify-event", G_CALLBACK(_live_sample_enter), sample);
+  g_signal_connect(G_OBJECT(sample->color_patch), "leave-notify-event", G_CALLBACK(_live_sample_leave), sample);
+  g_signal_connect(G_OBJECT(sample->color_patch), "button-press-event", G_CALLBACK(_sample_lock_toggle), sample);
   g_signal_connect(G_OBJECT(sample->color_patch), "draw", G_CALLBACK(sample_draw_callback), sample);
 
   sample->output_label = gtk_label_new("");
@@ -434,8 +432,7 @@ static void _set_sample_area(dt_lib_module_t *self, float size)
   {
     darktable.develop->gui_module->color_picker_box[0] = darktable.develop->gui_module->color_picker_box[1]
         = 1.0 - size;
-    darktable.develop->gui_module->color_picker_box[2] = darktable.develop->gui_module->color_picker_box[3]
-        = size;
+    darktable.develop->gui_module->color_picker_box[2] = darktable.develop->gui_module->color_picker_box[3] = size;
   }
 
   gtk_combo_box_set_active(GTK_COMBO_BOX(d->size_selector), 1);
@@ -532,8 +529,7 @@ void gui_init(dt_lib_module_t *self)
   gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(data->statistic_selector), _("mean"));
   gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(data->statistic_selector), _("min"));
   gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(data->statistic_selector), _("max"));
-  gtk_combo_box_set_active(GTK_COMBO_BOX(data->statistic_selector),
-                           dt_conf_get_int("ui_last/colorpicker_mode"));
+  gtk_combo_box_set_active(GTK_COMBO_BOX(data->statistic_selector), dt_conf_get_int("ui_last/colorpicker_mode"));
   gtk_widget_set_sensitive(data->statistic_selector, dt_conf_get_int("ui_last/colorpicker_size"));
   gtk_box_pack_start(GTK_BOX(output_options), data->statistic_selector, TRUE, TRUE, 0);
 
@@ -542,8 +538,7 @@ void gui_init(dt_lib_module_t *self)
   data->color_mode_selector = gtk_combo_box_text_new();
   gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(data->color_mode_selector), _("RGB"));
   gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(data->color_mode_selector), _("Lab"));
-  gtk_combo_box_set_active(GTK_COMBO_BOX(data->color_mode_selector),
-                           dt_conf_get_int("ui_last/colorpicker_model"));
+  gtk_combo_box_set_active(GTK_COMBO_BOX(data->color_mode_selector), dt_conf_get_int("ui_last/colorpicker_model"));
   gtk_box_pack_start(GTK_BOX(output_options), data->color_mode_selector, TRUE, TRUE, 0);
 
   g_signal_connect(G_OBJECT(data->color_mode_selector), "changed", G_CALLBACK(_color_mode_changed), self);
@@ -556,8 +551,7 @@ void gui_init(dt_lib_module_t *self)
   restrict_button = gtk_check_button_new_with_label(_("restrict histogram to selection"));
   gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(restrict_button),
                                dt_conf_get_int("ui_last/colorpicker_restrict_histogram"));
-  darktable.lib->proxy.colorpicker.restrict_histogram
-      = dt_conf_get_int("ui_last/colorpicker_restrict_histogram");
+  darktable.lib->proxy.colorpicker.restrict_histogram = dt_conf_get_int("ui_last/colorpicker_restrict_histogram");
   gtk_box_pack_start(GTK_BOX(container), restrict_button, TRUE, TRUE, 0);
 
   g_signal_connect(G_OBJECT(restrict_button), "toggled", G_CALLBACK(_restrict_histogram_changed), NULL);
@@ -574,8 +568,8 @@ void gui_init(dt_lib_module_t *self)
                            dt_conf_get_int("ui_last/colorsamples_mode"));
   gtk_box_pack_start(GTK_BOX(samples_options_row), data->samples_statistic_selector, TRUE, TRUE, 0);
 
-  g_signal_connect(G_OBJECT(data->samples_statistic_selector), "changed",
-                   G_CALLBACK(_samples_statistic_changed), self);
+  g_signal_connect(G_OBJECT(data->samples_statistic_selector), "changed", G_CALLBACK(_samples_statistic_changed),
+                   self);
 
   data->samples_mode_selector = gtk_combo_box_text_new();
   gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(data->samples_mode_selector), _("RGB"));
@@ -619,11 +613,9 @@ void gui_cleanup(dt_lib_module_t *self)
   free(darktable.lib->proxy.colorpicker.picked_color_lab_mean);
   free(darktable.lib->proxy.colorpicker.picked_color_lab_min);
   free(darktable.lib->proxy.colorpicker.picked_color_lab_max);
-  darktable.lib->proxy.colorpicker.picked_color_rgb_mean
-      = darktable.lib->proxy.colorpicker.picked_color_rgb_min
+  darktable.lib->proxy.colorpicker.picked_color_rgb_mean = darktable.lib->proxy.colorpicker.picked_color_rgb_min
       = darktable.lib->proxy.colorpicker.picked_color_rgb_max = NULL;
-  darktable.lib->proxy.colorpicker.picked_color_lab_mean
-      = darktable.lib->proxy.colorpicker.picked_color_lab_min
+  darktable.lib->proxy.colorpicker.picked_color_lab_mean = darktable.lib->proxy.colorpicker.picked_color_lab_min
       = darktable.lib->proxy.colorpicker.picked_color_lab_max = NULL;
 
 

@@ -51,7 +51,7 @@ const char *name(dt_lib_module_t *self)
 
 const char **views(dt_lib_module_t *self)
 {
-  static const char *v[] = {"lighttable", NULL};
+  static const char *v[] = { "lighttable", NULL };
   return v;
 }
 
@@ -111,8 +111,7 @@ static void _gui_styles_update_view(dt_lib_styles_t *d)
 
       if(style->description && *style->description)
       {
-        tooltip
-            = g_strconcat("<b>", g_markup_escape_text(style->description, -1), "</b>\n", items_string, NULL);
+        tooltip = g_strconcat("<b>", g_markup_escape_text(style->description, -1), "</b>\n", items_string, NULL);
       }
       else
       {
@@ -232,9 +231,9 @@ static void export_clicked(GtkWidget *w, gpointer user_data)
 static void import_clicked(GtkWidget *w, gpointer user_data)
 {
   GtkWidget *win = dt_ui_main_window(darktable.gui->ui);
-  GtkWidget *filechooser = gtk_file_chooser_dialog_new(
-      _("select style"), GTK_WINDOW(win), GTK_FILE_CHOOSER_ACTION_OPEN, _("_cancel"), GTK_RESPONSE_CANCEL,
-      _("_open"), GTK_RESPONSE_ACCEPT, (char *)NULL);
+  GtkWidget *filechooser
+      = gtk_file_chooser_dialog_new(_("select style"), GTK_WINDOW(win), GTK_FILE_CHOOSER_ACTION_OPEN, _("_cancel"),
+                                    GTK_RESPONSE_CANCEL, _("_open"), GTK_RESPONSE_ACCEPT, (char *)NULL);
 #ifdef GDK_WINDOWING_QUARTZ
   dt_osx_disallow_fullscreen(filechooser);
 #endif

@@ -50,7 +50,7 @@ static void _masks_write_forms_db(dt_develop_t *dev, gboolean undo);
 
 static dt_masks_form_t *_dup_masks_form(const dt_masks_form_t *form)
 {
-  if (!form) return NULL;
+  if(!form) return NULL;
 
   dt_masks_form_t *new_form = malloc(sizeof(struct dt_masks_form_t));
   memcpy(new_form, form, sizeof(struct dt_masks_form_t));
@@ -59,27 +59,27 @@ static dt_masks_form_t *_dup_masks_form(const dt_masks_form_t *form)
 
   new_form->points = NULL;
 
-  if (form->points)
+  if(form->points)
   {
     int size_item = 0;
 
-    if (form->type & DT_MASKS_CIRCLE)
+    if(form->type & DT_MASKS_CIRCLE)
       size_item = sizeof(struct dt_masks_point_circle_t);
-    else if (form->type & DT_MASKS_ELLIPSE)
+    else if(form->type & DT_MASKS_ELLIPSE)
       size_item = sizeof(struct dt_masks_point_ellipse_t);
-    else if (form->type & DT_MASKS_GRADIENT)
+    else if(form->type & DT_MASKS_GRADIENT)
       size_item = sizeof(struct dt_masks_point_gradient_t);
-    else if (form->type & DT_MASKS_BRUSH)
+    else if(form->type & DT_MASKS_BRUSH)
       size_item = sizeof(struct dt_masks_point_brush_t);
-    else if (form->type & DT_MASKS_GROUP)
+    else if(form->type & DT_MASKS_GROUP)
       size_item = sizeof(struct dt_masks_point_group_t);
-    else if (form->type & DT_MASKS_PATH)
+    else if(form->type & DT_MASKS_PATH)
       size_item = sizeof(struct dt_masks_point_path_t);
 
-    if (size_item != 0)
+    if(size_item != 0)
     {
       GList *pt = g_list_first(form->points);
-      while (pt)
+      while(pt)
       {
         void *item = malloc(size_item);
         memcpy(item, pt->data, size_item);
@@ -111,7 +111,7 @@ static _masks_undo_data_t *_create_snapshot(GList *forms, dt_masks_form_t *form,
 {
   _masks_undo_data_t *data = malloc(sizeof(struct _masks_undo_data_t));
   data->forms = _dup_masks_forms_deep(forms, form);
-  data->form  = dev->form_visible ? _dup_masks_form(dev->form_visible) : NULL;
+  data->form = dev->form_visible ? _dup_masks_form(dev->form_visible) : NULL;
   return data;
 }
 
@@ -181,7 +181,9 @@ static void _set_hinter_message(dt_masks_form_gui_t *gui, dt_masks_type_t formty
     if(gui->point_selected >= 0)
       g_strlcat(msg, _("ctrl+click to rotate"), sizeof(msg));
     else if(gui->form_selected)
-      g_strlcat(msg, _("shift+click to switch feathering mode, ctrl+scroll to set shape opacity,\nshift+scroll to set feather size"), sizeof(msg));
+      g_strlcat(msg, _("shift+click to switch feathering mode, ctrl+scroll to set shape opacity,\nshift+scroll to "
+                       "set feather size"),
+                sizeof(msg));
   }
   else if(formtype & DT_MASKS_BRUSH)
   {
@@ -206,8 +208,7 @@ void dt_masks_gui_form_create(dt_masks_form_t *form, dt_masks_form_gui_t *gui, i
 {
   if(g_list_length(gui->points) == index)
   {
-    dt_masks_form_gui_points_t *gpt2
-        = (dt_masks_form_gui_points_t *)calloc(1, sizeof(dt_masks_form_gui_points_t));
+    dt_masks_form_gui_points_t *gpt2 = (dt_masks_form_gui_points_t *)calloc(1, sizeof(dt_masks_form_gui_points_t));
     gui->points = g_list_append(gui->points, gpt2);
   }
   else if(g_list_length(gui->points) < index)
@@ -279,7 +280,7 @@ void dt_masks_gui_form_test_create(dt_masks_form_t *form, dt_masks_form_gui_t *g
       {
         dt_masks_point_group_t *fpt = (dt_masks_point_group_t *)fpts->data;
         dt_masks_form_t *sel = dt_masks_get_from_id(darktable.develop, fpt->formid);
-        if (!sel) return;
+        if(!sel) return;
         dt_masks_gui_form_create(sel, gui, pos);
         fpts = g_list_next(fpts);
         pos++;
@@ -504,8 +505,8 @@ int dt_masks_get_points_border(dt_develop_t *dev, dt_masks_form_t *form, float *
                               points_count))
     {
       if(border)
-        return dt_gradient_get_points_border(dev, gradient->anchor[0], gradient->anchor[1],
-                                             gradient->rotation, gradient->compression, border, border_count);
+        return dt_gradient_get_points_border(dev, gradient->anchor[0], gradient->anchor[1], gradient->rotation,
+                                             gradient->compression, border, border_count);
       else
         return 1;
     }
@@ -522,10 +523,11 @@ int dt_masks_get_points_border(dt_develop_t *dev, dt_masks_form_t *form, float *
     if(dt_ellipse_get_points(dev, x, y, a, b, ellipse->rotation, points, points_count))
     {
       if(border)
-        return dt_ellipse_get_points(dev, x, y,
-                                     (ellipse->flags & DT_MASKS_ELLIPSE_PROPORTIONAL ? a * (1.0f + ellipse->border) : a + ellipse->border),
-                                     (ellipse->flags & DT_MASKS_ELLIPSE_PROPORTIONAL ? b * (1.0f + ellipse->border) : b + ellipse->border),
-                                     ellipse->rotation, border, border_count);
+        return dt_ellipse_get_points(
+            dev, x, y,
+            (ellipse->flags & DT_MASKS_ELLIPSE_PROPORTIONAL ? a * (1.0f + ellipse->border) : a + ellipse->border),
+            (ellipse->flags & DT_MASKS_ELLIPSE_PROPORTIONAL ? b * (1.0f + ellipse->border) : b + ellipse->border),
+            ellipse->rotation, border, border_count);
       else
         return 1;
     }
@@ -534,8 +536,8 @@ int dt_masks_get_points_border(dt_develop_t *dev, dt_masks_form_t *form, float *
   return 0;
 }
 
-int dt_masks_get_area(dt_iop_module_t *module, dt_dev_pixelpipe_iop_t *piece, dt_masks_form_t *form,
-                      int *width, int *height, int *posx, int *posy)
+int dt_masks_get_area(dt_iop_module_t *module, dt_dev_pixelpipe_iop_t *piece, dt_masks_form_t *form, int *width,
+                      int *height, int *posx, int *posy)
 {
   if(form->type & DT_MASKS_CIRCLE)
   {
@@ -1027,15 +1029,13 @@ void dt_masks_read_forms(dt_develop_t *dev)
     }
     else if(form->type & DT_MASKS_GRADIENT)
     {
-      dt_masks_point_gradient_t *gradient
-          = (dt_masks_point_gradient_t *)malloc(sizeof(dt_masks_point_gradient_t));
+      dt_masks_point_gradient_t *gradient = (dt_masks_point_gradient_t *)malloc(sizeof(dt_masks_point_gradient_t));
       memcpy(gradient, sqlite3_column_blob(stmt, 5), sizeof(dt_masks_point_gradient_t));
       form->points = g_list_append(form->points, gradient);
     }
     else if(form->type & DT_MASKS_ELLIPSE)
     {
-      dt_masks_point_ellipse_t *ellipse
-          = (dt_masks_point_ellipse_t *)malloc(sizeof(dt_masks_point_ellipse_t));
+      dt_masks_point_ellipse_t *ellipse = (dt_masks_point_ellipse_t *)malloc(sizeof(dt_masks_point_ellipse_t));
       memcpy(ellipse, sqlite3_column_blob(stmt, 5), sizeof(dt_masks_point_ellipse_t));
       form->points = g_list_append(form->points, ellipse);
     }
@@ -1058,8 +1058,7 @@ void dt_masks_read_forms(dt_develop_t *dev)
         while(fname > dev->image_storage.filename && *fname != '/') fname--;
         if(fname > dev->image_storage.filename) fname++;
 
-        fprintf(stderr,
-                "[dt_masks_read_forms] %s (imgid `%i'): mask version mismatch: history is %d, dt %d.\n",
+        fprintf(stderr, "[dt_masks_read_forms] %s (imgid `%i'): mask version mismatch: history is %d, dt %d.\n",
                 fname, dev->image_storage.id, form->version, dt_masks_version());
         dt_control_log(_("%s: mask version mismatch: %d != %d"), fname, dt_masks_version(), form->version);
 
@@ -1087,7 +1086,7 @@ static void _masks_write_forms_db(dt_develop_t *dev, gboolean undo)
 
   // and now we write each forms
   GList *forms = g_list_first(dev->forms);
-  if (undo)
+  if(undo)
   {
     _do_record_undo(dev, NULL);
   }
@@ -1096,8 +1095,7 @@ static void _masks_write_forms_db(dt_develop_t *dev, gboolean undo)
   {
     dt_masks_form_t *form = (dt_masks_form_t *)forms->data;
 
-    if (form)
-      _masks_write_form_db(form, dev);
+    if(form) _masks_write_form_db(form, dev);
 
     forms = g_list_next(forms);
   }
@@ -1262,8 +1260,7 @@ int dt_masks_events_mouse_moved(struct dt_iop_module_t *module, double x, double
       if(gui->group_edited >= 0)
       {
         // we get the slected form
-        dt_masks_point_group_t *fpt
-            = (dt_masks_point_group_t *)g_list_nth_data(form->points, gui->group_edited);
+        dt_masks_point_group_t *fpt = (dt_masks_point_group_t *)g_list_nth_data(form->points, gui->group_edited);
         dt_masks_form_t *sel = dt_masks_get_from_id(darktable.develop, fpt->formid);
         if(!sel) return 0;
         ftype = sel->type;
@@ -1274,8 +1271,7 @@ int dt_masks_events_mouse_moved(struct dt_iop_module_t *module, double x, double
 
   return rep;
 }
-int dt_masks_events_button_released(struct dt_iop_module_t *module, double x, double y, int which,
-                                    uint32_t state)
+int dt_masks_events_button_released(struct dt_iop_module_t *module, double x, double y, int which, uint32_t state)
 {
   dt_masks_form_t *form = darktable.develop->form_visible;
   dt_masks_form_gui_t *gui = darktable.develop->form_gui;
@@ -1300,8 +1296,8 @@ int dt_masks_events_button_released(struct dt_iop_module_t *module, double x, do
   return 0;
 }
 
-int dt_masks_events_button_pressed(struct dt_iop_module_t *module, double x, double y, double pressure,
-                                   int which, int type, uint32_t state)
+int dt_masks_events_button_pressed(struct dt_iop_module_t *module, double x, double y, double pressure, int which,
+                                   int type, uint32_t state)
 {
   dt_masks_form_t *form = darktable.develop->form_visible;
   dt_masks_form_gui_t *gui = darktable.develop->form_gui;
@@ -1487,7 +1483,7 @@ void dt_masks_set_edit_mode(struct dt_iop_module_t *module, dt_masks_edit_mode_t
     dt_masks_group_ungroup(grp, form);
   }
 
-  if (bd) bd->masks_shown = value;
+  if(bd) bd->masks_shown = value;
 
   dt_masks_change_form_gui(grp);
   darktable.develop->form_gui->edit_mode = value;
@@ -1510,8 +1506,7 @@ void dt_masks_iop_edit_toggle_callback(GtkToggleButton *togglebutton, dt_iop_mod
   }
 
   // reset the gui
-  dt_masks_set_edit_mode(module,
-                         (bd->masks_shown == DT_MASKS_EDIT_OFF ? DT_MASKS_EDIT_FULL : DT_MASKS_EDIT_OFF));
+  dt_masks_set_edit_mode(module, (bd->masks_shown == DT_MASKS_EDIT_OFF ? DT_MASKS_EDIT_FULL : DT_MASKS_EDIT_OFF));
 }
 
 static void _menu_no_masks(struct dt_iop_module_t *module)
@@ -2292,14 +2287,14 @@ int dt_masks_point_in_form_exact(float x, float y, float *points, int points_sta
     for(int i = points_start; i < points_count; i++)
     {
       float yy = points[i * 2 + 1];
-      //if we need to skip points (in case of deleted point, because of self-intersection)
+      // if we need to skip points (in case of deleted point, because of self-intersection)
       if(isnan(points[i * 2]))
       {
         if(isnan(yy)) break;
         i = (int)yy - 1;
         continue;
       }
-      if (((yf<=yy && yf>last) || (yf>=yy && yf<last)) && (points[i * 2] > x)) nb++;
+      if(((yf <= yy && yf > last) || (yf >= yy && yf < last)) && (points[i * 2] > x)) nb++;
       last = yy;
     }
     return (nb & 1);
@@ -2307,7 +2302,8 @@ int dt_masks_point_in_form_exact(float x, float y, float *points, int points_sta
   return 0;
 }
 
-int dt_masks_point_in_form_near(float x, float y, float *points, int points_start, int points_count, float distance, int *near)
+int dt_masks_point_in_form_near(float x, float y, float *points, int points_start, int points_count,
+                                float distance, int *near)
 {
   // we use ray casting algorith
   // to avoid most problems with horizontal segments, y should be rounded as int
@@ -2323,14 +2319,14 @@ int dt_masks_point_in_form_near(float x, float y, float *points, int points_star
     for(int i = points_start; i < points_count; i++)
     {
       float yy = points[i * 2 + 1];
-      //if we need to jump to skip points (in case of deleted point, because of self-intersection)
+      // if we need to jump to skip points (in case of deleted point, because of self-intersection)
       if(isnan(points[i * 2]))
       {
         if(isnan(yy)) break;
         i = (int)yy - 1;
         continue;
       }
-      if ((yf<=yy && yf>last) || (yf>=yy && yf<last))
+      if((yf <= yy && yf > last) || (yf >= yy && yf < last))
       {
         if(points[i * 2] > x) nb++;
         if(points[i * 2] - x < distance && points[i * 2] - x > -distance) *near = 1;

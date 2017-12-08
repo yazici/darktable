@@ -159,10 +159,9 @@ void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const 
           for(int k = -rad; k <= rad; k++)
           {
             float *inp = in + ch * (l * roi_in->width + k);
-            sumw += w[l * wd + k] = m[l * wd + k]
-                                    * expf(-((in[0] - inp[0]) * (in[0] - inp[0]) * isig2col[0]
-                                             + (in[1] - inp[1]) * (in[1] - inp[1]) * isig2col[1]
-                                             + (in[2] - inp[2]) * (in[2] - inp[2]) * isig2col[2]));
+            sumw += w[l * wd + k] = m[l * wd + k] * expf(-((in[0] - inp[0]) * (in[0] - inp[0]) * isig2col[0]
+                                                           + (in[1] - inp[1]) * (in[1] - inp[1]) * isig2col[1]
+                                                           + (in[2] - inp[2]) * (in[2] - inp[2]) * isig2col[2]));
           }
         for(int l = -rad; l <= rad; l++)
           for(int k = -rad; k <= rad; k++) w[l * wd + k] /= sumw;
@@ -183,11 +182,11 @@ void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const 
 
     // fill unprocessed border
     for(int j = 0; j < rad; j++)
-      memcpy(((float *)ovoid) + (size_t)ch * j * roi_out->width,
-             ((float *)ivoid) + (size_t)ch * j * roi_in->width, (size_t)ch * sizeof(float) * roi_out->width);
+      memcpy(((float *)ovoid) + (size_t)ch * j * roi_out->width, ((float *)ivoid) + (size_t)ch * j * roi_in->width,
+             (size_t)ch * sizeof(float) * roi_out->width);
     for(int j = roi_out->height - rad; j < roi_out->height; j++)
-      memcpy(((float *)ovoid) + (size_t)ch * j * roi_out->width,
-             ((float *)ivoid) + (size_t)ch * j * roi_in->width, (size_t)ch * sizeof(float) * roi_out->width);
+      memcpy(((float *)ovoid) + (size_t)ch * j * roi_out->width, ((float *)ivoid) + (size_t)ch * j * roi_in->width,
+             (size_t)ch * sizeof(float) * roi_out->width);
     for(int j = rad; j < roi_out->height - rad; j++)
     {
       in = ((float *)ivoid) + (size_t)ch * roi_out->width * j;
@@ -301,8 +300,7 @@ void gui_update(struct dt_iop_module_t *self)
 }
 
 void tiling_callback(struct dt_iop_module_t *self, struct dt_dev_pixelpipe_iop_t *piece,
-                     const dt_iop_roi_t *roi_in, const dt_iop_roi_t *roi_out,
-                     struct dt_develop_tiling_t *tiling)
+                     const dt_iop_roi_t *roi_in, const dt_iop_roi_t *roi_out, struct dt_develop_tiling_t *tiling)
 {
   dt_iop_bilateral_data_t *data = (dt_iop_bilateral_data_t *)piece->data;
   float sigma[5];
@@ -323,7 +321,7 @@ void init(dt_iop_module_t *module)
   module->params = (dt_iop_params_t *)malloc(sizeof(dt_iop_bilateral_params_t));
   module->default_params = (dt_iop_params_t *)malloc(sizeof(dt_iop_bilateral_params_t));
   module->default_enabled = 0;
-    module->priority = 318; // module order created by iop_dependencies.py, do not edit!
+  module->priority = 318; // module order created by iop_dependencies.py, do not edit!
   module->params_size = sizeof(dt_iop_bilateral_params_t);
   module->gui_data = NULL;
   dt_iop_bilateral_params_t tmp = (dt_iop_bilateral_params_t){ { 15.0, 15.0, 0.005, 0.005, 0.005 } };

@@ -98,8 +98,8 @@ void gui_init(struct dt_iop_module_t *self);
 /** destroy widget. */
 void gui_cleanup(struct dt_iop_module_t *self);
 /** optional method called after darkroom expose. */
-void gui_post_expose(struct dt_iop_module_t *self, cairo_t *cr, int32_t width, int32_t height,
-                     int32_t pointerx, int32_t pointery);
+void gui_post_expose(struct dt_iop_module_t *self, cairo_t *cr, int32_t width, int32_t height, int32_t pointerx,
+                     int32_t pointery);
 /** optional callback to be notified if the module acquires gui focus/loses it. */
 void gui_focus(struct dt_iop_module_t *self, gboolean in);
 
@@ -127,8 +127,7 @@ void original_init(struct dt_iop_module_t *self);
 void cleanup(struct dt_iop_module_t *self);
 
 /** this inits the piece of the pipe, allocing piece->data as necessary. */
-void init_pipe(struct dt_iop_module_t *self, struct dt_dev_pixelpipe_t *pipe,
-               struct dt_dev_pixelpipe_iop_t *piece);
+void init_pipe(struct dt_iop_module_t *self, struct dt_dev_pixelpipe_t *pipe, struct dt_dev_pixelpipe_iop_t *piece);
 /** this resets the params to factory defaults. used at the beginning of each history synch. */
 /** this commits (a mutex will be locked to synch pipe/gui) the given history params to the pixelpipe piece.
  */
@@ -154,8 +153,7 @@ int legacy_params(struct dt_iop_module_t *self, const void *const old_params, co
 /** the simplest variant of process(). you can only use OpenMP SIMD here, no intrinsics */
 /** must be provided by each IOP. */
 void process(struct dt_iop_module_t *self, struct dt_dev_pixelpipe_iop_t *piece, const void *const i,
-             void *const o, const struct dt_iop_roi_t *const roi_in,
-             const struct dt_iop_roi_t *const roi_out);
+             void *const o, const struct dt_iop_roi_t *const roi_in, const struct dt_iop_roi_t *const roi_out);
 /** a tiling variant of process(). */
 void process_tiling(struct dt_iop_module_t *self, struct dt_dev_pixelpipe_iop_t *piece, const void *const i,
                     void *const o, const struct dt_iop_roi_t *const roi_in,
@@ -171,9 +169,8 @@ void process_sse2(struct dt_iop_module_t *self, struct dt_dev_pixelpipe_iop_t *p
 
 #ifdef HAVE_OPENCL
 /** the opencl equivalent of process(). */
-int process_cl(struct dt_iop_module_t *self, struct dt_dev_pixelpipe_iop_t *piece, cl_mem dev_in,
-               cl_mem dev_out, const struct dt_iop_roi_t *const roi_in,
-               const struct dt_iop_roi_t *const roi_out);
+int process_cl(struct dt_iop_module_t *self, struct dt_dev_pixelpipe_iop_t *piece, cl_mem dev_in, cl_mem dev_out,
+               const struct dt_iop_roi_t *const roi_in, const struct dt_iop_roi_t *const roi_out);
 /** a tiling variant of process_cl(). */
 int process_tiling_cl(struct dt_iop_module_t *self, struct dt_dev_pixelpipe_iop_t *piece, const void *const i,
                       void *const o, const struct dt_iop_roi_t *const roi_in,

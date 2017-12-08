@@ -23,7 +23,7 @@
 #include "control/conf.h"
 #include "control/control.h"
 #include <glib.h>
-#if defined (_WIN32)
+#if defined(_WIN32)
 #include "win/getdelim.h"
 #endif // defined (_WIN32)
 
@@ -101,8 +101,8 @@ guint dt_tag_remove(const guint tagid, gboolean final)
     sqlite3_step(stmt);
     sqlite3_finalize(stmt);
 
-    DT_DEBUG_SQLITE3_PREPARE_V2(dt_database_get(darktable.db), "DELETE FROM main.tagged_images WHERE tagid=?1",
-                                -1, &stmt, NULL);
+    DT_DEBUG_SQLITE3_PREPARE_V2(dt_database_get(darktable.db), "DELETE FROM main.tagged_images WHERE tagid=?1", -1,
+                                &stmt, NULL);
     DT_DEBUG_SQLITE3_BIND_INT(stmt, 1, tagid);
     sqlite3_step(stmt);
     sqlite3_finalize(stmt);
@@ -157,8 +157,8 @@ void dt_tag_reorganize(const gchar *source, const gchar *dest)
   sqlite3_finalize(stmt);
 
   DT_DEBUG_SQLITE3_PREPARE_V2(dt_database_get(darktable.db),
-                              "UPDATE main.used_tags SET name=REPLACE(name,?1,?2) WHERE name LIKE ?3",
-                              -1, &stmt, NULL);
+                              "UPDATE main.used_tags SET name=REPLACE(name,?1,?2) WHERE name LIKE ?3", -1, &stmt,
+                              NULL);
   DT_DEBUG_SQLITE3_BIND_TEXT(stmt, 1, source, -1, SQLITE_TRANSIENT);
   DT_DEBUG_SQLITE3_BIND_TEXT(stmt, 2, new_expr, -1, SQLITE_TRANSIENT);
   DT_DEBUG_SQLITE3_BIND_TEXT(stmt, 3, source_expr, -1, SQLITE_TRANSIENT);
@@ -335,13 +335,12 @@ uint32_t dt_tag_get_attached(gint imgid, GList **result, gboolean ignore_dt_tags
   else
   {
     if(ignore_dt_tags)
-      DT_DEBUG_SQLITE3_PREPARE_V2(
-          dt_database_get(darktable.db),
-          "SELECT DISTINCT T.id, T.name "
-          "FROM main.tagged_images AS I, data.tags AS T "
-          "WHERE I.imgid IN (SELECT imgid FROM main.selected_images) "
-          "AND T.id = I.tagid AND NOT T.name LIKE \"darktable|%\" ORDER BY T.name",
-          -1, &stmt, NULL);
+      DT_DEBUG_SQLITE3_PREPARE_V2(dt_database_get(darktable.db),
+                                  "SELECT DISTINCT T.id, T.name "
+                                  "FROM main.tagged_images AS I, data.tags AS T "
+                                  "WHERE I.imgid IN (SELECT imgid FROM main.selected_images) "
+                                  "AND T.id = I.tagid AND NOT T.name LIKE \"darktable|%\" ORDER BY T.name",
+                                  -1, &stmt, NULL);
     else
       DT_DEBUG_SQLITE3_PREPARE_V2(dt_database_get(darktable.db),
                                   "SELECT DISTINCT T.id, T.name "
@@ -389,7 +388,8 @@ GList *dt_tag_get_list(gint imgid)
       if(omit_tag_hierarchy)
       {
         char **iter = pch;
-        for(; *iter && *(iter + 1); iter++);
+        for(; *iter && *(iter + 1); iter++)
+          ;
         if(*iter) tags = g_list_prepend(tags, g_strdup(*iter));
       }
       else
@@ -441,15 +441,17 @@ GList *dt_tag_get_images_from_selection(gint imgid, gint tagid)
   if(imgid > 0)
   {
     DT_DEBUG_SQLITE3_PREPARE_V2(dt_database_get(darktable.db), "SELECT imgid FROM main.tagged_images WHERE "
-                                "imgid = ?1 AND tagid = ?2", -1, &stmt, NULL);
+                                                               "imgid = ?1 AND tagid = ?2",
+                                -1, &stmt, NULL);
     DT_DEBUG_SQLITE3_BIND_INT(stmt, 1, imgid);
     DT_DEBUG_SQLITE3_BIND_INT(stmt, 2, tagid);
   }
   else
   {
-    DT_DEBUG_SQLITE3_PREPARE_V2(dt_database_get(darktable.db), "SELECT imgid FROM main.tagged_images WHERE "
-                                "tagid = ?1 AND imgid IN (SELECT imgid FROM main.selected_images)", -1, &stmt,
-                                NULL);
+    DT_DEBUG_SQLITE3_PREPARE_V2(dt_database_get(darktable.db),
+                                "SELECT imgid FROM main.tagged_images WHERE "
+                                "tagid = ?1 AND imgid IN (SELECT imgid FROM main.selected_images)",
+                                -1, &stmt, NULL);
     DT_DEBUG_SQLITE3_BIND_INT(stmt, 1, tagid);
   }
 
@@ -484,9 +486,9 @@ uint32_t dt_tag_get_suggestions(const gchar *keyword, GList **result)
   gchar *keyword_expr = g_strdup_printf("%%%s%%", keyword);
 
   /* Only select tags that are similar to the one we are looking for once. */
-  DT_DEBUG_SQLITE3_PREPARE_V2(dt_database_get(darktable.db),
-                              "INSERT INTO memory.similar_tags (tagid) SELECT id FROM data.tags WHERE name LIKE ?1",
-                              -1, &stmt, NULL);
+  DT_DEBUG_SQLITE3_PREPARE_V2(
+      dt_database_get(darktable.db),
+      "INSERT INTO memory.similar_tags (tagid) SELECT id FROM data.tags WHERE name LIKE ?1", -1, &stmt, NULL);
   DT_DEBUG_SQLITE3_BIND_TEXT(stmt, 1, keyword_expr, -1, SQLITE_TRANSIENT);
   sqlite3_step(stmt);
   sqlite3_finalize(stmt);
@@ -503,24 +505,26 @@ uint32_t dt_tag_get_suggestions(const gchar *keyword, GList **result)
   sqlite3_finalize(stmt);
 
   /* Select tags that are similar to the keyword but were not used to tag any image*/
-  DT_DEBUG_SQLITE3_PREPARE_V2(dt_database_get(darktable.db),
-                              "INSERT INTO memory.taglist (id, count) SELECT tagid,1000000 FROM memory.similar_tags",
-                              -1, &stmt, NULL);
+  DT_DEBUG_SQLITE3_PREPARE_V2(
+      dt_database_get(darktable.db),
+      "INSERT INTO memory.taglist (id, count) SELECT tagid,1000000 FROM memory.similar_tags", -1, &stmt, NULL);
   sqlite3_step(stmt);
   sqlite3_finalize(stmt);
 
   /* Select tags from tagged images when at least one tag is similar to the keyword and insert in temp table*/
-  DT_DEBUG_SQLITE3_PREPARE_V2(dt_database_get(darktable.db),
-                              "INSERT INTO memory.tagq (id) SELECT tagid FROM main.tagged_images WHERE imgid IN "
-                              "(SELECT DISTINCT imgid FROM main.tagged_images JOIN memory.similar_tags USING (tagid)) ",
-                              -1, &stmt, NULL);
+  DT_DEBUG_SQLITE3_PREPARE_V2(
+      dt_database_get(darktable.db),
+      "INSERT INTO memory.tagq (id) SELECT tagid FROM main.tagged_images WHERE imgid IN "
+      "(SELECT DISTINCT imgid FROM main.tagged_images JOIN memory.similar_tags USING (tagid)) ",
+      -1, &stmt, NULL);
   sqlite3_step(stmt);
   sqlite3_finalize(stmt);
 
   /* Select tags from temp table that are not similar to the keyword */
   DT_DEBUG_SQLITE3_EXEC(dt_database_get(darktable.db), "INSERT INTO memory.taglist (id, count) SELECT id, "
                                                        "COUNT(*) FROM memory.tagq WHERE id NOT IN (SELECT id FROM "
-                                                       "memory.taglist) GROUP BY id", NULL, NULL, NULL);
+                                                       "memory.taglist) GROUP BY id",
+                        NULL, NULL, NULL);
 
   /* Now put all the bits together */
   DT_DEBUG_SQLITE3_PREPARE_V2(dt_database_get(darktable.db),
@@ -585,7 +589,7 @@ ssize_t dt_tag_import(const char *filename)
 
   if(!fd) return -1;
 
-  GList * hierarchy = NULL;
+  GList *hierarchy = NULL;
   char *line = NULL;
   size_t len = 0;
   ssize_t count = 0;
@@ -608,8 +612,8 @@ ssize_t dt_tag_import(const char *filename)
     // don't add the entry if it's a category
     // TODO also ignore synonyms for now as our db can't express that concept.
     gboolean skip = FALSE;
-    if((*start == '[' && *end == ']') // categories
-      || (*start == '{' && *end == '}')) // synonyms
+    if((*start == '[' && *end == ']')     // categories
+       || (*start == '{' && *end == '}')) // synonyms
     {
       skip = TRUE;
       start++;
@@ -681,7 +685,8 @@ ssize_t dt_tag_export(const char *filename)
   sqlite3_stmt *stmt;
   DT_DEBUG_SQLITE3_PREPARE_V2(dt_database_get(darktable.db),
                               "SELECT name FROM data.tags WHERE name NOT LIKE \"darktable|%\" "
-                              "ORDER BY name COLLATE NOCASE ASC", -1, &stmt, NULL);
+                              "ORDER BY name COLLATE NOCASE ASC",
+                              -1, &stmt, NULL);
 
 
   ssize_t count = 0;

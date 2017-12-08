@@ -39,8 +39,7 @@ typedef enum dt_collection_filter_comparator_t
   COLLECTION_FILTER_EQUAL_RATING = 1 << 2,   // show only selected star filter
   COLLECTION_FILTER_ALTERED = 1 << 3,        // show only altered images
   COLLECTION_FILTER_UNALTERED = 1 << 4,      // show only unaltered images
-  COLLECTION_FILTER_CUSTOM_COMPARE
-  = 1 << 5 // use the comparator defined in the comparator field to filter stars
+  COLLECTION_FILTER_CUSTOM_COMPARE = 1 << 5  // use the comparator defined in the comparator field to filter stars
 } dt_collection_filter_comparator_t;
 
 typedef enum dt_collection_filter_t
@@ -210,8 +209,7 @@ int dt_collection_serialize(char *buf, int bufsize);
 
 /* splits an input string into a number part and an optional operator part */
 void dt_collection_split_operator_number(const gchar *input, char **number1, char **number2, char **operator);
-void dt_collection_split_operator_datetime(const gchar *input, char **number1, char **number2,
-                                           char **operator);
+void dt_collection_split_operator_datetime(const gchar *input, char **number1, char **number2, char **operator);
 
 // modelines: These editor modelines have been set for all relevant files by tools/update_modelines.sh
 // vim: shiftwidth=2 expandtab tabstop=2 cindent

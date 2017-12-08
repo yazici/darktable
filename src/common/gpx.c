@@ -51,10 +51,10 @@ typedef struct dt_gpx_t
 static void _gpx_parser_start_element(GMarkupParseContext *ctx, const gchar *element_name,
                                       const gchar **attribute_names, const gchar **attribute_values,
                                       gpointer ueer_data, GError **error);
-static void _gpx_parser_end_element(GMarkupParseContext *context, const gchar *element_name,
-                                    gpointer user_data, GError **error);
-static void _gpx_parser_text(GMarkupParseContext *context, const gchar *text, gsize text_len,
-                             gpointer user_data, GError **error);
+static void _gpx_parser_end_element(GMarkupParseContext *context, const gchar *element_name, gpointer user_data,
+                                    GError **error);
+static void _gpx_parser_text(GMarkupParseContext *context, const gchar *text, gsize text_len, gpointer user_data,
+                             GError **error);
 
 static GMarkupParser _gpx_parser
     = { _gpx_parser_start_element, _gpx_parser_end_element, _gpx_parser_text, NULL, NULL };
@@ -134,8 +134,7 @@ void dt_gpx_destroy(struct dt_gpx_t *gpx)
   g_free(gpx);
 }
 
-gboolean dt_gpx_get_location(struct dt_gpx_t *gpx, GTimeVal *timestamp, gdouble *lon, gdouble *lat,
-                             gdouble *ele)
+gboolean dt_gpx_get_location(struct dt_gpx_t *gpx, GTimeVal *timestamp, gdouble *lon, gdouble *lat, gdouble *ele)
 {
   g_assert(gpx != NULL);
 
@@ -178,9 +177,8 @@ gboolean dt_gpx_get_location(struct dt_gpx_t *gpx, GTimeVal *timestamp, gdouble 
 /*
  * GPX XML parser code
  */
-void _gpx_parser_start_element(GMarkupParseContext *ctx, const gchar *element_name,
-                               const gchar **attribute_names, const gchar **attribute_values,
-                               gpointer user_data, GError **error)
+void _gpx_parser_start_element(GMarkupParseContext *ctx, const gchar *element_name, const gchar **attribute_names,
+                               const gchar **attribute_values, gpointer user_data, GError **error)
 {
   dt_gpx_t *gpx = (dt_gpx_t *)user_data;
 

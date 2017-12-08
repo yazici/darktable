@@ -28,8 +28,7 @@ typedef struct callback_data_t
   int gui_callback_id;
 } callback_data_t;
 
-static void _guides_draw_callback(cairo_t *cr, const float x, const float y,
-                                  const float w, const float h,
+static void _guides_draw_callback(cairo_t *cr, const float x, const float y, const float w, const float h,
                                   const float zoom_scale, void *user_data)
 {
   callback_data_t *d = (callback_data_t *)user_data;
@@ -47,9 +46,9 @@ static void _guides_draw_callback(cairo_t *cr, const float x, const float y,
   lua_pushnumber(L, zoom_scale);
 
   // this will be called directly from the gui thread so we can just execute it, without caring about the gtk lock
-  dt_lua_treated_pcall(L,6,0);
+  dt_lua_treated_pcall(L, 6, 0);
 
-  dt_lua_type_gpointer_drop(L,cr);
+  dt_lua_type_gpointer_drop(L, cr);
 
   dt_lua_unlock();
 }
@@ -60,13 +59,13 @@ static GtkWidget *_guides_gui_callback(dt_iop_module_t *self, void *user_data)
   dt_lua_lock_silent(); // this code is called from the C side so we have to lock
   lua_State *L = darktable.lua_state.state;
   lua_rawgeti(L, LUA_REGISTRYINDEX, d->gui_callback_id);
-  dt_lua_treated_pcall(L,0,1);
+  dt_lua_treated_pcall(L, 0, 1);
 
-//   dt_lua_debug_stack(L);
+  //   dt_lua_debug_stack(L);
   lua_widget widget;
   luaA_to(L, lua_widget, &widget, -1);
   dt_lua_widget_bind(L, widget);
-  lua_pop(L,1);
+  lua_pop(L, 1);
 
   dt_lua_unlock();
 
@@ -91,8 +90,7 @@ static int register_guide(lua_State *L)
   else
     lua_pop(L, 1); // get rid of the nil
 
-  if(lua_isnil(L, 2))
-    return luaL_error(L, "missing draw callback");
+  if(lua_isnil(L, 2)) return luaL_error(L, "missing draw callback");
 
   luaL_checktype(L, 2, LUA_TFUNCTION);
   draw_callback_id = luaL_ref(L, LUA_REGISTRYINDEX);

@@ -90,8 +90,7 @@ static gboolean _button_draw(GtkWidget *widget, cairo_t *cr)
   {
     /* draw default boxed button */
     gtk_render_background(context, cr, 0, 0, width, height);
-    if(!(flags & CPF_DO_NOT_USE_BORDER))
-      gtk_render_frame(context, cr, 0, 0, width, height);
+    if(!(flags & CPF_DO_NOT_USE_BORDER)) gtk_render_frame(context, cr, 0, 0, width, height);
   }
 
   gdk_cairo_set_source_rgba(cr, &fg_color);
@@ -105,11 +104,9 @@ static gboolean _button_draw(GtkWidget *widget, cairo_t *cr)
     if(icon_width > 0 && icon_height > 0)
     {
       if(text)
-        DTGTK_BUTTON(widget)
-            ->icon(cr, border, border, height - (border * 2), height - (border * 2), flags);
+        DTGTK_BUTTON(widget)->icon(cr, border, border, height - (border * 2), height - (border * 2), flags);
       else
-        DTGTK_BUTTON(widget)
-            ->icon(cr, border, border, width - (border * 2), height - (border * 2), flags);
+        DTGTK_BUTTON(widget)->icon(cr, border, border, width - (border * 2), height - (border * 2), flags);
     }
   }
 

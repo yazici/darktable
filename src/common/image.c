@@ -52,8 +52,7 @@ int dt_image_is_ldr(const dt_image_t *img)
 {
   const char *c = img->filename + strlen(img->filename);
   while(*c != '.' && c > img->filename) c--;
-  if((img->flags & DT_IMAGE_LDR) || !strcasecmp(c, ".jpg") || !strcasecmp(c, ".png")
-     || !strcasecmp(c, ".ppm"))
+  if((img->flags & DT_IMAGE_LDR) || !strcasecmp(c, ".jpg") || !strcasecmp(c, ".png") || !strcasecmp(c, ".ppm"))
     return 1;
   else
     return 0;
@@ -63,8 +62,7 @@ int dt_image_is_hdr(const dt_image_t *img)
 {
   const char *c = img->filename + strlen(img->filename);
   while(*c != '.' && c > img->filename) c--;
-  if((img->flags & DT_IMAGE_HDR) || !strcasecmp(c, ".exr") || !strcasecmp(c, ".hdr")
-     || !strcasecmp(c, ".pfm"))
+  if((img->flags & DT_IMAGE_HDR) || !strcasecmp(c, ".exr") || !strcasecmp(c, ".hdr") || !strcasecmp(c, ".pfm"))
     return 1;
   else
     return 0;
@@ -194,7 +192,7 @@ void dt_image_full_path(const int imgid, char *pathname, size_t pathname_len, gb
     char lc_pathname[PATH_MAX] = { 0 };
     _image_local_copy_full_path(imgid, lc_pathname, sizeof(lc_pathname));
 
-    if (g_file_test(lc_pathname, G_FILE_TEST_EXISTS))
+    if(g_file_test(lc_pathname, G_FILE_TEST_EXISTS))
       g_strlcpy(pathname, (char *)lc_pathname, pathname_len);
     else
       *from_cache = FALSE;
@@ -331,7 +329,8 @@ void dt_image_set_flip(const int32_t imgid, const dt_image_orientation_t orienta
   sqlite3_stmt *stmt;
   // push new orientation to sql via additional history entry:
   DT_DEBUG_SQLITE3_PREPARE_V2(dt_database_get(darktable.db), "SELECT IFNULL(MAX(num)+1, 0) FROM main.history "
-                                                             "WHERE imgid = ?1", -1, &stmt, NULL);
+                                                             "WHERE imgid = ?1",
+                              -1, &stmt, NULL);
   DT_DEBUG_SQLITE3_BIND_INT(stmt, 1, imgid);
   const int iop_flip_MODVER = 2;
   int num = 0;
@@ -352,7 +351,8 @@ void dt_image_set_flip(const int32_t imgid, const dt_image_orientation_t orienta
 
   DT_DEBUG_SQLITE3_PREPARE_V2(dt_database_get(darktable.db),
                               "UPDATE main.images SET history_end = (SELECT MAX(num) + 1 FROM main.history "
-                              "WHERE imgid = ?1) WHERE id = ?1", -1, &stmt, NULL);
+                              "WHERE imgid = ?1) WHERE id = ?1",
+                              -1, &stmt, NULL);
   DT_DEBUG_SQLITE3_BIND_INT(stmt, 1, imgid);
   sqlite3_step(stmt);
   sqlite3_finalize(stmt);
@@ -660,8 +660,7 @@ void dt_image_read_duplicates(const uint32_t id, const char *filename)
   gchar pattern[PATH_MAX] = { 0 };
 
   // NULL terminated list of glob patterns; should include "" and can be extended if needed
-  static const gchar *glob_patterns[]
-      = { "", "_[0-9][0-9]", "_[0-9][0-9][0-9]", "_[0-9][0-9][0-9][0-9]", NULL };
+  static const gchar *glob_patterns[] = { "", "_[0-9][0-9]", "_[0-9][0-9][0-9]", "_[0-9][0-9][0-9][0-9]", NULL };
 
   const gchar **glob_pattern = glob_patterns;
   GList *files = NULL;
@@ -687,16 +686,14 @@ void dt_image_read_duplicates(const uint32_t id, const char *filename)
         char *file = g_utf16_to_utf8(data.cFileName, -1, NULL, NULL, NULL);
         files = g_list_append(files, g_build_filename(imgpath, file, NULL));
         g_free(file);
-      }
-      while(FindNextFileW(handle, &data));
+      } while(FindNextFileW(handle, &data));
     }
     FindClose(handle);
 #else
     glob_t globbuf;
     if(!glob(pattern, 0, NULL, &globbuf))
     {
-      for(size_t i = 0; i < globbuf.gl_pathc; i++)
-        files = g_list_append(files, g_strdup(globbuf.gl_pathv[i]));
+      for(size_t i = 0; i < globbuf.gl_pathc; i++) files = g_list_append(files, g_strdup(globbuf.gl_pathv[i]));
       globfree(&globbuf);
     }
 #endif
@@ -725,8 +722,7 @@ void dt_image_read_duplicates(const uint32_t id, const char *filename)
 
       gchar *c3 = xmpfilename + strlen(xmpfilename)
                   - 5; // skip over .xmp extension; position c3 at character before the '.'
-      while(*c3 != '.' && c3 > xmpfilename)
-        c3--; // skip over filename extension; position c3 is at character '.'
+      while(*c3 != '.' && c3 > xmpfilename) c3--; // skip over filename extension; position c3 is at character '.'
       gchar *c4 = c3;
       while(*c4 != '_' && c4 > xmpfilename) c4--; // move to beginning of version number
       c4++;
@@ -751,10 +747,12 @@ void dt_image_read_duplicates(const uint32_t id, const char *filename)
 }
 
 
-static uint32_t dt_image_import_internal(const int32_t film_id, const char *filename, gboolean override_ignore_jpegs, gboolean lua_locking)
+static uint32_t dt_image_import_internal(const int32_t film_id, const char *filename,
+                                         gboolean override_ignore_jpegs, gboolean lua_locking)
 {
   char *normalized_filename = dt_util_normalize_path(filename);
-  if(!normalized_filename || !g_file_test(normalized_filename, G_FILE_TEST_IS_REGULAR) || dt_util_get_file_size(normalized_filename) == 0)
+  if(!normalized_filename || !g_file_test(normalized_filename, G_FILE_TEST_IS_REGULAR)
+     || dt_util_get_file_size(normalized_filename) == 0)
   {
     g_free(normalized_filename);
     return 0;
@@ -985,17 +983,15 @@ static uint32_t dt_image_import_internal(const int32_t film_id, const char *file
   g_free(normalized_filename);
 
 #ifdef USE_LUA
-  //Synchronous calling of lua post-import-image events
-  if(lua_locking)
-    dt_lua_lock();
+  // Synchronous calling of lua post-import-image events
+  if(lua_locking) dt_lua_lock();
 
   lua_State *L = darktable.lua_state.state;
 
   luaA_push(L, dt_lua_image_t, &id);
   dt_lua_event_trigger(L, "post-import-image", 1);
 
-  if(lua_locking)
-    dt_lua_unlock();
+  if(lua_locking) dt_lua_unlock();
 #endif
 
   dt_control_signal_raise(darktable.signals, DT_SIGNAL_IMAGE_IMPORT, id);
@@ -1072,20 +1068,19 @@ void dt_image_init(dt_image_t *img)
 
 void dt_image_refresh_makermodel(dt_image_t *img)
 {
-  if (!img->camera_maker[0] || !img->camera_model[0] || !img->camera_alias[0])
+  if(!img->camera_maker[0] || !img->camera_model[0] || !img->camera_alias[0])
   {
     // We need to use the exif values, so let's get rawspeed to munge them
-    dt_rawspeed_lookup_makermodel(img->exif_maker, img->exif_model,
-                                  img->camera_maker, sizeof(img->camera_maker),
-                                  img->camera_model, sizeof(img->camera_model),
-                                  img->camera_alias, sizeof(img->camera_alias));
+    dt_rawspeed_lookup_makermodel(img->exif_maker, img->exif_model, img->camera_maker, sizeof(img->camera_maker),
+                                  img->camera_model, sizeof(img->camera_model), img->camera_alias,
+                                  sizeof(img->camera_alias));
   }
 
   // Now we just create a makermodel by concatenation
   g_strlcpy(img->camera_makermodel, img->camera_maker, sizeof(img->camera_makermodel));
   int len = strlen(img->camera_maker);
   img->camera_makermodel[len] = ' ';
-  g_strlcpy(img->camera_makermodel+len+1, img->camera_model, sizeof(img->camera_makermodel)-len-1);
+  g_strlcpy(img->camera_makermodel + len + 1, img->camera_model, sizeof(img->camera_makermodel) - len - 1);
 }
 
 int32_t dt_image_move(const int32_t imgid, const int32_t filmid)
@@ -1148,8 +1143,7 @@ int32_t dt_image_move(const int32_t imgid, const int32_t filmid)
         GFile *goldxmp = g_file_new_for_path(oldxmp);
         GFile *gnewxmp = g_file_new_for_path(newxmp);
 
-        if(g_file_test(oldxmp, G_FILE_TEST_EXISTS))
-          (void)g_file_move(goldxmp, gnewxmp, 0, NULL, NULL, NULL, NULL);
+        if(g_file_test(oldxmp, G_FILE_TEST_EXISTS)) (void)g_file_move(goldxmp, gnewxmp, 0, NULL, NULL, NULL, NULL);
 
         g_object_unref(goldxmp);
         g_object_unref(gnewxmp);
@@ -1459,8 +1453,7 @@ int dt_image_local_copy_reset(const int32_t imgid)
   const gboolean local_copy_exists = (imgr->flags & DT_IMAGE_LOCAL_COPY) == DT_IMAGE_LOCAL_COPY ? TRUE : FALSE;
   dt_image_cache_read_release(darktable.image_cache, imgr);
 
-  if (!local_copy_exists)
-    return 0;
+  if(!local_copy_exists) return 0;
 
   // check that the original file is accessible
 
@@ -1539,14 +1532,14 @@ void dt_image_write_sidecar_file(int imgid)
     gboolean from_cache = FALSE;
     dt_image_full_path(imgid, filename, sizeof(filename), &from_cache);
 
-    if (!g_file_test(filename, G_FILE_TEST_EXISTS))
+    if(!g_file_test(filename, G_FILE_TEST_EXISTS))
     {
       // OTHERWISE: check if the local copy exists
       from_cache = TRUE;
       dt_image_full_path(imgid, filename, sizeof(filename), &from_cache);
 
       //  nothing to do, the original is not accessible and there is no local copy
-      if (!from_cache) return;
+      if(!from_cache) return;
     }
 
     dt_image_path_append_version(imgid, filename, sizeof(filename));
@@ -1642,9 +1635,8 @@ void dt_image_local_copy_synch(void)
 
   if(count > 0)
   {
-    dt_control_log(ngettext("%d local copy has been synchronized",
-                            "%d local copies have been synchronized", count),
-                   count);
+    dt_control_log(
+        ngettext("%d local copy has been synchronized", "%d local copies have been synchronized", count), count);
   }
 }
 
@@ -1661,8 +1653,8 @@ void dt_image_add_time_offset(const int imgid, const long int offset)
   gint minute;
   gint seconds;
 
-  if(sscanf(cimg->exif_datetime_taken, "%d:%d:%d %d:%d:%d", (int *)&year, (int *)&month, (int *)&day,
-            (int *)&hour, (int *)&minute, (int *)&seconds) != 6)
+  if(sscanf(cimg->exif_datetime_taken, "%d:%d:%d %d:%d:%d", (int *)&year, (int *)&month, (int *)&day, (int *)&hour,
+            (int *)&minute, (int *)&seconds) != 6)
   {
     fprintf(stderr, "broken exif time in db, '%s', imgid %d\n", cimg->exif_datetime_taken, imgid);
     dt_image_cache_read_release(darktable.image_cache, cimg);
@@ -1699,7 +1691,8 @@ void dt_image_add_time_offset(const int imgid, const long int offset)
     g_strlcpy(img->exif_datetime_taken, datetime, sizeof(img->exif_datetime_taken));
     dt_image_cache_write_release(darktable.image_cache, img, DT_IMAGE_CACHE_SAFE);
   }
-  else dt_image_cache_read_release(darktable.image_cache, cimg);
+  else
+    dt_image_cache_read_release(darktable.image_cache, cimg);
 
   g_free(datetime);
 }

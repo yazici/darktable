@@ -72,8 +72,7 @@ void default_input_format(dt_iop_module_t *self, dt_dev_pixelpipe_t *pipe, dt_de
 
   if(self->priority > _iop_module_rawprepare) return;
 
-  if(piece->pipe->dsc.filters)
-    dsc->datatype = TYPE_UINT16;
+  if(piece->pipe->dsc.filters) dsc->datatype = TYPE_UINT16;
 }
 
 void default_output_format(dt_iop_module_t *self, dt_dev_pixelpipe_t *pipe, dt_dev_pixelpipe_iop_t *piece,
@@ -90,8 +89,7 @@ void default_output_format(dt_iop_module_t *self, dt_dev_pixelpipe_t *pipe, dt_d
 
   if(self->priority >= _iop_module_rawprepare) return;
 
-  if(piece->pipe->dsc.filters)
-    dsc->datatype = TYPE_UINT16;
+  if(piece->pipe->dsc.filters) dsc->datatype = TYPE_UINT16;
 }
 
 // modelines: These editor modelines have been set for all relevant files by tools/update_modelines.sh

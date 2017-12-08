@@ -30,12 +30,12 @@
 #include "develop/imageop_math.h" // for FC, FCxtrans
 #include "develop/pixelpipe.h"    // for dt_dev_pixelpipe_type_t::DT_DEV_PI...
 #include "develop/tiling.h"
-#include "iop/iop_api.h"          // for dt_iop_params_t
-#include <glib/gi18n.h>           // for _
-#include <gtk/gtktypes.h>         // for GtkWidget
-#include <stdint.h>               // for uint16_t, uint8_t, uint32_t
-#include <stdlib.h>               // for size_t, free, NULL, calloc, malloc
-#include <string.h>               // for memcpy
+#include "iop/iop_api.h"  // for dt_iop_params_t
+#include <glib/gi18n.h>   // for _
+#include <gtk/gtktypes.h> // for GtkWidget
+#include <stdint.h>       // for uint16_t, uint8_t, uint32_t
+#include <stdlib.h>       // for size_t, free, NULL, calloc, malloc
+#include <string.h>       // for memcpy
 
 DT_MODULE(1)
 
@@ -181,7 +181,7 @@ void process(dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const void *c
 
   // NOT FROM THE PIPE !!!
   const uint32_t filters = image->buf_dsc.filters;
-  const uint8_t(*const xtrans)[6] = (const uint8_t(*const)[6])image->buf_dsc.xtrans;
+  const uint8_t (*const xtrans)[6] = (const uint8_t (*const)[6])image->buf_dsc.xtrans;
 
   // acquire temp memory for distorted pixel coords
   const size_t coordbufsize = (size_t)roi_out->width * 2;
@@ -249,7 +249,8 @@ void process(dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const void *c
 
   dt_mipmap_cache_release(darktable.mipmap_cache, &buf);
 
-  if(piece->pipe->mask_display & DT_DEV_PIXELPIPE_DISPLAY_MASK) dt_iop_alpha_copy(ivoid, ovoid, roi_out->width, roi_out->height);
+  if(piece->pipe->mask_display & DT_DEV_PIXELPIPE_DISPLAY_MASK)
+    dt_iop_alpha_copy(ivoid, ovoid, roi_out->width, roi_out->height);
 }
 
 #ifdef HAVE_OPENCL
@@ -361,8 +362,8 @@ int process_cl(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, cl_m
 
   if(filters == 9u)
   {
-    dev_xtrans
-        = dt_opencl_copy_host_to_device_constant(devid, sizeof(image->buf_dsc.xtrans), (void *)image->buf_dsc.xtrans);
+    dev_xtrans = dt_opencl_copy_host_to_device_constant(devid, sizeof(image->buf_dsc.xtrans),
+                                                        (void *)image->buf_dsc.xtrans);
     if(dev_xtrans == NULL) goto error;
   }
 
@@ -414,8 +415,7 @@ error:
 #endif
 
 void tiling_callback(struct dt_iop_module_t *self, struct dt_dev_pixelpipe_iop_t *piece,
-                     const dt_iop_roi_t *roi_in, const dt_iop_roi_t *roi_out,
-                     struct dt_develop_tiling_t *tiling)
+                     const dt_iop_roi_t *roi_in, const dt_iop_roi_t *roi_out, struct dt_develop_tiling_t *tiling)
 {
   dt_develop_t *dev = self->dev;
   const dt_image_t *const image = &(dev->image_storage);
@@ -437,7 +437,7 @@ void tiling_callback(struct dt_iop_module_t *self, struct dt_dev_pixelpipe_iop_t
 
   dt_mipmap_cache_release(darktable.mipmap_cache, &buf);
 
-  tiling->factor = 2.5f;  // in + out + coordinates
+  tiling->factor = 2.5f; // in + out + coordinates
   tiling->maxbuf = 1.0f;
   tiling->overhead = (size_t)raw_width * raw_height * sizeof(uint16_t);
   tiling->overlap = 0;
@@ -499,7 +499,7 @@ void init(dt_iop_module_t *module)
   module->default_params = calloc(1, sizeof(dt_iop_rawoverexposed_t));
   module->hide_enable_button = 1;
   module->default_enabled = 1;
-    module->priority = 942; // module order created by iop_dependencies.py, do not edit!
+  module->priority = 942; // module order created by iop_dependencies.py, do not edit!
   module->params_size = sizeof(dt_iop_rawoverexposed_t);
   module->gui_data = NULL;
 }

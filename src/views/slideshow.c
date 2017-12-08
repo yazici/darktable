@@ -186,8 +186,8 @@ static int process_next_image(dt_slideshow_t *d)
   const int high_quality = dt_conf_get_bool("plugins/slideshow/high_quality");
   if(id)
     // the flags are: ignore exif, display byteorder, high quality, upscale, thumbnail
-    dt_imageio_export_with_flags(id, "unused", &buf, (dt_imageio_module_data_t *)&dat, 1, 1, high_quality, 1, 0,
-                                 0, 0, DT_COLORSPACE_DISPLAY, NULL, DT_INTENT_LAST, NULL, NULL, 1, 1);
+    dt_imageio_export_with_flags(id, "unused", &buf, (dt_imageio_module_data_t *)&dat, 1, 1, high_quality, 1, 0, 0,
+                                 0, DT_COLORSPACE_DISPLAY, NULL, DT_INTENT_LAST, NULL, NULL, 1, 1);
   return 0;
 }
 
@@ -424,14 +424,15 @@ void expose(dt_view_t *self, cairo_t *cr, int32_t width, int32_t height, int32_t
     cairo_restore(cr); // pop control
     cairo_reset_clip(cr);
     cairo_save(cr);
-    cairo_translate(cr, (d->width - d->front_width) * .5f / darktable.gui->ppd, (d->height - d->front_height) * .5f / darktable.gui->ppd);
+    cairo_translate(cr, (d->width - d->front_width) * .5f / darktable.gui->ppd,
+                    (d->height - d->front_height) * .5f / darktable.gui->ppd);
     cairo_surface_t *surface = NULL;
     const int32_t stride = cairo_format_stride_for_width(CAIRO_FORMAT_RGB24, d->front_width);
     surface = dt_cairo_image_surface_create_for_data((uint8_t *)d->front, CAIRO_FORMAT_RGB24, d->front_width,
-                                                  d->front_height, stride);
+                                                     d->front_height, stride);
     cairo_set_source_surface(cr, surface, 0, 0);
     cairo_pattern_set_filter(cairo_get_source(cr), CAIRO_FILTER_NEAREST);
-    cairo_rectangle(cr, 0, 0, d->front_width/darktable.gui->ppd, d->front_height/darktable.gui->ppd);
+    cairo_rectangle(cr, 0, 0, d->front_width / darktable.gui->ppd, d->front_height / darktable.gui->ppd);
     cairo_fill(cr);
     cairo_surface_destroy(surface);
     cairo_restore(cr);
@@ -455,8 +456,10 @@ void mouse_moved(dt_view_t *self, double x, double y, double pressure, int which
 {
   dt_slideshow_t *d = (dt_slideshow_t *)self->data;
 
-  if(d->mouse_timeout > 0) g_source_remove(d->mouse_timeout);
-  else dt_control_change_cursor(GDK_LEFT_PTR);
+  if(d->mouse_timeout > 0)
+    g_source_remove(d->mouse_timeout);
+  else
+    dt_control_change_cursor(GDK_LEFT_PTR);
   d->mouse_timeout = g_timeout_add_seconds(1, _hide_mouse, self);
 }
 

@@ -84,8 +84,7 @@ int operation_tags()
   return IOP_TAG_DISTORT;
 }
 
-static void transform(const dt_dev_pixelpipe_iop_t *const piece, const float scale, const float *const x,
-                      float *o)
+static void transform(const dt_dev_pixelpipe_iop_t *const piece, const float scale, const float *const x, float *o)
 {
   dt_iop_rotatepixels_data_t *d = (dt_iop_rotatepixels_data_t *)piece->data;
 
@@ -126,8 +125,7 @@ int distort_transform(dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, floa
   return 1;
 }
 
-int distort_backtransform(dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, float *points,
-                          size_t points_count)
+int distort_backtransform(dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, float *points, size_t points_count)
 {
   const float scale = piece->buf_in.scale / piece->iscale;
 
@@ -178,8 +176,7 @@ void modify_roi_out(dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, dt_iop
 
   const float scale = roi_in->scale / piece->iscale, T = (float)d->ry * scale;
 
-  const float y = sqrtf(2.0f * T * T),
-              x = sqrtf(2.0f * ((float)roi_in->width - T) * ((float)roi_in->width - T));
+  const float y = sqrtf(2.0f * T * T), x = sqrtf(2.0f * ((float)roi_in->width - T) * ((float)roi_in->width - T));
 
   const struct dt_interpolation *interpolation = dt_interpolation_new(DT_INTERPOLATION_USERPREF);
   const float IW = (float)interpolation->width * scale;
@@ -314,7 +311,7 @@ void reload_defaults(dt_iop_module_t *self)
 
   const dt_image_t *const image = &(self->dev->image_storage);
 
-  tmp = (dt_iop_rotatepixels_params_t){ .rx = 0u, .ry = image->fuji_rotation_pos, .angle = -45.0f };
+  tmp = (dt_iop_rotatepixels_params_t){.rx = 0u, .ry = image->fuji_rotation_pos, .angle = -45.0f };
 
   self->default_enabled = ((tmp.rx != 0u) || (tmp.ry != 0u));
 
@@ -341,7 +338,7 @@ void init(dt_iop_module_t *self)
   self->default_params = calloc(1, sizeof(dt_iop_rotatepixels_params_t));
   self->params_size = sizeof(dt_iop_rotatepixels_params_t);
   self->gui_data = NULL;
-    self->priority = 246; // module order created by iop_dependencies.py, do not edit!
+  self->priority = 246; // module order created by iop_dependencies.py, do not edit!
 }
 
 void cleanup(dt_iop_module_t *self)

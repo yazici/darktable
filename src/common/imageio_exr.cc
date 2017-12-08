@@ -155,18 +155,16 @@ dt_imageio_retval_t dt_imageio_open_exr(dt_image_t *img, const char *filename, d
   Imf::Chromaticities chromaticities;
   float whiteLuminance = 1.0;
 
-  if(Imf::hasChromaticities(header))
-    chromaticities = Imf::chromaticities(header);
+  if(Imf::hasChromaticities(header)) chromaticities = Imf::chromaticities(header);
 
-  if(Imf::hasWhiteLuminance(header))
-    whiteLuminance = Imf::whiteLuminance(header);
+  if(Imf::hasWhiteLuminance(header)) whiteLuminance = Imf::whiteLuminance(header);
 
-//   printf("hasChromaticities: %d\n", Imf::hasChromaticities(header));
-//   printf("hasWhiteLuminance: %d\n", Imf::hasWhiteLuminance(header));
-//   std::cout << chromaticities.red << std::endl;
-//   std::cout << chromaticities.green << std::endl;
-//   std::cout << chromaticities.blue << std::endl;
-//   std::cout << chromaticities.white << std::endl;
+  //   printf("hasChromaticities: %d\n", Imf::hasChromaticities(header));
+  //   printf("hasWhiteLuminance: %d\n", Imf::hasWhiteLuminance(header));
+  //   std::cout << chromaticities.red << std::endl;
+  //   std::cout << chromaticities.green << std::endl;
+  //   std::cout << chromaticities.blue << std::endl;
+  //   std::cout << chromaticities.white << std::endl;
 
   Imath::M44f m = Imf::RGBtoXYZ(chromaticities, whiteLuminance);
   float mat[3][3];

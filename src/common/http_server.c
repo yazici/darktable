@@ -146,8 +146,8 @@ dt_http_server_t *dt_http_server_create(const int *ports, const int n_ports, con
       return NULL;
     }
 
-    httpserver = soup_server_new(SOUP_SERVER_SERVER_HEADER, "darktable internal server", "interface",
-                                 httpaddress, NULL);
+    httpserver
+        = soup_server_new(SOUP_SERVER_SERVER_HEADER, "darktable internal server", "interface", httpaddress, NULL);
 
     if(httpserver) break;
 

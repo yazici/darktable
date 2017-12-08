@@ -24,7 +24,8 @@
 // bump this when the noiseprofiles are getting a differen layout or meaning (raw-raw data, ...)
 #define DT_NOISE_PROFILE_VERSION 0
 
-const dt_noiseprofile_t dt_noiseprofile_generic = {N_("generic poissonian"), "", "", 0, {0.0001f, 0.0001f, 0.0001}, {0.0f, 0.0f, 0.0f}};
+const dt_noiseprofile_t dt_noiseprofile_generic
+    = { N_("generic poissonian"), "", "", 0, { 0.0001f, 0.0001f, 0.0001 }, { 0.0f, 0.0f, 0.0f } };
 
 static gboolean dt_noiseprofile_verify(JsonParser *parser);
 
@@ -60,7 +61,9 @@ JsonParser *dt_noiseprofile_init(const char *alternative)
   if(!dt_noiseprofile_verify(parser))
   {
     dt_control_log(_("noiseprofile file `%s' is not valid"), filename);
-    fprintf(stderr, "[noiseprofile] error: `%s' is not a valid noiseprofile file. run with -d control for details\n", filename);
+    fprintf(stderr,
+            "[noiseprofile] error: `%s' is not a valid noiseprofile file. run with -d control for details\n",
+            filename);
     g_object_unref(parser);
     return NULL;
   }
@@ -68,12 +71,11 @@ JsonParser *dt_noiseprofile_init(const char *alternative)
   return parser;
 }
 
-int is_member(gchar** names, char* name)
+int is_member(gchar **names, char *name)
 {
   while(*names)
   {
-    if(!g_strcmp0(*names, name))
-      return 1;
+    if(!g_strcmp0(*names, name)) return 1;
     names++;
   }
   return 0;
@@ -87,13 +89,14 @@ static gint _sort_by_iso(gconstpointer a, gconstpointer b)
   return profile_a->iso - profile_b->iso;
 }
 
-#define _ERROR(...)     {\
-                          dt_print(DT_DEBUG_CONTROL, "[noiseprofile] error: " );\
-                          dt_print(DT_DEBUG_CONTROL, __VA_ARGS__);\
-                          dt_print(DT_DEBUG_CONTROL, "\n");\
-                          valid = FALSE;\
-                          goto end;\
-                        }
+#define _ERROR(...)                                                                                               \
+  {                                                                                                               \
+    dt_print(DT_DEBUG_CONTROL, "[noiseprofile] error: ");                                                         \
+    dt_print(DT_DEBUG_CONTROL, __VA_ARGS__);                                                                      \
+    dt_print(DT_DEBUG_CONTROL, "\n");                                                                             \
+    valid = FALSE;                                                                                                \
+    goto end;                                                                                                     \
+  }
 
 static gboolean dt_noiseprofile_verify(JsonParser *parser)
 {
@@ -126,7 +129,7 @@ static gboolean dt_noiseprofile_verify(JsonParser *parser)
   dt_print(DT_DEBUG_CONTROL, "[noiseprofile] found %d makers\n", n_makers);
   for(int i = 0; i < n_makers; i++)
   {
-    if(!json_reader_read_element(reader, i)) _ERROR("can't access maker at position %d / %d", i+1, n_makers);
+    if(!json_reader_read_element(reader, i)) _ERROR("can't access maker at position %d / %d", i + 1, n_makers);
 
     if(!json_reader_read_member(reader, "maker")) _ERROR("missing `maker`");
 
@@ -141,7 +144,7 @@ static gboolean dt_noiseprofile_verify(JsonParser *parser)
     n_profiles_total += n_models;
     for(int j = 0; j < n_models; j++)
     {
-      if(!json_reader_read_element(reader, j)) _ERROR("can't access model at position %d / %d", j+1, n_models);
+      if(!json_reader_read_element(reader, j)) _ERROR("can't access model at position %d / %d", j + 1, n_models);
 
       if(!json_reader_read_member(reader, "model")) _ERROR("missing `model`");
 
@@ -154,9 +157,10 @@ static gboolean dt_noiseprofile_verify(JsonParser *parser)
       dt_print(DT_DEBUG_CONTROL, "[noiseprofile] found %d profiles\n", n_profiles);
       for(int k = 0; k < n_profiles; k++)
       {
-        if(!json_reader_read_element(reader, k)) _ERROR("can't access profile at position %d / %d", k+1, n_profiles);
+        if(!json_reader_read_element(reader, k))
+          _ERROR("can't access profile at position %d / %d", k + 1, n_profiles);
 
-        gchar** member_names = json_reader_list_members(reader);
+        gchar **member_names = json_reader_list_members(reader);
 
         // name
         if(!is_member(member_names, "name"))
@@ -232,7 +236,8 @@ GList *dt_noiseprofile_get_matching(const dt_image_t *cimg)
 
   if(!parser) goto end;
 
-  dt_print(DT_DEBUG_CONTROL, "[noiseprofile] looking for maker `%s', model `%s'\n", cimg->camera_maker, cimg->camera_model);
+  dt_print(DT_DEBUG_CONTROL, "[noiseprofile] looking for maker `%s', model `%s'\n", cimg->camera_maker,
+           cimg->camera_model);
 
   JsonNode *root = json_parser_get_root(parser);
 
@@ -251,7 +256,8 @@ GList *dt_noiseprofile_get_matching(const dt_image_t *cimg)
 
     if(g_strstr_len(cimg->camera_maker, -1, json_reader_get_string_value(reader)))
     {
-      dt_print(DT_DEBUG_CONTROL, "[noiseprofile] found `%s' as `%s'\n", cimg->camera_maker, json_reader_get_string_value(reader));
+      dt_print(DT_DEBUG_CONTROL, "[noiseprofile] found `%s' as `%s'\n", cimg->camera_maker,
+               json_reader_get_string_value(reader));
       // go through all models and check those
       json_reader_end_member(reader);
 
@@ -281,7 +287,7 @@ GList *dt_noiseprofile_get_matching(const dt_image_t *cimg)
 
             json_reader_read_element(reader, k);
 
-            gchar** member_names = json_reader_list_members(reader);
+            gchar **member_names = json_reader_list_members(reader);
 
             // do we want to skip this entry?
             if(is_member(member_names, "skip"))
@@ -372,20 +378,17 @@ void dt_noiseprofile_free(gpointer data)
   free(profile);
 }
 
-void dt_noiseprofile_interpolate(
-  const dt_noiseprofile_t *const p1,  // the smaller iso
-  const dt_noiseprofile_t *const p2,  // the larger iso (can't be == iso1)
-  dt_noiseprofile_t *out)             // has iso initialized
+void dt_noiseprofile_interpolate(const dt_noiseprofile_t *const p1, // the smaller iso
+                                 const dt_noiseprofile_t *const p2, // the larger iso (can't be == iso1)
+                                 dt_noiseprofile_t *out)            // has iso initialized
 {
   // stupid linear interpolation.
   // to be confirmed for gaussian part.
-  const float t = CLAMP(
-    (float)(out->iso - p1->iso) / (float)(p2->iso - p1->iso),
-                        0.0f, 1.0f);
-  for(int k=0; k<3; k++)
+  const float t = CLAMP((float)(out->iso - p1->iso) / (float)(p2->iso - p1->iso), 0.0f, 1.0f);
+  for(int k = 0; k < 3; k++)
   {
-    out->a[k] = (1.0f-t)*p1->a[k] + t*p2->a[k];
-    out->b[k] = (1.0f-t)*p1->b[k] + t*p2->b[k];
+    out->a[k] = (1.0f - t) * p1->a[k] + t * p2->a[k];
+    out->b[k] = (1.0f - t) * p1->b[k] + t * p2->b[k];
   }
 }
 

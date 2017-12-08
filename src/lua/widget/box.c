@@ -20,20 +20,18 @@
 #include "lua/types.h"
 #include "lua/widget/common.h"
 
-static void box_init(lua_State* L);
-static dt_lua_widget_type_t box_type = {
-  .name = "box",
-  .gui_init = box_init,
-  .gui_cleanup = NULL,
-  .alloc_size = sizeof(dt_lua_container_t),
-  .parent= &container_type
-};
+static void box_init(lua_State *L);
+static dt_lua_widget_type_t box_type = {.name = "box",
+                                        .gui_init = box_init,
+                                        .gui_cleanup = NULL,
+                                        .alloc_size = sizeof(dt_lua_container_t),
+                                        .parent = &container_type };
 
-static void box_init(lua_State* L)
+static void box_init(lua_State *L)
 {
   lua_box box;
-  luaA_to(L,lua_box,&box,-1);
-  gtk_orientable_set_orientation(GTK_ORIENTABLE(box->widget),GTK_ORIENTATION_VERTICAL);
+  luaA_to(L, lua_box, &box, -1);
+  gtk_orientable_set_orientation(GTK_ORIENTABLE(box->widget), GTK_ORIENTATION_VERTICAL);
   gtk_box_set_spacing(GTK_BOX(box->widget), DT_PIXEL_APPLY_DPI(5));
 }
 
@@ -41,23 +39,24 @@ static void box_init(lua_State* L)
 static int orientation_member(lua_State *L)
 {
   lua_box box;
-  luaA_to(L,lua_box,&box,1);
+  luaA_to(L, lua_box, &box, 1);
   dt_lua_orientation_t orientation;
-  if(lua_gettop(L) > 2) {
-    luaA_to(L,dt_lua_orientation_t,&orientation,3);
-    gtk_orientable_set_orientation(GTK_ORIENTABLE(box->widget),orientation);
+  if(lua_gettop(L) > 2)
+  {
+    luaA_to(L, dt_lua_orientation_t, &orientation, 3);
+    gtk_orientable_set_orientation(GTK_ORIENTABLE(box->widget), orientation);
     return 0;
   }
   orientation = gtk_orientable_get_orientation(GTK_ORIENTABLE(box->widget));
-  luaA_push(L,dt_lua_orientation_t,&orientation);
+  luaA_push(L, dt_lua_orientation_t, &orientation);
   return 1;
 }
 
-int dt_lua_init_widget_box(lua_State* L)
+int dt_lua_init_widget_box(lua_State *L)
 {
-  dt_lua_init_widget_type(L,&box_type,lua_box,GTK_TYPE_BOX);
+  dt_lua_init_widget_type(L, &box_type, lua_box, GTK_TYPE_BOX);
 
-  lua_pushcfunction(L,orientation_member);
+  lua_pushcfunction(L, orientation_member);
   dt_lua_gtk_wrap(L);
   dt_lua_type_register(L, lua_box, "orientation");
   return 0;

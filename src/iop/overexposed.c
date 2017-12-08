@@ -42,19 +42,18 @@ typedef enum dt_iop_overexposed_colorscheme_t
   DT_IOP_OVEREXPOSED_PURPLEGREEN = 2
 } dt_iop_overexposed_colorscheme_t;
 
-static const float dt_iop_overexposed_colors[][2][4]
-    = { {
-          { 0.0f, 0.0f, 0.0f, 1.0f }, // black
-          { 1.0f, 1.0f, 1.0f, 1.0f }  // white
-        },
-        {
-          { 1.0f, 0.0f, 0.0f, 1.0f }, // red
-          { 0.0f, 0.0f, 1.0f, 1.0f }  // blue
-        },
-        {
-          { 0.371f, 0.434f, 0.934f, 1.0f }, // purple (#5f6fef)
-          { 0.512f, 0.934f, 0.371f, 1.0f }  // green  (#83ef5f)
-        } };
+static const float dt_iop_overexposed_colors[][2][4] = { {
+                                                          { 0.0f, 0.0f, 0.0f, 1.0f }, // black
+                                                          { 1.0f, 1.0f, 1.0f, 1.0f }  // white
+                                                         },
+                                                         {
+                                                          { 1.0f, 0.0f, 0.0f, 1.0f }, // red
+                                                          { 0.0f, 0.0f, 1.0f, 1.0f }  // blue
+                                                         },
+                                                         {
+                                                          { 0.371f, 0.434f, 0.934f, 1.0f }, // purple (#5f6fef)
+                                                          { 0.512f, 0.934f, 0.371f, 1.0f }  // green  (#83ef5f)
+                                                         } };
 
 typedef struct dt_iop_overexposed_global_data_t
 {
@@ -82,8 +81,8 @@ int flags()
 }
 
 
-int legacy_params(dt_iop_module_t *self, const void *const old_params, const int old_version,
-                  void *new_params, const int new_version)
+int legacy_params(dt_iop_module_t *self, const void *const old_params, const int old_version, void *new_params,
+                  const int new_version)
 {
   // we do no longer have module params in here and just ignore any legacy entries
   return 0;
@@ -153,7 +152,8 @@ void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const 
     }
   }
 
-  if(piece->pipe->mask_display & DT_DEV_PIXELPIPE_DISPLAY_MASK) dt_iop_alpha_copy(ivoid, ovoid, roi_out->width, roi_out->height);
+  if(piece->pipe->mask_display & DT_DEV_PIXELPIPE_DISPLAY_MASK)
+    dt_iop_alpha_copy(ivoid, ovoid, roi_out->width, roi_out->height);
 }
 
 #if defined(__SSE__)
@@ -202,7 +202,8 @@ void process_sse2(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, c
   }
   _mm_sfence();
 
-  if(piece->pipe->mask_display & DT_DEV_PIXELPIPE_DISPLAY_MASK) dt_iop_alpha_copy(ivoid, ovoid, roi_out->width, roi_out->height);
+  if(piece->pipe->mask_display & DT_DEV_PIXELPIPE_DISPLAY_MASK)
+    dt_iop_alpha_copy(ivoid, ovoid, roi_out->width, roi_out->height);
 }
 #endif
 
@@ -286,7 +287,7 @@ void init(dt_iop_module_t *module)
   module->default_params = calloc(1, sizeof(dt_iop_overexposed_t));
   module->hide_enable_button = 1;
   module->default_enabled = 1;
-    module->priority = 927; // module order created by iop_dependencies.py, do not edit!
+  module->priority = 927; // module order created by iop_dependencies.py, do not edit!
   module->params_size = sizeof(dt_iop_overexposed_t);
   module->gui_data = NULL;
 }

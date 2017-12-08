@@ -63,12 +63,12 @@ static void _database_migrate_to_xdg_structure();
 /* delete old mipmaps files */
 static void _database_delete_mipmaps_files();
 
-#define _SQLITE3_EXEC(a, b, c, d, e)                                                                         \
-  if(sqlite3_exec(a, b, c, d, e) != SQLITE_OK)                                                               \
-  {                                                                                                          \
-    all_ok = FALSE;                                                                                          \
-    failing_query = b;                                                                                       \
-    goto end;                                                                                                \
+#define _SQLITE3_EXEC(a, b, c, d, e)                                                                              \
+  if(sqlite3_exec(a, b, c, d, e) != SQLITE_OK)                                                                    \
+  {                                                                                                               \
+    all_ok = FALSE;                                                                                               \
+    failing_query = b;                                                                                            \
+    goto end;                                                                                                     \
   }
 
 /* migrate from the legacy db format (with the 'settings' blob) to the first version this system knows */
@@ -96,16 +96,16 @@ static gboolean _migrate_schema(dt_database_t *db, int version)
   _SQLITE3_EXEC(db->handle, "DROP TABLE IF EXISTS main.mipmap_timestamps", NULL, NULL, NULL);
   _SQLITE3_EXEC(db->handle, "DROP TABLE IF EXISTS main.dt_migration_table", NULL, NULL, NULL);
 
-  // using _create_library_schema() and filling that with the old data doesn't work since we always want to generate
+  // using _create_library_schema() and filling that with the old data doesn't work since we always want to
+  // generate
   // version 1 tables
   ////////////////////////////// db_info
-  _SQLITE3_EXEC(db->handle, "CREATE TABLE main.db_info (key VARCHAR PRIMARY KEY, value VARCHAR)",
-                NULL, NULL, NULL);
-  _SQLITE3_EXEC(db->handle, "INSERT OR REPLACE INTO main.db_info (key, value) VALUES ('version', 1)",
-                NULL, NULL, NULL);
+  _SQLITE3_EXEC(db->handle, "CREATE TABLE main.db_info (key VARCHAR PRIMARY KEY, value VARCHAR)", NULL, NULL, NULL);
+  _SQLITE3_EXEC(db->handle, "INSERT OR REPLACE INTO main.db_info (key, value) VALUES ('version', 1)", NULL, NULL,
+                NULL);
   ////////////////////////////// film_rolls
-  _SQLITE3_EXEC(db->handle, "CREATE INDEX IF NOT EXISTS main.film_rolls_folder_index ON film_rolls (folder)",
-                NULL, NULL, NULL);
+  _SQLITE3_EXEC(db->handle, "CREATE INDEX IF NOT EXISTS main.film_rolls_folder_index ON film_rolls (folder)", NULL,
+                NULL, NULL);
   ////////////////////////////// images
   sqlite3_exec(db->handle, "ALTER TABLE main.images ADD COLUMN orientation INTEGER", NULL, NULL, NULL);
   sqlite3_exec(db->handle, "ALTER TABLE main.images ADD COLUMN focus_distance REAL", NULL, NULL, NULL);
@@ -120,19 +120,17 @@ static gboolean _migrate_schema(dt_database_t *db, int version)
   sqlite3_exec(db->handle, "ALTER TABLE main.images ADD COLUMN version INTEGER", NULL, NULL, NULL);
   sqlite3_exec(db->handle, "ALTER TABLE main.images ADD COLUMN max_version INTEGER", NULL, NULL, NULL);
   _SQLITE3_EXEC(db->handle, "UPDATE main.images SET orientation = -1 WHERE orientation IS NULL", NULL, NULL, NULL);
-  _SQLITE3_EXEC(db->handle, "UPDATE main.images SET focus_distance = -1 WHERE focus_distance IS NULL",
-                NULL, NULL, NULL);
+  _SQLITE3_EXEC(db->handle, "UPDATE main.images SET focus_distance = -1 WHERE focus_distance IS NULL", NULL, NULL,
+                NULL);
   _SQLITE3_EXEC(db->handle, "UPDATE main.images SET group_id = id WHERE group_id IS NULL", NULL, NULL, NULL);
   _SQLITE3_EXEC(db->handle, "UPDATE main.images SET max_version = (SELECT COUNT(*)-1 FROM main.images i WHERE "
                             "i.filename = main.images.filename AND "
                             "i.film_id = main.images.film_id) WHERE max_version IS NULL",
                 NULL, NULL, NULL);
-  _SQLITE3_EXEC(
-      db->handle,
-      "UPDATE main.images SET version = (SELECT COUNT(*) FROM main.images i "
-      "WHERE i.filename = main.images.filename AND "
-      "i.film_id = main.images.film_id AND i.id < main.images.id) WHERE version IS NULL",
-      NULL, NULL, NULL);
+  _SQLITE3_EXEC(db->handle, "UPDATE main.images SET version = (SELECT COUNT(*) FROM main.images i "
+                            "WHERE i.filename = main.images.filename AND "
+                            "i.film_id = main.images.film_id AND i.id < main.images.id) WHERE version IS NULL",
+                NULL, NULL, NULL);
   // make sure we have AUTOINCREMENT on imgid --> move the whole thing away and recreate the table :(
   _SQLITE3_EXEC(db->handle, "ALTER TABLE main.images RENAME TO dt_migration_table", NULL, NULL, NULL);
   _SQLITE3_EXEC(db->handle, "DROP INDEX IF EXISTS main.images_group_id_index", NULL, NULL, NULL);
@@ -223,8 +221,8 @@ static gboolean _migrate_schema(dt_database_t *db, int version)
                 NULL);
   ////////////////////////////// color_labels
   // color_labels could have a PRIMARY KEY that we don't want
-  _SQLITE3_EXEC(db->handle, "CREATE TEMPORARY TABLE dt_migration_table (imgid INTEGER, color INTEGER)", NULL,
-                NULL, NULL);
+  _SQLITE3_EXEC(db->handle, "CREATE TEMPORARY TABLE dt_migration_table (imgid INTEGER, color INTEGER)", NULL, NULL,
+                NULL);
   _SQLITE3_EXEC(db->handle, "INSERT INTO dt_migration_table SELECT imgid, color FROM main.color_labels", NULL,
                 NULL, NULL);
   _SQLITE3_EXEC(db->handle, "DROP TABLE main.color_labels", NULL, NULL, NULL);
@@ -372,43 +370,43 @@ end:
 
 #undef _SQLITE3_EXEC
 
-#define TRY_EXEC(_query, _message)                                               \
-  do                                                                             \
-  {                                                                              \
-    if(sqlite3_exec(db->handle, _query, NULL, NULL, NULL) != SQLITE_OK)          \
-    {                                                                            \
-      fprintf(stderr, _message);                                                 \
-      fprintf(stderr, "[init]   %s\n", sqlite3_errmsg(db->handle));              \
-      FINALIZE;                                                                  \
-      sqlite3_exec(db->handle, "ROLLBACK TRANSACTION", NULL, NULL, NULL);        \
-      return version;                                                            \
-    }                                                                            \
+#define TRY_EXEC(_query, _message)                                                                                \
+  do                                                                                                              \
+  {                                                                                                               \
+    if(sqlite3_exec(db->handle, _query, NULL, NULL, NULL) != SQLITE_OK)                                           \
+    {                                                                                                             \
+      fprintf(stderr, _message);                                                                                  \
+      fprintf(stderr, "[init]   %s\n", sqlite3_errmsg(db->handle));                                               \
+      FINALIZE;                                                                                                   \
+      sqlite3_exec(db->handle, "ROLLBACK TRANSACTION", NULL, NULL, NULL);                                         \
+      return version;                                                                                             \
+    }                                                                                                             \
   } while(0)
 
-#define TRY_STEP(_stmt, _expected, _message)                                     \
-  do                                                                             \
-  {                                                                              \
-    if(sqlite3_step(_stmt) != _expected)                                         \
-    {                                                                            \
-      fprintf(stderr, _message);                                                 \
-      fprintf(stderr, "[init]   %s\n", sqlite3_errmsg(db->handle));              \
-      FINALIZE;                                                                  \
-      sqlite3_exec(db->handle, "ROLLBACK TRANSACTION", NULL, NULL, NULL);        \
-      return version;                                                            \
-    }                                                                            \
+#define TRY_STEP(_stmt, _expected, _message)                                                                      \
+  do                                                                                                              \
+  {                                                                                                               \
+    if(sqlite3_step(_stmt) != _expected)                                                                          \
+    {                                                                                                             \
+      fprintf(stderr, _message);                                                                                  \
+      fprintf(stderr, "[init]   %s\n", sqlite3_errmsg(db->handle));                                               \
+      FINALIZE;                                                                                                   \
+      sqlite3_exec(db->handle, "ROLLBACK TRANSACTION", NULL, NULL, NULL);                                         \
+      return version;                                                                                             \
+    }                                                                                                             \
   } while(0)
 
-#define TRY_PREPARE(_stmt, _query, _message)                                     \
-  do                                                                             \
-  {                                                                              \
-    if(sqlite3_prepare_v2(db->handle, _query, -1, &_stmt, NULL) != SQLITE_OK)    \
-    {                                                                            \
-      fprintf(stderr, _message);                                                 \
-      fprintf(stderr, "[init]   %s\n", sqlite3_errmsg(db->handle));              \
-      FINALIZE;                                                                  \
-      sqlite3_exec(db->handle, "ROLLBACK TRANSACTION", NULL, NULL, NULL);        \
-      return version;                                                            \
-    }                                                                            \
+#define TRY_PREPARE(_stmt, _query, _message)                                                                      \
+  do                                                                                                              \
+  {                                                                                                               \
+    if(sqlite3_prepare_v2(db->handle, _query, -1, &_stmt, NULL) != SQLITE_OK)                                     \
+    {                                                                                                             \
+      fprintf(stderr, _message);                                                                                  \
+      fprintf(stderr, "[init]   %s\n", sqlite3_errmsg(db->handle));                                               \
+      FINALIZE;                                                                                                   \
+      sqlite3_exec(db->handle, "ROLLBACK TRANSACTION", NULL, NULL, NULL);                                         \
+      return version;                                                                                             \
+    }                                                                                                             \
   } while(0)
 
 // redefine this where needed
@@ -489,7 +487,7 @@ static int _upgrade_library_schema_step(dt_database_t *db, int version)
   {
     sqlite3_exec(db->handle, "BEGIN TRANSACTION", NULL, NULL, NULL);
 
-    TRY_EXEC("ALTER TABLE main.presets RENAME TO tmp_presets",  "[init] can't rename table presets\n");
+    TRY_EXEC("ALTER TABLE main.presets RENAME TO tmp_presets", "[init] can't rename table presets\n");
 
     TRY_EXEC("CREATE TABLE main.presets (name VARCHAR, description VARCHAR, operation VARCHAR, op_params BLOB,"
              "enabled INTEGER, blendop_params BLOB, model VARCHAR, maker VARCHAR, lens VARCHAR,"
@@ -583,7 +581,8 @@ static int _upgrade_library_schema_step(dt_database_t *db, int version)
              "[init] can't add `history_end' column to database\n");
 
     TRY_EXEC("UPDATE main.images SET history_end = (SELECT IFNULL(MAX(num) + 1, 0) FROM main.history "
-             "WHERE imgid = id)", "[init] can't initialize `history_end' with last history entry\n");
+             "WHERE imgid = id)",
+             "[init] can't initialize `history_end' with last history entry\n");
 
     sqlite3_exec(db->handle, "COMMIT", NULL, NULL, NULL);
     new_version = 9;
@@ -594,7 +593,8 @@ static int _upgrade_library_schema_step(dt_database_t *db, int version)
     sqlite3_exec(db->handle, "BEGIN TRANSACTION", NULL, NULL, NULL);
 
     TRY_EXEC("UPDATE main.images SET history_end = (SELECT IFNULL(MAX(num) + 1, 0) FROM main.history "
-             "WHERE imgid = id)", "[init] can't set `history_end' to 0 where it was NULL\n");
+             "WHERE imgid = id)",
+             "[init] can't set `history_end' to 0 where it was NULL\n");
 
     sqlite3_exec(db->handle, "COMMIT", NULL, NULL, NULL);
     new_version = 10;
@@ -635,52 +635,52 @@ static int _upgrade_library_schema_step(dt_database_t *db, int version)
     // 11 -> 12 move presets, styles and tags over to the data database
     sqlite3_exec(db->handle, "BEGIN TRANSACTION", NULL, NULL, NULL);
 
-    ////////////// presets
+////////////// presets
 #undef FINALIZE
-#define FINALIZE                                                                   \
-    do                                                                             \
-    {                                                                              \
-      sqlite3_finalize(stmt);                                                      \
-      sqlite3_finalize(select_stmt);                                               \
-      sqlite3_finalize(count_clashes_stmt);                                        \
-      sqlite3_finalize(update_name_stmt);                                          \
-      sqlite3_finalize(insert_stmt);                                               \
-      sqlite3_finalize(delete_stmt);                                               \
-    } while(0)
+#define FINALIZE                                                                                                  \
+  do                                                                                                              \
+  {                                                                                                               \
+    sqlite3_finalize(stmt);                                                                                       \
+    sqlite3_finalize(select_stmt);                                                                                \
+    sqlite3_finalize(count_clashes_stmt);                                                                         \
+    sqlite3_finalize(update_name_stmt);                                                                           \
+    sqlite3_finalize(insert_stmt);                                                                                \
+    sqlite3_finalize(delete_stmt);                                                                                \
+  } while(0)
 
     stmt = NULL;
     sqlite3_stmt *insert_stmt = NULL, *delete_stmt = NULL, *select_stmt = NULL, *count_clashes_stmt = NULL,
-    *update_name_stmt = NULL;
+                 *update_name_stmt = NULL;
     // remove presets that are already in data.
     // we can't use a NATURAL JOIN here as that fails when columns have NULL values. :-(
     TRY_EXEC("DELETE FROM main.presets WHERE rowid IN (SELECT p1.rowid FROM main.presets p1 "
              "JOIN data.presets p2 ON "
-                 "p1.name IS p2.name AND "
-                 "p1.description IS p2.description AND "
-                 "p1.operation IS p2.operation AND "
-                 "p1.op_version IS p2.op_version AND "
-                 "p1.op_params IS p2.op_params AND "
-                 "p1.enabled IS p2.enabled AND "
-                 "p1.blendop_params IS p2.blendop_params AND "
-                 "p1.blendop_version IS p2.blendop_version AND "
-                 "p1.multi_priority IS p2.multi_priority AND "
-                 "p1.multi_name IS p2.multi_name AND "
-                 "p1.model IS p2.model AND "
-                 "p1.maker IS p2.maker AND "
-                 "p1.lens IS p2.lens AND "
-                 "p1.iso_min IS p2.iso_min AND "
-                 "p1.iso_max IS p2.iso_max AND "
-                 "p1.exposure_min IS p2.exposure_min AND "
-                 "p1.exposure_max IS p2.exposure_max AND "
-                 "p1.aperture_min IS p2.aperture_min AND "
-                 "p1.aperture_max IS p2.aperture_max AND "
-                 "p1.focal_length_min IS p2.focal_length_min AND "
-                 "p1.focal_length_max IS p2.focal_length_max AND "
-                 "p1.writeprotect IS p2.writeprotect AND "
-                 "p1.autoapply IS p2.autoapply AND "
-                 "p1.filter IS p2.filter AND "
-                 "p1.def IS p2.def AND "
-                 "p1.format IS p2.format "
+             "p1.name IS p2.name AND "
+             "p1.description IS p2.description AND "
+             "p1.operation IS p2.operation AND "
+             "p1.op_version IS p2.op_version AND "
+             "p1.op_params IS p2.op_params AND "
+             "p1.enabled IS p2.enabled AND "
+             "p1.blendop_params IS p2.blendop_params AND "
+             "p1.blendop_version IS p2.blendop_version AND "
+             "p1.multi_priority IS p2.multi_priority AND "
+             "p1.multi_name IS p2.multi_name AND "
+             "p1.model IS p2.model AND "
+             "p1.maker IS p2.maker AND "
+             "p1.lens IS p2.lens AND "
+             "p1.iso_min IS p2.iso_min AND "
+             "p1.iso_max IS p2.iso_max AND "
+             "p1.exposure_min IS p2.exposure_min AND "
+             "p1.exposure_max IS p2.exposure_max AND "
+             "p1.aperture_min IS p2.aperture_min AND "
+             "p1.aperture_max IS p2.aperture_max AND "
+             "p1.focal_length_min IS p2.focal_length_min AND "
+             "p1.focal_length_max IS p2.focal_length_max AND "
+             "p1.writeprotect IS p2.writeprotect AND "
+             "p1.autoapply IS p2.autoapply AND "
+             "p1.filter IS p2.filter AND "
+             "p1.def IS p2.def AND "
+             "p1.format IS p2.format "
              "WHERE p1.writeprotect = 0)",
              "[init] can't delete already migrated presets from database\n");
 
@@ -719,7 +719,8 @@ static int _upgrade_library_schema_step(dt_database_t *db, int version)
                              "FROM main.presets p1 WHERE p1.rowid = ?2",
                 "[init] can't prepare insertion statement\n");
 
-    TRY_PREPARE(delete_stmt, "DELETE FROM main.presets WHERE rowid = ?1", "[init] can't prepare deletion statement\n");
+    TRY_PREPARE(delete_stmt, "DELETE FROM main.presets WHERE rowid = ?1",
+                "[init] can't prepare deletion statement\n");
 
     // first rename presets with (name, operation, op_version) not being unique
     while(sqlite3_step(select_stmt) == SQLITE_ROW)
@@ -735,8 +736,7 @@ static int _upgrade_library_schema_step(dt_database_t *db, int version)
         sqlite3_clear_bindings(count_clashes_stmt);
         sqlite3_bind_int(count_clashes_stmt, 1, other_rowid);
         sqlite3_bind_int(count_clashes_stmt, 2, preset_version);
-      }
-      while(sqlite3_step(count_clashes_stmt) == SQLITE_ROW && sqlite3_column_int(count_clashes_stmt, 0) > 0);
+      } while(sqlite3_step(count_clashes_stmt) == SQLITE_ROW && sqlite3_column_int(count_clashes_stmt, 0) > 0);
 
       sqlite3_bind_int(update_name_stmt, 1, preset_version);
       sqlite3_bind_int(update_name_stmt, 2, own_rowid);
@@ -781,19 +781,19 @@ static int _upgrade_library_schema_step(dt_database_t *db, int version)
     FINALIZE;
 #undef FINALIZE
 
-    ////////////// styles
-#define FINALIZE                                                                   \
-    do                                                                             \
-    {                                                                              \
-      sqlite3_finalize(stmt);                                                      \
-      sqlite3_finalize(insert_stmt);                                               \
-      sqlite3_finalize(select_stmt);                                               \
-      sqlite3_finalize(delete_stmt);                                               \
-      sqlite3_finalize(update_name_stmt);                                          \
-      sqlite3_finalize(select_new_stmt);                                           \
-      sqlite3_finalize(copy_style_items_stmt);                                     \
-      sqlite3_finalize(delete_style_items_stmt);                                   \
-    } while(0)
+////////////// styles
+#define FINALIZE                                                                                                  \
+  do                                                                                                              \
+  {                                                                                                               \
+    sqlite3_finalize(stmt);                                                                                       \
+    sqlite3_finalize(insert_stmt);                                                                                \
+    sqlite3_finalize(select_stmt);                                                                                \
+    sqlite3_finalize(delete_stmt);                                                                                \
+    sqlite3_finalize(update_name_stmt);                                                                           \
+    sqlite3_finalize(select_new_stmt);                                                                            \
+    sqlite3_finalize(copy_style_items_stmt);                                                                      \
+    sqlite3_finalize(delete_style_items_stmt);                                                                    \
+  } while(0)
 
     stmt = NULL;
     select_stmt = NULL;
@@ -895,7 +895,7 @@ static int _upgrade_library_schema_step(dt_database_t *db, int version)
     FINALIZE;
 #undef FINALIZE
 
-    ////////////// tags
+////////////// tags
 #define FINALIZE
 
     // tags
@@ -910,7 +910,8 @@ static int _upgrade_library_schema_step(dt_database_t *db, int version)
 
     TRY_EXEC("INSERT INTO tagged_images_tmp (imgid, tagid) "
              "SELECT imgid, (SELECT t2.id FROM main.tags t1, data.tags t2 USING (name) WHERE t1.id = tagid) "
-             "FROM main.tagged_images", "[init] can't insert into `tagged_images_tmp'\n");
+             "FROM main.tagged_images",
+             "[init] can't insert into `tagged_images_tmp'\n");
 
     TRY_EXEC("DELETE FROM main.tagged_images", "[init] can't delete tagged images in database\n");
 
@@ -928,7 +929,8 @@ static int _upgrade_library_schema_step(dt_database_t *db, int version)
 
     sqlite3_exec(db->handle, "COMMIT", NULL, NULL, NULL);
     new_version = 13;
-  } else if(version == 13)
+  }
+  else if(version == 13)
   {
     // 12 -> 13 bring back the used tag names to library.db so people can use it independently of data.db
     sqlite3_exec(db->handle, "BEGIN TRANSACTION", NULL, NULL, NULL);
@@ -968,17 +970,17 @@ static int _upgrade_library_schema_step(dt_database_t *db, int version)
     sqlite3_exec(db->handle, "COMMIT", NULL, NULL, NULL);
     new_version = 15;
   } // maybe in the future, see commented out code elsewhere
-    //   else if(version == XXX)
-    //   {
-    //     sqlite3_exec(db->handle, "ALTER TABLE film_rolls ADD COLUMN external_drive VARCHAR(1024)", NULL,
-    //     NULL, NULL);
-    //   }
+  //   else if(version == XXX)
+  //   {
+  //     sqlite3_exec(db->handle, "ALTER TABLE film_rolls ADD COLUMN external_drive VARCHAR(1024)", NULL,
+  //     NULL, NULL);
+  //   }
   else
     new_version = version; // should be the fallback so that calling code sees that we are in an infinite loop
 
   // write the new version to db
-  sqlite3_prepare_v2(db->handle, "INSERT OR REPLACE INTO main.db_info (key, value) VALUES ('version', ?1)", -1, &stmt,
-                     NULL);
+  sqlite3_prepare_v2(db->handle, "INSERT OR REPLACE INTO main.db_info (key, value) VALUES ('version', ?1)", -1,
+                     &stmt, NULL);
   sqlite3_bind_int(stmt, 1, new_version);
   sqlite3_step(stmt);
   sqlite3_finalize(stmt);
@@ -1010,8 +1012,8 @@ static int _upgrade_data_schema_step(dt_database_t *db, int version)
     new_version = version; // should be the fallback so that calling code sees that we are in an infinite loop
 
   // write the new version to db
-  sqlite3_prepare_v2(db->handle, "INSERT OR REPLACE INTO data.db_info (key, value) VALUES ('version', ?1)", -1, &stmt,
-                     NULL);
+  sqlite3_prepare_v2(db->handle, "INSERT OR REPLACE INTO data.db_info (key, value) VALUES ('version', ?1)", -1,
+                     &stmt, NULL);
   sqlite3_bind_int(stmt, 1, new_version);
   sqlite3_step(stmt);
   sqlite3_finalize(stmt);
@@ -1054,10 +1056,9 @@ static void _create_library_schema(dt_database_t *db)
 {
   sqlite3_stmt *stmt;
   ////////////////////////////// db_info
-  sqlite3_exec(db->handle, "CREATE TABLE main.db_info (key VARCHAR PRIMARY KEY, value VARCHAR)", NULL,
-               NULL, NULL);
-  sqlite3_prepare_v2(
-      db->handle, "INSERT OR REPLACE INTO main.db_info (key, value) VALUES ('version', ?1)", -1, &stmt, NULL);
+  sqlite3_exec(db->handle, "CREATE TABLE main.db_info (key VARCHAR PRIMARY KEY, value VARCHAR)", NULL, NULL, NULL);
+  sqlite3_prepare_v2(db->handle, "INSERT OR REPLACE INTO main.db_info (key, value) VALUES ('version', ?1)", -1,
+                     &stmt, NULL);
   sqlite3_bind_int(stmt, 1, CURRENT_DATABASE_VERSION_LIBRARY);
   sqlite3_step(stmt);
   sqlite3_finalize(stmt);
@@ -1092,12 +1093,11 @@ static void _create_library_schema(dt_database_t *db)
   ////////////////////////////// selected_images
   sqlite3_exec(db->handle, "CREATE TABLE main.selected_images (imgid INTEGER PRIMARY KEY)", NULL, NULL, NULL);
   ////////////////////////////// history
-  sqlite3_exec(
-      db->handle,
-      "CREATE TABLE main.history (imgid INTEGER, num INTEGER, module INTEGER, "
-      "operation VARCHAR(256), op_params BLOB, enabled INTEGER, "
-      "blendop_params BLOB, blendop_version INTEGER, multi_priority INTEGER, multi_name VARCHAR(256))",
-      NULL, NULL, NULL);
+  sqlite3_exec(db->handle,
+               "CREATE TABLE main.history (imgid INTEGER, num INTEGER, module INTEGER, "
+               "operation VARCHAR(256), op_params BLOB, enabled INTEGER, "
+               "blendop_params BLOB, blendop_version INTEGER, multi_priority INTEGER, multi_name VARCHAR(256))",
+               NULL, NULL, NULL);
   sqlite3_exec(db->handle, "CREATE INDEX main.history_imgid_index ON history (imgid)", NULL, NULL, NULL);
   ////////////////////////////// mask
   sqlite3_exec(db->handle,
@@ -1106,8 +1106,10 @@ static void _create_library_schema(dt_database_t *db)
                NULL, NULL, NULL);
   ////////////////////////////// tagged_images
   sqlite3_exec(db->handle, "CREATE TABLE main.tagged_images (imgid INTEGER, tagid INTEGER, "
-                           "PRIMARY KEY (imgid, tagid))", NULL, NULL, NULL);
-  sqlite3_exec(db->handle, "CREATE INDEX main.tagged_images_tagid_index ON tagged_images (tagid)", NULL, NULL, NULL);
+                           "PRIMARY KEY (imgid, tagid))",
+               NULL, NULL, NULL);
+  sqlite3_exec(db->handle, "CREATE INDEX main.tagged_images_tagid_index ON tagged_images (tagid)", NULL, NULL,
+               NULL);
   ////////////////////////////// used_tags
   sqlite3_exec(db->handle, "CREATE TABLE main.used_tags (id INTEGER, name VARCHAR NOT NULL)", NULL, NULL, NULL);
   sqlite3_exec(db->handle, "CREATE UNIQUE INDEX main.used_tags_idx ON used_tags (id, name)", NULL, NULL, NULL);
@@ -1116,7 +1118,8 @@ static void _create_library_schema(dt_database_t *db)
   sqlite3_exec(db->handle, "CREATE UNIQUE INDEX main.color_labels_idx ON color_labels (imgid, color)", NULL, NULL,
                NULL);
   ////////////////////////////// meta_data
-  sqlite3_exec(db->handle, "CREATE TABLE main.meta_data (id INTEGER, key INTEGER, value VARCHAR)", NULL, NULL, NULL);
+  sqlite3_exec(db->handle, "CREATE TABLE main.meta_data (id INTEGER, key INTEGER, value VARCHAR)", NULL, NULL,
+               NULL);
   sqlite3_exec(db->handle, "CREATE INDEX main.metadata_index ON meta_data (id, key)", NULL, NULL, NULL);
 }
 
@@ -1125,27 +1128,26 @@ static void _create_data_schema(dt_database_t *db)
 {
   sqlite3_stmt *stmt;
   ////////////////////////////// db_info
-  sqlite3_exec(db->handle, "CREATE TABLE data.db_info (key VARCHAR PRIMARY KEY, value VARCHAR)", NULL,
-               NULL, NULL);
-  sqlite3_prepare_v2(
-        db->handle, "INSERT OR REPLACE INTO data.db_info (key, value) VALUES ('version', ?1)", -1, &stmt, NULL);
+  sqlite3_exec(db->handle, "CREATE TABLE data.db_info (key VARCHAR PRIMARY KEY, value VARCHAR)", NULL, NULL, NULL);
+  sqlite3_prepare_v2(db->handle, "INSERT OR REPLACE INTO data.db_info (key, value) VALUES ('version', ?1)", -1,
+                     &stmt, NULL);
   sqlite3_bind_int(stmt, 1, CURRENT_DATABASE_VERSION_DATA);
   sqlite3_step(stmt);
   sqlite3_finalize(stmt);
   ////////////////////////////// tags
   sqlite3_exec(db->handle, "CREATE TABLE data.tags (id INTEGER PRIMARY KEY, name VARCHAR, icon BLOB, "
-                           "description VARCHAR, flags INTEGER)", NULL, NULL, NULL);
+                           "description VARCHAR, flags INTEGER)",
+               NULL, NULL, NULL);
   sqlite3_exec(db->handle, "CREATE UNIQUE INDEX data.tags_name_idx ON tags (name)", NULL, NULL, NULL);
   ////////////////////////////// styles
-  sqlite3_exec(db->handle, "CREATE TABLE data.styles (id INTEGER, name VARCHAR, description VARCHAR)",
-                        NULL, NULL, NULL);
+  sqlite3_exec(db->handle, "CREATE TABLE data.styles (id INTEGER, name VARCHAR, description VARCHAR)", NULL, NULL,
+               NULL);
   ////////////////////////////// style_items
-  sqlite3_exec(
-      db->handle,
-      "CREATE TABLE data.style_items (styleid INTEGER, num INTEGER, module INTEGER, "
-      "operation VARCHAR(256), op_params BLOB, enabled INTEGER, "
-      "blendop_params BLOB, blendop_version INTEGER, multi_priority INTEGER, multi_name VARCHAR(256))",
-      NULL, NULL, NULL);
+  sqlite3_exec(db->handle,
+               "CREATE TABLE data.style_items (styleid INTEGER, num INTEGER, module INTEGER, "
+               "operation VARCHAR(256), op_params BLOB, enabled INTEGER, "
+               "blendop_params BLOB, blendop_version INTEGER, multi_priority INTEGER, multi_name VARCHAR(256))",
+               NULL, NULL, NULL);
   ////////////////////////////// presets
   sqlite3_exec(db->handle, "CREATE TABLE data.presets (name VARCHAR, description VARCHAR, operation "
                            "VARCHAR, op_version INTEGER, op_params BLOB, "
@@ -1157,8 +1159,8 @@ static void _create_data_schema(dt_database_t *db)
                            "focal_length_max REAL, writeprotect INTEGER, "
                            "autoapply INTEGER, filter INTEGER, def INTEGER, format INTEGER)",
                NULL, NULL, NULL);
-  sqlite3_exec(db->handle, "CREATE UNIQUE INDEX data.presets_idx ON presets (name, operation, op_version)",
-               NULL, NULL, NULL);
+  sqlite3_exec(db->handle, "CREATE UNIQUE INDEX data.presets_idx ON presets (name, operation, op_version)", NULL,
+               NULL, NULL);
 }
 
 // create the in-memory tables
@@ -1166,28 +1168,25 @@ static void _create_data_schema(dt_database_t *db)
 static void _create_memory_schema(dt_database_t *db)
 {
   sqlite3_exec(db->handle, "CREATE TABLE memory.color_labels_temp (imgid INTEGER PRIMARY KEY)", NULL, NULL, NULL);
-  sqlite3_exec(
-      db->handle,
-      "CREATE TABLE memory.collected_images (rowid INTEGER PRIMARY KEY AUTOINCREMENT, imgid INTEGER)", NULL,
-      NULL, NULL);
+  sqlite3_exec(db->handle,
+               "CREATE TABLE memory.collected_images (rowid INTEGER PRIMARY KEY AUTOINCREMENT, imgid INTEGER)",
+               NULL, NULL, NULL);
   sqlite3_exec(db->handle, "CREATE TABLE memory.tmp_selection (imgid INTEGER)", NULL, NULL, NULL);
   sqlite3_exec(db->handle, "CREATE TABLE memory.tagq (tmpid INTEGER PRIMARY KEY, id INTEGER)", NULL, NULL, NULL);
   sqlite3_exec(db->handle, "CREATE TABLE memory.taglist "
                            "(tmpid INTEGER PRIMARY KEY, id INTEGER UNIQUE ON CONFLICT IGNORE, count INTEGER)",
                NULL, NULL, NULL);
   sqlite3_exec(db->handle, "CREATE TABLE memory.similar_tags (tagid INTEGER)", NULL, NULL, NULL);
-  sqlite3_exec(
-      db->handle,
-      "CREATE TABLE memory.history (imgid INTEGER, num INTEGER, module INTEGER, "
-      "operation VARCHAR(256) UNIQUE ON CONFLICT REPLACE, op_params BLOB, enabled INTEGER, "
-      "blendop_params BLOB, blendop_version INTEGER, multi_priority INTEGER, multi_name VARCHAR(256))",
-      NULL, NULL, NULL);
-  sqlite3_exec(
-      db->handle,
-      "CREATE TABLE memory.style_items (styleid INTEGER, num INTEGER, module INTEGER, "
-      "operation VARCHAR(256), op_params BLOB, enabled INTEGER, "
-      "blendop_params BLOB, blendop_version INTEGER, multi_priority INTEGER, multi_name VARCHAR(256))",
-      NULL, NULL, NULL);
+  sqlite3_exec(db->handle,
+               "CREATE TABLE memory.history (imgid INTEGER, num INTEGER, module INTEGER, "
+               "operation VARCHAR(256) UNIQUE ON CONFLICT REPLACE, op_params BLOB, enabled INTEGER, "
+               "blendop_params BLOB, blendop_version INTEGER, multi_priority INTEGER, multi_name VARCHAR(256))",
+               NULL, NULL, NULL);
+  sqlite3_exec(db->handle,
+               "CREATE TABLE memory.style_items (styleid INTEGER, num INTEGER, module INTEGER, "
+               "operation VARCHAR(256), op_params BLOB, enabled INTEGER, "
+               "blendop_params BLOB, blendop_version INTEGER, multi_priority INTEGER, multi_name VARCHAR(256))",
+               NULL, NULL, NULL);
 }
 
 static void _sanitize_db(dt_database_t *db)
@@ -1223,49 +1222,50 @@ static void _sanitize_db(dt_database_t *db)
 
 // in library we keep the names of the tags used in tagged_images. however, using that table at runtime results
 // in some overhead not necessary so instead we just use the used_tags table to update tagged_images on startup
-#define TRY_EXEC(_query, _message)                                                 \
-  do                                                                               \
-  {                                                                                \
-    if(sqlite3_exec(db->handle, _query, NULL, NULL, NULL) != SQLITE_OK)            \
-    {                                                                              \
-      fprintf(stderr, _message);                                                   \
-      fprintf(stderr, "[init]   %s\n", sqlite3_errmsg(db->handle));                \
-      FINALIZE;                                                                    \
-      sqlite3_exec(db->handle, "ROLLBACK TRANSACTION", NULL, NULL, NULL);          \
-      return FALSE;                                                                \
-    }                                                                              \
+#define TRY_EXEC(_query, _message)                                                                                \
+  do                                                                                                              \
+  {                                                                                                               \
+    if(sqlite3_exec(db->handle, _query, NULL, NULL, NULL) != SQLITE_OK)                                           \
+    {                                                                                                             \
+      fprintf(stderr, _message);                                                                                  \
+      fprintf(stderr, "[init]   %s\n", sqlite3_errmsg(db->handle));                                               \
+      FINALIZE;                                                                                                   \
+      sqlite3_exec(db->handle, "ROLLBACK TRANSACTION", NULL, NULL, NULL);                                         \
+      return FALSE;                                                                                               \
+    }                                                                                                             \
   } while(0)
 
-#define TRY_STEP(_stmt, _expected, _message)                                       \
-  do                                                                               \
-  {                                                                                \
-    if(sqlite3_step(_stmt) != _expected)                                           \
-    {                                                                              \
-      fprintf(stderr, _message);                                                   \
-      fprintf(stderr, "[init]   %s\n", sqlite3_errmsg(db->handle));                \
-      FINALIZE;                                                                    \
-      sqlite3_exec(db->handle, "ROLLBACK TRANSACTION", NULL, NULL, NULL);          \
-      return FALSE;                                                                \
-    }                                                                              \
+#define TRY_STEP(_stmt, _expected, _message)                                                                      \
+  do                                                                                                              \
+  {                                                                                                               \
+    if(sqlite3_step(_stmt) != _expected)                                                                          \
+    {                                                                                                             \
+      fprintf(stderr, _message);                                                                                  \
+      fprintf(stderr, "[init]   %s\n", sqlite3_errmsg(db->handle));                                               \
+      FINALIZE;                                                                                                   \
+      sqlite3_exec(db->handle, "ROLLBACK TRANSACTION", NULL, NULL, NULL);                                         \
+      return FALSE;                                                                                               \
+    }                                                                                                             \
   } while(0)
 
-#define TRY_PREPARE(_stmt, _query, _message)                                       \
-  do                                                                               \
-  {                                                                                \
-    if(sqlite3_prepare_v2(db->handle, _query, -1, &_stmt, NULL) != SQLITE_OK)      \
-    {                                                                              \
-      fprintf(stderr, _message);                                                   \
-      fprintf(stderr, "[init]   %s\n", sqlite3_errmsg(db->handle));                \
-      FINALIZE;                                                                    \
-      sqlite3_exec(db->handle, "ROLLBACK TRANSACTION", NULL, NULL, NULL);          \
-      return FALSE;                                                                \
-    }                                                                              \
+#define TRY_PREPARE(_stmt, _query, _message)                                                                      \
+  do                                                                                                              \
+  {                                                                                                               \
+    if(sqlite3_prepare_v2(db->handle, _query, -1, &_stmt, NULL) != SQLITE_OK)                                     \
+    {                                                                                                             \
+      fprintf(stderr, _message);                                                                                  \
+      fprintf(stderr, "[init]   %s\n", sqlite3_errmsg(db->handle));                                               \
+      FINALIZE;                                                                                                   \
+      sqlite3_exec(db->handle, "ROLLBACK TRANSACTION", NULL, NULL, NULL);                                         \
+      return FALSE;                                                                                               \
+    }                                                                                                             \
   } while(0)
 
-#define FINALIZE                                                                   \
-  do                                                                               \
-  {                                                                                \
-    sqlite3_finalize(stmt); stmt = NULL; /* NULL so that finalize becomes a NOP */ \
+#define FINALIZE                                                                                                  \
+  do                                                                                                              \
+  {                                                                                                               \
+    sqlite3_finalize(stmt);                                                                                       \
+    stmt = NULL; /* NULL so that finalize becomes a NOP */                                                        \
   } while(0)
 
 static gboolean _synchronize_tags(dt_database_t *db)
@@ -1294,7 +1294,8 @@ static gboolean _synchronize_tags(dt_database_t *db)
 
     // insert id, name for the tags in main.used_tags according to data.tags
     TRY_EXEC("INSERT INTO temp_used_tags (id, name) SELECT t.id, t.name FROM main.used_tags, data.tags "
-             "AS t USING (name)", "[synchronize tags] can't collect used tags into temporary table\n");
+             "AS t USING (name)",
+             "[synchronize tags] can't collect used tags into temporary table\n");
 
     // insert updated valued into temp_tagged_images
     // FIXME: slowish!
@@ -1338,14 +1339,14 @@ void dt_database_show_error(const dt_database_t *db)
   if(!db->lock_acquired)
   {
     char *label_text = g_markup_printf_escaped(_("an error has occured while trying to open the database from\n"
-                                                  "\n"
-                                                  "<span style=\"italic\">%s</span>\n"
-                                                  "\n"
-                                                  "%s\n"),
-                                                db->error_dbfilename, db->error_message ? db->error_message : "");
+                                                 "\n"
+                                                 "<span style=\"italic\">%s</span>\n"
+                                                 "\n"
+                                                 "%s\n"),
+                                               db->error_dbfilename, db->error_message ? db->error_message : "");
 
     dt_gui_show_standalone_yes_no_dialog(_("darktable - error locking database"), label_text, _("close darktable"),
-                                         /*_("try again")*/NULL);
+                                         /*_("try again")*/ NULL);
 
     g_free(label_text);
   }
@@ -1369,8 +1370,7 @@ static gboolean pid_is_alive(int pid)
     long unsigned int n_filename = sizeof(wfilename);
     int ret = QueryFullProcessImageNameW(h, 0, wfilename, &n_filename);
     char *filename = g_utf16_to_utf8(wfilename, -1, NULL, NULL, NULL);
-    if(ret && n_filename > 0 && filename && g_str_has_suffix(filename, "darktable.exe"))
-      pid_is_alive = TRUE;
+    if(ret && n_filename > 0 && filename && g_str_has_suffix(filename, "darktable.exe")) pid_is_alive = TRUE;
     g_free(filename);
     CloseHandle(h);
   }
@@ -1417,7 +1417,7 @@ static gboolean _lock_single_database(dt_database_t *db, const char *dbfilename,
   else
   {
     *lockfile = g_strconcat(dbfilename, ".lock", NULL);
-lock_again:
+  lock_again:
     lock_tries++;
     old_mode = umask(0);
     fd = g_open(*lockfile, O_RDWR | O_CREAT | O_EXCL, 0666);
@@ -1451,11 +1451,11 @@ lock_again:
           }
           else
           {
-            fprintf(
-              stderr,
-              "[init] the database lock file contains a pid that seems to be alive in your system: %d\n",
-              other_pid);
-            db->error_message = g_strdup_printf(_("the database lock file contains a pid that seems to be alive in your system: %d"), other_pid);
+            fprintf(stderr,
+                    "[init] the database lock file contains a pid that seems to be alive in your system: %d\n",
+                    other_pid);
+            db->error_message = g_strdup_printf(
+                _("the database lock file contains a pid that seems to be alive in your system: %d"), other_pid);
           }
         }
         else
@@ -1469,23 +1469,22 @@ lock_again:
       {
         int err = errno;
         fprintf(stderr, "[init] error opening the database lock file for reading: %s\n", strerror(err));
-        db->error_message = g_strdup_printf(_("error opening the database lock file for reading: %s"), strerror(err));
+        db->error_message
+            = g_strdup_printf(_("error opening the database lock file for reading: %s"), strerror(err));
       }
     }
   }
 
   g_free(pid);
 
-  if(db->error_message)
-    db->error_dbfilename = g_strdup(dbfilename);
+  if(db->error_message) db->error_dbfilename = g_strdup(dbfilename);
 
   return lock_acquired;
 }
 
 static gboolean _lock_databases(dt_database_t *db)
 {
-  if(!_lock_single_database(db, db->dbfilename_data, &db->lockfile_data))
-    return FALSE;
+  if(!_lock_single_database(db, db->dbfilename_data, &db->lockfile_data)) return FALSE;
   if(!_lock_single_database(db, db->dbfilename_library, &db->lockfile_library))
   {
     // unlock data.db to not leave a stale lock file around
@@ -1655,9 +1654,8 @@ start:
                                                    "the database from a backup or start with a new one?"),
                                                  dbfilename_data);
 
-      gboolean shall_we_delete_the_db =
-          dt_gui_show_standalone_yes_no_dialog(_("darktable - error opening database"), label_text,
-                                               _("close darktable"), _("delete database"));
+      gboolean shall_we_delete_the_db = dt_gui_show_standalone_yes_no_dialog(
+          _("darktable - error opening database"), label_text, _("close darktable"), _("delete database"));
 
       g_free(label_text);
 
@@ -1678,7 +1676,8 @@ start:
       else
       {
         fprintf(stderr, "[init] database `%s' is corrupt and can't be opened! either replace it from a backup or "
-        "delete the file so that darktable can create a new one the next time. aborting\n", dbfilename_data);
+                        "delete the file so that darktable can create a new one the next time. aborting\n",
+                dbfilename_data);
         goto error;
       }
     }
@@ -1709,8 +1708,7 @@ start:
     else if(db_version > CURRENT_DATABASE_VERSION_LIBRARY)
     {
       // newer: bail out. it's better than what we did before: delete everything
-      fprintf(stderr, "[init] database version of `%s' is too new for this build of darktable. aborting\n",
-              dbname);
+      fprintf(stderr, "[init] database version of `%s' is too new for this build of darktable. aborting\n", dbname);
       dt_database_destroy(db);
       db = NULL;
       goto error;
@@ -1723,17 +1721,16 @@ start:
     // we inform the user here and let him decide what to do: exit or delete and try again.
 
     char *label_text = g_markup_printf_escaped(_("an error has occured while trying to open the database from\n"
-                                                  "\n"
-                                                  "<span style=\"italic\">%s</span>\n"
-                                                  "\n"
-                                                  "it seems that the database is corrupt.\n"
-                                                  "do you want to close darktable now to manually restore\n"
-                                                  "the database from a backup or start with a new one?"),
+                                                 "\n"
+                                                 "<span style=\"italic\">%s</span>\n"
+                                                 "\n"
+                                                 "it seems that the database is corrupt.\n"
+                                                 "do you want to close darktable now to manually restore\n"
+                                                 "the database from a backup or start with a new one?"),
                                                dbfilename_library);
 
-    gboolean shall_we_delete_the_db =
-        dt_gui_show_standalone_yes_no_dialog(_("darktable - error opening database"), label_text,
-                                              _("close darktable"), _("delete database"));
+    gboolean shall_we_delete_the_db = dt_gui_show_standalone_yes_no_dialog(
+        _("darktable - error opening database"), label_text, _("close darktable"), _("delete database"));
 
     g_free(label_text);
 
@@ -1754,7 +1751,8 @@ start:
     else
     {
       fprintf(stderr, "[init] database `%s' is corrupt and can't be opened! either replace it from a backup or "
-                      "delete the file so that darktable can create a new one the next time. aborting\n", dbname);
+                      "delete the file so that darktable can create a new one the next time. aborting\n",
+              dbname);
       goto error;
     }
   }
@@ -1773,8 +1771,8 @@ start:
                                            // path ...
       {
         // we couldn't migrate the db for some reason. bail out.
-        fprintf(stderr, "[init] database `%s' couldn't be migrated from the legacy version %d. aborting\n",
-                dbname, db_version);
+        fprintf(stderr, "[init] database `%s' couldn't be migrated from the legacy version %d. aborting\n", dbname,
+                db_version);
         dt_database_destroy(db);
         db = NULL;
         goto error;
@@ -1826,12 +1824,12 @@ error:
 void dt_database_destroy(const dt_database_t *db)
 {
   sqlite3_close(db->handle);
-  if (db->lockfile_data)
+  if(db->lockfile_data)
   {
     g_unlink(db->lockfile_data);
     g_free(db->lockfile_data);
   }
-  if (db->lockfile_library)
+  if(db->lockfile_library)
   {
     g_unlink(db->lockfile_library);
     g_free(db->lockfile_library);

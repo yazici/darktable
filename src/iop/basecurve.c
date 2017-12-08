@@ -60,9 +60,9 @@ typedef struct dt_iop_basecurve_params_t
   dt_iop_basecurve_node_t basecurve[3][MAXNODES];
   int basecurve_nodes[3];
   int basecurve_type[3];
-  int exposure_fusion;    // number of exposure fusion steps
-  float exposure_stops;   // number of stops between fusion images
-  float exposure_bias;    // whether to do exposure-fusion with over or under-exposure
+  int exposure_fusion;  // number of exposure fusion steps
+  float exposure_stops; // number of stops between fusion images
+  float exposure_bias;  // whether to do exposure-fusion with over or under-exposure
 } dt_iop_basecurve_params_t;
 
 typedef struct dt_iop_basecurve_params3_t
@@ -94,8 +94,8 @@ typedef struct dt_iop_basecurve_params1_t
   int tonecurve_preset;
 } dt_iop_basecurve_params1_t;
 
-int legacy_params(dt_iop_module_t *self, const void *const old_params, const int old_version,
-                  void *new_params, const int new_version)
+int legacy_params(dt_iop_module_t *self, const void *const old_params, const int old_version, void *new_params,
+                  const int new_version)
 {
   if(old_version == 1 && new_version == 5)
   {
@@ -105,10 +105,12 @@ int legacy_params(dt_iop_module_t *self, const void *const old_params, const int
     // start with a fresh copy of default parameters
     // unfortunately default_params aren't inited at this stage.
     *n = (dt_iop_basecurve_params_t){ {
-                                        { { 0.0, 0.0 }, { 1.0, 1.0 } },
+                                       { { 0.0, 0.0 }, { 1.0, 1.0 } },
                                       },
                                       { 2, 3, 3 },
-                                      { MONOTONE_HERMITE, MONOTONE_HERMITE, MONOTONE_HERMITE } , 0, 1};
+                                      { MONOTONE_HERMITE, MONOTONE_HERMITE, MONOTONE_HERMITE },
+                                      0,
+                                      1 };
     for(int k = 0; k < 6; k++) n->basecurve[0][k].x = o->tonecurve_x[k];
     for(int k = 0; k < 6; k++) n->basecurve[0][k].y = o->tonecurve_y[k];
     n->basecurve_nodes[0] = 6;
@@ -303,7 +305,8 @@ int flags()
   return IOP_FLAGS_SUPPORTS_BLENDING | IOP_FLAGS_ALLOW_TILING;
 }
 
-static void set_presets(dt_iop_module_so_t *self, const basecurve_preset_t *presets, int count, int *force_autoapply)
+static void set_presets(dt_iop_module_so_t *self, const basecurve_preset_t *presets, int count,
+                        int *force_autoapply)
 {
   // transform presets above to db entries.
   for(int k = 0; k < count; k++)
@@ -317,13 +320,13 @@ static void set_presets(dt_iop_module_so_t *self, const basecurve_preset_t *pres
       tmp.exposure_bias = 1.0f;
     }
     // add the preset.
-    dt_gui_presets_add_generic(_(presets[k].name), self->op, self->version(),
-                               &tmp, sizeof(dt_iop_basecurve_params_t), 1);
+    dt_gui_presets_add_generic(_(presets[k].name), self->op, self->version(), &tmp,
+                               sizeof(dt_iop_basecurve_params_t), 1);
     // and restrict it to model, maker, iso, and raw images
-    dt_gui_presets_update_mml(_(presets[k].name), self->op, self->version(),
-                              presets[k].maker, presets[k].model, "");
-    dt_gui_presets_update_iso(_(presets[k].name), self->op, self->version(),
-                              presets[k].iso_min, presets[k].iso_max);
+    dt_gui_presets_update_mml(_(presets[k].name), self->op, self->version(), presets[k].maker, presets[k].model,
+                              "");
+    dt_gui_presets_update_iso(_(presets[k].name), self->op, self->version(), presets[k].iso_min,
+                              presets[k].iso_max);
     dt_gui_presets_update_ldr(_(presets[k].name), self->op, self->version(), FOR_RAW);
     // make it auto-apply for matching images:
     dt_gui_presets_update_autoapply(_(presets[k].name), self->op, self->version(),
@@ -355,10 +358,8 @@ static float exposure_increment(float stops, int e, float fusion, float bias)
 }
 
 #ifdef HAVE_OPENCL
-static
-int gauss_blur_cl(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece,
-                  cl_mem dev_in, cl_mem dev_out, cl_mem dev_tmp,
-                  const int width, const int height)
+static int gauss_blur_cl(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, cl_mem dev_in,
+                         cl_mem dev_out, cl_mem dev_tmp, const int width, const int height)
 {
   dt_iop_basecurve_global_data_t *gd = (dt_iop_basecurve_global_data_t *)self->data;
 
@@ -385,10 +386,8 @@ int gauss_blur_cl(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece,
   return TRUE;
 }
 
-static
-int gauss_expand_cl(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece,
-                    cl_mem dev_in, cl_mem dev_out, cl_mem dev_tmp,
-                    const int width, const int height)
+static int gauss_expand_cl(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, cl_mem dev_in,
+                           cl_mem dev_out, cl_mem dev_tmp, const int width, const int height)
 {
   dt_iop_basecurve_global_data_t *gd = (dt_iop_basecurve_global_data_t *)self->data;
 
@@ -407,11 +406,9 @@ int gauss_expand_cl(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece,
 }
 
 
-static
-int gauss_reduce_cl(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece,
-                    cl_mem dev_in, cl_mem dev_coarse, cl_mem dev_detail,
-                    cl_mem dev_tmp1, cl_mem dev_tmp2,
-                    const int width, const int height)
+static int gauss_reduce_cl(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, cl_mem dev_in,
+                           cl_mem dev_coarse, cl_mem dev_detail, cl_mem dev_tmp1, cl_mem dev_tmp2, const int width,
+                           const int height)
 {
   dt_iop_basecurve_global_data_t *gd = (dt_iop_basecurve_global_data_t *)self->data;
 
@@ -420,8 +417,7 @@ int gauss_reduce_cl(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece,
 
   do
   {
-    if(!gauss_blur_cl(self, piece, dev_in, dev_tmp1, dev_tmp2, width, height))
-      return FALSE;
+    if(!gauss_blur_cl(self, piece, dev_in, dev_tmp1, dev_tmp2, width, height)) return FALSE;
 
     const int cw = (width - 1) / 2 + 1;
     const int ch = (height - 1) / 2 + 1;
@@ -438,8 +434,7 @@ int gauss_reduce_cl(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece,
 
   if(dev_detail != NULL)
   {
-    if(!gauss_expand_cl(self, piece, dev_coarse, dev_tmp1, dev_tmp2, width, height))
-      return FALSE;
+    if(!gauss_expand_cl(self, piece, dev_coarse, dev_tmp1, dev_tmp2, width, height)) return FALSE;
 
     size_t sizes[] = { ROUNDUPWD(width), ROUNDUPHT(height), 1 };
     dt_opencl_set_kernel_arg(devid, gd->kernel_basecurve_detail, 0, sizeof(cl_mem), (void *)&dev_in);
@@ -454,9 +449,8 @@ int gauss_reduce_cl(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece,
   return TRUE;
 }
 
-static
-int process_cl_fusion(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, cl_mem dev_in, cl_mem dev_out,
-                      const dt_iop_roi_t *const roi_in, const dt_iop_roi_t *const roi_out)
+static int process_cl_fusion(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, cl_mem dev_in,
+                             cl_mem dev_out, const dt_iop_roi_t *const roi_in, const dt_iop_roi_t *const roi_out)
 {
   dt_iop_basecurve_data_t *d = (dt_iop_basecurve_data_t *)piece->data;
   dt_iop_basecurve_global_data_t *gd = (dt_iop_basecurve_global_data_t *)self->data;
@@ -489,7 +483,7 @@ int process_cl_fusion(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piec
   for(int k = 0, step = 1, w = width, h = height; k < num_levels; k++)
   {
     // coarsest step is some % of image width.
-    dev_col[k]  = dt_opencl_alloc_device(devid, w, h, 4 * sizeof(float));
+    dev_col[k] = dt_opencl_alloc_device(devid, w, h, 4 * sizeof(float));
     if(dev_col[k] == NULL) goto error;
 
     dev_comb[k] = dt_opencl_alloc_device(devid, w, h, 4 * sizeof(float));
@@ -539,7 +533,8 @@ int process_cl_fusion(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piec
       if(err != CL_SUCCESS) goto error;
 
       dt_opencl_set_kernel_arg(devid, gd->kernel_basecurve_compute_features, 0, sizeof(cl_mem), (void *)&dev_tmp1);
-      dt_opencl_set_kernel_arg(devid, gd->kernel_basecurve_compute_features, 1, sizeof(cl_mem), (void *)&dev_col[0]);
+      dt_opencl_set_kernel_arg(devid, gd->kernel_basecurve_compute_features, 1, sizeof(cl_mem),
+                               (void *)&dev_col[0]);
       dt_opencl_set_kernel_arg(devid, gd->kernel_basecurve_compute_features, 2, sizeof(int), (void *)&width);
       dt_opencl_set_kernel_arg(devid, gd->kernel_basecurve_compute_features, 3, sizeof(int), (void *)&height);
       err = dt_opencl_enqueue_kernel_2d(devid, gd->kernel_basecurve_compute_features, sizes);
@@ -571,8 +566,7 @@ int process_cl_fusion(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piec
 
     for(int k = 1, w = width, h = height; k < num_levels; k++)
     {
-      if(!gauss_reduce_cl(self, piece, dev_col[k-1], dev_col[k], NULL, dev_tmp1, dev_tmp2, w, h))
-        goto error;
+      if(!gauss_reduce_cl(self, piece, dev_col[k - 1], dev_col[k], NULL, dev_tmp1, dev_tmp2, w, h)) goto error;
 
       w = (w - 1) / 2 + 1;
       h = (h - 1) / 2 + 1;
@@ -592,16 +586,17 @@ int process_cl_fusion(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piec
 
       // dev_col[k+1] -> dev_tmp2[k]
       if(k != num_levels - 1)
-        if(!gauss_expand_cl(self, piece, dev_col[k+1], dev_tmp2, dev_tmp1, w, h))
-          goto error;
+        if(!gauss_expand_cl(self, piece, dev_col[k + 1], dev_tmp2, dev_tmp1, w, h)) goto error;
 
       // blend images into output pyramid
       if(k == num_levels - 1)
       {
         // blend gaussian base
         size_t sizes[] = { ROUNDUPWD(w), ROUNDUPHT(h), 1 };
-        dt_opencl_set_kernel_arg(devid, gd->kernel_basecurve_blend_gaussian, 0, sizeof(cl_mem), (void *)&dev_comb[k]);
-        dt_opencl_set_kernel_arg(devid, gd->kernel_basecurve_blend_gaussian, 1, sizeof(cl_mem), (void *)&dev_col[k]);
+        dt_opencl_set_kernel_arg(devid, gd->kernel_basecurve_blend_gaussian, 0, sizeof(cl_mem),
+                                 (void *)&dev_comb[k]);
+        dt_opencl_set_kernel_arg(devid, gd->kernel_basecurve_blend_gaussian, 1, sizeof(cl_mem),
+                                 (void *)&dev_col[k]);
         dt_opencl_set_kernel_arg(devid, gd->kernel_basecurve_blend_gaussian, 2, sizeof(cl_mem), (void *)&dev_tmp1);
         dt_opencl_set_kernel_arg(devid, gd->kernel_basecurve_blend_gaussian, 3, sizeof(int), (void *)&w);
         dt_opencl_set_kernel_arg(devid, gd->kernel_basecurve_blend_gaussian, 4, sizeof(int), (void *)&h);
@@ -617,8 +612,10 @@ int process_cl_fusion(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piec
       {
         // blend laplacian
         size_t sizes[] = { ROUNDUPWD(w), ROUNDUPHT(h), 1 };
-        dt_opencl_set_kernel_arg(devid, gd->kernel_basecurve_blend_laplacian, 0, sizeof(cl_mem), (void *)&dev_comb[k]);
-        dt_opencl_set_kernel_arg(devid, gd->kernel_basecurve_blend_laplacian, 1, sizeof(cl_mem), (void *)&dev_col[k]);
+        dt_opencl_set_kernel_arg(devid, gd->kernel_basecurve_blend_laplacian, 0, sizeof(cl_mem),
+                                 (void *)&dev_comb[k]);
+        dt_opencl_set_kernel_arg(devid, gd->kernel_basecurve_blend_laplacian, 1, sizeof(cl_mem),
+                                 (void *)&dev_col[k]);
         dt_opencl_set_kernel_arg(devid, gd->kernel_basecurve_blend_laplacian, 2, sizeof(cl_mem), (void *)&dev_tmp2);
         dt_opencl_set_kernel_arg(devid, gd->kernel_basecurve_blend_laplacian, 3, sizeof(cl_mem), (void *)&dev_tmp1);
         dt_opencl_set_kernel_arg(devid, gd->kernel_basecurve_blend_laplacian, 4, sizeof(int), (void *)&w);
@@ -670,8 +667,7 @@ int process_cl_fusion(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piec
       // reconstruct output image
 
       // dev_comb[k+1] -> dev_tmp1
-      if(!gauss_expand_cl(self, piece, dev_comb[k+1], dev_tmp1, dev_tmp2, w, h))
-        goto error;
+      if(!gauss_expand_cl(self, piece, dev_comb[k + 1], dev_tmp1, dev_tmp2, w, h)) goto error;
 
       // dev_comb[k] + dev_tmp1 -> dev_tmp2
       size_t sizes[] = { ROUNDUPWD(w), ROUNDUPHT(h), 1 };
@@ -734,9 +730,8 @@ error:
   return FALSE;
 }
 
-static
-int process_cl_lut(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, cl_mem dev_in, cl_mem dev_out,
-                   const dt_iop_roi_t *const roi_in, const dt_iop_roi_t *const roi_out)
+static int process_cl_lut(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, cl_mem dev_in,
+                          cl_mem dev_out, const dt_iop_roi_t *const roi_in, const dt_iop_roi_t *const roi_out)
 {
   dt_iop_basecurve_data_t *d = (dt_iop_basecurve_data_t *)piece->data;
   dt_iop_basecurve_global_data_t *gd = (dt_iop_basecurve_global_data_t *)self->data;
@@ -787,8 +782,7 @@ int process_cl(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, cl_m
 #endif
 
 void tiling_callback(struct dt_iop_module_t *self, struct dt_dev_pixelpipe_iop_t *piece,
-                     const dt_iop_roi_t *roi_in, const dt_iop_roi_t *roi_out,
-                     struct dt_develop_tiling_t *tiling)
+                     const dt_iop_roi_t *roi_in, const dt_iop_roi_t *roi_out, struct dt_develop_tiling_t *tiling)
 {
   dt_iop_basecurve_data_t *d = (dt_iop_basecurve_data_t *)piece->data;
 
@@ -796,7 +790,7 @@ void tiling_callback(struct dt_iop_module_t *self, struct dt_dev_pixelpipe_iop_t
   {
     const int rad = MIN(roi_in->width, ceilf(256 * roi_in->scale / piece->iscale));
 
-    tiling->factor = 6.666f;                 // in + out + col[] + comb[] + 2*tmp
+    tiling->factor = 6.666f; // in + out + col[] + comb[] + 2*tmp
     tiling->maxbuf = 1.0f;
     tiling->overhead = 0;
     tiling->xalign = 1;
@@ -805,7 +799,7 @@ void tiling_callback(struct dt_iop_module_t *self, struct dt_dev_pixelpipe_iop_t
   }
   else
   {
-    tiling->factor = 2.0f;                   // in + out
+    tiling->factor = 2.0f; // in + out
     tiling->maxbuf = 1.0f;
     tiling->overhead = 0;
     tiling->xalign = 1;
@@ -816,14 +810,9 @@ void tiling_callback(struct dt_iop_module_t *self, struct dt_dev_pixelpipe_iop_t
 }
 
 
-static inline void apply_ev_and_curve(
-    const float *const in,
-    float *const out,
-    const int width,
-    const int height,
-    const float mul,
-    const float *const table,
-    const float *const unbounded_coeffs)
+static inline void apply_ev_and_curve(const float *const in, float *const out, const int width, const int height,
+                                      const float mul, const float *const table,
+                                      const float *const unbounded_coeffs)
 {
 #ifdef _OPENMP
 #pragma omp parallel for default(none) schedule(static)
@@ -840,103 +829,101 @@ static inline void apply_ev_and_curve(
         outp[i] = table[CLAMP((int)(f * 0x10000ul), 0, 0xffff)];
       else if(unbounded_coeffs)
         outp[i] = dt_iop_eval_exp(unbounded_coeffs, f);
-      else outp[i] = 1.0f;
+      else
+        outp[i] = 1.0f;
     }
   }
 }
 
-static inline void compute_features(
-    float *const col,
-    const int wd,
-    const int ht)
+static inline void compute_features(float *const col, const int wd, const int ht)
 {
-  // features are product of
-  // 1) well exposedness
-  // 2) saturation
-  // 3) local contrast (handled in laplacian form later)
+// features are product of
+// 1) well exposedness
+// 2) saturation
+// 3) local contrast (handled in laplacian form later)
 #ifdef _OPENMP
 #pragma omp parallel for default(none) schedule(static) collapse(2)
 #endif
-  for(int j=0;j<ht;j++) for(int i=0;i<wd;i++)
-  {
-    const size_t x = 4ul*(wd*j+i);
-    const float max = MAX(col[x], MAX(col[x+1], col[x+2]));
-    const float min = MIN(col[x], MIN(col[x+1], col[x+2]));
-    const float sat = .1f + .1f*(max-min)/MAX(1e-4, max);
-    col[x+3] = sat;
+  for(int j = 0; j < ht; j++)
+    for(int i = 0; i < wd; i++)
+    {
+      const size_t x = 4ul * (wd * j + i);
+      const float max = MAX(col[x], MAX(col[x + 1], col[x + 2]));
+      const float min = MIN(col[x], MIN(col[x + 1], col[x + 2]));
+      const float sat = .1f + .1f * (max - min) / MAX(1e-4, max);
+      col[x + 3] = sat;
 
-    const float c = 0.54f;
-    float v = fabsf(col[x]-c);
-    v = MAX(fabsf(col[x+1]-c), v);
-    v = MAX(fabsf(col[x+2]-c), v);
-    const float var = 0.5;
-    const float exp = .2f + dt_fast_expf(-v*v/(var*var));
-    col[x+3] *= exp;
-  }
+      const float c = 0.54f;
+      float v = fabsf(col[x] - c);
+      v = MAX(fabsf(col[x + 1] - c), v);
+      v = MAX(fabsf(col[x + 2] - c), v);
+      const float var = 0.5;
+      const float exp = .2f + dt_fast_expf(-v * v / (var * var));
+      col[x + 3] *= exp;
+    }
 }
 
-static inline void gauss_blur(
-    const float *const input,
-    float *const output,
-    const size_t wd,
-    const size_t ht)
+static inline void gauss_blur(const float *const input, float *const output, const size_t wd, const size_t ht)
 {
-  const float w[5] = {1./16., 4./16., 6./16., 4./16., 1./16.};
-  float *tmp = dt_alloc_align(64, (size_t)wd*ht*4*sizeof(float));
-  memset(tmp, 0, 4*wd*ht*sizeof(float));
+  const float w[5] = { 1. / 16., 4. / 16., 6. / 16., 4. / 16., 1. / 16. };
+  float *tmp = dt_alloc_align(64, (size_t)wd * ht * 4 * sizeof(float));
+  memset(tmp, 0, 4 * wd * ht * sizeof(float));
 #ifdef _OPENMP
 #pragma omp parallel for default(none) schedule(static) shared(tmp)
 #endif
-  for(int j=0;j<ht;j++)
+  for(int j = 0; j < ht; j++)
   { // horizontal pass
     // left borders
-    for(int i=0;i<2;i++) for(int c=0;c<4;c++)
-      for(int ii=-2;ii<=2;ii++)
-        tmp[4*(j*wd+i)+c] += input[4*(j*wd+MAX(-i-ii,i+ii))+c] * w[ii+2];
+    for(int i = 0; i < 2; i++)
+      for(int c = 0; c < 4; c++)
+        for(int ii = -2; ii <= 2; ii++)
+          tmp[4 * (j * wd + i) + c] += input[4 * (j * wd + MAX(-i - ii, i + ii)) + c] * w[ii + 2];
     // most pixels
-    for(int i=2;i<wd-2;i++) for(int c=0;c<4;c++)
-      for(int ii=-2;ii<=2;ii++)
-        tmp[4*(j*wd+i)+c] += input[4*(j*wd+i+ii)+c] * w[ii+2];
+    for(int i = 2; i < wd - 2; i++)
+      for(int c = 0; c < 4; c++)
+        for(int ii = -2; ii <= 2; ii++) tmp[4 * (j * wd + i) + c] += input[4 * (j * wd + i + ii) + c] * w[ii + 2];
     // right borders
-    for(int i=wd-2;i<wd;i++) for(int c=0;c<4;c++)
-      for(int ii=-2;ii<=2;ii++)
-        tmp[4*(j*wd+i)+c] += input[4*(j*wd+MIN(i+ii, wd-(i+ii-wd+1) ))+c] * w[ii+2];
+    for(int i = wd - 2; i < wd; i++)
+      for(int c = 0; c < 4; c++)
+        for(int ii = -2; ii <= 2; ii++)
+          tmp[4 * (j * wd + i) + c] += input[4 * (j * wd + MIN(i + ii, wd - (i + ii - wd + 1))) + c] * w[ii + 2];
   }
-  memset(output, 0, 4*wd*ht*sizeof(float));
+  memset(output, 0, 4 * wd * ht * sizeof(float));
 #ifdef _OPENMP
 #pragma omp parallel for default(none) schedule(static) shared(tmp)
 #endif
-  for(int i=0;i<wd;i++)
+  for(int i = 0; i < wd; i++)
   { // vertical pass
-    for(int j=0;j<2;j++) for(int c=0;c<4;c++)
-      for(int jj=-2;jj<=2;jj++)
-        output[4*(j*wd+i)+c] += tmp[4*(MAX(-j-jj,j+jj)*wd+i)+c] * w[jj+2];
-    for(int j=2;j<ht-2;j++) for(int c=0;c<4;c++)
-      for(int jj=-2;jj<=2;jj++)
-        output[4*(j*wd+i)+c] += tmp[4*((j+jj)*wd+i)+c] * w[jj+2];
-    for(int j=ht-2;j<ht;j++) for(int c=0;c<4;c++)
-      for(int jj=-2;jj<=2;jj++)
-        output[4*(j*wd+i)+c] += tmp[4*(MIN(j+jj, ht-(j+jj-ht+1))*wd+i)+c] * w[jj+2];
+    for(int j = 0; j < 2; j++)
+      for(int c = 0; c < 4; c++)
+        for(int jj = -2; jj <= 2; jj++)
+          output[4 * (j * wd + i) + c] += tmp[4 * (MAX(-j - jj, j + jj) * wd + i) + c] * w[jj + 2];
+    for(int j = 2; j < ht - 2; j++)
+      for(int c = 0; c < 4; c++)
+        for(int jj = -2; jj <= 2; jj++)
+          output[4 * (j * wd + i) + c] += tmp[4 * ((j + jj) * wd + i) + c] * w[jj + 2];
+    for(int j = ht - 2; j < ht; j++)
+      for(int c = 0; c < 4; c++)
+        for(int jj = -2; jj <= 2; jj++)
+          output[4 * (j * wd + i) + c] += tmp[4 * (MIN(j + jj, ht - (j + jj - ht + 1)) * wd + i) + c] * w[jj + 2];
   }
   dt_free_align(tmp);
 }
 
-static inline void gauss_expand(
-    const float *const input, // coarse input
-    float *const fine,        // upsampled, blurry output
-    const size_t wd,          // fine res
-    const size_t ht)
+static inline void gauss_expand(const float *const input, // coarse input
+                                float *const fine,        // upsampled, blurry output
+                                const size_t wd,          // fine res
+                                const size_t ht)
 {
-  const size_t cw = (wd-1)/2+1;
+  const size_t cw = (wd - 1) / 2 + 1;
   // fill numbers in even pixels, zero odd ones
-  memset(fine, 0, 4*wd*ht*sizeof(float));
+  memset(fine, 0, 4 * wd * ht * sizeof(float));
 #ifdef _OPENMP
 #pragma omp parallel for default(none) schedule(static) collapse(2)
 #endif
-  for(int j=0;j<ht;j+=2)
-    for(int i=0;i<wd;i+=2)
-      for(int c=0;c<4;c++)
-        fine[4*(j*wd+i)+c] = 4.0f * input[4*(j/2*cw + i/2)+c];
+  for(int j = 0; j < ht; j += 2)
+    for(int i = 0; i < wd; i += 2)
+      for(int c = 0; c < 4; c++) fine[4 * (j * wd + i) + c] = 4.0f * input[4 * (j / 2 * cw + i / 2) + c];
 
   // convolve with same kernel weights mul by 4:
   gauss_blur(fine, fine, wd, ht);
@@ -946,20 +933,19 @@ static inline void gauss_expand(
 // XXX FIXME: downsampling will not result in an energy conserving pattern (every 4 pixels one sample)
 // XXX FIXME: neither will a mirror boundary condition (mirrors in subsampled values at random density)
 // TODO: copy laplacian code from local laplacian filters, it's faster.
-static inline void gauss_reduce(
-    const float *const input, // fine input buffer
-    float *const coarse,      // coarse scale, blurred input buf
-    float *const detail,      // detail/laplacian, fine scale, or 0
-    const size_t wd,
-    const size_t ht)
+static inline void gauss_reduce(const float *const input, // fine input buffer
+                                float *const coarse,      // coarse scale, blurred input buf
+                                float *const detail,      // detail/laplacian, fine scale, or 0
+                                const size_t wd, const size_t ht)
 {
   // blur, store only coarse res
-  const size_t cw = (wd-1)/2+1, ch = (ht-1)/2+1;
+  const size_t cw = (wd - 1) / 2 + 1, ch = (ht - 1) / 2 + 1;
 
-  float *blurred = dt_alloc_align(64, (size_t)wd*ht*4*sizeof(float));
+  float *blurred = dt_alloc_align(64, (size_t)wd * ht * 4 * sizeof(float));
   gauss_blur(input, blurred, wd, ht);
-  for(size_t j=0;j<ch;j++) for(size_t i=0;i<cw;i++)
-    for(int c=0;c<4;c++) coarse[4*(j*cw+i)+c] = blurred[4*(2*j*wd+2*i)+c];
+  for(size_t j = 0; j < ch; j++)
+    for(size_t i = 0; i < cw; i++)
+      for(int c = 0; c < 4; c++) coarse[4 * (j * cw + i) + c] = blurred[4 * (2 * j * wd + 2 * i) + c];
   dt_free_align(blurred);
 
   if(detail)
@@ -967,15 +953,14 @@ static inline void gauss_reduce(
     // compute laplacian/details: expand coarse buffer into detail
     // buffer subtract expanded buffer from input in place
     gauss_expand(coarse, detail, wd, ht);
-    for(size_t k=0;k<wd*ht*4;k++)
-      detail[k] = input[k] - detail[k];
+    for(size_t k = 0; k < wd * ht * 4; k++) detail[k] = input[k] - detail[k];
   }
 }
 
 void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const void *const ivoid,
-    void *const ovoid, const dt_iop_roi_t *const roi_in, const dt_iop_roi_t *const roi_out)
+             void *const ovoid, const dt_iop_roi_t *const roi_in, const dt_iop_roi_t *const roi_out)
 {
-  const float *const in  = (float *)ivoid;
+  const float *const in = (float *)ivoid;
   float *const out = (float *)ovoid;
   const int ch = piece->colors;
   dt_iop_basecurve_data_t *const d = (dt_iop_basecurve_data_t *)(piece->data);
@@ -986,27 +971,28 @@ void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const 
     // allocate temporary buffer for wavelet transform + blending
     const int wd = roi_in->width, ht = roi_in->height;
     int num_levels = 8;
-    float **col  = malloc(num_levels * sizeof(float*));
-    float **comb = malloc(num_levels * sizeof(float*));
+    float **col = malloc(num_levels * sizeof(float *));
+    float **comb = malloc(num_levels * sizeof(float *));
     int w = wd, h = ht;
     const int rad = MIN(wd, ceilf(256 * roi_in->scale / piece->iscale));
     int step = 1;
-    for(int k=0;k<num_levels;k++)
+    for(int k = 0; k < num_levels; k++)
     {
       // coarsest step is some % of image width.
-      col[k]  = dt_alloc_align(64, sizeof(float)*4ul*w*h);
-      comb[k] = dt_alloc_align(64, sizeof(float)*4ul*w*h);
-      memset(comb[k], 0, sizeof(float)*4*w*h);
-      w = (w-1)/2+1; h = (h-1)/2+1;
+      col[k] = dt_alloc_align(64, sizeof(float) * 4ul * w * h);
+      comb[k] = dt_alloc_align(64, sizeof(float) * 4ul * w * h);
+      memset(comb[k], 0, sizeof(float) * 4 * w * h);
+      w = (w - 1) / 2 + 1;
+      h = (h - 1) / 2 + 1;
       step *= 2;
       if(step > rad || w < 4 || h < 4)
       {
-        num_levels = k+1;
+        num_levels = k + 1;
         break;
       }
     }
 
-    for(int e=0;e<d->exposure_fusion+1;e++)
+    for(int e = 0; e < d->exposure_fusion + 1; e++)
     { // for every exposure fusion image:
       // push by some ev, apply base curve:
       apply_ev_and_curve(in, col[0], wd, ht,
@@ -1017,107 +1003,116 @@ void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const 
       compute_features(col[0], wd, ht);
 
       // create gaussian pyramid of colour buffer
-      w = wd; h = ht;
+      w = wd;
+      h = ht;
       gauss_reduce(col[0], col[1], out, w, h);
 #ifdef _OPENMP
 #pragma omp parallel for default(none) shared(col) schedule(static)
 #endif
-      for(size_t k=0;k<4ul*wd*ht;k+=4)
-        col[0][k+3] *= .1f + sqrtf(out[k]*out[k] + out[k+1]*out[k+1] + out[k+2]*out[k+2]);
+      for(size_t k = 0; k < 4ul * wd * ht; k += 4)
+        col[0][k + 3] *= .1f + sqrtf(out[k] * out[k] + out[k + 1] * out[k + 1] + out[k + 2] * out[k + 2]);
 
 // #define DEBUG_VIS2
 #ifdef DEBUG_VIS2 // transform weights in channels
-      for(size_t k=0;k<4ul*w*h;k+=4)
-        col[0][k+e] = col[0][k+3];
+      for(size_t k = 0; k < 4ul * w * h; k += 4) col[0][k + e] = col[0][k + 3];
 #endif
 
 // #define DEBUG_VIS
 #ifdef DEBUG_VIS // DEBUG visualise weight buffer
-      for(size_t k=0;k<4ul*w*h;k+=4)
-        comb[0][k+e] = col[0][k+3];
+      for(size_t k = 0; k < 4ul * w * h; k += 4) comb[0][k + e] = col[0][k + 3];
       continue;
 #endif
 
-      for(int k=1;k<num_levels;k++)
+      for(int k = 1; k < num_levels; k++)
       {
-        gauss_reduce(col[k-1], col[k], 0, w, h);
-        w = (w-1)/2+1; h = (h-1)/2+1;
+        gauss_reduce(col[k - 1], col[k], 0, w, h);
+        w = (w - 1) / 2 + 1;
+        h = (h - 1) / 2 + 1;
       }
 
       // update pyramid coarse to fine
-      for(int k=num_levels-1;k>=0;k--)
+      for(int k = num_levels - 1; k >= 0; k--)
       {
-        w = wd; h = ht;
-        for(int i=0;i<k;i++) { w = (w-1)/2+1; h = (h-1)/2+1; }
-        // abuse output buffer as temporary memory:
-        if(k!=num_levels-1)
-          gauss_expand(col[k+1], out, w, h);
-#ifdef _OPENMP
-#pragma omp parallel for default(none) shared(col,comb,w,h,num_levels,k) schedule(static)
-#endif
-        for(int j=0;j<h;j++) for(int i=0;i<w;i++)
+        w = wd;
+        h = ht;
+        for(int i = 0; i < k; i++)
         {
-          const size_t x = 4ul*(w*j+i);
-          // blend images into output pyramid
-          if(k == num_levels-1) // blend gaussian base
-#ifdef DEBUG_VIS2
-            ;
-#else
-            for(int c=0;c<3;c++)
-              comb[k][x+c] += col[k][x+3] * col[k][x+c];
-#endif
-          else // laplacian
-            for(int c=0;c<3;c++) comb[k][x+c] +=
-              col[k][x+3] * (col[k][x+c] - out[x+c]);
-          comb[k][x+3] += col[k][x+3];
+          w = (w - 1) / 2 + 1;
+          h = (h - 1) / 2 + 1;
         }
+        // abuse output buffer as temporary memory:
+        if(k != num_levels - 1) gauss_expand(col[k + 1], out, w, h);
+#ifdef _OPENMP
+#pragma omp parallel for default(none) shared(col, comb, w, h, num_levels, k) schedule(static)
+#endif
+        for(int j = 0; j < h; j++)
+          for(int i = 0; i < w; i++)
+          {
+            const size_t x = 4ul * (w * j + i);
+            // blend images into output pyramid
+            if(k == num_levels - 1) // blend gaussian base
+#ifdef DEBUG_VIS2
+              ;
+#else
+              for(int c = 0; c < 3; c++) comb[k][x + c] += col[k][x + 3] * col[k][x + c];
+#endif
+            else // laplacian
+              for(int c = 0; c < 3; c++) comb[k][x + c] += col[k][x + 3] * (col[k][x + c] - out[x + c]);
+            comb[k][x + 3] += col[k][x + 3];
+          }
       }
     }
 
 #ifndef DEBUG_VIS // DEBUG: switch off when visualising weight buf
     // normalise and reconstruct output pyramid buffer coarse to fine
-    for(int k=num_levels-1;k>=0;k--)
+    for(int k = num_levels - 1; k >= 0; k--)
     {
-      w = wd; h = ht;
-      for(int i=0;i<k;i++) { w = (w-1)/2+1; h = (h-1)/2+1;}
+      w = wd;
+      h = ht;
+      for(int i = 0; i < k; i++)
+      {
+        w = (w - 1) / 2 + 1;
+        h = (h - 1) / 2 + 1;
+      }
 
-      // normalise both gaussian base and laplacians:
+// normalise both gaussian base and laplacians:
 #ifdef _OPENMP
-#pragma omp parallel for default(none) shared(comb,w,h,k) schedule(static)
+#pragma omp parallel for default(none) shared(comb, w, h, k) schedule(static)
 #endif
-      for(size_t i=0;i<(size_t)4*w*h;i+=4)
-        if(comb[k][i+3] > 1e-8f)
-          for(int c=0;c<3;c++) comb[k][i+c] /= comb[k][i+3];
+      for(size_t i = 0; i < (size_t)4 * w * h; i += 4)
+        if(comb[k][i + 3] > 1e-8f)
+          for(int c = 0; c < 3; c++) comb[k][i + c] /= comb[k][i + 3];
 
-      if(k < num_levels-1)
+      if(k < num_levels - 1)
       { // reconstruct output image
-        gauss_expand(comb[k+1], out, w, h);
+        gauss_expand(comb[k + 1], out, w, h);
 #ifdef _OPENMP
-#pragma omp parallel for default(none) shared(comb,w,h,k) schedule(static)
+#pragma omp parallel for default(none) shared(comb, w, h, k) schedule(static)
 #endif
-        for(int j=0;j<h;j++) for(int i=0;i<w;i++)
-        {
-          const size_t x = 4ul*(w*j+i);
-          for(int c=0;c<3;c++) comb[k][x+c] += out[x+c];
-        }
+        for(int j = 0; j < h; j++)
+          for(int i = 0; i < w; i++)
+          {
+            const size_t x = 4ul * (w * j + i);
+            for(int c = 0; c < 3; c++) comb[k][x + c] += out[x + c];
+          }
       }
     }
 #endif
 
-    // copy output buffer
+// copy output buffer
 #ifdef _OPENMP
 #pragma omp parallel for default(none) shared(comb) schedule(static)
 #endif
-    for(size_t k=0;k<4ul*wd*ht;k+=4)
+    for(size_t k = 0; k < 4ul * wd * ht; k += 4)
     {
-      out[k+0] = comb[0][k+0];
-      out[k+1] = comb[0][k+1];
-      out[k+2] = comb[0][k+2];
-      out[k+3] = in[k+3]; // pass on 4th channel
+      out[k + 0] = comb[0][k + 0];
+      out[k + 1] = comb[0][k + 1];
+      out[k + 2] = comb[0][k + 2];
+      out[k + 3] = in[k + 3]; // pass on 4th channel
     }
 
     // free temp buffers
-    for(int k=0;k<num_levels;k++)
+    for(int k = 0; k < num_levels; k++)
     {
       dt_free_align(col[k]);
       dt_free_align(comb[k]);
@@ -1127,7 +1122,7 @@ void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const 
     return;
   }
 
-  // fast path for non-fusion
+// fast path for non-fusion
 #ifdef _OPENMP
 #pragma omp parallel for default(none) schedule(static)
 #endif
@@ -1184,10 +1179,10 @@ void commit_params(struct dt_iop_module_t *self, dt_iop_params_t *p1, dt_dev_pix
   // now the extrapolation stuff:
   const float xm = p->basecurve[0][p->basecurve_nodes[0] - 1].x;
   const float x[4] = { 0.7f * xm, 0.8f * xm, 0.9f * xm, 1.0f * xm };
-  const float y[4] = { d->table[CLAMP((int)(x[0] * 0x10000ul), 0, 0xffff)],
-                       d->table[CLAMP((int)(x[1] * 0x10000ul), 0, 0xffff)],
-                       d->table[CLAMP((int)(x[2] * 0x10000ul), 0, 0xffff)],
-                       d->table[CLAMP((int)(x[3] * 0x10000ul), 0, 0xffff)] };
+  const float y[4]
+      = { d->table[CLAMP((int)(x[0] * 0x10000ul), 0, 0xffff)], d->table[CLAMP((int)(x[1] * 0x10000ul), 0, 0xffff)],
+          d->table[CLAMP((int)(x[2] * 0x10000ul), 0, 0xffff)],
+          d->table[CLAMP((int)(x[3] * 0x10000ul), 0, 0xffff)] };
   dt_iop_estimate_exp(x, y, 4, d->unbounded_coeffs);
 }
 
@@ -1233,19 +1228,20 @@ void init(dt_iop_module_t *module)
   module->params = calloc(1, sizeof(dt_iop_basecurve_params_t));
   module->default_params = calloc(1, sizeof(dt_iop_basecurve_params_t));
   module->default_enabled = 0;
-    module->priority = 304; // module order created by iop_dependencies.py, do not edit!
+  module->priority = 304; // module order created by iop_dependencies.py, do not edit!
   module->params_size = sizeof(dt_iop_basecurve_params_t);
   module->gui_data = NULL;
   dt_iop_basecurve_params_t tmp = (dt_iop_basecurve_params_t){
     {
-      { // three curves (L, a, b) with a number of nodes
-        { 0.0, 0.0 },
-        { 1.0, 1.0 }
-      },
+     { // three curves (L, a, b) with a number of nodes
+       { 0.0, 0.0 },
+       { 1.0, 1.0 } },
     },
     { 2, 0, 0 }, // number of nodes per curve
     { MONOTONE_HERMITE, MONOTONE_HERMITE, MONOTONE_HERMITE },
-    0, 1.0f, 1.0f // no exposure fusion, but if we would, add one stop
+    0,
+    1.0f,
+    1.0f // no exposure fusion, but if we would, add one stop
   };
   memcpy(module->params, &tmp, sizeof(dt_iop_basecurve_params_t));
   memcpy(module->default_params, &tmp, sizeof(dt_iop_basecurve_params_t));
@@ -1420,7 +1416,7 @@ static gboolean dt_iop_basecurve_draw(GtkWidget *widget, cairo_t *crf, gpointer 
     snprintf(text, sizeof(text), "100.00 / 100.00 ( +100.00)");
     pango_layout_set_text(layout, text, -1);
     pango_layout_get_pixel_extents(layout, &ink, NULL);
-    pango_font_description_set_absolute_size(desc, width*1.0/ink.width * PANGO_SCALE);
+    pango_font_description_set_absolute_size(desc, width * 1.0 / ink.width * PANGO_SCALE);
     pango_layout_set_font_description(layout, desc);
 
     snprintf(text, sizeof(text), "%.2f / %.2f ( %+.2f)", x_node_value, y_node_value, d_node_value);
@@ -1609,9 +1605,8 @@ static gboolean dt_iop_basecurve_motion_notify(GtkWidget *widget, GdkEventMotion
     int nearest = -1;
     for(int k = 0; k < nodes; k++)
     {
-      float dist
-          = (my - to_log(basecurve[k].y, c->loglogscale)) * (my - to_log(basecurve[k].y, c->loglogscale))
-            + (mx - to_log(basecurve[k].x, c->loglogscale)) * (mx - to_log(basecurve[k].x, c->loglogscale));
+      float dist = (my - to_log(basecurve[k].y, c->loglogscale)) * (my - to_log(basecurve[k].y, c->loglogscale))
+                   + (mx - to_log(basecurve[k].x, c->loglogscale)) * (mx - to_log(basecurve[k].x, c->loglogscale));
       if(dist < min)
       {
         min = dist;
@@ -1638,8 +1633,8 @@ static gboolean dt_iop_basecurve_button_press(GtkWidget *widget, GdkEventButton 
 
   if(event->button == 1)
   {
-    if(event->type == GDK_BUTTON_PRESS && (event->state & GDK_CONTROL_MASK) == GDK_CONTROL_MASK
-      && nodes < MAXNODES && c->selected == -1)
+    if(event->type == GDK_BUTTON_PRESS && (event->state & GDK_CONTROL_MASK) == GDK_CONTROL_MASK && nodes < MAXNODES
+       && c->selected == -1)
     {
       // if we are not on a node -> add a new node at the current x of the pointer and y of the curve at that x
       const int inset = DT_GUI_CURVE_EDITOR_INSET;
@@ -1670,8 +1665,8 @@ static gboolean dt_iop_basecurve_button_press(GtkWidget *widget, GdkEventButton 
       if(selected == -1) selected = nodes;
       // > 0 -> check distance to left neighbour
       // < nodes -> check distance to right neighbour
-      if(!((selected > 0 && linx - basecurve[selected - 1].x <= 0.025) ||
-           (selected < nodes && basecurve[selected].x - linx <= 0.025)))
+      if(!((selected > 0 && linx - basecurve[selected - 1].x <= 0.025)
+           || (selected < nodes && basecurve[selected].x - linx <= 0.025)))
       {
         // evaluate the curve at the current x position
         const float y = dt_draw_curve_calc_value(c->minmax_curve, linx);
@@ -1949,8 +1944,8 @@ void gui_init(struct dt_iop_module_t *self)
 
   gtk_widget_add_events(GTK_WIDGET(c->area), GDK_POINTER_MOTION_MASK | GDK_POINTER_MOTION_HINT_MASK
                                                  | GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK
-                                                 | GDK_LEAVE_NOTIFY_MASK | GDK_SCROLL_MASK
-                                                 | GDK_SMOOTH_SCROLL_MASK | GDK_KEY_PRESS_MASK);
+                                                 | GDK_LEAVE_NOTIFY_MASK | GDK_SCROLL_MASK | GDK_SMOOTH_SCROLL_MASK
+                                                 | GDK_KEY_PRESS_MASK);
   gtk_widget_set_can_focus(GTK_WIDGET(c->area), TRUE);
   g_signal_connect(G_OBJECT(c->area), "draw", G_CALLBACK(dt_iop_basecurve_draw), self);
   g_signal_connect(G_OBJECT(c->area), "button-press-event", G_CALLBACK(dt_iop_basecurve_button_press), self);

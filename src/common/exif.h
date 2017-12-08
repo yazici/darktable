@@ -65,7 +65,8 @@ char *dt_exif_xmp_encode(const unsigned char *input, const int len, int *output_
 char *dt_exif_xmp_encode_internal(const unsigned char *input, const int len, int *output_len, gboolean do_compress);
 unsigned char *dt_exif_xmp_decode(const char *input, const int len, int *output_len);
 
-/** look for color space hints in data and tell the caller if it's sRGB, AdobeRGB or something else. used for mipmaps */
+/** look for color space hints in data and tell the caller if it's sRGB, AdobeRGB or something else. used for
+ * mipmaps */
 dt_colorspaces_color_profile_type_t dt_exif_get_color_space(const uint8_t *data, size_t size);
 
 /** look for datetime_taken in data. used for gphoto downloads */

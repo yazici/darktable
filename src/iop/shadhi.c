@@ -53,8 +53,8 @@
 #define UNBOUND_HIGHLIGHTS_B (UNBOUND_B << 3) /* 32 */
 #define UNBOUND_GAUSSIAN 64
 #define UNBOUND_BILATERAL 128 /* not implemented yet */
-#define UNBOUND_DEFAULT                                                                                      \
-  (UNBOUND_SHADOWS_L | UNBOUND_SHADOWS_A | UNBOUND_SHADOWS_B | UNBOUND_HIGHLIGHTS_L | UNBOUND_HIGHLIGHTS_A   \
+#define UNBOUND_DEFAULT                                                                                           \
+  (UNBOUND_SHADOWS_L | UNBOUND_SHADOWS_A | UNBOUND_SHADOWS_B | UNBOUND_HIGHLIGHTS_L | UNBOUND_HIGHLIGHTS_A        \
    | UNBOUND_HIGHLIGHTS_B | UNBOUND_GAUSSIAN)
 
 #define CLAMPF(a, mn, mx) ((a) < (mn) ? (mn) : ((a) > (mx) ? (mx) : (a)))
@@ -187,8 +187,8 @@ int groups()
   return IOP_GROUP_BASIC;
 }
 
-int legacy_params(dt_iop_module_t *self, const void *const old_params, const int old_version,
-                  void *new_params, const int new_version)
+int legacy_params(dt_iop_module_t *self, const void *const old_params, const int old_version, void *new_params,
+                  const int new_version)
 {
   if(old_version == 1 && new_version == 5)
   {
@@ -331,10 +331,10 @@ void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const 
   const float whitepoint = fmax(1.0f - data->whitepoint / 100.0f, 0.01f);
   const float compress
       = fmin(fmax(0, (data->compress / 100.0f)), 0.99f); // upper limit 0.99f to avoid division by zero later
-  const float shadows_ccorrect = (fmin(fmax(0.0f, (data->shadows_ccorrect / 100.0f)), 1.0f) - 0.5f)
-                                 * sign(shadows) + 0.5f;
-  const float highlights_ccorrect = (fmin(fmax(0.0f, (data->highlights_ccorrect / 100.0f)), 1.0f) - 0.5f)
-                                    * sign(-highlights) + 0.5f;
+  const float shadows_ccorrect = (fmin(fmax(0.0f, (data->shadows_ccorrect / 100.0f)), 1.0f) - 0.5f) * sign(shadows)
+                                 + 0.5f;
+  const float highlights_ccorrect
+      = (fmin(fmax(0.0f, (data->highlights_ccorrect / 100.0f)), 1.0f) - 0.5f) * sign(-highlights) + 0.5f;
   const unsigned int flags = data->flags;
   const int unbound_mask = ((data->shadhi_algo == SHADHI_ALGO_BILATERAL) && (flags & UNBOUND_BILATERAL))
                            || ((data->shadhi_algo == SHADHI_ALGO_GAUSSIAN) && (flags & UNBOUND_GAUSSIAN));
@@ -419,8 +419,8 @@ void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const 
       highlights2 -= 1.0f;
 
       ta[0] = la * (1.0 - optrans)
-              + (la > halfmax ? lmax - (lmax - doublemax * (la - halfmax)) * (lmax - lb) : doublemax * la
-                                                                                           * lb) * optrans;
+              + (la > halfmax ? lmax - (lmax - doublemax * (la - halfmax)) * (lmax - lb) : doublemax * la * lb)
+                    * optrans;
 
       ta[0] = (flags & UNBOUND_HIGHLIGHTS_L) ? ta[0] : CLAMP_RANGE(ta[0], lmin, lmax);
 
@@ -456,8 +456,8 @@ void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const 
       shadows2 -= 1.0f;
 
       ta[0] = la * (1.0 - optrans)
-              + (la > halfmax ? lmax - (lmax - doublemax * (la - halfmax)) * (lmax - lb) : doublemax * la
-                                                                                           * lb) * optrans;
+              + (la > halfmax ? lmax - (lmax - doublemax * (la - halfmax)) * (lmax - lb) : doublemax * la * lb)
+                    * optrans;
 
       ta[0] = (flags & UNBOUND_SHADOWS_L) ? ta[0] : CLAMP_RANGE(ta[0], lmin, lmax);
 
@@ -477,7 +477,8 @@ void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const 
     _Lab_rescale(ta, &out[j]);
   }
 
-  if(piece->pipe->mask_display & DT_DEV_PIXELPIPE_DISPLAY_MASK) dt_iop_alpha_copy(ivoid, ovoid, roi_out->width, roi_out->height);
+  if(piece->pipe->mask_display & DT_DEV_PIXELPIPE_DISPLAY_MASK)
+    dt_iop_alpha_copy(ivoid, ovoid, roi_out->width, roi_out->height);
 }
 
 
@@ -506,8 +507,8 @@ int process_cl(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, cl_m
       = fmin(fmax(0.0f, (d->compress / 100.0f)), 0.99f); // upper limit 0.99f to avoid division by zero later
   const float shadows_ccorrect = (fmin(fmax(0.0f, (d->shadows_ccorrect / 100.0f)), 1.0f) - 0.5f) * sign(shadows)
                                  + 0.5f;
-  const float highlights_ccorrect = (fmin(fmax(0.0f, (d->highlights_ccorrect / 100.0f)), 1.0f) - 0.5f)
-                                    * sign(-highlights) + 0.5f;
+  const float highlights_ccorrect
+      = (fmin(fmax(0.0f, (d->highlights_ccorrect / 100.0f)), 1.0f) - 0.5f) * sign(-highlights) + 0.5f;
   const float low_approximation = d->low_approximation;
   const unsigned int flags = d->flags;
   const int unbound_mask = ((d->shadhi_algo == SHADHI_ALGO_BILATERAL) && (flags & UNBOUND_BILATERAL))
@@ -575,16 +576,13 @@ int process_cl(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, cl_m
   dt_opencl_set_kernel_arg(devid, gd->kernel_shadows_highlights_mix, 5, sizeof(float), (void *)&shadows);
   dt_opencl_set_kernel_arg(devid, gd->kernel_shadows_highlights_mix, 6, sizeof(float), (void *)&highlights);
   dt_opencl_set_kernel_arg(devid, gd->kernel_shadows_highlights_mix, 7, sizeof(float), (void *)&compress);
-  dt_opencl_set_kernel_arg(devid, gd->kernel_shadows_highlights_mix, 8, sizeof(float),
-                           (void *)&shadows_ccorrect);
+  dt_opencl_set_kernel_arg(devid, gd->kernel_shadows_highlights_mix, 8, sizeof(float), (void *)&shadows_ccorrect);
   dt_opencl_set_kernel_arg(devid, gd->kernel_shadows_highlights_mix, 9, sizeof(float),
                            (void *)&highlights_ccorrect);
   dt_opencl_set_kernel_arg(devid, gd->kernel_shadows_highlights_mix, 10, sizeof(unsigned int), (void *)&flags);
   dt_opencl_set_kernel_arg(devid, gd->kernel_shadows_highlights_mix, 11, sizeof(int), (void *)&unbound_mask);
-  dt_opencl_set_kernel_arg(devid, gd->kernel_shadows_highlights_mix, 12, sizeof(float),
-                           (void *)&low_approximation);
-  dt_opencl_set_kernel_arg(devid, gd->kernel_shadows_highlights_mix, 13, sizeof(float),
-                           (void *)&whitepoint);
+  dt_opencl_set_kernel_arg(devid, gd->kernel_shadows_highlights_mix, 12, sizeof(float), (void *)&low_approximation);
+  dt_opencl_set_kernel_arg(devid, gd->kernel_shadows_highlights_mix, 13, sizeof(float), (void *)&whitepoint);
   err = dt_opencl_enqueue_kernel_2d(devid, gd->kernel_shadows_highlights_mix, sizes);
   if(err != CL_SUCCESS) goto error;
 
@@ -601,8 +599,7 @@ error:
 #endif
 
 void tiling_callback(struct dt_iop_module_t *self, struct dt_dev_pixelpipe_iop_t *piece,
-                     const dt_iop_roi_t *roi_in, const dt_iop_roi_t *roi_out,
-                     struct dt_develop_tiling_t *tiling)
+                     const dt_iop_roi_t *roi_in, const dt_iop_roi_t *roi_out, struct dt_develop_tiling_t *tiling)
 {
   dt_iop_shadhi_data_t *d = (dt_iop_shadhi_data_t *)piece->data;
 
@@ -620,7 +617,8 @@ void tiling_callback(struct dt_iop_module_t *self, struct dt_dev_pixelpipe_iop_t
   if(d->shadhi_algo == SHADHI_ALGO_BILATERAL)
   {
     // bilateral filter
-    tiling->factor = 2.0f + fmax(1.0f, (float)dt_bilateral_memory_use(width, height, sigma_s, sigma_r) / basebuffer);
+    tiling->factor = 2.0f
+                     + fmax(1.0f, (float)dt_bilateral_memory_use(width, height, sigma_s, sigma_r) / basebuffer);
     tiling->maxbuf
         = fmax(1.0f, (float)dt_bilateral_singlebuffer_size(width, height, sigma_s, sigma_r) / basebuffer);
   }
@@ -769,12 +767,12 @@ void init(dt_iop_module_t *module)
   module->params = calloc(1, sizeof(dt_iop_shadhi_params_t));
   module->default_params = calloc(1, sizeof(dt_iop_shadhi_params_t));
   module->default_enabled = 0;
-    module->priority = 565; // module order created by iop_dependencies.py, do not edit!
+  module->priority = 565; // module order created by iop_dependencies.py, do not edit!
   module->params_size = sizeof(dt_iop_shadhi_params_t);
   module->gui_data = NULL;
   dt_iop_shadhi_params_t tmp
-      = (dt_iop_shadhi_params_t){ DT_IOP_GAUSSIAN_ZERO, 100.0f, 50.0f, 0.0f, -50.0f, 0.0f, 50.0f, 100.0f,
-                                  50.0f, UNBOUND_DEFAULT, 0.000001f, SHADHI_ALGO_GAUSSIAN };
+      = (dt_iop_shadhi_params_t){ DT_IOP_GAUSSIAN_ZERO, 100.0f, 50.0f, 0.0f, -50.0f, 0.0f, 50.0f, 100.0f, 50.0f,
+                                  UNBOUND_DEFAULT, 0.000001f, SHADHI_ALGO_GAUSSIAN };
   memcpy(module->params, &tmp, sizeof(dt_iop_shadhi_params_t));
   memcpy(module->default_params, &tmp, sizeof(dt_iop_shadhi_params_t));
 }
@@ -782,8 +780,7 @@ void init(dt_iop_module_t *module)
 void init_global(dt_iop_module_so_t *module)
 {
   const int program = 6; // gaussian.cl, from programs.conf
-  dt_iop_shadhi_global_data_t *gd
-      = (dt_iop_shadhi_global_data_t *)malloc(sizeof(dt_iop_shadhi_global_data_t));
+  dt_iop_shadhi_global_data_t *gd = (dt_iop_shadhi_global_data_t *)malloc(sizeof(dt_iop_shadhi_global_data_t));
   module->data = gd;
   gd->kernel_shadows_highlights_mix = dt_opencl_create_kernel(program, "shadows_highlights_mix");
 }
@@ -863,7 +860,8 @@ void gui_init(struct dt_iop_module_t *self)
   g_signal_connect(G_OBJECT(g->shadhi_algo), "value-changed", G_CALLBACK(shadhi_algo_callback), self);
   g_signal_connect(G_OBJECT(g->compress), "value-changed", G_CALLBACK(compress_callback), self);
   g_signal_connect(G_OBJECT(g->shadows_ccorrect), "value-changed", G_CALLBACK(shadows_ccorrect_callback), self);
-  g_signal_connect(G_OBJECT(g->highlights_ccorrect), "value-changed", G_CALLBACK(highlights_ccorrect_callback), self);
+  g_signal_connect(G_OBJECT(g->highlights_ccorrect), "value-changed", G_CALLBACK(highlights_ccorrect_callback),
+                   self);
 }
 
 void gui_cleanup(struct dt_iop_module_t *self)

@@ -24,8 +24,7 @@
 #ifdef HAVE_GRAPHICSMAGICK
 dt_imageio_retval_t dt_imageio_open_gm(dt_image_t *img, const char *filename, dt_mipmap_buffer_t *buf);
 #else
-inline dt_imageio_retval_t dt_imageio_open_gm(dt_image_t *img, const char *filename,
-                                              dt_mipmap_buffer_t *buf)
+inline dt_imageio_retval_t dt_imageio_open_gm(dt_image_t *img, const char *filename, dt_mipmap_buffer_t *buf)
 {
   return DT_IMAGEIO_FILE_NOT_FOUND;
 }
