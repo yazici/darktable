@@ -421,6 +421,12 @@ static void _blendop_blendif_radius_callback(GtkWidget *slider, dt_iop_gui_blend
   dt_dev_add_history_item(darktable.develop, data->module, TRUE);
 }
 
+static void _blendop_blendif_brightness_callback(GtkWidget *slider, dt_iop_gui_blend_data_t *data)
+{
+  data->module->blend_params->brightness = dt_bauhaus_slider_get(slider);
+  dt_dev_add_history_item(darktable.develop, data->module, TRUE);
+}
+
 static void _blendop_blendif_contrast_callback(GtkWidget *slider, dt_iop_gui_blend_data_t *data)
 {
   data->module->blend_params->contrast = dt_bauhaus_slider_get(slider);
@@ -1612,6 +1618,7 @@ void dt_iop_gui_update_blending(dt_iop_module_t *module)
   dt_bauhaus_combobox_set(bd->masks_blur_modes_combo,
                           g_list_index(bd->masks_blur_modes, GUINT_TO_POINTER(module->blend_params->mask_blur_mode)));
   dt_bauhaus_slider_set(bd->radius_slider, module->blend_params->radius);
+  dt_bauhaus_slider_set(bd->brightness_slider, module->blend_params->brightness);
   dt_bauhaus_slider_set(bd->contrast_slider, module->blend_params->contrast);
 
   dt_iop_gui_update_blendif(module);
@@ -2063,38 +2070,54 @@ void dt_iop_gui_init_blending(GtkWidget *iopw, dt_iop_module_t *module)
 
 
     bd->masks_blur_modes_combo = dt_bauhaus_combobox_new(module);
-    dt_bauhaus_widget_set_label(bd->masks_blur_modes_combo, _("blur mode"), _("blur mode"));
+    dt_bauhaus_widget_set_label(bd->masks_blur_modes_combo, _("mask enhancement"), _("mask enhancement"));
 
-    dt_bauhaus_combobox_add(bd->masks_blur_modes_combo, _("Gaussian"));
+    dt_bauhaus_combobox_add(bd->masks_blur_modes_combo, _("Gaussian blur"));
     bd->masks_blur_modes = g_list_append(bd->masks_blur_modes, GUINT_TO_POINTER(DEVELOP_MASK_BLUR_GAUSSIAN));
 
-    dt_bauhaus_combobox_add(bd->masks_blur_modes_combo, _("guided filter"));
-    bd->masks_blur_modes = g_list_append(bd->masks_blur_modes, GUINT_TO_POINTER(DEVELOP_MASK_BLUR_GUIDED_FILTER));
+    dt_bauhaus_combobox_add(bd->masks_blur_modes_combo, _("feathering"));
+    bd->masks_blur_modes = g_list_append(bd->masks_blur_modes, GUINT_TO_POINTER(DEVELOP_MASK_FEATHER));
 
     dt_bauhaus_combobox_set(bd->masks_blur_modes_combo, 0);
-    gtk_widget_set_tooltip_text(bd->masks_blur_modes_combo, _("blur mask by chosen method"));
+    gtk_widget_set_tooltip_text(bd->masks_blur_modes_combo, _("modify mask by chosen method"));
     g_signal_connect(G_OBJECT(bd->masks_blur_modes_combo), "value-changed",
                      G_CALLBACK(_blendop_masks_blur_modes_callback), bd);
 
 
-    bd->radius_slider = dt_bauhaus_slider_new_with_range(module, 0.0, 100.0, 0.1, 0.0, 1);
+    bd->radius_slider = dt_bauhaus_slider_new_with_range(module, 0.0, 250.0, 0.1, 0.0, 1);
     dt_bauhaus_widget_set_label(bd->radius_slider, _("blend"), _("mask blur"));
     dt_bauhaus_slider_set_format(bd->radius_slider, "%.1f");
-    gtk_widget_set_tooltip_text(bd->radius_slider, _("radius for gaussian blur of blend mask"));
+    gtk_widget_set_tooltip_text(bd->radius_slider, _("radius for mask enhancement method"));
     g_signal_connect(G_OBJECT(bd->radius_slider), "value-changed",
                      G_CALLBACK(_blendop_blendif_radius_callback), bd);
+    bd->brightness_slider = dt_bauhaus_slider_new_with_range(module, -1.0, 1.0, 0.01, 0.0, 2);
+    dt_bauhaus_widget_set_label(bd->brightness_slider, _("blend"), _("mask brightness"));
+    dt_bauhaus_slider_set_format(bd->brightness_slider, "%.2f");
+    gtk_widget_set_tooltip_text(bd->brightness_slider, _("brightness adjustment of blend mask"));
+    g_signal_connect(G_OBJECT(bd->brightness_slider), "value-changed",
+                     G_CALLBACK(_blendop_blendif_brightness_callback), bd);
 
 
-    bd->contrast_slider = dt_bauhaus_slider_new_with_range(module, 0.0, 1.0, 0.01, 0.0, 2);
-    dt_bauhaus_widget_set_label(bd->contrast_slider, _("blend"), _("mask contrast enhancement"));
+    bd->brightness_slider = dt_bauhaus_slider_new_with_range(module, -1.0, 1.0, 0.01, 0.0, 2);
+    dt_bauhaus_widget_set_label(bd->brightness_slider, _("blend"), _("mask brightness"));
+    dt_bauhaus_slider_set_format(bd->brightness_slider, "%.2f");
+    gtk_widget_set_tooltip_text(bd->brightness_slider, _("brightness adjustment of blend mask"));
+    g_signal_connect(G_OBJECT(bd->brightness_slider), "value-changed",
+                     G_CALLBACK(_blendop_blendif_brightness_callback), bd);
+
+
+    bd->contrast_slider = dt_bauhaus_slider_new_with_range(module, -1.0, 1.0, 0.01, 0.0, 2);
+    dt_bauhaus_widget_set_label(bd->contrast_slider, _("blend"), _("mask contrast"));
     dt_bauhaus_slider_set_format(bd->contrast_slider, "%.2f");
-    gtk_widget_set_tooltip_text(bd->contrast_slider, _("contrast enhancement of blend mask"));
+    gtk_widget_set_tooltip_text(bd->contrast_slider, _("contrast adjustment of blend mask"));
     g_signal_connect(G_OBJECT(bd->contrast_slider), "value-changed",
                      G_CALLBACK(_blendop_blendif_contrast_callback), bd);
 
-
-    bd->showmask = dtgtk_togglebutton_new(dtgtk_cairo_paint_showmask, CPF_STYLE_FLAT | CPF_DO_NOT_USE_BORDER, NULL);
-    gtk_widget_set_tooltip_text(bd->showmask, _("display mask"));
+    
+    bd->showmask = dtgtk_button_new(dtgtk_cairo_paint_showmask, CPF_STYLE_FLAT | CPF_DO_NOT_USE_BORDER, NULL);
+    gtk_widget_set_tooltip_text(bd->showmask, _("display mask and/or color channel. ctrl-click to display mask, "
+                                                "shift-click to display channel. hover over parametric mask slider to "
+                                                "select channel for display"));
     gtk_widget_set_size_request(GTK_WIDGET(bd->showmask), bs, bs);
     g_signal_connect(G_OBJECT(bd->showmask), "button-press-event", G_CALLBACK(_blendop_blendif_showmask_clicked), module);
     gtk_widget_set_name(bd->showmask, "show_mask_button");
@@ -2126,6 +2149,7 @@ void dt_iop_gui_init_blending(GtkWidget *iopw, dt_iop_module_t *module)
     gtk_box_pack_start(GTK_BOX(bd->bottom_box), GTK_WIDGET(bd->masks_invert_combo), TRUE, TRUE, 0);
     gtk_box_pack_start(GTK_BOX(bd->bottom_box), bd->masks_blur_modes_combo, TRUE, TRUE, 0);
     gtk_box_pack_start(GTK_BOX(bd->bottom_box), bd->radius_slider, TRUE, TRUE, 0);
+    gtk_box_pack_start(GTK_BOX(bd->bottom_box), bd->brightness_slider, TRUE, TRUE, 0);
     gtk_box_pack_start(GTK_BOX(bd->bottom_box), bd->contrast_slider, TRUE, TRUE, 0);
     gtk_box_pack_start(GTK_BOX(bd->bottom_box), hbox, TRUE, TRUE, 0);
     gtk_box_pack_start(GTK_BOX(iopw), GTK_WIDGET(bd->bottom_box), TRUE, TRUE, 0);

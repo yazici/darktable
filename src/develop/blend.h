@@ -92,7 +92,7 @@ typedef enum dt_develop_mask_combine_mode_t
 typedef enum dt_develop_mask_blur_mode_t
 {
   DEVELOP_MASK_BLUR_GAUSSIAN = 0x01,
-  DEVELOP_MASK_BLUR_GUIDED_FILTER = 0x02
+  DEVELOP_MASK_FEATHER = 0x02
 } dt_develop_mask_blur_mode_t;
 
 typedef enum dt_develop_blendif_channels_t
@@ -282,8 +282,10 @@ typedef struct dt_develop_blend_params_t
   uint32_t blendif;
   /** blur radius */
   float radius;
-  /** blur contrast enhancement */
+  /** mask contrast enhancement */
   float contrast;
+  /** mask brightness adjustment */
+  float brightness;
   /** mask blur mode */
   uint32_t mask_blur_mode;
   /** some reserved fields for future use */
@@ -362,6 +364,7 @@ typedef struct dt_iop_gui_blend_data_t
   GtkWidget *masks_blur_modes_combo;
   GtkWidget *radius_slider;
   GtkWidget *contrast_slider;
+  GtkWidget *brightness_slider;
   int tab;
   int channels[8][2];
   dt_dev_pixelpipe_display_mask_t display_channel[8][2];
