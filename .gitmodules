@@ -2,3 +2,6 @@
 	path = src/external/rawspeed
 	url = https://github.com/darktable-org/rawspeed.git
 	branch = develop
+[submodule "elles_icc_profiles"]
+	path = elles_icc_profiles
+	url = https://github.com/ellelstone/elles_icc_profiles.git
