@@ -45,7 +45,13 @@
 #define DT_IOP_COLOR_ICC_LEN 100
 #define LUT_SAMPLES 0x10000
 
-DT_MODULE_INTROSPECTION(4, dt_iop_colorout_params_t)
+DT_MODULE_INTROSPECTION(5, dt_iop_colorout_params_t)
+
+enum dt_colorout_workflow_t
+{
+  DISPLAY_REFERRED_WORKFLOW = 0,
+  SCENE_REFERRED_WORKFLOW = 1
+};
 
 typedef struct dt_iop_colorout_data_t
 {
@@ -55,11 +61,14 @@ typedef struct dt_iop_colorout_data_t
   float cmatrix[9];
   cmsHTRANSFORM *xform;
   float unbounded_coeffs[3][3]; // for extrapolation of shaper curves
+  int workflow;
+  cmsToneCurve *tcr;
 } dt_iop_colorout_data_t;
 
 typedef struct dt_iop_colorout_global_data_t
 {
-  int kernel_colorout;
+  int kernel_colorout_gamma;
+  int kernel_colorout_linear;
 } dt_iop_colorout_global_data_t;
 
 typedef struct dt_iop_colorout_params_t
@@ -67,11 +76,13 @@ typedef struct dt_iop_colorout_params_t
   dt_colorspaces_color_profile_type_t type;
   char filename[DT_IOP_COLOR_ICC_LEN];
   dt_iop_color_intent_t intent;
+  int workflow;
 } dt_iop_colorout_params_t;
 
 typedef struct dt_iop_colorout_gui_data_t
 {
   GtkWidget *output_intent, *output_profile;
+  GtkWidget *workflow;
 } dt_iop_colorout_gui_data_t;
 
 
@@ -140,6 +151,29 @@ int legacy_params(dt_iop_module_t *self, const void *const old_params, const int
     return 0;
   }
 
+  if(old_version == 4 && new_version == 5)
+  {
+    typedef struct dt_iop_colorout_params_v4_t
+    {
+      dt_colorspaces_color_profile_type_t type;
+      char filename[DT_IOP_COLOR_ICC_LEN];
+      dt_iop_color_intent_t intent;
+      int workflow;
+    } dt_iop_colorout_params_v4_t;
+
+
+    dt_iop_colorout_params_v4_t *o = (dt_iop_colorout_params_v4_t *)old_params;
+    dt_iop_colorout_params_t *n = (dt_iop_colorout_params_t *)new_params;
+    memset(n, 0, sizeof(dt_iop_colorout_params_t));
+
+    n->type = o->type;
+    *n->filename = *o->filename;
+    n->intent = o->intent;
+    n->workflow = DISPLAY_REFERRED_WORKFLOW;
+
+    return 0;
+  }
+
   return 1;
 }
 
@@ -149,15 +183,26 @@ void init_global(dt_iop_module_so_t *module)
   dt_iop_colorout_global_data_t *gd
       = (dt_iop_colorout_global_data_t *)malloc(sizeof(dt_iop_colorout_global_data_t));
   module->data = gd;
-  gd->kernel_colorout = dt_opencl_create_kernel(program, "colorout");
+  gd->kernel_colorout_linear = dt_opencl_create_kernel(program, "colorout_linear");
+  gd->kernel_colorout_gamma = dt_opencl_create_kernel(program, "colorout_gamma");
 }
 
 void cleanup_global(dt_iop_module_so_t *module)
 {
   dt_iop_colorout_global_data_t *gd = (dt_iop_colorout_global_data_t *)module->data;
-  dt_opencl_free_kernel(gd->kernel_colorout);
+  dt_opencl_free_kernel(gd->kernel_colorout_linear);
+  dt_opencl_free_kernel(gd->kernel_colorout_gamma);
   free(module->data);
   module->data = NULL;
+}
+
+static void workflow_changed(GtkWidget *widget, gpointer user_data)
+{
+  dt_iop_module_t *self = (dt_iop_module_t *)user_data;
+  if(self->dt->gui->reset) return;
+  dt_iop_colorout_params_t *p = (dt_iop_colorout_params_t *)self->params;
+  p->workflow = dt_bauhaus_combobox_get(widget);
+  dt_dev_add_history_item(darktable.develop, self, TRUE);
 }
 
 static void intent_changed(GtkWidget *widget, gpointer user_data)
@@ -235,45 +280,71 @@ int process_cl(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, cl_m
 
   size_t sizes[] = { ROUNDUPWD(width), ROUNDUPHT(height), 1 };
 
-  dev_m = dt_opencl_copy_host_to_device_constant(devid, sizeof(float) * 9, d->cmatrix);
-  if(dev_m == NULL) goto error;
-  dev_r = dt_opencl_copy_host_to_device(devid, d->lut[0], 256, 256, sizeof(float));
-  if(dev_r == NULL) goto error;
-  dev_g = dt_opencl_copy_host_to_device(devid, d->lut[1], 256, 256, sizeof(float));
-  if(dev_g == NULL) goto error;
-  dev_b = dt_opencl_copy_host_to_device(devid, d->lut[2], 256, 256, sizeof(float));
-  if(dev_b == NULL) goto error;
-  dev_coeffs
-      = dt_opencl_copy_host_to_device_constant(devid, sizeof(float) * 3 * 3, (float *)d->unbounded_coeffs);
-  if(dev_coeffs == NULL) goto error;
-  dt_opencl_set_kernel_arg(devid, gd->kernel_colorout, 0, sizeof(cl_mem), (void *)&dev_in);
-  dt_opencl_set_kernel_arg(devid, gd->kernel_colorout, 1, sizeof(cl_mem), (void *)&dev_out);
-  dt_opencl_set_kernel_arg(devid, gd->kernel_colorout, 2, sizeof(int), (void *)&width);
-  dt_opencl_set_kernel_arg(devid, gd->kernel_colorout, 3, sizeof(int), (void *)&height);
-  dt_opencl_set_kernel_arg(devid, gd->kernel_colorout, 4, sizeof(cl_mem), (void *)&dev_m);
-  dt_opencl_set_kernel_arg(devid, gd->kernel_colorout, 5, sizeof(cl_mem), (void *)&dev_r);
-  dt_opencl_set_kernel_arg(devid, gd->kernel_colorout, 6, sizeof(cl_mem), (void *)&dev_g);
-  dt_opencl_set_kernel_arg(devid, gd->kernel_colorout, 7, sizeof(cl_mem), (void *)&dev_b);
-  dt_opencl_set_kernel_arg(devid, gd->kernel_colorout, 8, sizeof(cl_mem), (void *)&dev_coeffs);
-  err = dt_opencl_enqueue_kernel_2d(devid, gd->kernel_colorout, sizes);
-  if(err != CL_SUCCESS) goto error;
-  dt_opencl_release_mem_object(dev_m);
-  dt_opencl_release_mem_object(dev_r);
-  dt_opencl_release_mem_object(dev_g);
-  dt_opencl_release_mem_object(dev_b);
-  dt_opencl_release_mem_object(dev_coeffs);
-  return TRUE;
+  if (d->workflow == SCENE_REFERRED_WORKFLOW)
+  {
+    dev_m = dt_opencl_copy_host_to_device_constant(devid, sizeof(float) * 9, d->cmatrix);
+    if(dev_m == NULL) goto error;
+    dev_r = dt_opencl_copy_host_to_device(devid, d->lut[0], 256, 256, sizeof(float));
+    if(dev_r == NULL) goto error;
+    dev_g = dt_opencl_copy_host_to_device(devid, d->lut[1], 256, 256, sizeof(float));
+    if(dev_g == NULL) goto error;
+    dev_b = dt_opencl_copy_host_to_device(devid, d->lut[2], 256, 256, sizeof(float));
+    if(dev_b == NULL) goto error;
+    dev_coeffs
+        = dt_opencl_copy_host_to_device_constant(devid, sizeof(float) * 3 * 3, (float *)d->unbounded_coeffs);
+    if(dev_coeffs == NULL) goto error;
+    dt_opencl_set_kernel_arg(devid, gd->kernel_colorout_gamma, 0, sizeof(cl_mem), (void *)&dev_in);
+    dt_opencl_set_kernel_arg(devid, gd->kernel_colorout_gamma, 1, sizeof(cl_mem), (void *)&dev_out);
+    dt_opencl_set_kernel_arg(devid, gd->kernel_colorout_gamma, 2, sizeof(int), (void *)&width);
+    dt_opencl_set_kernel_arg(devid, gd->kernel_colorout_gamma, 3, sizeof(int), (void *)&height);
+    dt_opencl_set_kernel_arg(devid, gd->kernel_colorout_gamma, 4, sizeof(cl_mem), (void *)&dev_m);
+    dt_opencl_set_kernel_arg(devid, gd->kernel_colorout_gamma, 5, sizeof(cl_mem), (void *)&dev_r);
+    dt_opencl_set_kernel_arg(devid, gd->kernel_colorout_gamma, 6, sizeof(cl_mem), (void *)&dev_g);
+    dt_opencl_set_kernel_arg(devid, gd->kernel_colorout_gamma, 7, sizeof(cl_mem), (void *)&dev_b);
+    dt_opencl_set_kernel_arg(devid, gd->kernel_colorout_gamma, 8, sizeof(cl_mem), (void *)&dev_coeffs);
+    err = dt_opencl_enqueue_kernel_2d(devid, gd->kernel_colorout_gamma, sizes);
+    if(err != CL_SUCCESS) goto error;
+    dt_opencl_release_mem_object(dev_m);
+    dt_opencl_release_mem_object(dev_r);
+    dt_opencl_release_mem_object(dev_g);
+    dt_opencl_release_mem_object(dev_b);
+    dt_opencl_release_mem_object(dev_coeffs);
+    return TRUE;
+  }
+  else
+  {
+    dev_m = dt_opencl_copy_host_to_device_constant(devid, sizeof(float) * 9, d->cmatrix);
+    if(dev_m == NULL) goto error;
+    dt_opencl_set_kernel_arg(devid, gd->kernel_colorout_linear, 0, sizeof(cl_mem), (void *)&dev_in);
+    dt_opencl_set_kernel_arg(devid, gd->kernel_colorout_linear, 1, sizeof(cl_mem), (void *)&dev_out);
+    dt_opencl_set_kernel_arg(devid, gd->kernel_colorout_linear, 2, sizeof(int), (void *)&width);
+    dt_opencl_set_kernel_arg(devid, gd->kernel_colorout_linear, 3, sizeof(int), (void *)&height);
+    dt_opencl_set_kernel_arg(devid, gd->kernel_colorout_linear, 4, sizeof(cl_mem), (void *)&dev_m);
+    err = dt_opencl_enqueue_kernel_2d(devid, gd->kernel_colorout_linear, sizes);
+    if(err != CL_SUCCESS) goto error;
+    dt_opencl_release_mem_object(dev_m);
+    dt_opencl_release_mem_object(dev_r);
+    dt_opencl_release_mem_object(dev_g);
+    dt_opencl_release_mem_object(dev_b);
+    dt_opencl_release_mem_object(dev_coeffs);
+    return TRUE;
+  }
+
 
 error:
-  dt_opencl_release_mem_object(dev_m);
-  dt_opencl_release_mem_object(dev_r);
-  dt_opencl_release_mem_object(dev_g);
-  dt_opencl_release_mem_object(dev_b);
-  dt_opencl_release_mem_object(dev_coeffs);
+  if (d->workflow == DISPLAY_REFERRED_WORKFLOW)
+  {
+    dt_opencl_release_mem_object(dev_m);
+    dt_opencl_release_mem_object(dev_r);
+    dt_opencl_release_mem_object(dev_g);
+    dt_opencl_release_mem_object(dev_b);
+    dt_opencl_release_mem_object(dev_coeffs);
+  }
   dt_print(DT_DEBUG_OPENCL, "[opencl_colorout] couldn't enqueue kernel! %d\n", err);
   return FALSE;
 }
 #endif
+
 
 static void process_fastpath_apply_tonecurves(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece,
                                               const void *const ivoid, void *const ovoid,
@@ -337,7 +408,7 @@ void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const 
   }
   else if(!isnan(d->cmatrix[0]))
   {
-// fprintf(stderr,"Using cmatrix codepath\n");
+ fprintf(stderr,"Using cmatrix codepath\n");
 // convert to rgb using matrix
 #ifdef _OPENMP
 #pragma omp parallel for schedule(static) default(none)
@@ -359,12 +430,12 @@ void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const 
         }
       }
     }
+    if (d->workflow == SCENE_REFERRED_WORKFLOW) process_fastpath_apply_tonecurves(self, piece, ivoid, ovoid, roi_in, roi_out);
 
-    process_fastpath_apply_tonecurves(self, piece, ivoid, ovoid, roi_in, roi_out);
   }
   else
   {
-// fprintf(stderr,"Using xform codepath\n");
+ fprintf(stderr,"Using xform codepath\n");
 #ifdef _OPENMP
 #pragma omp parallel for schedule(static) default(none)
 #endif
@@ -407,7 +478,7 @@ void process_sse2(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, c
   }
   else if(!isnan(d->cmatrix[0]))
   {
-// fprintf(stderr,"Using cmatrix codepath\n");
+    fprintf(stderr,"Using cmatrix codepath\n");
 // convert to rgb using matrix
 #ifdef _OPENMP
 #pragma omp parallel for schedule(static) default(none)
@@ -434,11 +505,11 @@ void process_sse2(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, c
     }
     _mm_sfence();
 
-    process_fastpath_apply_tonecurves(self, piece, ivoid, ovoid, roi_in, roi_out);
+    if (d->workflow == SCENE_REFERRED_WORKFLOW) process_fastpath_apply_tonecurves(self, piece, ivoid, ovoid, roi_in, roi_out);
   }
   else
   {
-    // fprintf(stderr,"Using xform codepath\n");
+    fprintf(stderr,"Using xform codepath\n");
     const __m128 outofgamutpixel = _mm_set_ps(0.0f, 1.0f, 1.0f, 0.0f);
 #ifdef _OPENMP
 #pragma omp parallel for schedule(static) default(none)
@@ -499,6 +570,7 @@ void commit_params(struct dt_iop_module_t *self, dt_iop_params_t *p1, dt_dev_pix
   dt_iop_colorout_data_t *d = (dt_iop_colorout_data_t *)piece->data;
 
   d->type = p->type;
+  d->workflow = p->workflow;
 
   const int force_lcms2 = dt_conf_get_bool("plugins/lighttable/export/force_lcms2");
 
@@ -511,6 +583,7 @@ void commit_params(struct dt_iop_module_t *self, dt_iop_params_t *p1, dt_dev_pix
   cmsHPROFILE output = NULL;
   cmsHPROFILE softproof = NULL;
   cmsUInt32Number output_format = TYPE_RGBA_FLT;
+  d->tcr = NULL;
 
   d->mode = pipe->type == DT_DEV_PIXELPIPE_FULL ? darktable.color_profiles->mode : DT_PROFILE_NORMAL;
 
@@ -563,12 +636,16 @@ void commit_params(struct dt_iop_module_t *self, dt_iop_params_t *p1, dt_dev_pix
    * Setup transform flags
    */
   uint32_t transformFlags = 0;
+  uint32_t DT_DIRECTION_FLAGS = 0;
 
   /* creating output profile */
-  if(out_type == DT_COLORSPACE_DISPLAY) pthread_rwlock_rdlock(&darktable.color_profiles->xprofile_lock);
+  if(out_type == DT_COLORSPACE_DISPLAY)
+    pthread_rwlock_rdlock(&darktable.color_profiles->xprofile_lock);
+
+  DT_DIRECTION_FLAGS |=  DT_PROFILE_DIRECTION_OUT | DT_PROFILE_DIRECTION_DISPLAY;
 
   const dt_colorspaces_color_profile_t *out_profile
-        = dt_colorspaces_get_profile(out_type, out_filename, DT_PROFILE_DIRECTION_OUT | DT_PROFILE_DIRECTION_DISPLAY);
+        = dt_colorspaces_get_profile(out_type, out_filename, DT_DIRECTION_FLAGS);
   if(out_profile)
   {
     output = out_profile->profile;
@@ -576,8 +653,7 @@ void commit_params(struct dt_iop_module_t *self, dt_iop_params_t *p1, dt_dev_pix
   }
   else
   {
-    output = dt_colorspaces_get_profile(DT_COLORSPACE_SRGB, "",
-                                        DT_PROFILE_DIRECTION_OUT | DT_PROFILE_DIRECTION_DISPLAY)->profile;
+    output = dt_colorspaces_get_profile(DT_COLORSPACE_SRGB, "", DT_DIRECTION_FLAGS)->profile;
     dt_control_log(_("missing output profile has been replaced by sRGB!"));
     fprintf(stderr, "missing output profile `%s' has been replaced by sRGB!\n",
             dt_colorspaces_get_name(out_type, out_filename));
@@ -588,13 +664,12 @@ void commit_params(struct dt_iop_module_t *self, dt_iop_params_t *p1, dt_dev_pix
   {
     const dt_colorspaces_color_profile_t *prof = dt_colorspaces_get_profile(
         darktable.color_profiles->softproof_type, darktable.color_profiles->softproof_filename,
-        DT_PROFILE_DIRECTION_OUT | DT_PROFILE_DIRECTION_DISPLAY);
+        DT_DIRECTION_FLAGS);
     if(prof)
       softproof = prof->profile;
     else
     {
-      softproof = dt_colorspaces_get_profile(DT_COLORSPACE_SRGB, "",
-                                             DT_PROFILE_DIRECTION_OUT | DT_PROFILE_DIRECTION_DISPLAY)->profile;
+      softproof = dt_colorspaces_get_profile(DT_COLORSPACE_SRGB, "", DT_DIRECTION_FLAGS)->profile;
       dt_control_log(_("missing softproof profile has been replaced by sRGB!"));
       fprintf(stderr, "missing softproof profile `%s' has been replaced by sRGB!\n",
               dt_colorspaces_get_name(darktable.color_profiles->softproof_type,
@@ -631,8 +706,42 @@ void commit_params(struct dt_iop_module_t *self, dt_iop_params_t *p1, dt_dev_pix
   {
     d->cmatrix[0] = NAN;
     piece->process_cl_ready = 0;
-    d->xform = cmsCreateProofingTransform(Lab, TYPE_LabA_FLT, output, output_format, softproof,
-                                          out_intent, INTENT_RELATIVE_COLORIMETRIC, transformFlags);
+
+    if (d->workflow == SCENE_REFERRED_WORKFLOW)
+    {
+      /*
+      const cmsFloat64Number Params[5] = {
+                                            1.0, //gamma
+                                            1.0 / (logf(2.0f) * 16.0f), // general slope
+                                            1.0 / 0.18, // slope in log
+                                            0.0, // offset in log
+                                            -0.5, // general offset
+                                          };*/
+      */
+      //cmsContext ContextID = cmsGetProfileContextID(output);
+      //void *old_LUT = cmsReadTag(output, cmsSigGrayTRCTag);
+      //cmsToneCurve *new_LUT = cmsReverseToneCurve(old_LUT);
+
+      d->xform = cmsCreateProofingTransform(Lab, TYPE_LabA_FLT, output, output_format, softproof,
+                                      out_intent, INTENT_RELATIVE_COLORIMETRIC, transformFlags);
+      /*
+      cmsToneCurve *tcr[3] =  { cmsBuildParametricToneCurve(ContextID, (cmsInt32Number) 7, Params), // Log TCR
+                                cmsBuildParametricToneCurve(ContextID, (cmsInt32Number) 7, Params),
+                                cmsBuildParametricToneCurve(ContextID, (cmsInt32Number) 7, Params) };
+      */
+
+      //if (cmsWriteTag(output, cmsSigGrayTRCTag, new_LUT)) fprintf(stderr, "linearization failed");
+
+      //cmsFreeToneCurve(new_LUT);
+      //cmsFreeToneCurve(old_LUT);
+      //cmsDeleteContext(ContextID);
+      //cmsCloseProfile(linear);
+    }
+    else
+    {
+      d->xform = cmsCreateProofingTransform(Lab, TYPE_LabA_FLT, output, output_format, softproof,
+                                            out_intent, INTENT_RELATIVE_COLORIMETRIC, transformFlags);
+    }
   }
 
   // user selected a non-supported output profile, check that:
@@ -640,14 +749,13 @@ void commit_params(struct dt_iop_module_t *self, dt_iop_params_t *p1, dt_dev_pix
   {
     dt_control_log(_("unsupported output profile has been replaced by sRGB!"));
     fprintf(stderr, "unsupported output profile `%s' has been replaced by sRGB!\n", out_profile->name);
-    output = dt_colorspaces_get_profile(DT_COLORSPACE_SRGB, "", DT_PROFILE_DIRECTION_OUT)->profile;
+    output = dt_colorspaces_get_profile(DT_COLORSPACE_SRGB, "", DT_DIRECTION_FLAGS)->profile;
     if(d->mode != DT_PROFILE_NORMAL
        || dt_colorspaces_get_matrix_from_output_profile(output, d->cmatrix, d->lut[0], d->lut[1],
                                                         d->lut[2], LUT_SAMPLES, out_intent))
     {
       d->cmatrix[0] = NAN;
       piece->process_cl_ready = 0;
-
       d->xform = cmsCreateProofingTransform(Lab, TYPE_LabA_FLT, output, output_format, softproof,
                                             out_intent, INTENT_RELATIVE_COLORIMETRIC, transformFlags);
     }
@@ -664,10 +772,16 @@ void commit_params(struct dt_iop_module_t *self, dt_iop_params_t *p1, dt_dev_pix
     // omit luts marked as linear (negative as marker)
     if(d->lut[k][0] >= 0.0f)
     {
-      const float x[4] = { 0.7f, 0.8f, 0.9f, 1.0f };
-      const float y[4] = { lerp_lut(d->lut[k], x[0]), lerp_lut(d->lut[k], x[1]), lerp_lut(d->lut[k], x[2]),
-                           lerp_lut(d->lut[k], x[3]) };
-      dt_iop_estimate_exp(x, y, 4, d->unbounded_coeffs[k]);
+      const float x[7] = { 0.0f, 0.25f, 0.5f, 0.7f, 0.8f, 0.9f, 1.0f };
+      const float y[7] = { lerp_lut(d->lut[k], x[0]),
+                           lerp_lut(d->lut[k], x[1]),
+                           lerp_lut(d->lut[k], x[2]),
+                           lerp_lut(d->lut[k], x[3]),
+                           lerp_lut(d->lut[k], x[4]),
+                           lerp_lut(d->lut[k], x[5]),
+                           lerp_lut(d->lut[k], x[6]),
+                           };
+      dt_iop_estimate_exp(x, y, 7, d->unbounded_coeffs[k]);
     }
     else
       d->unbounded_coeffs[k][0] = -1.0f;
@@ -704,6 +818,7 @@ void gui_update(struct dt_iop_module_t *self)
   dt_iop_module_t *module = (dt_iop_module_t *)self;
   dt_iop_colorout_gui_data_t *g = (dt_iop_colorout_gui_data_t *)self->gui_data;
   dt_iop_colorout_params_t *p = (dt_iop_colorout_params_t *)module->params;
+  dt_bauhaus_combobox_set(g->workflow, p->workflow);
   dt_bauhaus_combobox_set(g->output_intent, (int)p->intent);
 
   for(GList *iter = darktable.color_profiles->profiles; iter; iter = g_list_next(iter))
@@ -774,6 +889,18 @@ void gui_init(struct dt_iop_module_t *self)
   self->widget = gtk_box_new(GTK_ORIENTATION_VERTICAL, DT_BAUHAUS_SPACE);
   dt_gui_add_help_link(self->widget, dt_get_help_url(self->op));
 
+  g->workflow = dt_bauhaus_combobox_new(self);
+  gtk_box_pack_start(GTK_BOX(self->widget), g->workflow, TRUE, TRUE, 0);
+  dt_bauhaus_widget_set_label(g->workflow, NULL, _("color worflow"));
+  dt_bauhaus_combobox_add(g->workflow, _("display-referred (gamma)"));
+  dt_bauhaus_combobox_add(g->workflow, _("scene-referred (linear)"));
+  /*
+  gtk_widget_set_tooltip_text(g->workflow, _("display-referred is the legacy way to work, inherited from CRT screens. "
+                                             "To adapt the lightness, it uses the gamma correction of the color profile to cope with non color-managed devices. "
+                                             "It will limit your work with tonecurves and defeats the purpose of the logarithmic processing. \n"
+                                             "scene-referred is the modern way to work, in fully color-managed environnements. "
+                                             "It leaves the lightness correction to the device which knows better what correction it needs "
+                                             "and gives you full control over the tone curves."));*/
   // TODO:
   g->output_intent = dt_bauhaus_combobox_new(self);
   gtk_box_pack_start(GTK_BOX(self->widget), g->output_intent, TRUE, TRUE, 0);
@@ -807,6 +934,7 @@ void gui_init(struct dt_iop_module_t *self)
   g_free(user_profile_dir);
   g_free(tooltip);
 
+  g_signal_connect(G_OBJECT(g->workflow), "value-changed", G_CALLBACK(workflow_changed), (gpointer)self);
   g_signal_connect(G_OBJECT(g->output_intent), "value-changed", G_CALLBACK(intent_changed), (gpointer)self);
   g_signal_connect(G_OBJECT(g->output_profile), "value-changed", G_CALLBACK(output_profile_changed), (gpointer)self);
 
