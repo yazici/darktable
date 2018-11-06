@@ -50,7 +50,17 @@ DT_MODULE_INTROSPECTION(5, dt_iop_colorout_params_t)
 enum dt_colorout_workflow_t
 {
   DISPLAY_REFERRED_WORKFLOW = 0,
-  SCENE_REFERRED_WORKFLOW = 1
+  SCENE_REFERRED_WORKFLOW = 1,
+  MANUAL_WORKFLOW = 2
+};
+
+enum dt_TRC_channels_t
+{
+  TRC_CHANNEL_RED = 0,
+  TRC_CHANNEL_GREEN,
+  TRC_CHANNEL_BLUE,
+  TRC_CHANNEL_GREY,
+  TRC_CHANNEL_NUMBERS
 };
 
 typedef struct dt_iop_colorout_data_t
@@ -62,7 +72,8 @@ typedef struct dt_iop_colorout_data_t
   cmsHTRANSFORM *xform;
   float unbounded_coeffs[3][3]; // for extrapolation of shaper curves
   int workflow;
-  cmsToneCurve *tcr;
+  cmsToneCurve *trc[TRC_CHANNEL_NUMBERS];
+  float gamma;
 } dt_iop_colorout_data_t;
 
 typedef struct dt_iop_colorout_global_data_t
@@ -77,6 +88,7 @@ typedef struct dt_iop_colorout_params_t
   char filename[DT_IOP_COLOR_ICC_LEN];
   dt_iop_color_intent_t intent;
   int workflow;
+  float gamma;
 } dt_iop_colorout_params_t;
 
 typedef struct dt_iop_colorout_gui_data_t
@@ -280,7 +292,7 @@ int process_cl(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, cl_m
 
   size_t sizes[] = { ROUNDUPWD(width), ROUNDUPHT(height), 1 };
 
-  if (d->workflow == SCENE_REFERRED_WORKFLOW)
+  if (TRUE)
   {
     dev_m = dt_opencl_copy_host_to_device_constant(devid, sizeof(float) * 9, d->cmatrix);
     if(dev_m == NULL) goto error;
@@ -430,8 +442,7 @@ void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const 
         }
       }
     }
-    if (d->workflow == SCENE_REFERRED_WORKFLOW) process_fastpath_apply_tonecurves(self, piece, ivoid, ovoid, roi_in, roi_out);
-
+    process_fastpath_apply_tonecurves(self, piece, ivoid, ovoid, roi_in, roi_out);
   }
   else
   {
@@ -456,6 +467,25 @@ void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const 
             out[1] = 1.0f;
             out[2] = 1.0f;
           }
+        }
+      }
+    }
+
+    if (d->workflow == SCENE_REFERRED_WORKFLOW)
+    {
+#ifdef _OPENMP
+#pragma omp parallel for schedule(static) default(none)
+#endif
+      for(size_t k = 0; k < (size_t)ch * roi_out->width * roi_out->height; k += ch)
+      {
+        float *out = (float *)ovoid + (size_t)k;
+
+        for(int c = 0; c < 3; c++)
+        {
+          cmsToneCurve *temp = NULL;
+          // If no color channel transfer function, select the grey
+          temp = (d->trc[c] != NULL) ? d->trc[c] : d->trc[TRC_CHANNEL_GREY];
+          if (temp != NULL) out[c] = (float)cmsEvalToneCurveFloat((const cmsToneCurve *)temp, (cmsFloat32Number)out[c]);
         }
       }
     }
@@ -505,7 +535,7 @@ void process_sse2(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, c
     }
     _mm_sfence();
 
-    if (d->workflow == SCENE_REFERRED_WORKFLOW) process_fastpath_apply_tonecurves(self, piece, ivoid, ovoid, roi_in, roi_out);
+    process_fastpath_apply_tonecurves(self, piece, ivoid, ovoid, roi_in, roi_out);
   }
   else
   {
@@ -534,6 +564,25 @@ void process_sse2(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, c
           const __m128 result
               = _mm_or_ps(_mm_and_ps(ingamut, outofgamutpixel), _mm_andnot_ps(ingamut, pixel));
           _mm_stream_ps(out, result);
+        }
+      }
+    }
+
+    if (d->workflow == SCENE_REFERRED_WORKFLOW)
+    {
+#ifdef _OPENMP
+#pragma omp parallel for schedule(static) default(none)
+#endif
+      for(size_t k = 0; k < (size_t)ch * roi_out->width * roi_out->height; k += ch)
+      {
+        float *out = (float *)ovoid + (size_t)k;
+
+        for(int c = 0; c < 3; c++)
+        {
+          cmsToneCurve *temp = NULL;
+          // If no color channel transfer function, select the grey
+          temp = (d->trc[c] != NULL) ? d->trc[c] : d->trc[TRC_CHANNEL_GREY];
+          if (temp != NULL) out[c] = (float)cmsEvalToneCurveFloat((const cmsToneCurve *)temp, (cmsFloat32Number)out[c]);
         }
       }
     }
@@ -583,7 +632,10 @@ void commit_params(struct dt_iop_module_t *self, dt_iop_params_t *p1, dt_dev_pix
   cmsHPROFILE output = NULL;
   cmsHPROFILE softproof = NULL;
   cmsUInt32Number output_format = TYPE_RGBA_FLT;
-  d->tcr = NULL;
+  d->trc[TRC_CHANNEL_RED] = NULL;
+  d->trc[TRC_CHANNEL_GREEN] = NULL;
+  d->trc[TRC_CHANNEL_BLUE] = NULL;
+  d->trc[TRC_CHANNEL_GREY] = NULL;
 
   d->mode = pipe->type == DT_DEV_PIXELPIPE_FULL ? darktable.color_profiles->mode : DT_PROFILE_NORMAL;
 
@@ -639,8 +691,7 @@ void commit_params(struct dt_iop_module_t *self, dt_iop_params_t *p1, dt_dev_pix
   uint32_t DT_DIRECTION_FLAGS = 0;
 
   /* creating output profile */
-  if(out_type == DT_COLORSPACE_DISPLAY)
-    pthread_rwlock_rdlock(&darktable.color_profiles->xprofile_lock);
+  pthread_rwlock_rdlock(&darktable.color_profiles->xprofile_lock);
 
   DT_DIRECTION_FLAGS |=  DT_PROFILE_DIRECTION_OUT | DT_PROFILE_DIRECTION_DISPLAY;
 
@@ -707,35 +758,69 @@ void commit_params(struct dt_iop_module_t *self, dt_iop_params_t *p1, dt_dev_pix
     d->cmatrix[0] = NAN;
     piece->process_cl_ready = 0;
 
-    if (d->workflow == SCENE_REFERRED_WORKFLOW)
+    if (d->workflow == SCENE_REFERRED_WORKFLOW && )
     {
       /*
       const cmsFloat64Number Params[5] = {
-                                            1.0, //gamma
-                                            1.0 / (logf(2.0f) * 16.0f), // general slope
-                                            1.0 / 0.18, // slope in log
-                                            0.0, // offset in log
-                                            -0.5, // general offset
-                                          };*/
-      */
-      //cmsContext ContextID = cmsGetProfileContextID(output);
-      //void *old_LUT = cmsReadTag(output, cmsSigGrayTRCTag);
-      //cmsToneCurve *new_LUT = cmsReverseToneCurve(old_LUT);
+                                            1.0,                          // gamma
+                                            1.0 / (logf(2.0f) * 16.0f),   // general slope
+                                            1.0 / 0.18,                   // slope in log
+                                            0.0,                          // offset in log
+                                            -0.5,                         // general offset
+                                          };
 
-      d->xform = cmsCreateProofingTransform(Lab, TYPE_LabA_FLT, output, output_format, softproof,
-                                      out_intent, INTENT_RELATIVE_COLORIMETRIC, transformFlags);
-      /*
       cmsToneCurve *tcr[3] =  { cmsBuildParametricToneCurve(ContextID, (cmsInt32Number) 7, Params), // Log TCR
                                 cmsBuildParametricToneCurve(ContextID, (cmsInt32Number) 7, Params),
                                 cmsBuildParametricToneCurve(ContextID, (cmsInt32Number) 7, Params) };
+
+      cmsContext ContextID = cmsGetProfileContextID(output);
+
+      if (cmsWriteTag(output, cmsSigGrayTRCTag, new_LUT)) fprintf(stderr, "linearization failed");
       */
 
-      //if (cmsWriteTag(output, cmsSigGrayTRCTag, new_LUT)) fprintf(stderr, "linearization failed");
+      double Parameters[2] = {1.0, 0.0};
 
-      //cmsFreeToneCurve(new_LUT);
-      //cmsFreeToneCurve(old_LUT);
-      //cmsDeleteContext(ContextID);
-      //cmsCloseProfile(linear);
+      // Inverse grey transfer function
+      cmsToneCurve *old_LUT = NULL;
+      old_LUT = cmsReadTag((const cmsHPROFILE)output, cmsSigGrayTRCTag);
+      if (old_LUT != NULL) d->trc[TRC_CHANNEL_GREY] = old_LUT; //cmsReverseToneCurve((const cmsToneCurve *)old_LUT);
+      old_LUT = cmsBuildParametricToneCurve(0, 1, Parameters);
+
+      // Inverse blue transfer function
+      old_LUT = NULL;
+      old_LUT = cmsReadTag((const cmsHPROFILE)output, cmsSigBlueTRCTag);
+      if (old_LUT != NULL) d->trc[TRC_CHANNEL_BLUE]= old_LUT; //cmsReverseToneCurve((const cmsToneCurve *)old_LUT);
+      old_LUT = cmsBuildParametricToneCurve(0, 1, Parameters);
+
+      // Inverse red transfer function
+      old_LUT = NULL;
+      old_LUT = cmsReadTag((const cmsHPROFILE)output, cmsSigRedTRCTag);
+      if (old_LUT != NULL) d->trc[TRC_CHANNEL_RED] = old_LUT; //cmsReverseToneCurve((const cmsToneCurve *)old_LUT);
+      old_LUT = cmsBuildParametricToneCurve(0, 1, Parameters);
+
+      // Inverse green transfer function
+      old_LUT = NULL;
+      old_LUT = cmsReadTag((const cmsHPROFILE)output, cmsSigGreenTRCTag);
+      if (old_LUT != NULL) d->trc[TRC_CHANNEL_GREEN] = old_LUT; //cmsReverseToneCurve((const cmsToneCurve *)old_LUT);
+      old_LUT = cmsBuildParametricToneCurve(0, 1, Parameters);
+
+      /*
+      static const cmsCIEXYZ D50 = { cmsD50X, cmsD50Y, cmsD50Z };
+
+      cmsToneCurve *Gamma[3];
+      double Parameters[2] = {1.0, 0.0};
+      Gamma[0] = Gamma[1] = Gamma[2] = cmsBuildParametricToneCurve(0, 1, Parameters);
+
+      cmsCIEXYZTRIPLE Primaries = { { x[0], y[0], 1.0 }, { x[1], y[1], 1.0 }, { x[2], y[2], 1.0 } };
+
+      profile = cmsCreateRGBProfile(&D50, &Primaries, Gamma);
+
+      cmsHPROFILE RGB = cmsCreateRGBProfile(&D65, &CameraPrimaries, Gamma);
+      cmsFreeToneCurve(Gamma[0]);
+      */
+
+      d->xform = cmsCreateProofingTransform(Lab, TYPE_LabA_FLT, output, output_format, softproof,
+                                            out_intent, INTENT_RELATIVE_COLORIMETRIC, transformFlags);
     }
     else
     {
@@ -761,7 +846,14 @@ void commit_params(struct dt_iop_module_t *self, dt_iop_params_t *p1, dt_dev_pix
     }
   }
 
-  if(out_type == DT_COLORSPACE_DISPLAY) pthread_rwlock_unlock(&darktable.color_profiles->xprofile_lock);
+  pthread_rwlock_unlock(&darktable.color_profiles->xprofile_lock);
+
+  if (d->workflow == SCENE_REFERRED_WORKFLOW)
+  {
+    d->lut[0][0] = -1.0f;
+    d->lut[1][0] = -1.0f;
+    d->lut[2][0] = -1.0f;
+  }
 
   // now try to initialize unbounded mode:
   // we do extrapolation for input values above 1.0f.
@@ -786,6 +878,7 @@ void commit_params(struct dt_iop_module_t *self, dt_iop_params_t *p1, dt_dev_pix
     else
       d->unbounded_coeffs[k][0] = -1.0f;
   }
+
 
   // softproof is never the original but always a copy that went through _make_clipping_profile()
   dt_colorspaces_cleanup_profile(softproof);
@@ -893,7 +986,8 @@ void gui_init(struct dt_iop_module_t *self)
   gtk_box_pack_start(GTK_BOX(self->widget), g->workflow, TRUE, TRUE, 0);
   dt_bauhaus_widget_set_label(g->workflow, NULL, _("color worflow"));
   dt_bauhaus_combobox_add(g->workflow, _("display-referred (gamma)"));
-  dt_bauhaus_combobox_add(g->workflow, _("scene-referred (linear)"));
+  dt_bauhaus_combobox_add(g->workflow, _("scene-referred (linearized)"));
+  dt_bauhaus_combobox_add(g->workflow, _("scene-referred (manual linearization)"));
   /*
   gtk_widget_set_tooltip_text(g->workflow, _("display-referred is the legacy way to work, inherited from CRT screens. "
                                              "To adapt the lightness, it uses the gamma correction of the color profile to cope with non color-managed devices. "
