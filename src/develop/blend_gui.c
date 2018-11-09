@@ -2087,15 +2087,17 @@ void dt_iop_gui_init_blending(GtkWidget *iopw, dt_iop_module_t *module)
     bd->radius_slider = dt_bauhaus_slider_new_with_range(module, 0.0, 250.0, 0.1, 0.0, 1);
     dt_bauhaus_widget_set_label(bd->radius_slider, _("blend"), _("radius"));
     dt_bauhaus_slider_set_format(bd->radius_slider, "%.1f");
-    gtk_widget_set_tooltip_text(bd->radius_slider, _("radius for mask enhancement method"));
+    gtk_widget_set_tooltip_text(bd->radius_slider, _("spatial radius of the mask enhancement method"));
     g_signal_connect(G_OBJECT(bd->radius_slider), "value-changed",
                      G_CALLBACK(_blendop_blendif_radius_callback), bd);
 
-
+    
     bd->brightness_slider = dt_bauhaus_slider_new_with_range(module, -1.0, 1.0, 0.01, 0.0, 2);
     dt_bauhaus_widget_set_label(bd->brightness_slider, _("blend"), _("mask brightness"));
     dt_bauhaus_slider_set_format(bd->brightness_slider, "%.2f");
-    gtk_widget_set_tooltip_text(bd->brightness_slider, _("brightness adjustment of blend mask"));
+    gtk_widget_set_tooltip_text(bd->brightness_slider, _("shifts and tilts the tone curve of the blend mask to adjust its "
+                                                         "brightness without affecting fully transparent/fully opaque "
+                                                         "regions"));
     g_signal_connect(G_OBJECT(bd->brightness_slider), "value-changed",
                      G_CALLBACK(_blendop_blendif_brightness_callback), bd);
 
@@ -2103,7 +2105,8 @@ void dt_iop_gui_init_blending(GtkWidget *iopw, dt_iop_module_t *module)
     bd->contrast_slider = dt_bauhaus_slider_new_with_range(module, -1.0, 1.0, 0.01, 0.0, 2);
     dt_bauhaus_widget_set_label(bd->contrast_slider, _("blend"), _("mask contrast"));
     dt_bauhaus_slider_set_format(bd->contrast_slider, "%.2f");
-    gtk_widget_set_tooltip_text(bd->contrast_slider, _("contrast adjustment of blend mask"));
+    gtk_widget_set_tooltip_text(bd->contrast_slider, _("gives the tone curve of the blend mask an s-like shape to "
+                                                       "adjust its contrast"));
     g_signal_connect(G_OBJECT(bd->contrast_slider), "value-changed",
                      G_CALLBACK(_blendop_blendif_contrast_callback), bd);
 
