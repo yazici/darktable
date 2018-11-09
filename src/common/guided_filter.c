@@ -74,12 +74,6 @@ static inline void free_gray_image(gray_image *img_p)
   img_p->data = NULL;
 }
 
-// copy 1-component image img1 to img2
-static inline void copy_gray_image(gray_image img1, gray_image img2)
-{
-  memcpy(img2.data, img1.data, sizeof(gray_pixel) * img1.width * img1.height);
-}
-
 // minimum of two integers
 static inline int min_i(int a, int b)
 {
@@ -96,24 +90,52 @@ static inline int max_i(int a, int b)
 // input array x has stride 1, output array y has stride stride_y
 static inline void box_mean_1d(int N, const float *x, float *y, size_t stride_y, int w)
 {
-  float m = 0, n_box = 0;
-  for(int i = 0, i_end = min_i(w + 1, N); i < i_end; i++)
+  float m = 0.f, n_box = 0.f;
+  if(N > 2 * w)
   {
-    m += x[i];
-    n_box++;
-  }
-  for(int i = 0; i < N; i++)
-  {
-    y[i * stride_y] = m / n_box;
-    if(i - w >= 0)
+    for(int i = 0, i_end = w + 1; i < i_end; i++)
     {
+      m += x[i];
+      n_box++;
+    }
+    for(int i = 0, i_end = w; i < i_end; i++)
+    {
+      y[i * stride_y] = m / n_box;
+      m += x[i + w + 1];
+      n_box++;
+    }
+    for(int i = w, i_end = N - w - 1; i < i_end; i++)
+    {
+      y[i * stride_y] = m / n_box;
+      m += x[i + w + 1] - x[i - w];
+    }
+    for(int i = N - w -1, i_end = N; i < i_end; i++)
+    {
+      y[i * stride_y] = m / n_box;
       m -= x[i - w];
       n_box--;
     }
-    if(i + w + 1 < N)
+  }
+  else
+  {
+    for(int i = 0, i_end = min_i(w + 1, N); i < i_end; i++)
     {
-      m += x[i + w + 1];
+      m += x[i];
       n_box++;
+    }
+    for(int i = 0; i < N; i++)
+    {
+      y[i * stride_y] = m / n_box;
+      if(i - w >= 0)
+      {
+        m -= x[i - w];
+        n_box--;
+      }
+      if(i + w + 1 < N)
+      {
+        m += x[i + w + 1];
+        n_box++;
+      }
     }
   }
 }
@@ -182,13 +204,12 @@ static void guided_filter_tiling(rgb_lab_image imgg, gray_image img, gray_image 
   gray_image cov_imgg_img_r = new_gray_image(width, height);
   gray_image cov_imgg_img_g = new_gray_image(width, height);
   gray_image cov_imgg_img_b = new_gray_image(width, height);
-  gray_image var_imgg_rr, var_imgg_rg, var_imgg_rb, var_imgg_gg, var_imgg_gb, var_imgg_bb;
-  var_imgg_rr = new_gray_image(width, height);
-  var_imgg_gg = new_gray_image(width, height);
-  var_imgg_bb = new_gray_image(width, height);
-  var_imgg_rg = new_gray_image(width, height);
-  var_imgg_rb = new_gray_image(width, height);
-  var_imgg_gb = new_gray_image(width, height);
+  gray_image var_imgg_rr = new_gray_image(width, height);
+  gray_image var_imgg_gg = new_gray_image(width, height);
+  gray_image var_imgg_bb = new_gray_image(width, height);
+  gray_image var_imgg_rg = new_gray_image(width, height);
+  gray_image var_imgg_rb = new_gray_image(width, height);
+  gray_image var_imgg_gb = new_gray_image(width, height);
   for(int j_imgg = source.lower; j_imgg < source.upper; j_imgg++)
   {
     int j = j_imgg - source.lower;
@@ -239,31 +260,31 @@ static void guided_filter_tiling(rgb_lab_image imgg, gray_image img, gray_image 
     for(int i0 = 0; i0 < width; i0++)
     {
       // solve linear system of equations of size 3x3 via Cramer's rule
-      float Sigma[3][3]; // symmetric coefficient matrix
-      Sigma[0][0] = var_imgg_rr.data[i];
-      Sigma[0][1] = var_imgg_rg.data[i];
-      Sigma[0][2] = var_imgg_rb.data[i];
-      Sigma[1][1] = var_imgg_gg.data[i];
-      Sigma[1][2] = var_imgg_gb.data[i];
-      Sigma[2][2] = var_imgg_bb.data[i];
+      // symmetric coefficient matrix
+      float Sigma_0_0 = var_imgg_rr.data[i];
+      float Sigma_0_1 = var_imgg_rg.data[i];
+      float Sigma_0_2 = var_imgg_rb.data[i];
+      float Sigma_1_1 = var_imgg_gg.data[i];
+      float Sigma_1_2 = var_imgg_gb.data[i];
+      float Sigma_2_2 = var_imgg_bb.data[i];
       rgb_lab_pixel cov_imgg_img;
       cov_imgg_img[0] = cov_imgg_img_r.data[i];
       cov_imgg_img[1] = cov_imgg_img_g.data[i];
       cov_imgg_img[2] = cov_imgg_img_b.data[i];
-      float det0 = Sigma[0][0] * (Sigma[1][1] * Sigma[2][2] - Sigma[1][2] * Sigma[1][2])
-                   - Sigma[0][1] * (Sigma[0][1] * Sigma[2][2] - Sigma[0][2] * Sigma[1][2])
-                   + Sigma[0][2] * (Sigma[0][1] * Sigma[1][2] - Sigma[0][2] * Sigma[1][1]);
+      float det0 = Sigma_0_0 * (Sigma_1_1 * Sigma_2_2 - Sigma_1_2 * Sigma_1_2)
+                   - Sigma_0_1 * (Sigma_0_1 * Sigma_2_2 - Sigma_0_2 * Sigma_1_2)
+                   + Sigma_0_2 * (Sigma_0_1 * Sigma_1_2 - Sigma_0_2 * Sigma_1_1);
       if(fabsf(det0) > 4.f * FLT_EPSILON)
       {
-        float det1 = cov_imgg_img[0] * (Sigma[1][1] * Sigma[2][2] - Sigma[1][2] * Sigma[1][2])
-                     - Sigma[0][1] * (cov_imgg_img[1] * Sigma[2][2] - cov_imgg_img[2] * Sigma[1][2])
-                     + Sigma[0][2] * (cov_imgg_img[1] * Sigma[1][2] - cov_imgg_img[2] * Sigma[1][1]);
-        float det2 = Sigma[0][0] * (cov_imgg_img[1] * Sigma[2][2] - cov_imgg_img[2] * Sigma[1][2])
-                     - cov_imgg_img[0] * (Sigma[0][1] * Sigma[2][2] - Sigma[0][2] * Sigma[1][2])
-                     + Sigma[0][2] * (Sigma[0][1] * cov_imgg_img[2] - Sigma[0][2] * cov_imgg_img[1]);
-        float det3 = Sigma[0][0] * (Sigma[1][1] * cov_imgg_img[2] - Sigma[1][2] * cov_imgg_img[1])
-                     - Sigma[0][1] * (Sigma[0][1] * cov_imgg_img[2] - Sigma[0][2] * cov_imgg_img[1])
-                     + cov_imgg_img[0] * (Sigma[0][1] * Sigma[1][2] - Sigma[0][2] * Sigma[1][1]);
+        float det1 = cov_imgg_img[0] * (Sigma_1_1 * Sigma_2_2 - Sigma_1_2 * Sigma_1_2)
+                     - Sigma_0_1 * (cov_imgg_img[1] * Sigma_2_2 - cov_imgg_img[2] * Sigma_1_2)
+                     + Sigma_0_2 * (cov_imgg_img[1] * Sigma_1_2 - cov_imgg_img[2] * Sigma_1_1);
+        float det2 = Sigma_0_0 * (cov_imgg_img[1] * Sigma_2_2 - cov_imgg_img[2] * Sigma_1_2)
+                     - cov_imgg_img[0] * (Sigma_0_1 * Sigma_2_2 - Sigma_0_2 * Sigma_1_2)
+                     + Sigma_0_2 * (Sigma_0_1 * cov_imgg_img[2] - Sigma_0_2 * cov_imgg_img[1]);
+        float det3 = Sigma_0_0 * (Sigma_1_1 * cov_imgg_img[2] - Sigma_1_2 * cov_imgg_img[1])
+                     - Sigma_0_1 * (Sigma_0_1 * cov_imgg_img[2] - Sigma_0_2 * cov_imgg_img[1])
+                     + cov_imgg_img[0] * (Sigma_0_1 * Sigma_1_2 - Sigma_0_2 * Sigma_1_1);
         a_r.data[i] = det1 / det0;
         a_g.data[i] = det2 / det0;
         a_b.data[i] = det3 / det0;
@@ -271,9 +292,9 @@ static void guided_filter_tiling(rgb_lab_image imgg, gray_image img, gray_image 
       else
       {
         // linear system is singular
-        a_r.data[i] = 0;
-        a_g.data[i] = 0;
-        a_b.data[i] = 0;
+        a_r.data[i] = 0.f;
+        a_g.data[i] = 0.f;
+        a_b.data[i] = 0.f;
       }
       b.data[i] -= a_r.data[i] * imgg_mean_r.data[i];
       b.data[i] -= a_g.data[i] * imgg_mean_g.data[i];
@@ -348,3 +369,28 @@ void guided_filter(const float *const guide, const float *const in, float *const
     }
   }
 }
+
+#ifdef HAVE_OPENCL
+void guided_filter_cl(int devid, cl_mem guide, cl_mem in, cl_mem out,
+                     int width, int height, int ch, int w,
+                     float sqrt_eps, float min, float max)
+{
+  // fall-back implementation: copy data from device memory to host memory and perform filter
+  // by CPU until there is a proper OpenCL implementation
+  float *guide_host = dt_alloc_align(64, sizeof(*guide_host) * width * height * ch);
+  float *in_host = dt_alloc_align(64, sizeof(*in_host) * width * height);
+  float *out_host = dt_alloc_align(64, sizeof(*out_host) * width * height);
+  int err;
+  err = dt_opencl_read_host_from_device(devid, guide_host, guide, width, height, ch * sizeof(float));
+  if(err != CL_SUCCESS) goto error;
+  err = dt_opencl_read_host_from_device(devid, in_host, in, width, height, sizeof(float));
+  if(err != CL_SUCCESS) goto error;
+  guided_filter(guide_host, in_host, out_host, width, height, ch, w, sqrt_eps, 0.0f, 1.0f);
+  err = dt_opencl_write_host_to_device(devid, out_host, out, width, height, sizeof(float));
+  if(err != CL_SUCCESS) goto error;
+error:
+  dt_free_align(guide_host);
+  dt_free_align(in_host);
+  dt_free_align(out_host);
+}
+#endif

@@ -2072,7 +2072,7 @@ void dt_iop_gui_init_blending(GtkWidget *iopw, dt_iop_module_t *module)
     bd->masks_blur_modes_combo = dt_bauhaus_combobox_new(module);
     dt_bauhaus_widget_set_label(bd->masks_blur_modes_combo, _("mask enhancement"), _("mask enhancement"));
 
-    dt_bauhaus_combobox_add(bd->masks_blur_modes_combo, _("Gaussian blur"));
+    dt_bauhaus_combobox_add(bd->masks_blur_modes_combo, _("gaussian blur"));
     bd->masks_blur_modes = g_list_append(bd->masks_blur_modes, GUINT_TO_POINTER(DEVELOP_MASK_BLUR_GAUSSIAN));
 
     dt_bauhaus_combobox_add(bd->masks_blur_modes_combo, _("feathering"));
@@ -2085,17 +2085,11 @@ void dt_iop_gui_init_blending(GtkWidget *iopw, dt_iop_module_t *module)
 
 
     bd->radius_slider = dt_bauhaus_slider_new_with_range(module, 0.0, 250.0, 0.1, 0.0, 1);
-    dt_bauhaus_widget_set_label(bd->radius_slider, _("blend"), _("mask blur"));
+    dt_bauhaus_widget_set_label(bd->radius_slider, _("blend"), _("radius"));
     dt_bauhaus_slider_set_format(bd->radius_slider, "%.1f");
     gtk_widget_set_tooltip_text(bd->radius_slider, _("radius for mask enhancement method"));
     g_signal_connect(G_OBJECT(bd->radius_slider), "value-changed",
                      G_CALLBACK(_blendop_blendif_radius_callback), bd);
-    bd->brightness_slider = dt_bauhaus_slider_new_with_range(module, -1.0, 1.0, 0.01, 0.0, 2);
-    dt_bauhaus_widget_set_label(bd->brightness_slider, _("blend"), _("mask brightness"));
-    dt_bauhaus_slider_set_format(bd->brightness_slider, "%.2f");
-    gtk_widget_set_tooltip_text(bd->brightness_slider, _("brightness adjustment of blend mask"));
-    g_signal_connect(G_OBJECT(bd->brightness_slider), "value-changed",
-                     G_CALLBACK(_blendop_blendif_brightness_callback), bd);
 
 
     bd->brightness_slider = dt_bauhaus_slider_new_with_range(module, -1.0, 1.0, 0.01, 0.0, 2);
