@@ -929,8 +929,8 @@ void commit_params(dt_iop_module_t *self, dt_iop_params_t *p1, dt_dev_pixelpipe_
   if (p->interpolator == CUBIC_SPLINE)
   {
     // the cubic spline is extra sensitive to close nodes : they will produce cusps
-    if (toe_log < 0.05f || toe_display < 0.05f) TOE_LOST = TRUE;
-    if (shoulder_log > 0.95f || shoulder_display > 0.95f) SHOULDER_LOST = TRUE;
+    if (toe_log < 0.01f || toe_display < 0.01f) TOE_LOST = TRUE;
+    if (shoulder_log > 0.99f || shoulder_display > 0.99f) SHOULDER_LOST = TRUE;
   }
 
   // Build the curve from the nodes
