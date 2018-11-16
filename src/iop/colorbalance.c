@@ -328,7 +328,7 @@ void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const 
           // transform the pixel to sRGB:
           // Lab -> XYZ
           float XYZ[3] = { 0.0f };
-          dt_Lab_to_XYZ(in, XYZ);
+          dt_Lab_to_XYZ_D50(in, XYZ);
 
           // XYZ -> sRGB
           float rgb[3] = { 0.0f };
@@ -347,7 +347,7 @@ void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const 
           dt_sRGB_to_XYZ(rgb, XYZ);
 
           // XYZ -> Lab
-          dt_XYZ_to_Lab(XYZ, out);
+          dt_XYZ_to_Lab_D50(XYZ, out);
           out[3] = in[3];
 
           in += ch;
@@ -382,7 +382,7 @@ void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const 
           // transform the pixel to sRGB:
           // Lab -> XYZ
           float XYZ[3] = { 0.0f };
-          dt_Lab_to_XYZ(in, XYZ);
+          dt_Lab_to_XYZ_D50(in, XYZ);
 
           // XYZ -> sRGB
           float rgb[3] = { 0.0f };
@@ -412,7 +412,7 @@ void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const 
           dt_prophotorgb_to_XYZ(rgb, XYZ);
 
           // XYZ -> Lab
-          dt_XYZ_to_Lab(XYZ, out);
+          dt_XYZ_to_Lab_D50(XYZ, out);
           out[3] = in[3];
 
           in += ch;
@@ -446,7 +446,7 @@ void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const 
           // transform the pixel to RGB:
           // Lab -> XYZ
           float XYZ[3];
-          dt_Lab_to_XYZ(in, XYZ);
+          dt_Lab_to_XYZ_D50(in, XYZ);
 
           // XYZ -> RGB
           float rgb[3];
@@ -472,7 +472,7 @@ void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const 
           dt_prophotorgb_to_XYZ(rgb , XYZ);
 
           // XYZ -> Lab
-          dt_XYZ_to_Lab(XYZ, out);
+          dt_XYZ_to_Lab_D50(XYZ, out);
           out[3] = in[3];
 
           in += ch;
@@ -539,7 +539,7 @@ void process_sse2(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, c
         {
           // transform the pixel to sRGB:
           // Lab -> XYZ
-          __m128 XYZ = dt_Lab_to_XYZ_sse2(_mm_load_ps(in));
+          __m128 XYZ = dt_Lab_to_XYZ_D50_sse2(_mm_load_ps(in));
           // XYZ -> sRGB
           __m128 rgb = dt_XYZ_to_sRGB_sse2(XYZ);
 
@@ -553,7 +553,7 @@ void process_sse2(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, c
           // sRGB -> XYZ
           XYZ = dt_sRGB_to_XYZ_sse2(rgb);
           // XYZ -> Lab
-          _mm_store_ps(out, dt_XYZ_to_Lab_sse2(XYZ));
+          _mm_store_ps(out, dt_XYZ_to_Lab_D50_sse2(XYZ));
         }
       }
 
@@ -590,7 +590,7 @@ void process_sse2(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, c
         {
           // transform the pixel to sRGB:
           // Lab -> XYZ
-          __m128 XYZ = dt_Lab_to_XYZ_sse2(_mm_load_ps(in));
+          __m128 XYZ = dt_Lab_to_XYZ_D50_sse2(_mm_load_ps(in));
           // XYZ -> sRGB
           __m128 rgb = dt_XYZ_to_prophotoRGB_sse2(XYZ);
 
@@ -622,7 +622,7 @@ void process_sse2(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, c
           // sRGB -> XYZ
           XYZ = dt_prophotoRGB_to_XYZ_sse2(rgb);
           // XYZ -> Lab
-          _mm_store_ps(out, dt_XYZ_to_Lab_sse2(XYZ));
+          _mm_store_ps(out, dt_XYZ_to_Lab_D50_sse2(XYZ));
         }
       }
 
@@ -652,7 +652,7 @@ void process_sse2(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, c
         {
           // transform the pixel to sRGB:
           // Lab -> XYZ
-          __m128 XYZ = dt_Lab_to_XYZ_sse2(_mm_load_ps(in));
+          __m128 XYZ = dt_Lab_to_XYZ_D50_sse2(_mm_load_ps(in));
           // XYZ -> sRGB
           __m128 rgb = dt_XYZ_to_prophotoRGB_sse2(XYZ);
 
@@ -681,7 +681,7 @@ void process_sse2(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, c
           // sRGB -> XYZ
           XYZ = dt_prophotoRGB_to_XYZ_sse2(rgb);
           // XYZ -> Lab
-          _mm_store_ps(out, dt_XYZ_to_Lab_sse2(XYZ));
+          _mm_store_ps(out, dt_XYZ_to_Lab_D50_sse2(XYZ));
         }
       }
       break;
@@ -943,7 +943,7 @@ static void apply_autogrey(dt_iop_module_t *self)
 
   float XYZ[3] = { 0.0f };
   float rgb[3] = { 0.0f };
-  dt_Lab_to_XYZ((const float *)self->picked_color, XYZ);
+  dt_Lab_to_XYZ_D50((const float *)self->picked_color, XYZ);
   dt_XYZ_to_prophotorgb((const float *)XYZ, rgb);
 
   const float lift[3]
@@ -986,7 +986,7 @@ static void apply_lift_neutralize(dt_iop_module_t *self)
   const float gain[3] = { p->gain[CHANNEL_RED], p->gain[CHANNEL_GREEN], p->gain[CHANNEL_BLUE] };
 
   float XYZ[3] = { 0.0f };
-  dt_Lab_to_XYZ((const float *)self->picked_color, XYZ);
+  dt_Lab_to_XYZ_D50((const float *)self->picked_color, XYZ);
   float RGB[3] = { 0.0f };
   dt_XYZ_to_prophotorgb((const float *)XYZ, RGB);
 
@@ -1025,7 +1025,7 @@ static void apply_gamma_neutralize(dt_iop_module_t *self)
   dt_iop_colorbalance_gui_data_t *g = (dt_iop_colorbalance_gui_data_t *)self->gui_data;
 
   float XYZ[3] = { 0.0f };
-  dt_Lab_to_XYZ((const float *)self->picked_color, XYZ);
+  dt_Lab_to_XYZ_D50((const float *)self->picked_color, XYZ);
   float RGB[3] = { 0.0f };
   dt_XYZ_to_prophotorgb((const float *)XYZ, RGB);
 
@@ -1064,7 +1064,7 @@ static void apply_gain_neutralize(dt_iop_module_t *self)
   dt_iop_colorbalance_gui_data_t *g = (dt_iop_colorbalance_gui_data_t *)self->gui_data;
 
   float XYZ[3] = { 0.0f };
-  dt_Lab_to_XYZ((const float *)self->picked_color, XYZ);
+  dt_Lab_to_XYZ_D50((const float *)self->picked_color, XYZ);
   float RGB[3] = { 0.0f };
   dt_XYZ_to_prophotorgb((const float *)XYZ, RGB);
 
@@ -1103,7 +1103,7 @@ static void apply_lift_auto(dt_iop_module_t *self)
   dt_iop_colorbalance_gui_data_t *g = (dt_iop_colorbalance_gui_data_t *)self->gui_data;
 
   float XYZ[3] = { 0.0f };
-  dt_Lab_to_XYZ((const float *)self->picked_color_min, XYZ);
+  dt_Lab_to_XYZ_D50((const float *)self->picked_color_min, XYZ);
 
 #ifdef OPTIM
   g->luma_patches[LIFT] = XYZ[1];
@@ -1129,7 +1129,7 @@ static void apply_gamma_auto(dt_iop_module_t *self)
   dt_iop_colorbalance_gui_data_t *g = (dt_iop_colorbalance_gui_data_t *)self->gui_data;
 
   float XYZ[3] = { 0.0f };
-  dt_Lab_to_XYZ((const float *)self->picked_color, XYZ);
+  dt_Lab_to_XYZ_D50((const float *)self->picked_color, XYZ);
 
 #ifdef OPTIM
   g->luma_patches[GAMMA] = XYZ[1];
@@ -1156,7 +1156,7 @@ static void apply_gain_auto(dt_iop_module_t *self)
   dt_iop_colorbalance_gui_data_t *g = (dt_iop_colorbalance_gui_data_t *)self->gui_data;
 
   float XYZ[3] = { 0.0f };
-  dt_Lab_to_XYZ((const float *)self->picked_color_max, XYZ);
+  dt_Lab_to_XYZ_D50((const float *)self->picked_color_max, XYZ);
 
 #ifdef OPTIM
   g->luma_patches[GAIN] = XYZ[1];
@@ -1190,7 +1190,7 @@ static void apply_autocolor(dt_iop_module_t *self)
      * picture-wide patch for these.
      */
     float XYZ[3] = { 0.0f };
-    dt_Lab_to_XYZ((const float *)self->picked_color, XYZ);
+    dt_Lab_to_XYZ_D50((const float *)self->picked_color, XYZ);
     float RGB[3] = { 0.0f };
     dt_XYZ_to_prophotorgb((const float *)XYZ, RGB);
 
@@ -1299,21 +1299,21 @@ static void apply_autoluma(dt_iop_module_t *self)
   if(g->luma_patches_flags[LIFT] == INVALID)
   {
     float XYZ[3] = { 0.0f };
-    dt_Lab_to_XYZ((const float *)self->picked_color_min, XYZ);
+    dt_Lab_to_XYZ_D50((const float *)self->picked_color_min, XYZ);
     g->luma_patches[LIFT] = XYZ[1];
     g->luma_patches_flags[LIFT] = AUTO_SELECTED;
   }
   if(g->luma_patches_flags[GAMMA] == INVALID)
   {
     float XYZ[3] = { 0.0f };
-    dt_Lab_to_XYZ((const float *)self->picked_color, XYZ);
+    dt_Lab_to_XYZ_D50((const float *)self->picked_color, XYZ);
     g->luma_patches[GAMMA] = XYZ[1];
     g->luma_patches_flags[GAMMA] = AUTO_SELECTED;
   }
   if(g->luma_patches_flags[GAIN] == INVALID)
   {
     float XYZ[3] = { 0.0f };
-    dt_Lab_to_XYZ((const float *)self->picked_color_max, XYZ);
+    dt_Lab_to_XYZ_D50((const float *)self->picked_color_max, XYZ);
     g->luma_patches[GAIN] = XYZ[1];
     g->luma_patches_flags[GAIN] = AUTO_SELECTED;
   }

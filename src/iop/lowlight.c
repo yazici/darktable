@@ -129,7 +129,7 @@ void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const 
   float Lab_sw[3] = { 100.0f, 0, -d->blueness };
   float XYZ_sw[3];
 
-  dt_Lab_to_XYZ(Lab_sw, XYZ_sw);
+  dt_Lab_to_XYZ_D50(Lab_sw, XYZ_sw);
 
 #ifdef _OPENMP
 #pragma omp parallel for default(none) schedule(static) shared(d, XYZ_sw)
@@ -142,7 +142,7 @@ void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const 
     float V;
     float w;
 
-    dt_Lab_to_XYZ(in, XYZ);
+    dt_Lab_to_XYZ_D50(in, XYZ);
 
     // calculate scotopic luminance
     if(XYZ[0] > threshold)
@@ -170,7 +170,7 @@ void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const 
     XYZ[1] = w * XYZ[1] + (1.0f - w) * XYZ_s[1];
     XYZ[2] = w * XYZ[2] + (1.0f - w) * XYZ_s[2];
 
-    dt_XYZ_to_Lab(XYZ, out);
+    dt_XYZ_to_Lab_D50(XYZ, out);
 
     out[3] = in[3];
   }
@@ -194,7 +194,7 @@ int process_cl(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, cl_m
   float Lab_sw[3] = { 100.0f, 0.0f, -d->blueness };
   float XYZ_sw[4];
 
-  dt_Lab_to_XYZ(Lab_sw, XYZ_sw);
+  dt_Lab_to_XYZ_D50(Lab_sw, XYZ_sw);
 
   dev_m = dt_opencl_copy_host_to_device(devid, d->lut, 256, 256, sizeof(float));
   if(dev_m == NULL) goto error;

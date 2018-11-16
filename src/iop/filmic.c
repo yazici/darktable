@@ -240,7 +240,7 @@ void process(dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const void *c
     for(size_t i = 0; i < roi_out->width; i++)
     {
       float XYZ[3];
-      dt_Lab_to_XYZ(in, XYZ);
+      dt_Lab_to_XYZ_D50(in, XYZ);
 
       float rgb[3] = { 0.0f };
       dt_XYZ_to_prophotorgb(XYZ, rgb);
@@ -280,7 +280,8 @@ void process(dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const void *c
 
       // transform the result back to Lab
       // sRGB -> XYZ
-      dt_prophotorgb_to_Lab(rgb, out);
+      dt_prophotorgb_to_XYZ(rgb, XYZ);
+      dt_XYZ_to_Lab_D50(XYZ, out);
       out[3] = in[3];
 
       in += ch;
@@ -325,7 +326,7 @@ void process_sse2(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, c
     float *out = ((float *)ovoid) + (size_t)ch * roi_out->width * j;
     for(int i = 0; i < roi_out->width; i++, in += ch, out += ch)
     {
-      __m128 XYZ = dt_Lab_to_XYZ_sse2(_mm_load_ps(in));
+      __m128 XYZ = dt_Lab_to_XYZ_D50_sse2(_mm_load_ps(in));
       __m128 rgb = dt_XYZ_to_prophotoRGB_sse2(XYZ);
 
       // Log tone-mapping
@@ -378,7 +379,7 @@ void process_sse2(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, c
       // sRGB -> XYZ
       XYZ = dt_prophotoRGB_to_XYZ_sse2(rgb);
       // XYZ -> Lab
-      _mm_store_ps(out, dt_XYZ_to_Lab_sse2(XYZ));
+      _mm_store_ps(out, dt_XYZ_to_Lab_D50_sse2(XYZ));
     }
   }
 
@@ -464,7 +465,7 @@ static void apply_auto_grey(dt_iop_module_t *self)
   dt_iop_filmic_gui_data_t *g = (dt_iop_filmic_gui_data_t *)self->gui_data;
 
   float XYZ[3] = { 0.0f };
-  dt_Lab_to_XYZ(self->picked_color, XYZ);
+  dt_Lab_to_XYZ_D50(self->picked_color, XYZ);
 
   float grey = XYZ[1];
   p->grey_point_source = 100.f * grey;
@@ -574,7 +575,7 @@ static void apply_autotune(dt_iop_module_t *self)
   float XYZ[3] = { 0.0f };
 
   // Grey
-  dt_Lab_to_XYZ(self->picked_color, XYZ);
+  dt_Lab_to_XYZ_D50(self->picked_color, XYZ);
   float grey = XYZ[1];
   p->grey_point_source = 100.f * grey;
 

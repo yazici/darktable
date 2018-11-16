@@ -3505,7 +3505,7 @@ static void image_rgb2lab(float *img_src, const int width, const int height, con
       __m128 rgb = _mm_load_ps(img_src + i);
       __m128 XYZ = dt_RGB_to_XYZ_sse2(rgb);
       // XYZ -> Lab
-      _mm_store_ps(img_src + i, dt_XYZ_to_Lab_sse2(XYZ));
+      _mm_store_ps(img_src + i, dt_XYZ_to_Lab_D50_sse2(XYZ));
     }
 
     return;
@@ -3520,7 +3520,7 @@ static void image_rgb2lab(float *img_src, const int width, const int height, con
     float XYZ[3] = { 0 };
 
     dt_RGB_to_XYZ(img_src + i, XYZ);
-    dt_XYZ_to_Lab(XYZ, img_src + i);
+    dt_XYZ_to_Lab_D50(XYZ, img_src + i);
   }
 }
 
@@ -3538,7 +3538,7 @@ static void image_lab2rgb(float *img_src, const int width, const int height, con
     {
       // Lab -> XYZ
       __m128 Lab = _mm_load_ps(img_src + i);
-      __m128 XYZ = dt_Lab_to_XYZ_sse2(Lab);
+      __m128 XYZ = dt_Lab_to_XYZ_D50_sse2(Lab);
       // XYZ -> RGB
       _mm_store_ps(img_src + i, dt_XYZ_to_RGB_sse2(XYZ));
     }
@@ -3554,7 +3554,7 @@ static void image_lab2rgb(float *img_src, const int width, const int height, con
   {
     float XYZ[3] = { 0 };
 
-    dt_Lab_to_XYZ(img_src + i, XYZ);
+    dt_Lab_to_XYZ_D50(img_src + i, XYZ);
     dt_XYZ_to_RGB(XYZ, img_src + i);
   }
 }
@@ -3578,7 +3578,7 @@ static void rt_process_stats(const float *const img_src, const int width, const 
     float Lab[3] = { 0 };
 
     dt_RGB_to_XYZ(img_src + i, XYZ);
-    dt_XYZ_to_Lab(XYZ, Lab);
+    dt_XYZ_to_Lab_D50(XYZ, Lab);
 
     l_max = MAX(l_max, Lab[0]);
     l_min = MIN(l_min, Lab[0]);
@@ -3615,7 +3615,7 @@ static void rt_adjust_levels(float *img_src, const int width, const int height, 
     float XYZ[3] = { 0 };
 
     dt_RGB_to_XYZ(img_src + i, XYZ);
-    dt_XYZ_to_Lab(XYZ, img_src + i);
+    dt_XYZ_to_Lab_D50(XYZ, img_src + i);
 
     for(int c = 0; c < 1; c++)
     {
@@ -3632,7 +3632,7 @@ static void rt_adjust_levels(float *img_src, const int width, const int height, 
       }
     }
 
-    dt_Lab_to_XYZ(img_src + i, XYZ);
+    dt_Lab_to_XYZ_D50(img_src + i, XYZ);
     dt_XYZ_to_RGB(XYZ, img_src + i);
   }
 }

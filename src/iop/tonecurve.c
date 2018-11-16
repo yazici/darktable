@@ -363,11 +363,11 @@ void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const 
       else if(autoscale_ab == DT_S_SCALE_AUTOMATIC_XYZ)
       {
         float XYZ[3];
-        dt_Lab_to_XYZ(in, XYZ);
+        dt_Lab_to_XYZ_D50(in, XYZ);
         for(int c=0;c<3;c++)
           XYZ[c] = (XYZ[c] < xm_L) ? d->table[ch_L][CLAMP((int)(XYZ[c] * 0x10000ul), 0, 0xffff)]
                                    : dt_iop_eval_exp(d->unbounded_coeffs_L, XYZ[c]);
-        dt_XYZ_to_Lab(XYZ, out);
+        dt_XYZ_to_Lab_D50(XYZ, out);
       }
       else if(autoscale_ab == DT_S_SCALE_AUTOMATIC_RGB)
       {
@@ -579,9 +579,9 @@ void commit_params(struct dt_iop_module_t *self, dt_iop_params_t *p1, dt_dev_pix
     {
       float XYZ[3] = {k/(float)0x10000, k/(float)0x10000, k/(float)0x10000};
       float Lab[3] = {0.0};
-      dt_XYZ_to_Lab(XYZ, Lab);
+      dt_XYZ_to_Lab_D50(XYZ, Lab);
       Lab[0] = d->table[ch_L][CLAMP((int)(Lab[0]/100.0f * 0x10000), 0, 0xffff)];
-      dt_Lab_to_XYZ(Lab, XYZ);
+      dt_Lab_to_XYZ_D50(Lab, XYZ);
       d->table[ch_L][k] = XYZ[1]; // now mapping Y_in to Y_out
     }
   }

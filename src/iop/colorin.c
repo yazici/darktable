@@ -516,7 +516,7 @@ static void process_cmatrix_bm(struct dt_iop_module_t *self, dt_dev_pixelpipe_io
           }
         }
 
-        dt_XYZ_to_Lab(_xyz, out);
+        dt_XYZ_to_Lab_D50(_xyz, out);
       }
       else
       {
@@ -546,7 +546,7 @@ static void process_cmatrix_bm(struct dt_iop_module_t *self, dt_dev_pixelpipe_io
           }
         }
 
-        dt_XYZ_to_Lab(XYZ, out);
+        dt_XYZ_to_Lab_D50(XYZ, out);
       }
     }
   }
@@ -580,7 +580,7 @@ static void process_cmatrix_fastpath_simple(struct dt_iop_module_t *self, dt_dev
       }
     }
 
-    dt_XYZ_to_Lab(_xyz, out);
+    dt_XYZ_to_Lab_D50(_xyz, out);
   }
 }
 
@@ -627,7 +627,7 @@ static void process_cmatrix_fastpath_clipping(struct dt_iop_module_t *self, dt_d
       }
     }
 
-    dt_XYZ_to_Lab(XYZ, out);
+    dt_XYZ_to_Lab_D50(XYZ, out);
   }
 }
 
@@ -690,7 +690,7 @@ static void process_cmatrix_proper(struct dt_iop_module_t *self, dt_dev_pixelpip
           }
         }
 
-        dt_XYZ_to_Lab(_xyz, out);
+        dt_XYZ_to_Lab_D50(_xyz, out);
       }
       else
       {
@@ -720,7 +720,7 @@ static void process_cmatrix_proper(struct dt_iop_module_t *self, dt_dev_pixelpip
           }
         }
 
-        dt_XYZ_to_Lab(XYZ, out);
+        dt_XYZ_to_Lab_D50(XYZ, out);
       }
     }
   }
@@ -922,7 +922,7 @@ static void process_sse2_cmatrix_bm(struct dt_iop_module_t *self, dt_dev_pixelpi
         __m128 xyz
             = _mm_add_ps(_mm_add_ps(_mm_mul_ps(cm0, _mm_set1_ps(cam[0])), _mm_mul_ps(cm1, _mm_set1_ps(cam[1]))),
                          _mm_mul_ps(cm2, _mm_set1_ps(cam[2])));
-        _mm_stream_ps(buf_out, dt_XYZ_to_Lab_sse2(xyz));
+        _mm_stream_ps(buf_out, dt_XYZ_to_Lab_D50_sse2(xyz));
       }
       else
       {
@@ -933,7 +933,7 @@ static void process_sse2_cmatrix_bm(struct dt_iop_module_t *self, dt_dev_pixelpi
         __m128 xyz = _mm_add_ps(_mm_add_ps(_mm_mul_ps(lm0, _mm_shuffle_ps(crgb, crgb, _MM_SHUFFLE(0, 0, 0, 0))),
                                            _mm_mul_ps(lm1, _mm_shuffle_ps(crgb, crgb, _MM_SHUFFLE(1, 1, 1, 1)))),
                                 _mm_mul_ps(lm2, _mm_shuffle_ps(crgb, crgb, _MM_SHUFFLE(2, 2, 2, 2))));
-        _mm_stream_ps(buf_out, dt_XYZ_to_Lab_sse2(xyz));
+        _mm_stream_ps(buf_out, dt_XYZ_to_Lab_D50_sse2(xyz));
       }
     }
   }
@@ -968,7 +968,7 @@ static void process_sse2_cmatrix_fastpath_simple(struct dt_iop_module_t *self, d
     __m128 xyz = _mm_add_ps(_mm_add_ps(_mm_mul_ps(cm0, _mm_shuffle_ps(input, input, _MM_SHUFFLE(0, 0, 0, 0))),
                                        _mm_mul_ps(cm1, _mm_shuffle_ps(input, input, _MM_SHUFFLE(1, 1, 1, 1)))),
                             _mm_mul_ps(cm2, _mm_shuffle_ps(input, input, _MM_SHUFFLE(2, 2, 2, 2))));
-    _mm_stream_ps(out, dt_XYZ_to_Lab_sse2(xyz));
+    _mm_stream_ps(out, dt_XYZ_to_Lab_D50_sse2(xyz));
   }
   _mm_sfence();
 }
@@ -1010,7 +1010,7 @@ static void process_sse2_cmatrix_fastpath_clipping(struct dt_iop_module_t *self,
     __m128 xyz = _mm_add_ps(_mm_add_ps(_mm_mul_ps(lm0, _mm_shuffle_ps(crgb, crgb, _MM_SHUFFLE(0, 0, 0, 0))),
                                        _mm_mul_ps(lm1, _mm_shuffle_ps(crgb, crgb, _MM_SHUFFLE(1, 1, 1, 1)))),
                             _mm_mul_ps(lm2, _mm_shuffle_ps(crgb, crgb, _MM_SHUFFLE(2, 2, 2, 2))));
-    _mm_stream_ps(out, dt_XYZ_to_Lab_sse2(xyz));
+    _mm_stream_ps(out, dt_XYZ_to_Lab_D50_sse2(xyz));
   }
   _mm_sfence();
 }
@@ -1083,7 +1083,7 @@ static void process_sse2_cmatrix_proper(struct dt_iop_module_t *self, dt_dev_pix
         __m128 xyz
             = _mm_add_ps(_mm_add_ps(_mm_mul_ps(cm0, _mm_set1_ps(cam[0])), _mm_mul_ps(cm1, _mm_set1_ps(cam[1]))),
                          _mm_mul_ps(cm2, _mm_set1_ps(cam[2])));
-        _mm_stream_ps(buf_out, dt_XYZ_to_Lab_sse2(xyz));
+        _mm_stream_ps(buf_out, dt_XYZ_to_Lab_D50_sse2(xyz));
       }
       else
       {
@@ -1094,7 +1094,7 @@ static void process_sse2_cmatrix_proper(struct dt_iop_module_t *self, dt_dev_pix
         __m128 xyz = _mm_add_ps(_mm_add_ps(_mm_mul_ps(lm0, _mm_shuffle_ps(crgb, crgb, _MM_SHUFFLE(0, 0, 0, 0))),
                                            _mm_mul_ps(lm1, _mm_shuffle_ps(crgb, crgb, _MM_SHUFFLE(1, 1, 1, 1)))),
                                 _mm_mul_ps(lm2, _mm_shuffle_ps(crgb, crgb, _MM_SHUFFLE(2, 2, 2, 2))));
-        _mm_stream_ps(buf_out, dt_XYZ_to_Lab_sse2(xyz));
+        _mm_stream_ps(buf_out, dt_XYZ_to_Lab_D50_sse2(xyz));
       }
     }
   }

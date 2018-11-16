@@ -862,13 +862,13 @@ static void process_data(dt_lut_t *self, double *target_L, double *target_a, dou
   int num_tonecurve = 0;
   {
     int cnt = 0;
-    
+
     for(int i=0;i<N;i++)
     {
       double sat_in =
         colorchecker_Lab[3*i+1] * colorchecker_Lab[3*i+1] +
         colorchecker_Lab[3*i+2] * colorchecker_Lab[3*i+2];
-      double sat_out = 
+      double sat_out =
         target_a[i] * target_a[i] +
         target_b[i] * target_b[i];
       // we'll allow some artistic tint or one due to illuminants (note square scale)
@@ -962,7 +962,7 @@ static void process_data(dt_lut_t *self, double *target_L, double *target_a, dou
     gtk_label_set_text(GTK_LABEL(self->result_label), result_string);
     g_free(result_string);
   }
-  
+
   free(coeff_b);
   free(coeff_a);
   free(coeff_L);
@@ -1319,7 +1319,7 @@ static void get_Lab_from_box(box_t *box, float *Lab)
     {
       float XYZ[3];
       for(int i = 0; i < 3; i++) XYZ[i] = box->color[i] * 0.01;
-      dt_XYZ_to_Lab(XYZ, Lab);
+      dt_XYZ_to_Lab_D50(XYZ, Lab);
       break;
     }
     case DT_COLORSPACE_LAB:
@@ -1548,7 +1548,7 @@ static void image_lab_to_xyz(float *image, const int width, const int height)
     for(int x = 0; x < width; x++)
     {
       float *pixel = &image[(x + y * width) * 3];
-      dt_Lab_to_XYZ(pixel, pixel);
+      dt_Lab_to_XYZ_D50(pixel, pixel);
     }
 }
 

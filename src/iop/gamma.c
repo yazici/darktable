@@ -101,14 +101,14 @@ static inline void LCH_2_RGB(const float *LCH, float *RGB)
 {
   float Lab[3], XYZ[3];
   LCH_2_Lab(LCH, Lab);
-  dt_Lab_to_XYZ(Lab, XYZ);
-  dt_XYZ_to_sRGB_clipped(XYZ, RGB);
+  dt_Lab_to_XYZ_D50(Lab, XYZ);
+  dt_XYZ_to_sRGB(XYZ, RGB);
 }
 
 static inline void Lab_2_RGB(const float *Lab, float *RGB)
 {
   float XYZ[3];
-  dt_Lab_to_XYZ(Lab, XYZ);
+  dt_Lab_to_XYZ_D50(Lab, XYZ);
   dt_XYZ_to_sRGB_clipped(XYZ, RGB);
 }
 

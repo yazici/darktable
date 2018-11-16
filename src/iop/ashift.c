@@ -1214,7 +1214,7 @@ static int detail_enhance(const float *in, float *out, const int width, const in
     {
       float XYZ[3];
       sRGB_to_XYZ(inp, XYZ);
-      dt_XYZ_to_Lab(XYZ, outp);
+      dt_XYZ_to_Lab_D50(XYZ, outp);
     }
   }
 
@@ -1241,7 +1241,7 @@ static int detail_enhance(const float *in, float *out, const int width, const in
     for(int i = 0; i < width; i++, outp += 4)
     {
       float XYZ[3];
-      dt_Lab_to_XYZ(outp, XYZ);
+      dt_Lab_to_XYZ_D50(outp, XYZ);
       XYZ_to_sRGB(XYZ, outp);
     }
   }

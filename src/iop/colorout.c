@@ -431,7 +431,7 @@ void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const 
       float *out = (float *)ovoid + (size_t)k;
 
       float xyz[3];
-      dt_Lab_to_XYZ(in, xyz);
+      dt_Lab_to_XYZ_D50(in, xyz);
 
       for(int c = 0; c < 3; c++)
       {
@@ -524,7 +524,7 @@ void process_sse2(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, c
 
       for(int i = 0; i < roi_out->width; i++, in += ch, out += ch)
       {
-        const __m128 xyz = dt_Lab_to_XYZ_sse2(_mm_load_ps(in));
+        const __m128 xyz = dt_Lab_to_XYZ_D50_sse2(_mm_load_ps(in));
         const __m128 t
             = _mm_add_ps(_mm_mul_ps(m0, _mm_shuffle_ps(xyz, xyz, _MM_SHUFFLE(0, 0, 0, 0))),
                          _mm_add_ps(_mm_mul_ps(m1, _mm_shuffle_ps(xyz, xyz, _MM_SHUFFLE(1, 1, 1, 1))),
@@ -758,7 +758,7 @@ void commit_params(struct dt_iop_module_t *self, dt_iop_params_t *p1, dt_dev_pix
     d->cmatrix[0] = NAN;
     piece->process_cl_ready = 0;
 
-    if (d->workflow == SCENE_REFERRED_WORKFLOW && )
+    if (d->workflow == SCENE_REFERRED_WORKFLOW)
     {
       /*
       const cmsFloat64Number Params[5] = {

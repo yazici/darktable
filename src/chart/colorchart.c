@@ -116,7 +116,7 @@ void set_color(box_t *box, dt_colorspaces_color_profile_type_t color_space, floa
       for(int c = 0; c < 3; c++) box->rgb[c] = 0.0;
       break;
     case DT_COLORSPACE_LAB:
-      dt_Lab_to_XYZ(Lab, XYZ);
+      dt_Lab_to_XYZ_D50(Lab, XYZ);
     case DT_COLORSPACE_XYZ:
       dt_XYZ_to_sRGB_clipped(XYZ, box->rgb);
       break;

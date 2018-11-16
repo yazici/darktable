@@ -206,7 +206,7 @@ static inline float hue_conversion(const float HSL_Hue)
   XYZ[1] = (rgb[0] * 0.2225045f) + (rgb[1] * 0.7168786f) + (rgb[2] * 0.0606169f);
   XYZ[2] = (rgb[0] * 0.0139322f) + (rgb[1] * 0.0971045f) + (rgb[2] * 0.7141733f);
 
-  dt_XYZ_to_Lab(XYZ, Lab);
+  dt_XYZ_to_Lab_D50(XYZ, Lab);
 
   // Hue from LCH color space in [-pi, +pi] interval
   float LCH_hue = atan2(Lab[2], Lab[1]);

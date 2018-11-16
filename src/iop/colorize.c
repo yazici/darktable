@@ -332,6 +332,8 @@ void commit_params(struct dt_iop_module_t *self, dt_iop_params_t *p1, dt_dev_pix
   float rgb[3] = { 0 }, XYZ[3] = { 0 }, Lab[3] = { 0 };
   hsl2rgb(rgb, p->hue, p->saturation, p->lightness / 100.0);
 
+  // TODO: please remove fucking hardcoded RGB primaries and give user the choice of the working colorspace !!!!!!!!
+
   if(p->version == 1)
   {
     // the old matrix is a bit off. in fact it's the conversion matrix from AdobeRGB to XYZ@D65
@@ -341,14 +343,19 @@ void commit_params(struct dt_iop_module_t *self, dt_iop_params_t *p1, dt_dev_pix
   }
   else
   {
-    // this fits better. conversion matrix from sRGB to XYZ@D50 - which is what dt_XYZ_to_Lab() expects as
+
+    // TODO: sRGB to XYZ D50 IS BULLSHIT !!!! Bradford transformation much ?
+
+    // this fits better. conversion matrix from sRGB to XYZ@D50 - which is what dt_XYZ_to_Lab_D50() expects as
     // input
     XYZ[0] = (rgb[0] * 0.4360747f) + (rgb[1] * 0.3850649f) + (rgb[2] * 0.1430804f);
     XYZ[1] = (rgb[0] * 0.2225045f) + (rgb[1] * 0.7168786f) + (rgb[2] * 0.0606169f);
     XYZ[2] = (rgb[0] * 0.0139322f) + (rgb[1] * 0.0971045f) + (rgb[2] * 0.7141733f);
   }
 
-  dt_XYZ_to_Lab(XYZ, Lab);
+  dt_XYZ_to_Lab_D50(XYZ, Lab);
+
+  // TODO: WTF with Lab ????
 
   /* a/b components */
   d->L = Lab[0];
