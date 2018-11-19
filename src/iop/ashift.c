@@ -1250,6 +1250,7 @@ static int detail_enhance(const float *in, float *out, const int width, const in
 }
 
 // apply gamma correction to RGB buffer (function arguments in and out may represent identical buffers)
+/*
 static void gamma_correct(const float *in, float *out, const int width, const int height)
 {
 #ifdef _OPENMP
@@ -1266,6 +1267,7 @@ static void gamma_correct(const float *in, float *out, const int width, const in
     }
   }
 }
+*/
 
 // do actual line_detection based on LSD algorithm and return results according
 // to this module's conventions
@@ -1283,10 +1285,13 @@ static int line_detect(float *in, const int width, const int height, const int x
   float horizontal_weight = 0.0f;
 
   // apply gamma correction if image is raw
+  /* If it's raw, there is no gamma to apply */
+  /*
   if(is_raw)
   {
     gamma_correct(in, in, width, height);
   }
+  */
 
   // if requested perform an additional detail enhancement step
   if(enhance & ASHIFT_ENHANCE_DETAIL)
