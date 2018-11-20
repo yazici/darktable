@@ -44,20 +44,22 @@ typedef enum dt_colorspaces_color_profile_type_t
   DT_COLORSPACE_FILE = 0,
   DT_COLORSPACE_SRGB = 1,
   DT_COLORSPACE_ADOBERGB = 2,
-  DT_COLORSPACE_LIN_REC709 = 3,
-  DT_COLORSPACE_LIN_REC2020 = 4,
-  DT_COLORSPACE_XYZ = 5,
-  DT_COLORSPACE_LAB = 6,
-  DT_COLORSPACE_INFRARED = 7,
-  DT_COLORSPACE_DISPLAY = 8,
-  DT_COLORSPACE_EMBEDDED_ICC = 9,
-  DT_COLORSPACE_EMBEDDED_MATRIX = 10,
-  DT_COLORSPACE_STANDARD_MATRIX = 11,
-  DT_COLORSPACE_ENHANCED_MATRIX = 12,
-  DT_COLORSPACE_VENDOR_MATRIX = 13,
-  DT_COLORSPACE_ALTERNATE_MATRIX = 14,
-  DT_COLORSPACE_BRG = 15,
-  DT_COLORSPACE_LAST = 16
+  DT_COLORSPACE_PROPHOTORGB = 3,
+  DT_COLORSPACE_LIN_REC709 = 4,
+  DT_COLORSPACE_LIN_REC2020 = 5,
+  DT_COLORSPACE_XYZ = 6,
+  DT_COLORSPACE_LAB = 7,
+  DT_COLORSPACE_LAB_D50 = 8,
+  DT_COLORSPACE_INFRARED = 9,
+  DT_COLORSPACE_DISPLAY = 10,
+  DT_COLORSPACE_EMBEDDED_ICC = 11,
+  DT_COLORSPACE_EMBEDDED_MATRIX = 12,
+  DT_COLORSPACE_STANDARD_MATRIX = 13,
+  DT_COLORSPACE_ENHANCED_MATRIX = 14,
+  DT_COLORSPACE_VENDOR_MATRIX = 15,
+  DT_COLORSPACE_ALTERNATE_MATRIX = 16,
+  DT_COLORSPACE_BRG = 17,
+  DT_COLORSPACE_LAST = 18
 } dt_colorspaces_color_profile_type_t;
 
 typedef enum dt_colorspaces_color_mode_t
@@ -114,13 +116,39 @@ int mat3inv_float(float *const dst, const float *const src);
 int mat3inv_double(double *const dst, const double *const src);
 int mat3inv(float *const dst, const float *const src);
 
+// White illuminants
+static const cmsCIEXYZ d65 = {0.95045471, 1.00000000, 1.08905029};
+static const cmsCIEXYZ d50 = {0.9642, 1.0, 0.8249};
+
+// RGB primaries
+static const cmsCIEXYZTRIPLE rec709_primaries_pre_quantized = {
+  {0.43603516, 0.22248840, 0.01391602},
+  {0.38511658, 0.71690369, 0.09706116},
+  {0.14305115, 0.06060791, 0.71392822}
+};
+static const cmsCIEXYZTRIPLE rec2020_primaries_prequantized = {
+  {0.67349243, 0.27903748, -0.00193787},
+  {0.16566467, 0.67535400, 0.02998352},
+  {0.12504578, 0.04560852, 0.79685974}
+};
+static const cmsCIEXYZTRIPLE adobe_primaries_prequantized = {
+  {0.60974121, 0.31111145, 0.01947021},
+  {0.20527649, 0.62567139, 0.06086731},
+  {0.14918518, 0.06321716, 0.74456787}
+};
+static const cmsCIEXYZTRIPLE prophoto_primaries_prequantized = {
+  {0.7976749f, 0.1351917f, 0.0313534f},
+  {0.2880402f, 0.7118741f, 0.0000857f},
+  {0.0000000f, 0.0000000f, 0.8252100f},
+};
+
 /** populate the global color profile lists */
 dt_colorspaces_t *dt_colorspaces_init();
 /** cleanup on shutdown */
 void dt_colorspaces_cleanup(dt_colorspaces_t *self);
 
 /** create a profile from a xyz->camera matrix. */
-cmsHPROFILE dt_colorspaces_create_xyzimatrix_profile(float cam_xyz[3][3]);
+cmsHPROFILE dt_colorspaces_create_xyzimatrix_profile(float cam_xyz[3][3], const cmsCIEXYZ illuminant);
 
 /** create a ICC virtual profile from the shipped presets in darktable. */
 cmsHPROFILE dt_colorspaces_create_darktable_profile(const char *makermodel);
@@ -132,7 +160,7 @@ cmsHPROFILE dt_colorspaces_create_vendor_profile(const char *makermodel);
 cmsHPROFILE dt_colorspaces_create_alternate_profile(const char *makermodel);
 
 /** just get the associated transformation matrix, for manual application. */
-int dt_colorspaces_get_darktable_matrix(const char *makermodel, float *matrix);
+int dt_colorspaces_get_darktable_matrix(const char *makermodel, float *matrix, const cmsCIEXYZ illuminant);
 
 /** return the output profile as set in colorout, taking export override into account if passed in. */
 const dt_colorspaces_color_profile_t *dt_colorspaces_get_output_profile(const int imgid,

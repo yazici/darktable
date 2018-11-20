@@ -37,23 +37,6 @@
 #include <CoreServices/CoreServices.h>
 #endif
 
-static const cmsCIEXYZ d65 = {0.95045471, 1.00000000, 1.08905029};
-static const cmsCIEXYZTRIPLE rec709_primaries_pre_quantized = {
-  {0.43603516, 0.22248840, 0.01391602},
-  {0.38511658, 0.71690369, 0.09706116},
-  {0.14305115, 0.06060791, 0.71392822}
-};
-static const cmsCIEXYZTRIPLE rec2020_primaries_prequantized = {
-  {0.67349243, 0.27903748, -0.00193787},
-  {0.16566467, 0.67535400, 0.02998352},
-  {0.12504578, 0.04560852, 0.79685974}
-};
-static const cmsCIEXYZTRIPLE adobe_primaries_prequantized = {
-  {0.60974121, 0.31111145, 0.01947021},
-  {0.20527649, 0.62567139, 0.06086731},
-  {0.14918518, 0.06321716, 0.74456787}
-};
-
 #define generate_mat3inv_body(c_type, A, B)                                                                  \
   int mat3inv_##c_type(c_type *const dst, const c_type *const src)                                           \
   {                                                                                                          \
@@ -233,11 +216,22 @@ int dt_colorspaces_get_matrix_from_output_profile(cmsHPROFILE prof, float *matri
 
 static cmsHPROFILE dt_colorspaces_create_lab_profile()
 {
+  /** Since we keep the internal color space in D65,
+   * we want a generic D65 Lab profile
+   * Don't forget to convert to D50 Lab before saving the output in Lab for color chart
+   * */
+  cmsCIExyY cmsD65_xyY;
+  cmsXYZ2xyY(&cmsD65_xyY, &d65);
+  return cmsCreateLab4Profile(&cmsD65_xyY);
+}
+
+static cmsHPROFILE dt_colorspaces_create_lab_d50_profile()
+{
   return cmsCreateLab4Profile(cmsD50_xyY());
 }
 
 static cmsHPROFILE _create_lcms_profile(const char *desc, const char *dmdd,
-                                        const cmsCIEXYZTRIPLE *primaries, const cmsToneCurve *trc, gboolean v2)
+                                        const cmsCIEXYZTRIPLE *primaries, const cmsToneCurve *trc, gboolean v2, const cmsCIEXYZ illuminant)
 {
   cmsCIEXYZ black = { 0, 0, 0 };
 
@@ -270,7 +264,7 @@ static cmsHPROFILE _create_lcms_profile(const char *desc, const char *dmdd,
   cmsSetColorSpace(profile, cmsSigRgbData);
   cmsSetPCS(profile, cmsSigXYZData);
 
-  cmsWriteTag(profile, cmsSigMediaWhitePointTag, &d65);
+  cmsWriteTag(profile, cmsSigMediaWhitePointTag, &illuminant);
   cmsWriteTag(profile, cmsSigMediaBlackPointTag, &black);
 
   cmsWriteTag(profile, cmsSigRedColorantTag, (void *)&primaries->Red);
@@ -290,7 +284,7 @@ static cmsHPROFILE _colorspaces_create_srgb_profile(gboolean v2)
   cmsToneCurve *transferFunction = cmsBuildParametricToneCurve(NULL, 4, srgb_parameters);
 
   cmsHPROFILE profile = _create_lcms_profile("sRGB", "sRGB",
-                                             &rec709_primaries_pre_quantized, transferFunction, v2);
+                                             &rec709_primaries_pre_quantized, transferFunction, v2, d65);
 
   cmsFreeToneCurve(transferFunction);
 
@@ -318,7 +312,7 @@ static cmsHPROFILE dt_colorspaces_create_brg_profile()
   cmsToneCurve *transferFunction = cmsBuildParametricToneCurve(NULL, 4, srgb_parameters);
 
   cmsHPROFILE profile = _create_lcms_profile("BRG", "BRG",
-                                             &primaries_pre_quantized, transferFunction, TRUE);
+                                             &primaries_pre_quantized, transferFunction, TRUE, d65);
 
   cmsFreeToneCurve(transferFunction);
 
@@ -332,7 +326,19 @@ static cmsHPROFILE dt_colorspaces_create_adobergb_profile(void)
   cmsToneCurve *transferFunction = cmsBuildGamma(NULL, 2.19921875);
 
   cmsHPROFILE profile = _create_lcms_profile("Adobe RGB (compatible)", "Adobe RGB",
-                                             &adobe_primaries_prequantized, transferFunction, TRUE);
+                                             &adobe_primaries_prequantized, transferFunction, TRUE, d65);
+
+  cmsFreeToneCurve(transferFunction);
+
+  return profile;
+}
+
+static cmsHPROFILE dt_colorspaces_create_prophotorgb_profile(void)
+{
+  cmsToneCurve *transferFunction = cmsBuildGamma(NULL, 1.8);
+
+  cmsHPROFILE profile = _create_lcms_profile("ProPhoto RGB", "ProPhoto RGB",
+                                             &prophoto_primaries_prequantized, transferFunction, TRUE, d50);
 
   cmsFreeToneCurve(transferFunction);
 
@@ -349,7 +355,7 @@ static cmsToneCurve *build_linear_gamma(void)
   return cmsBuildParametricToneCurve(0, 1, Parameters);
 }
 
-int dt_colorspaces_get_darktable_matrix(const char *makermodel, float *matrix)
+int dt_colorspaces_get_darktable_matrix(const char *makermodel, float *matrix, const cmsCIEXYZ illuminant)
 {
   dt_profiled_colormatrix_t *preset = NULL;
   for(int k = 0; k < dt_profiled_colormatrix_cnt; k++)
@@ -362,60 +368,73 @@ int dt_colorspaces_get_darktable_matrix(const char *makermodel, float *matrix)
   }
   if(!preset) return -1;
 
-  const float wxyz = preset->white[0] + preset->white[1] + preset->white[2];
-  const float rxyz = preset->rXYZ[0] + preset->rXYZ[1] + preset->rXYZ[2];
-  const float gxyz = preset->gXYZ[0] + preset->gXYZ[1] + preset->gXYZ[2];
-  const float bxyz = preset->bXYZ[0] + preset->bXYZ[1] + preset->bXYZ[2];
+  if (illuminant.X != preset->white[0] && illuminant.Y != preset->white[1] && illuminant.Z != preset->white[2])
+  {
+    /** From http://www.color.org/whyd50.xalter:
+     * ICC v4 profiles assume D50 illuminant and the thus the chromaticity should be adjusted
+     * However, we don't care about ICCs for input profiles, since we only fetch the RGB
+     * primaries.
+     *
+     * Using the ACES workflow, we want the linear RGB raw data untouched, so we want
+     * to avoid any assumption here and keep the RGB as is.
+     *
+     * ICC are a concern only at outputs.
+    * */
+    const float wxyz = preset->white[0] + preset->white[1] + preset->white[2];
+    const float rxyz = preset->rXYZ[0] + preset->rXYZ[1] + preset->rXYZ[2];
+    const float gxyz = preset->gXYZ[0] + preset->gXYZ[1] + preset->gXYZ[2];
+    const float bxyz = preset->bXYZ[0] + preset->bXYZ[1] + preset->bXYZ[2];
 
-  const float xn = preset->white[0] / wxyz;
-  const float yn = preset->white[1] / wxyz;
-  const float xr = preset->rXYZ[0] / rxyz;
-  const float yr = preset->rXYZ[1] / rxyz;
-  const float xg = preset->gXYZ[0] / gxyz;
-  const float yg = preset->gXYZ[1] / gxyz;
-  const float xb = preset->bXYZ[0] / bxyz;
-  const float yb = preset->bXYZ[1] / bxyz;
+    const float xn = preset->white[0] / wxyz;
+    const float yn = preset->white[1] / wxyz;
+    const float xr = preset->rXYZ[0] / rxyz;
+    const float yr = preset->rXYZ[1] / rxyz;
+    const float xg = preset->gXYZ[0] / gxyz;
+    const float yg = preset->gXYZ[1] / gxyz;
+    const float xb = preset->bXYZ[0] / bxyz;
+    const float yb = preset->bXYZ[1] / bxyz;
 
-  const float primaries[9] = { xr, xg, xb, yr, yg, yb, 1.0f - xr - yr, 1.0f - xg - yg, 1.0f - xb - yb };
+    const float primaries[9] = { xr, xg, xb, yr, yg, yb, 1.0f - xr - yr, 1.0f - xg - yg, 1.0f - xb - yb };
 
-  float result[9];
-  if(mat3inv(result, primaries)) return -1;
+    float result[9];
+    if(mat3inv(result, primaries)) return -1;
 
-  const float whitepoint[3] = { xn / yn, 1.0f, (1.0f - xn - yn) / yn };
-  float coeff[3];
+    const float whitepoint[3] = { xn / yn, 1.0f, (1.0f - xn - yn) / yn };
+    float coeff[3];
 
-  // get inverse primary whitepoint
-  mat3mulv(coeff, result, whitepoint);
-
-
-  float tmp[9] = { coeff[0] * xr, coeff[1] * xg, coeff[2] * xb, coeff[0] * yr, coeff[1] * yg, coeff[2] * yb,
-                   coeff[0] * (1.0f - xr - yr), coeff[1] * (1.0f - xg - yg), coeff[2] * (1.0f - xb - yb) };
-
-  // input whitepoint[] in XYZ with Y normalized to 1.0f
-  const float dn[3]
-      = { preset->white[0] / (float)preset->white[1], 1.0f, preset->white[2] / (float)preset->white[1] };
-  const float lam_rigg[9] = { 0.8951, 0.2664, -0.1614, -0.7502, 1.7135, 0.0367, 0.0389, -0.0685, 1.0296 };
-  const float d50[3] = { 0.9642, 1.0, 0.8249 };
+    // get inverse primary whitepoint
+    mat3mulv(coeff, result, whitepoint);
 
 
-  // adapt to d50
-  float chad_inv[9];
-  if(mat3inv(chad_inv, lam_rigg)) return -1;
+    float tmp[9] = { coeff[0] * xr, coeff[1] * xg, coeff[2] * xb, coeff[0] * yr, coeff[1] * yg, coeff[2] * yb,
+                     coeff[0] * (1.0f - xr - yr), coeff[1] * (1.0f - xg - yg), coeff[2] * (1.0f - xb - yb) };
 
-  float cone_src_rgb[3], cone_dst_rgb[3];
-  mat3mulv(cone_src_rgb, lam_rigg, dn);
-  mat3mulv(cone_dst_rgb, lam_rigg, d50);
+    // input whitepoint[] in XYZ with Y normalized to 1.0f
+    const float dn[3]
+        = { preset->white[0] / (float)preset->white[1], 1.0f, preset->white[2] / (float)preset->white[1] };
+    const float lam_rigg[9] = { 0.8951, 0.2664, -0.1614, -0.7502, 1.7135, 0.0367, 0.0389, -0.0685, 1.0296 };
 
-  const float cone[9]
-      = { cone_dst_rgb[0] / cone_src_rgb[0], 0.0f, 0.0f, 0.0f, cone_dst_rgb[1] / cone_src_rgb[1], 0.0f, 0.0f,
-          0.0f, cone_dst_rgb[2] / cone_src_rgb[2] };
+    // adapt to d50
+    const float D50[3] = {illuminant.X, illuminant.Y, illuminant.Z};
+    float chad_inv[9];
+    if(mat3inv(chad_inv, lam_rigg)) return -1;
 
-  float tmp2[9];
-  float bradford[9];
-  mat3mul(tmp2, cone, lam_rigg);
-  mat3mul(bradford, chad_inv, tmp2);
+    float cone_src_rgb[3], cone_dst_rgb[3];
+    mat3mulv(cone_src_rgb, lam_rigg, dn);
+    mat3mulv(cone_dst_rgb, lam_rigg, D50);
 
-  mat3mul(matrix, bradford, tmp);
+    const float cone[9]
+        = { cone_dst_rgb[0] / cone_src_rgb[0], 0.0f, 0.0f, 0.0f, cone_dst_rgb[1] / cone_src_rgb[1], 0.0f, 0.0f,
+            0.0f, cone_dst_rgb[2] / cone_src_rgb[2] };
+
+    float tmp2[9];
+    float bradford[9];
+    mat3mul(tmp2, cone, lam_rigg);
+    mat3mul(bradford, chad_inv, tmp2);
+
+    mat3mul(matrix, bradford, tmp);
+  }
+
   return 0;
 }
 
@@ -600,7 +619,7 @@ static cmsHPROFILE dt_colorspaces_create_linear_rec709_rgb_profile(void)
   cmsToneCurve *transferFunction = build_linear_gamma();
 
   cmsHPROFILE profile = _create_lcms_profile("Linear Rec709 RGB", "Linear Rec709 RGB",
-                                             &rec709_primaries_pre_quantized, transferFunction, TRUE);
+                                             &rec709_primaries_pre_quantized, transferFunction, TRUE, d65);
 
   cmsFreeToneCurve(transferFunction);
 
@@ -612,7 +631,7 @@ static cmsHPROFILE dt_colorspaces_create_linear_rec2020_rgb_profile(void)
   cmsToneCurve *transferFunction = build_linear_gamma();
 
   cmsHPROFILE profile = _create_lcms_profile("Linear Rec2020 RGB", "Linear Rec2020 RGB",
-                                             &rec2020_primaries_prequantized, transferFunction, TRUE);
+                                             &rec2020_primaries_prequantized, transferFunction, TRUE, d65);
 
   cmsFreeToneCurve(transferFunction);
 
@@ -630,7 +649,7 @@ static cmsHPROFILE dt_colorspaces_create_linear_infrared_profile(void)
   cmsToneCurve *transferFunction = build_linear_gamma();
 
   cmsHPROFILE profile = _create_lcms_profile("linear infrared bgr", "Darktable Linear Infrared BGR",
-                                             &primaries_pre_quantized, transferFunction, FALSE);
+                                             &primaries_pre_quantized, transferFunction, FALSE, d65);
 
   cmsFreeToneCurve(transferFunction);
 
@@ -717,7 +736,7 @@ static void dt_colorspaces_create_cmatrix(float cmatrix[4][3], float mat[3][3])
 }
 #endif
 
-static cmsHPROFILE dt_colorspaces_create_xyzmatrix_profile(float mat[3][3])
+static cmsHPROFILE dt_colorspaces_create_xyzmatrix_profile(float mat[3][3], const cmsCIEXYZ illuminant)
 {
   // mat: cam -> xyz
   float x[3], y[3];
@@ -730,12 +749,13 @@ static cmsHPROFILE dt_colorspaces_create_xyzmatrix_profile(float mat[3][3])
   cmsCIExyYTRIPLE CameraPrimaries = { { x[0], y[0], 1.0 }, { x[1], y[1], 1.0 }, { x[2], y[2], 1.0 } };
   cmsHPROFILE profile;
 
-  cmsCIExyY D65;
-  cmsXYZ2xyY(&D65, &d65);
+  cmsCIExyY D;
+
+  cmsXYZ2xyY(&D, &illuminant);
 
   cmsToneCurve *Gamma[3];
   Gamma[0] = Gamma[1] = Gamma[2] = build_linear_gamma();
-  profile = cmsCreateRGBProfile(&D65, &CameraPrimaries, Gamma);
+  profile = cmsCreateRGBProfile(&D, &CameraPrimaries, Gamma);
   cmsFreeToneCurve(Gamma[0]);
   if(profile == NULL) return NULL;
 
@@ -757,12 +777,12 @@ static cmsHPROFILE dt_colorspaces_create_xyzmatrix_profile(float mat[3][3])
   return profile;
 }
 
-cmsHPROFILE dt_colorspaces_create_xyzimatrix_profile(float mat[3][3])
+cmsHPROFILE dt_colorspaces_create_xyzimatrix_profile(float mat[3][3], const cmsCIEXYZ illuminant)
 {
   // mat: xyz -> cam
   float imat[3][3];
   mat3inv((float *)imat, (float *)mat);
-  return dt_colorspaces_create_xyzmatrix_profile(imat);
+  return dt_colorspaces_create_xyzmatrix_profile(imat, illuminant);
 }
 
 static cmsHPROFILE _ensure_rgb_profile(cmsHPROFILE profile)
@@ -934,6 +954,7 @@ static const char *_profile_names[] =
   "", // 0th entry is a dummy for DT_COLORSPACE_FILE and not used
   N_("sRGB"), // this is only used in error messages, no need for the (...) description
   N_("Adobe RGB (compatible)"),
+  N_("ProPhoto RGB"),
   N_("linear Rec709 RGB"),
   N_("linear Rec2020 RGB"),
   N_("linear XYZ"),
@@ -1158,6 +1179,11 @@ dt_colorspaces_t *dt_colorspaces_init()
                                                                _("Adobe RGB (compatible)"),
                                                                ++in_pos, ++out_pos, ++display_pos));
 
+  res->profiles = g_list_append(res->profiles, _create_profile(DT_COLORSPACE_PROPHOTORGB,
+                                                               dt_colorspaces_create_prophotorgb_profile(),
+                                                               _("ProPhoto RGB"),
+                                                               ++in_pos, ++out_pos, ++display_pos));
+
   res->profiles = g_list_append(res->profiles, _create_profile(DT_COLORSPACE_LIN_REC709,
                                                                dt_colorspaces_create_linear_rec709_rgb_profile(),
                                                                _("linear Rec709 RGB"),
@@ -1176,7 +1202,13 @@ dt_colorspaces_t *dt_colorspaces_init()
 
   res->profiles = g_list_append(res->profiles, _create_profile(DT_COLORSPACE_LAB,
                                                                dt_colorspaces_create_lab_profile(),
-                                                               _("Lab"),
+                                                               _("Lab D65"),
+                                                               ++in_pos,
+                                                               dt_conf_get_bool("allow_lab_output") ?  ++out_pos : -1, -1));
+
+  res->profiles = g_list_append(res->profiles, _create_profile(DT_COLORSPACE_LAB_D50,
+                                                               dt_colorspaces_create_lab_d50_profile(),
+                                                               _("Lab D50"),
                                                                ++in_pos,
                                                                dt_conf_get_bool("allow_lab_output") ?  ++out_pos : -1, -1));
 

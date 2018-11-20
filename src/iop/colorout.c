@@ -431,7 +431,7 @@ void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const 
       float *out = (float *)ovoid + (size_t)k;
 
       float xyz[3];
-      dt_Lab_to_XYZ_D50(in, xyz);
+      dt_Lab_to_XYZ(in, xyz, d65);
 
       for(int c = 0; c < 3; c++)
       {
@@ -524,7 +524,7 @@ void process_sse2(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, c
 
       for(int i = 0; i < roi_out->width; i++, in += ch, out += ch)
       {
-        const __m128 xyz = dt_Lab_to_XYZ_D50_sse2(_mm_load_ps(in));
+        const __m128 xyz = dt_Lab_to_XYZ_sse2(_mm_load_ps(in), d65);
         const __m128 t
             = _mm_add_ps(_mm_mul_ps(m0, _mm_shuffle_ps(xyz, xyz, _MM_SHUFFLE(0, 0, 0, 0))),
                          _mm_add_ps(_mm_mul_ps(m1, _mm_shuffle_ps(xyz, xyz, _MM_SHUFFLE(1, 1, 1, 1))),
@@ -564,25 +564,6 @@ void process_sse2(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, c
           const __m128 result
               = _mm_or_ps(_mm_and_ps(ingamut, outofgamutpixel), _mm_andnot_ps(ingamut, pixel));
           _mm_stream_ps(out, result);
-        }
-      }
-    }
-
-    if (d->workflow == SCENE_REFERRED_WORKFLOW)
-    {
-#ifdef _OPENMP
-#pragma omp parallel for schedule(static) default(none)
-#endif
-      for(size_t k = 0; k < (size_t)ch * roi_out->width * roi_out->height; k += ch)
-      {
-        float *out = (float *)ovoid + (size_t)k;
-
-        for(int c = 0; c < 3; c++)
-        {
-          cmsToneCurve *temp = NULL;
-          // If no color channel transfer function, select the grey
-          temp = (d->trc[c] != NULL) ? d->trc[c] : d->trc[TRC_CHANNEL_GREY];
-          if (temp != NULL) out[c] = (float)cmsEvalToneCurveFloat((const cmsToneCurve *)temp, (cmsFloat32Number)out[c]);
         }
       }
     }
@@ -627,7 +608,7 @@ void commit_params(struct dt_iop_module_t *self, dt_iop_params_t *p1, dt_dev_pix
   gchar *out_filename = NULL;
   dt_iop_color_intent_t out_intent = DT_INTENT_PERCEPTUAL;
 
-  const cmsHPROFILE Lab = dt_colorspaces_get_profile(DT_COLORSPACE_LAB, "", DT_PROFILE_DIRECTION_ANY)->profile;
+  cmsHPROFILE Lab = dt_colorspaces_get_profile(DT_COLORSPACE_LAB, "", DT_PROFILE_DIRECTION_ANY)->profile;
 
   cmsHPROFILE output = NULL;
   cmsHPROFILE softproof = NULL;
@@ -681,7 +662,7 @@ void commit_params(struct dt_iop_module_t *self, dt_iop_params_t *p1, dt_dev_pix
   // when the output type is Lab then process is a nop, so we can avoid creating a transform
   // and the subsequent error messages
   d->type = out_type;
-  if(out_type == DT_COLORSPACE_LAB)
+  if(out_type == DT_COLORSPACE_LAB_D50)
     return;
 
   /*

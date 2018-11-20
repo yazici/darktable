@@ -1371,7 +1371,7 @@ void commit_params(struct dt_iop_module_t *self, dt_iop_params_t *p1, dt_dev_pix
       type = DT_COLORSPACE_STANDARD_MATRIX;
     else
     {
-      d->input = dt_colorspaces_create_xyzimatrix_profile((float(*)[3])pipe->image.d65_color_matrix);
+      d->input = dt_colorspaces_create_xyzimatrix_profile((float(*)[3])pipe->image.d65_color_matrix, d65);
       d->clear_input = 1;
     }
   }
@@ -1398,7 +1398,7 @@ void commit_params(struct dt_iop_module_t *self, dt_iop_params_t *p1, dt_dev_pix
     }
     else
     {
-      d->input = dt_colorspaces_create_xyzimatrix_profile((float(*)[3])cam_xyz);
+      d->input = dt_colorspaces_create_xyzimatrix_profile((float(*)[3])cam_xyz, d65);
       d->clear_input = 1;
     }
   }

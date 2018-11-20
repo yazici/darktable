@@ -19,6 +19,7 @@
  */
 
 #pragma once
+#include "common/colorspaces.h"
 
 
 /*** SSE versions ***/
@@ -66,9 +67,9 @@ static inline __m128 lab_f_m_sse2(const __m128 x)
 
 
 /** Lab <-> XYZ **/
-static inline __m128 dt_Lab_to_XYZ_D50_sse2(const __m128 Lab)
+static inline __m128 dt_Lab_to_XYZ_sse2(const __m128 Lab, const cmsCIEXYZ illuminant)
 {
-  const __m128 d50 = _mm_set_ps(0.0f, 0.8249f, 1.0f, 0.9642f);
+  const __m128 D = _mm_set_ps(0.0f, illuminant.Z, illuminant.Y, illuminant.X);
   const __m128 coef = _mm_set_ps(0.0f, -1.0f / 200.0f, 1.0f / 116.0f, 1.0f / 500.0f);
   const __m128 offset = _mm_set1_ps(0.137931034f);
 
@@ -76,21 +77,43 @@ static inline __m128 dt_Lab_to_XYZ_D50_sse2(const __m128 Lab)
   // 0.0f in f
   const __m128 f = _mm_shuffle_ps(Lab, Lab, _MM_SHUFFLE(0, 2, 0, 1)) * coef;
 
-  return d50 * lab_f_inv_m(f + _mm_shuffle_ps(f, f, _MM_SHUFFLE(1, 1, 3, 1)) + offset);
+  return D * lab_f_inv_m(f + _mm_shuffle_ps(f, f, _MM_SHUFFLE(1, 1, 3, 1)) + offset);
+}
+
+static inline __m128 dt_XYZ_to_Lab_sse2(const __m128 XYZ, const cmsCIEXYZ illuminant)
+{
+  const __m128 D_inv = _mm_set_ps(1.0f, illuminant.Z, illuminant.Y, illuminant.X);
+  const __m128 coef = _mm_set_ps(0.0f, 200.0f, 500.0f, 116.0f);
+  const __m128 f = lab_f_m_sse2(XYZ / D_inv);
+  // because D50_inv.z is 0.0f, lab_f(0) == 16/116, so Lab[0] = 116*f[0] - 16 equal to 116*(f[0]-f[3])
+  return coef * (_mm_shuffle_ps(f, f, _MM_SHUFFLE(3, 1, 0, 1)) - _mm_shuffle_ps(f, f, _MM_SHUFFLE(3, 2, 1, 3)));
+}
+
+static inline __m128 dt_Lab_to_XYZ_D50_sse2(const __m128 Lab)
+{
+  const __m128 D50 = _mm_set_ps(0.0f, d50.Z, d50.Y, d50.X);
+  const __m128 coef = _mm_set_ps(0.0f, -1.0f / 200.0f, 1.0f / 116.0f, 1.0f / 500.0f);
+  const __m128 offset = _mm_set1_ps(0.137931034f);
+
+  // last component ins shuffle taken from 1st component of Lab to make sure it is not nan, so it will become
+  // 0.0f in f
+  const __m128 f = _mm_shuffle_ps(Lab, Lab, _MM_SHUFFLE(0, 2, 0, 1)) * coef;
+
+  return D50 * lab_f_inv_m(f + _mm_shuffle_ps(f, f, _MM_SHUFFLE(1, 1, 3, 1)) + offset);
 }
 
 static inline __m128 dt_XYZ_to_Lab_D50_sse2(const __m128 XYZ)
 {
-  const __m128 d50_inv = _mm_set_ps(1.0f, 0.8249f, 1.0f, 0.9642f);
+  const __m128 D50_inv = _mm_set_ps(1.0f, d50.Z, d50.Y, d50.X);
   const __m128 coef = _mm_set_ps(0.0f, 200.0f, 500.0f, 116.0f);
-  const __m128 f = lab_f_m_sse2(XYZ / d50_inv);
-  // because d50_inv.z is 0.0f, lab_f(0) == 16/116, so Lab[0] = 116*f[0] - 16 equal to 116*(f[0]-f[3])
+  const __m128 f = lab_f_m_sse2(XYZ / D50_inv);
+  // because D50_inv.z is 0.0f, lab_f(0) == 16/116, so Lab[0] = 116*f[0] - 16 equal to 116*(f[0]-f[3])
   return coef * (_mm_shuffle_ps(f, f, _MM_SHUFFLE(3, 1, 0, 1)) - _mm_shuffle_ps(f, f, _MM_SHUFFLE(3, 2, 1, 3)));
 }
 
 static inline __m128 dt_Lab_to_XYZ_D65_sse2(const __m128 Lab)
 {
-  const __m128 d65 = _mm_set_ps(0.0f, 1.08905029f, 1.0f, 0.95045471f);
+  const __m128 D65 = _mm_set_ps(0.0f, d65.Z, d65.Y, d65.X);
   const __m128 coef = _mm_set_ps(0.0f, -1.0f / 200.0f, 1.0f / 116.0f, 1.0f / 500.0f);
   const __m128 offset = _mm_set1_ps(0.137931034f);
 
@@ -98,18 +121,17 @@ static inline __m128 dt_Lab_to_XYZ_D65_sse2(const __m128 Lab)
   // 0.0f in f
   const __m128 f = _mm_shuffle_ps(Lab, Lab, _MM_SHUFFLE(0, 2, 0, 1)) * coef;
 
-  return d65 * lab_f_inv_m(f + _mm_shuffle_ps(f, f, _MM_SHUFFLE(1, 1, 3, 1)) + offset);
+  return D65 * lab_f_inv_m(f + _mm_shuffle_ps(f, f, _MM_SHUFFLE(1, 1, 3, 1)) + offset);
 }
 
 static inline __m128 dt_XYZ_to_Lab_D65_sse2(const __m128 XYZ)
 {
-  const __m128 d65_inv = _mm_set_ps(1.0f, 1.08905029f, 1.0f, 0.95045471f);
+  const __m128 D65_inv = _mm_set_ps(1.0f, d65.Z, d65.Y, d65.X);
   const __m128 coef = _mm_set_ps(0.0f, 200.0f, 500.0f, 116.0f);
-  const __m128 f = lab_f_m_sse2(XYZ / d65_inv);
-  // because d50_inv.z is 0.0f, lab_f(0) == 16/116, so Lab[0] = 116*f[0] - 16 equal to 116*(f[0]-f[3])
+  const __m128 f = lab_f_m_sse2(XYZ / D65_inv);
+  // because D50_inv.z is 0.0f, lab_f(0) == 16/116, so Lab[0] = 116*f[0] - 16 equal to 116*(f[0]-f[3])
   return coef * (_mm_shuffle_ps(f, f, _MM_SHUFFLE(3, 1, 0, 1)) - _mm_shuffle_ps(f, f, _MM_SHUFFLE(3, 2, 1, 3)));
 }
-
 
 /** RGB <-> XYZ **/
 // see http://www.brucelindbloom.com/Eqn_RGB_XYZ_Matrix.html for the transformation matrices
@@ -225,10 +247,30 @@ static inline float lab_f_inv(const float x)
 }
 
 /** XYZ <-> Lab **/
+static inline void dt_XYZ_to_Lab(const float *XYZ, float *Lab, const cmsCIEXYZ illuminant)
+{
+  const float D[3] = { (float)illuminant.X, (float)illuminant.Y, (float)illuminant.Z };
+  const float f[3] = { lab_f(XYZ[0] / D[0]), lab_f(XYZ[1]) / D[1], lab_f(XYZ[2] / D[2]) };
+  Lab[0] = 116.0f * f[1] - 16.0f;
+  Lab[1] = 500.0f * (f[0] - f[1]);
+  Lab[2] = 200.0f * (f[1] - f[2]);
+}
+
+static inline void dt_Lab_to_XYZ(const float *Lab, float *XYZ, const cmsCIEXYZ illuminant)
+{
+  const float D[3] = { (float)illuminant.X, (float)illuminant.Y, (float)illuminant.Z };
+  const float fy = (Lab[0] + 16.0f) / 116.0f;
+  const float fx = Lab[1] / 500.0f + fy;
+  const float fz = fy - Lab[2] / 200.0f;
+  XYZ[0] = D[0] * lab_f_inv(fx);
+  XYZ[1] = D[1] * lab_f_inv(fy);
+  XYZ[2] = D[2] * lab_f_inv(fz);
+}
+
 static inline void dt_XYZ_to_Lab_D50(const float *XYZ, float *Lab)
 {
-  const float d50[3] = { 0.9642f, 1.0f, 0.8249f };
-  const float f[3] = { lab_f(XYZ[0] / d50[0]), lab_f(XYZ[1]), lab_f(XYZ[2] / d50[2]) };
+  const float D50[3] = { (float)d50.X, (float)d50.Y, (float)d50.Z };
+  const float f[3] = { lab_f(XYZ[0] / D50[0]), lab_f(XYZ[1]), lab_f(XYZ[2] / D50[2]) };
   Lab[0] = 116.0f * f[1] - 16.0f;
   Lab[1] = 500.0f * (f[0] - f[1]);
   Lab[2] = 200.0f * (f[1] - f[2]);
@@ -236,19 +278,19 @@ static inline void dt_XYZ_to_Lab_D50(const float *XYZ, float *Lab)
 
 static inline void dt_Lab_to_XYZ_D50(const float *Lab, float *XYZ)
 {
-  const float d50[3] = { 0.9642f, 1.0f, 0.8249f };
+  const float D50[3] = { (float)d50.X, (float)d50.Y, (float)d50.Z };
   const float fy = (Lab[0] + 16.0f) / 116.0f;
   const float fx = Lab[1] / 500.0f + fy;
   const float fz = fy - Lab[2] / 200.0f;
-  XYZ[0] = d50[0] * lab_f_inv(fx);
+  XYZ[0] = D50[0] * lab_f_inv(fx);
   XYZ[1] = lab_f_inv(fy);
-  XYZ[2] = d50[2] * lab_f_inv(fz);
+  XYZ[2] = D50[2] * lab_f_inv(fz);
 }
 
 static inline void dt_XYZ_to_Lab_D65(const float *XYZ, float *Lab)
 {
-  const float d65[3] = {0.95045471f, 1.00000000f, 1.08905029f};
-  const float f[3] = { lab_f(XYZ[0] / d65[0]), lab_f(XYZ[1]), lab_f(XYZ[2] / d65[2]) };
+  const float D65[3] = { (float)d65.X, (float)d65.Y, (float)d65.Z };
+  const float f[3] = { lab_f(XYZ[0] / D65[0]), lab_f(XYZ[1]), lab_f(XYZ[2] / D65[2]) };
   Lab[0] = 116.0f * f[1] - 16.0f;
   Lab[1] = 500.0f * (f[0] - f[1]);
   Lab[2] = 200.0f * (f[1] - f[2]);
@@ -256,13 +298,13 @@ static inline void dt_XYZ_to_Lab_D65(const float *XYZ, float *Lab)
 
 static inline void dt_Lab_to_XYZ_D65(const float *Lab, float *XYZ)
 {
-  const float d65[3] = {0.95045471f, 1.00000000f, 1.08905029f};
+  const float D65[3] = { (float)d65.X, (float)d65.Y, (float)d65.Z };
   const float fy = (Lab[0] + 16.0f) / 116.0f;
   const float fx = Lab[1] / 500.0f + fy;
   const float fz = fy - Lab[2] / 200.0f;
-  XYZ[0] = d65[0] * lab_f_inv(fx);
+  XYZ[0] = D65[0] * lab_f_inv(fx);
   XYZ[1] = lab_f_inv(fy);
-  XYZ[2] = d65[2] * lab_f_inv(fz);
+  XYZ[2] = D65[2] * lab_f_inv(fz);
 }
 
 /**  XYZ <-> RGB **/
@@ -312,7 +354,7 @@ static inline void dt_sRGB_to_XYZ(const float *const sRGB, float *XYZ)
 static inline void dt_XYZ_to_prophotorgb(const float *const XYZ, float *rgb)
 {
   const float xyz_to_rgb[3][3] = {
-    // prophoto rgb d50
+    // prophoto rgb D50
     { 1.3459433f, -0.2556075f, -0.0511118f},
     {-0.5445989f,  1.5081673f,  0.0205351f},
     { 0.0000000f,  0.0000000f,  1.2118128f},
