@@ -1,6 +1,7 @@
 /*
     This file is part of darktable,
     copyright (c) 2010 Henrik Andersson.
+    copyright (c) 2918 Aurélien Pierre.
 
     darktable is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -23,6 +24,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "bauhaus/bauhaus.h"
 #include "common/darktable.h"
 #include "common/gaussian.h"
 #include "common/opencl.h"
@@ -51,14 +53,21 @@
 
 
 #define CLIP(x) (((x) >= 0) ? ((x) <= 1.0 ? (x) : 1.0) : 0.0)
-DT_MODULE_INTROSPECTION(1, dt_iop_zonesystem_params_t)
+DT_MODULE_INTROSPECTION(2, dt_iop_zonesystem_params_t)
 #define MAX_ZONE_SYSTEM_SIZE 24
+
+typedef enum dt_iop_zonesystem_mode_t
+{
+  ADAMS = 0,
+  EQUALIZER = 1
+} dt_iop_zonesystem_mode_t;
 
 /** gui params. */
 typedef struct dt_iop_zonesystem_params_t
 {
   int size;
   float zone[MAX_ZONE_SYSTEM_SIZE + 1];
+  dt_iop_zonesystem_mode_t mode;
 } dt_iop_zonesystem_params_t;
 
 /** and pixelpipe data is just the same */
@@ -110,7 +119,39 @@ typedef struct dt_iop_zonesystem_gui_data_t
   guint8 *image_buffer;
   int image_width, image_height;
 
+  GtkWidget *mode;
+  GtkWidget *mode_stack;
+
+
 } dt_iop_zonesystem_gui_data_t;
+
+
+int legacy_params(dt_iop_module_t *self, const void *const old_params, const int old_version, void *new_params,
+                  const int new_version)
+{
+  if(old_version == 1 && new_version == 2)
+  {
+    typedef struct dt_iop_zonesystem_params_v1_t
+    {
+      int size;
+      float zone[MAX_ZONE_SYSTEM_SIZE + 1];
+    } dt_iop_zonesystem_params_v1_t;
+
+    dt_iop_zonesystem_params_v1_t *o = (dt_iop_zonesystem_params_v1_t *)old_params;
+    dt_iop_zonesystem_params_t *n = (dt_iop_zonesystem_params_t *)new_params;
+    dt_iop_zonesystem_params_t *d = (dt_iop_zonesystem_params_t *)self->default_params;
+
+    *n = *d; // start with a fresh copy of default parameters
+    n->size = o->size;
+
+    for(int i = 0; i < MAX_ZONE_SYSTEM_SIZE + 1; i++) n->zone[i] = o->zone[i];
+    n->mode = ADAMS;
+
+    return 0;
+  }
+
+  return 1;
+}
 
 
 const char *name()
@@ -128,6 +169,9 @@ int groups()
 {
   return dt_iop_get_group("zone system", IOP_GROUP_TONE);
 }
+
+
+
 
 /* get the zone index of pixel lightness from zonemap */
 static inline int _iop_zonesystem_zone_index_from_lightness(float lightness, float *zonemap, int size)
@@ -165,7 +209,7 @@ static inline void _iop_zonesystem_calculate_zonemap(struct dt_iop_zonesystem_pa
   }
 }
 
-#define GAUSS(a, b, c, x) (a * pow(2.718281828, (-pow((x - b), 2) / (pow(c, 2)))))
+#define GAUSS(a, b, c, x) (a * expf((-(x - b) * (x - b) / (c*c))))
 
 static void process_common_setup(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece,
                                  const void *const ivoid, void *const ovoid, const dt_iop_roi_t *const roi_in,
@@ -272,31 +316,34 @@ void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const 
 {
   const dt_iop_zonesystem_data_t *const d = (const dt_iop_zonesystem_data_t *const)piece->data;
 
-  process_common_setup(self, piece, ivoid, ovoid, roi_in, roi_out);
-
   const int ch = piece->colors;
-  const int size = d->params.size;
 
-  const float *const in = (const float *const)ivoid;
-  float *const out = (float *const)ovoid;
+  if (d->params.mode == ADAMS)
+  {
+    const int size = d->params.size;
+    process_common_setup(self, piece, ivoid, ovoid, roi_in, roi_out);
+
+    const float *const in = (const float *const)ivoid;
+    float *const out = (float *const)ovoid;
 
 #ifdef _OPENMP
 #pragma omp parallel for SIMD() default(none) schedule(static) collapse(2)
 #endif
-  for(size_t k = 0; k < (size_t)ch * roi_out->width * roi_out->height; k += ch)
-  {
-    for(int c = 0; c < 3; c++)
+    for(size_t k = 0; k < (size_t)ch * roi_out->width * roi_out->height; k += ch)
     {
-      /* remap lightness into zonemap and apply lightness */
-      const int rz = CLAMPS(in[k] * d->rzscale, 0, size - 2); // zone index
-      const float zs = ((rz > 0) ? (d->zonemap_offset[rz] / in[k]) : 0) + d->zonemap_scale[rz];
+      for(int c = 0; c < 3; c++)
+      {
+        /* remap lightness into zonemap and apply lightness */
+        const int rz = CLAMPS(in[k] * d->rzscale, 0, size - 2); // zone index
+        const float zs = ((rz > 0) ? (d->zonemap_offset[rz] / in[k]) : 0) + d->zonemap_scale[rz];
 
-      const size_t p = (size_t)k + c;
-      out[p] = in[p] * zs;
+        const size_t p = (size_t)k + c;
+        out[p] = in[p] * zs;
+      }
     }
-  }
 
-  process_common_cleanup(self, piece, ivoid, ovoid, roi_in, roi_out);
+    process_common_cleanup(self, piece, ivoid, ovoid, roi_in, roi_out);
+  }
 }
 
 #if defined(__SSE__)
@@ -305,33 +352,36 @@ void process_sse2(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, c
 {
   const dt_iop_zonesystem_data_t *const d = (const dt_iop_zonesystem_data_t *const)piece->data;
 
-  process_common_setup(self, piece, ivoid, ovoid, roi_in, roi_out);
-
   const int ch = piece->colors;
-  const int size = d->params.size;
+
+  if (d->params.mode == ADAMS)
+  {
+    const int size = d->params.size;
+    process_common_setup(self, piece, ivoid, ovoid, roi_in, roi_out);
 
 #ifdef _OPENMP
 #pragma omp parallel for default(none) schedule(static)
 #endif
-  for(int j = 0; j < roi_out->height; j++)
-  {
-    for(int i = 0; i < roi_out->width; i++)
+    for(int j = 0; j < roi_out->height; j++)
     {
-      /* remap lightness into zonemap and apply lightness */
-      const float *in = (float *)ivoid + ch * ((size_t)j * roi_out->width + i);
-      float *out = (float *)ovoid + ch * ((size_t)j * roi_out->width + i);
+      for(int i = 0; i < roi_out->width; i++)
+      {
+        /* remap lightness into zonemap and apply lightness */
+        const float *in = (float *)ivoid + ch * ((size_t)j * roi_out->width + i);
+        float *out = (float *)ovoid + ch * ((size_t)j * roi_out->width + i);
 
-      const int rz = CLAMPS(in[0] * d->rzscale, 0, size - 2); // zone index
+        const int rz = CLAMPS(in[0] * d->rzscale, 0, size - 2); // zone index
 
-      const float zs = ((rz > 0) ? (d->zonemap_offset[rz] / in[0]) : 0) + d->zonemap_scale[rz];
+        const float zs = ((rz > 0) ? (d->zonemap_offset[rz] / in[0]) : 0) + d->zonemap_scale[rz];
 
-      _mm_stream_ps(out, _mm_mul_ps(_mm_load_ps(in), _mm_set1_ps(zs)));
+        _mm_stream_ps(out, _mm_mul_ps(_mm_load_ps(in), _mm_set1_ps(zs)));
+      }
     }
+
+    _mm_sfence();
+
+    process_common_cleanup(self, piece, ivoid, ovoid, roi_in, roi_out);
   }
-
-  _mm_sfence();
-
-  process_common_cleanup(self, piece, ivoid, ovoid, roi_in, roi_out);
 }
 #endif
 
@@ -348,44 +398,46 @@ int process_cl(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, cl_m
   const int width = roi_in->width;
   const int height = roi_in->height;
 
-  /* calculate zonemap */
-  const int size = data->params.size;
-  float zonemap[MAX_ZONE_SYSTEM_SIZE] = { -1 };
-  float zonemap_offset[ROUNDUP(MAX_ZONE_SYSTEM_SIZE, 16)] = { -1 };
-  float zonemap_scale[ROUNDUP(MAX_ZONE_SYSTEM_SIZE, 16)] = { -1 };
+  if (data->params.mode == ADAMS)
+  {
+    /* calculate zonemap */
+    const int size = data->params.size;
+    float zonemap[MAX_ZONE_SYSTEM_SIZE] = { -1 };
+    float zonemap_offset[ROUNDUP(MAX_ZONE_SYSTEM_SIZE, 16)] = { -1 };
+    float zonemap_scale[ROUNDUP(MAX_ZONE_SYSTEM_SIZE, 16)] = { -1 };
 
-  _iop_zonesystem_calculate_zonemap(&(data->params), zonemap);
+    _iop_zonesystem_calculate_zonemap(&(data->params), zonemap);
 
-  /* precompute scale and offset */
-  for(int k = 0; k < size - 1; k++) zonemap_scale[k] = (zonemap[k + 1] - zonemap[k]) * (size - 1);
-  for(int k = 0; k < size - 1; k++) zonemap_offset[k] = 100.0f * ((k + 1) * zonemap[k] - k * zonemap[k + 1]);
+    /* precompute scale and offset */
+    for(int k = 0; k < size - 1; k++) zonemap_scale[k] = (zonemap[k + 1] - zonemap[k]) * (size - 1);
+    for(int k = 0; k < size - 1; k++) zonemap_offset[k] = 100.0f * ((k + 1) * zonemap[k] - k * zonemap[k + 1]);
 
-  dev_zmo = dt_opencl_copy_host_to_device_constant(devid, sizeof(float) * ROUNDUP(MAX_ZONE_SYSTEM_SIZE, 16),
-                                                   zonemap_offset);
-  if(dev_zmo == NULL) goto error;
-  dev_zms = dt_opencl_copy_host_to_device_constant(devid, sizeof(float) * ROUNDUP(MAX_ZONE_SYSTEM_SIZE, 16),
-                                                   zonemap_scale);
-  if(dev_zms == NULL) goto error;
+    dev_zmo = dt_opencl_copy_host_to_device_constant(devid, sizeof(float) * ROUNDUP(MAX_ZONE_SYSTEM_SIZE, 16),
+                                                     zonemap_offset);
+    if(dev_zmo == NULL) goto error;
+    dev_zms = dt_opencl_copy_host_to_device_constant(devid, sizeof(float) * ROUNDUP(MAX_ZONE_SYSTEM_SIZE, 16),
+                                                     zonemap_scale);
+    if(dev_zms == NULL) goto error;
 
-  size_t sizes[] = { ROUNDUPWD(width), ROUNDUPHT(height), 1 };
+    size_t sizes[] = { ROUNDUPWD(width), ROUNDUPHT(height), 1 };
 
-  dt_opencl_set_kernel_arg(devid, gd->kernel_zonesystem, 0, sizeof(cl_mem), (void *)&dev_in);
-  dt_opencl_set_kernel_arg(devid, gd->kernel_zonesystem, 1, sizeof(cl_mem), (void *)&dev_out);
-  dt_opencl_set_kernel_arg(devid, gd->kernel_zonesystem, 2, sizeof(int), (void *)&width);
-  dt_opencl_set_kernel_arg(devid, gd->kernel_zonesystem, 3, sizeof(int), (void *)&height);
-  dt_opencl_set_kernel_arg(devid, gd->kernel_zonesystem, 4, sizeof(int), (void *)&size);
-  dt_opencl_set_kernel_arg(devid, gd->kernel_zonesystem, 5, sizeof(cl_mem), (void *)&dev_zmo);
-  dt_opencl_set_kernel_arg(devid, gd->kernel_zonesystem, 6, sizeof(cl_mem), (void *)&dev_zms);
-  err = dt_opencl_enqueue_kernel_2d(devid, gd->kernel_zonesystem, sizes);
+    dt_opencl_set_kernel_arg(devid, gd->kernel_zonesystem, 0, sizeof(cl_mem), (void *)&dev_in);
+    dt_opencl_set_kernel_arg(devid, gd->kernel_zonesystem, 1, sizeof(cl_mem), (void *)&dev_out);
+    dt_opencl_set_kernel_arg(devid, gd->kernel_zonesystem, 2, sizeof(int), (void *)&width);
+    dt_opencl_set_kernel_arg(devid, gd->kernel_zonesystem, 3, sizeof(int), (void *)&height);
+    dt_opencl_set_kernel_arg(devid, gd->kernel_zonesystem, 4, sizeof(int), (void *)&size);
+    dt_opencl_set_kernel_arg(devid, gd->kernel_zonesystem, 5, sizeof(cl_mem), (void *)&dev_zmo);
+    dt_opencl_set_kernel_arg(devid, gd->kernel_zonesystem, 6, sizeof(cl_mem), (void *)&dev_zms);
+    err = dt_opencl_enqueue_kernel_2d(devid, gd->kernel_zonesystem, sizes);
 
-  if(err != CL_SUCCESS) goto error;
-  dt_opencl_release_mem_object(dev_zmo);
-  dt_opencl_release_mem_object(dev_zms);
-  return TRUE;
+    dt_opencl_release_mem_object(dev_zmo);
+    dt_opencl_release_mem_object(dev_zms);
+    if(err != CL_SUCCESS) goto error;
+
+    return TRUE;
+  }
 
 error:
-  dt_opencl_release_mem_object(dev_zmo);
-  dt_opencl_release_mem_object(dev_zms);
   dt_print(DT_DEBUG_OPENCL, "[opencl_zonesystem] couldn't enqueue kernel! %d\n", err);
   return FALSE;
 }
@@ -447,10 +499,24 @@ void cleanup_pipe(struct dt_iop_module_t *self, dt_dev_pixelpipe_t *pipe, dt_dev
 
 void gui_update(struct dt_iop_module_t *self)
 {
-  //  dt_iop_module_t *module = (dt_iop_module_t *)self;
+  dt_iop_module_t *module = (dt_iop_module_t *)self;
   dt_iop_zonesystem_gui_data_t *g = (dt_iop_zonesystem_gui_data_t *)self->gui_data;
-  // dt_iop_zonesystem_params_t *p = (dt_iop_zonesystem_params_t *)module->params;
-  gtk_widget_queue_draw(GTK_WIDGET(g->zones));
+  dt_iop_zonesystem_params_t *p = (dt_iop_zonesystem_params_t *)module->params;
+
+  switch(p->mode)
+  {
+    case ADAMS:
+      gtk_stack_set_visible_child_name(GTK_STACK(g->mode_stack), "adams");
+      gtk_widget_queue_draw(GTK_WIDGET(g->zones));
+      break;
+    case EQUALIZER:
+      gtk_stack_set_visible_child_name(GTK_STACK(g->mode_stack), "equalizer");
+      break;
+    default:
+      gtk_stack_set_visible_child_name(GTK_STACK(g->mode_stack), "adams");
+      gtk_widget_queue_draw(GTK_WIDGET(g->zones));
+      break;
+  }
 }
 
 void init(dt_iop_module_t *module)
@@ -462,7 +528,7 @@ void init(dt_iop_module_t *module)
   module->params_size = sizeof(dt_iop_zonesystem_params_t);
   module->gui_data = NULL;
   dt_iop_zonesystem_params_t tmp = (dt_iop_zonesystem_params_t){
-    10, { -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 }
+    10, { -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 }, 0
   };
   memcpy(module->params, &tmp, sizeof(dt_iop_zonesystem_params_t));
   memcpy(module->default_params, &tmp, sizeof(dt_iop_zonesystem_params_t));
@@ -490,6 +556,31 @@ static gboolean dt_iop_zonesystem_bar_button_release(GtkWidget *widget, GdkEvent
                                                      dt_iop_module_t *self);
 static gboolean dt_iop_zonesystem_bar_scrolled(GtkWidget *widget, GdkEventScroll *event,
                                                dt_iop_module_t *self);
+
+static void mode_callback(GtkWidget *combo, gpointer user_data)
+{
+  dt_iop_module_t *self = (dt_iop_module_t *)user_data;
+  dt_iop_zonesystem_params_t *p = (dt_iop_zonesystem_params_t *)self->params;
+  dt_iop_zonesystem_gui_data_t *g = (dt_iop_zonesystem_gui_data_t *)self->gui_data;
+
+  p->mode = dt_bauhaus_combobox_get(combo);
+
+  switch(p->mode)
+  {
+    case ADAMS:
+      gtk_stack_set_visible_child_name(GTK_STACK(g->mode_stack), "adams");
+      gtk_widget_queue_draw(GTK_WIDGET(g->zones));
+      break;
+    case EQUALIZER:
+      gtk_stack_set_visible_child_name(GTK_STACK(g->mode_stack), "equalizer");
+      break;
+    default:
+      gtk_stack_set_visible_child_name(GTK_STACK(g->mode_stack), "adams");
+      gtk_widget_queue_draw(GTK_WIDGET(g->zones));
+      break;
+  }
+  dt_dev_add_history_item(darktable.develop, self, TRUE);
+}
 
 
 static void size_allocate_callback(GtkWidget *widget, GtkAllocation *allocation, gpointer user_data)
@@ -520,6 +611,7 @@ void gui_init(struct dt_iop_module_t *self)
 {
   self->gui_data = malloc(sizeof(dt_iop_zonesystem_gui_data_t));
   dt_iop_zonesystem_gui_data_t *g = (dt_iop_zonesystem_gui_data_t *)self->gui_data;
+
   g->in_preview_buffer = g->out_preview_buffer = NULL;
   g->is_dragging = FALSE;
   g->hilite_zone = FALSE;
@@ -530,6 +622,21 @@ void gui_init(struct dt_iop_module_t *self)
 
   self->widget = gtk_box_new(GTK_ORIENTATION_VERTICAL, DT_GUI_IOP_MODULE_CONTROL_SPACING);
   dt_gui_add_help_link(self->widget, dt_get_help_url(self->op));
+
+  /* Mode */
+  g->mode = dt_bauhaus_combobox_new(self);
+  dt_bauhaus_widget_set_label(g->mode, NULL, _("mode"));
+  dt_bauhaus_combobox_add(g->mode, _("Ansel Adams"));
+  dt_bauhaus_combobox_add(g->mode, _("equalizer"));
+  gtk_box_pack_start(GTK_BOX(self->widget), GTK_WIDGET(g->mode), TRUE, TRUE, 0);
+  gtk_widget_set_tooltip_text(g->mode, _("tone mapping method"));
+  g_signal_connect(G_OBJECT(g->mode), "value-changed", G_CALLBACK(mode_callback), self);
+
+  g->mode_stack = gtk_stack_new();
+  gtk_stack_set_homogeneous(GTK_STACK(g->mode_stack), FALSE);
+  gtk_box_pack_start(GTK_BOX(self->widget), g->mode_stack, TRUE, TRUE, 0);
+
+  GtkWidget *vbox_adams = GTK_WIDGET(gtk_box_new(GTK_ORIENTATION_VERTICAL, DT_BAUHAUS_SPACE));
 
   g->preview = dtgtk_drawing_area_new_with_aspect_ratio(1.0);
   g_signal_connect(G_OBJECT(g->preview), "size-allocate", G_CALLBACK(size_allocate_callback), self);
@@ -558,8 +665,11 @@ void gui_init(struct dt_iop_module_t *self)
                                               | GDK_LEAVE_NOTIFY_MASK | darktable.gui->scroll_mask);
   gtk_widget_set_size_request(g->zones, -1, DT_PIXEL_APPLY_DPI(40));
 
-  gtk_box_pack_start(GTK_BOX(self->widget), g->preview, TRUE, TRUE, 0);
-  gtk_box_pack_start(GTK_BOX(self->widget), g->zones, TRUE, TRUE, 0);
+  gtk_box_pack_start(GTK_BOX(vbox_adams), g->preview, TRUE, TRUE, 0);
+  gtk_box_pack_start(GTK_BOX(vbox_adams), g->zones, TRUE, TRUE, 0);
+
+  gtk_widget_show_all(vbox_adams);
+  gtk_stack_add_named(GTK_STACK(g->mode_stack), vbox_adams, "adams");
 
   /* add signal handler for preview pipe finish to redraw the preview */
   dt_control_signal_connect(darktable.signals, DT_SIGNAL_DEVELOP_PREVIEW_PIPE_FINISHED,
@@ -570,6 +680,11 @@ void gui_init(struct dt_iop_module_t *self)
   g->image_buffer = NULL;
   g->image_width = 0;
   g->image_height = 0;
+
+  GtkWidget *vbox_equalizer = GTK_WIDGET(gtk_box_new(GTK_ORIENTATION_VERTICAL, DT_BAUHAUS_SPACE));
+  gtk_widget_show_all(vbox_equalizer);
+  gtk_stack_add_named(GTK_STACK(g->mode_stack), vbox_equalizer, "equalizer");
+
 }
 
 void gui_cleanup(struct dt_iop_module_t *self)
