@@ -7737,7 +7737,7 @@ msgstr "liquefazer (liquify)"
 #: ../src/iop/liquify.c:3355
 msgid ""
 "click and drag to add point\n"
-"scrool to change size\n"
+"scroll to change size\n"
 "shift-scroll to change strength - ctrl-scroll to change direction"
 msgstr ""
 "click para adicionar ponto\n"
@@ -7747,7 +7747,7 @@ msgstr ""
 #: ../src/iop/liquify.c:3359
 msgid ""
 "click to add line\n"
-"scrool to change size\n"
+"scroll to change size\n"
 "shift-scroll to change strength - ctrl-scroll to change direction"
 msgstr ""
 "click para adicionar linha\n"
@@ -7757,7 +7757,7 @@ msgstr ""
 #: ../src/iop/liquify.c:3363
 msgid ""
 "click to add curve\n"
-"scrool to change size\n"
+"scroll to change size\n"
 "shift-scroll to change strength - ctrl-scroll to change direction"
 msgstr ""
 "click para adicionar curva\n"
@@ -9823,7 +9823,7 @@ msgid "existing duplicates"
 msgstr "duplicatas existentes"
 
 #: ../src/libs/duplicate.c:370
-msgid "create a 'virgin' duplicate of the image without any developpement"
+msgid "create a 'virgin' duplicate of the image without any development"
 msgstr "cria uma duplicata da imagem sem nenhum desenvolvimento"
 
 #: ../src/libs/duplicate.c:374
