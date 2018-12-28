@@ -49,7 +49,7 @@ DT_MODULE_INTROSPECTION(1, dt_iop_toneequalizer_params_t)
 
 typedef struct dt_iop_toneequalizer_params_t
 {
-  float ultra_deep_blacks, deep_blacks, blacks, shadows, midtones, highlights, whites;
+  float noise, ultra_deep_blacks, deep_blacks, blacks, shadows, midtones, highlights, whites;
   float blending;
   int scales;
 } dt_iop_toneequalizer_params_t;
@@ -67,7 +67,7 @@ typedef struct dt_iop_toneequalizer_global_data_t
 
 typedef struct dt_iop_toneequalizer_gui_data_t
 {
-  GtkWidget *ultra_deep_blacks, *deep_blacks, *blacks, *shadows, *midtones, *highlights, *whites;
+  GtkWidget *noise, *ultra_deep_blacks, *deep_blacks, *blacks, *shadows, *midtones, *highlights, *whites;
   GtkWidget *blending, *scales;
 } dt_iop_toneequalizer_gui_data_t;
 
@@ -117,6 +117,7 @@ void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const 
 
   const float factors[12] = { 1.0f,
                               1.0f,
+                              exp2f(d->params.noise),
                               exp2f(d->params.ultra_deep_blacks),
                               exp2f(d->params.deep_blacks),
                               exp2f(d->params.blacks),
@@ -125,8 +126,7 @@ void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const 
                               exp2f(d->params.highlights),
                               exp2f(d->params.whites),
                               1.0f,
-                              1.0f,
-                              1.0f };
+                              1.0f};
 
   const int ch = piece->colors;
   const float *const in = (const float *const)ivoid;
@@ -145,17 +145,11 @@ void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const 
     // build the pixel correction
     float correction = 0.0f;
 
-#ifdef _OPENMP
-#pragma omp ordered simd
-#endif
     for (int c = 0; c < 12; ++c) correction += GAUSS(centers[c], luma) * factors[c];
 
     correction /= w_sum;
 
     // Apply the weighted contribution of each channel to the current pixel
-#ifdef _OPENMP
-#pragma omp ordered simd
-#endif
     for (int c = 0; c < 3; ++c) out[k + c] = correction * in[k + c];
     out[k + 4] = in[k + 4];
   }
@@ -201,6 +195,7 @@ void gui_update(struct dt_iop_module_t *self)
   dt_iop_toneequalizer_gui_data_t *g = (dt_iop_toneequalizer_gui_data_t *)self->gui_data;
   dt_iop_toneequalizer_params_t *p = (dt_iop_toneequalizer_params_t *)module->params;
 
+  dt_bauhaus_slider_set(g->noise, p->noise);
   dt_bauhaus_slider_set(g->ultra_deep_blacks, p->ultra_deep_blacks);
   dt_bauhaus_slider_set(g->deep_blacks, p->deep_blacks);
   dt_bauhaus_slider_set(g->blacks, p->blacks);
@@ -218,7 +213,7 @@ void init(dt_iop_module_t *module)
   module->priority = 158; // module order created by iop_dependencies.py, do not edit!
   module->params_size = sizeof(dt_iop_toneequalizer_params_t);
   module->gui_data = NULL;
-  dt_iop_toneequalizer_params_t tmp = (dt_iop_toneequalizer_params_t){0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+  dt_iop_toneequalizer_params_t tmp = (dt_iop_toneequalizer_params_t){0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
   memcpy(module->params, &tmp, sizeof(dt_iop_toneequalizer_params_t));
   memcpy(module->default_params, &tmp, sizeof(dt_iop_toneequalizer_params_t));
 }
@@ -227,6 +222,15 @@ void cleanup(dt_iop_module_t *module)
 {
   free(module->params);
   module->params = NULL;
+}
+
+static void noise_callback(GtkWidget *slider, gpointer user_data)
+{
+  dt_iop_module_t *self = (dt_iop_module_t *)user_data;
+  if(self->dt->gui->reset) return;
+  dt_iop_toneequalizer_params_t *p = (dt_iop_toneequalizer_params_t *)self->params;
+  p->noise = dt_bauhaus_slider_get(slider);
+  dt_dev_add_history_item(darktable.develop, self, TRUE);
 }
 
 static void ultra_deep_blacks_callback(GtkWidget *slider, gpointer user_data)
@@ -298,6 +302,12 @@ void gui_init(struct dt_iop_module_t *self)
   dt_iop_toneequalizer_gui_data_t *g = (dt_iop_toneequalizer_gui_data_t *)self->gui_data;
 
   self->widget = gtk_box_new(GTK_ORIENTATION_VERTICAL, DT_GUI_IOP_MODULE_CONTROL_SPACING);
+
+  g->noise = dt_bauhaus_slider_new_with_range(self, -2.0, 2.0, 0.1, 0.0, 2);
+  dt_bauhaus_slider_set_format(g->noise, "%+.2f EV");
+  dt_bauhaus_widget_set_label(g->noise, NULL, _("-14 EV : HDR noise"));
+  gtk_box_pack_start(GTK_BOX(self->widget), g->noise, TRUE, TRUE, 0);
+  g_signal_connect(G_OBJECT(g->noise), "value-changed", G_CALLBACK(noise_callback), self);
 
   g->ultra_deep_blacks = dt_bauhaus_slider_new_with_range(self, -2.0, 2.0, 0.1, 0.0, 2);
   dt_bauhaus_slider_set_format(g->ultra_deep_blacks, "%+.2f EV");
