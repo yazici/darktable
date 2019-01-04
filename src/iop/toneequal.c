@@ -77,9 +77,9 @@ const char *name()
   return _("tone equalizer");
 }
 
-int groups()
+int default_group()
 {
-  return dt_iop_get_group("tone equalizer", IOP_GROUP_BASIC);
+  return IOP_GROUP_TONE;
 }
 
 #ifdef _OPENMP
