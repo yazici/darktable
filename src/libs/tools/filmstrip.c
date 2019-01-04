@@ -624,6 +624,17 @@ static gboolean _lib_filmstrip_button_release_callback(GtkWidget *w, GdkEventBut
   return result;
 }
 
+static gboolean _expose_again(gpointer user_data)
+{
+  // unfortunately there might have been images without thumbnails during expose.
+  // this can have multiple reasons: not loaded yet (we'll receive a signal when done)
+  // or still locked for writing.. we won't be notified when this changes.
+  // so we just track whether there were missing images and expose again.
+  if(darktable.view_manager->proxy.filmstrip.module)
+    gtk_widget_queue_draw(darktable.view_manager->proxy.filmstrip.module->widget);
+  return FALSE; // don't call again
+}
+
 static gboolean _lib_filmstrip_draw_callback(GtkWidget *widget, cairo_t *cr, gpointer user_data)
 {
   dt_lib_module_t *self = (dt_lib_module_t *)user_data;
@@ -631,8 +642,8 @@ static gboolean _lib_filmstrip_draw_callback(GtkWidget *widget, cairo_t *cr, gpo
 
   GtkAllocation allocation;
   gtk_widget_get_allocation(widget, &allocation);
-  int32_t width = allocation.width;
-  int32_t height = allocation.height;
+  const int32_t width = allocation.width;
+  const int32_t height = allocation.height;
 
   gdouble pointerx = strip->pointerx;
   gdouble pointery = strip->pointery;
@@ -654,7 +665,7 @@ static gboolean _lib_filmstrip_draw_callback(GtkWidget *widget, cairo_t *cr, gpo
   int max_cols = (int)(width / (float)wd) + 2;
   if(max_cols % 2 == 0) max_cols += 1;
 
-  const int col_start = max_cols / 2 - strip->offset;
+  const int col_start = max_cols / 2 - offset;
   const int empty_edge = (width - (max_cols * wd)) / 2;
   int step_res = SQLITE_ROW;
 
@@ -665,7 +676,6 @@ static gboolean _lib_filmstrip_draw_callback(GtkWidget *widget, cairo_t *cr, gpo
   const int seli = (pointery > 0 && pointery <= ht) ? pointerx / (float)wd : -1;
   const int img_pointerx = (int)fmodf(pointerx, wd);
   const int img_pointery = (int)pointery;
-
 
   /* get the count of current collection */
   strip->collection_count = dt_collection_get_count(darktable.collection);
@@ -683,9 +693,10 @@ static gboolean _lib_filmstrip_draw_callback(GtkWidget *widget, cairo_t *cr, gpo
   DT_DEBUG_SQLITE3_BIND_INT(stmt, 1, offset - max_cols / 2);
   DT_DEBUG_SQLITE3_BIND_INT(stmt, 2, max_cols);
 
-
   cairo_save(cr);
   cairo_translate(cr, empty_edge, 0.0f);
+  int missing = 0;
+
   for(int col = 0; col < max_cols; col++)
   {
     if(col < col_start)
@@ -713,7 +724,7 @@ static gboolean _lib_filmstrip_draw_callback(GtkWidget *widget, cairo_t *cr, gpo
       // getting it from the matrix ...
       cairo_matrix_t m;
       cairo_get_matrix(cr, &m);
-      dt_view_image_expose(&(strip->image_over), id, cr, wd, ht, max_cols, img_pointerx, img_pointery, FALSE, FALSE);
+      missing += dt_view_image_expose(&(strip->image_over), id, cr, wd, ht, max_cols, img_pointerx, img_pointery, FALSE, FALSE);
       cairo_restore(cr);
     }
     else if(step_res == SQLITE_DONE)
@@ -750,6 +761,8 @@ failure:
 #ifdef _DEBUG
   if(darktable.unmuted & DT_DEBUG_CACHE) dt_mipmap_cache_print(darktable.mipmap_cache);
 #endif
+
+  if(missing) g_timeout_add(250, _expose_again, widget);
 
   return TRUE;
 }

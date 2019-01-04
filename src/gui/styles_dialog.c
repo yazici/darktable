@@ -269,10 +269,7 @@ static void _gui_styles_dialog_run(gboolean edit, const char *name, int imgid)
 
   if(edit)
   {
-    snprintf(title, sizeof(title), "%s", _("edit style"));
-    g_strlcat(title, " \"", sizeof(title));
-    g_strlcat(title, name, sizeof(title));
-    g_strlcat(title, "\"", sizeof(title));
+    snprintf(title, sizeof(title), "%s \"%s\"", _("edit style"), name);
     sd->duplicate = gtk_check_button_new_with_label(_("duplicate style"));
     gtk_widget_set_tooltip_text(sd->duplicate, _("creates a duplicate of the style before applying changes"));
   }
@@ -301,7 +298,8 @@ static void _gui_styles_dialog_run(gboolean edit, const char *name, int imgid)
   GtkWidget *scroll = gtk_scrolled_window_new(NULL, NULL);
   gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroll), GTK_POLICY_NEVER, GTK_POLICY_AUTOMATIC);
   gtk_scrolled_window_set_min_content_height(GTK_SCROLLED_WINDOW(scroll), DT_PIXEL_APPLY_DPI(300));
-  gtk_scrolled_window_set_max_content_height(GTK_SCROLLED_WINDOW(scroll), DT_PIXEL_APPLY_DPI(700));
+//  only available in 3.22, and not making the expected job anyway
+//  gtk_scrolled_window_set_max_content_height(GTK_SCROLLED_WINDOW(scroll), DT_PIXEL_APPLY_DPI(700));
   gtk_scrolled_window_set_propagate_natural_height(GTK_SCROLLED_WINDOW(scroll), TRUE);
   gtk_widget_set_margin_start(scroll, DT_PIXEL_APPLY_DPI(5));
   gtk_widget_set_margin_end(scroll, DT_PIXEL_APPLY_DPI(5));
@@ -311,7 +309,7 @@ static void _gui_styles_dialog_run(gboolean edit, const char *name, int imgid)
   // box in scrollwindow containing the two possible trees
   GtkBox *sbox = GTK_BOX(gtk_box_new(GTK_ORIENTATION_VERTICAL, DT_PIXEL_APPLY_DPI(5)));
 
-  gtk_box_pack_start(GTK_BOX(content_area), GTK_WIDGET(box), FALSE, FALSE, 0);
+  gtk_box_pack_start(GTK_BOX(content_area), GTK_WIDGET(box), TRUE, TRUE, 0);
   gtk_box_pack_start(GTK_BOX(content_area), GTK_WIDGET(scroll), TRUE, TRUE, 0);
   gtk_container_add(GTK_CONTAINER(scroll), GTK_WIDGET(sbox));
 
@@ -336,8 +334,8 @@ static void _gui_styles_dialog_run(gboolean edit, const char *name, int imgid)
     }
   }
 
-  gtk_box_pack_start(box, sd->name, FALSE, FALSE, 0);
-  gtk_box_pack_start(box, sd->description, FALSE, FALSE, 0);
+  gtk_box_pack_start(box, sd->name, TRUE, TRUE, 0);
+  gtk_box_pack_start(box, sd->description, TRUE, TRUE, 0);
 
   /* create the list of items */
   sd->items = GTK_TREE_VIEW(gtk_tree_view_new());
@@ -479,7 +477,7 @@ static void _gui_styles_dialog_run(gboolean edit, const char *name, int imgid)
 
   if(has_new_item) gtk_box_pack_start(sbox, GTK_WIDGET(sd->items_new), TRUE, TRUE, 0);
 
-  if(edit) gtk_box_pack_start(GTK_BOX(content_area), GTK_WIDGET(sd->duplicate), FALSE, FALSE, 0);
+  if(edit) gtk_box_pack_start(GTK_BOX(content_area), GTK_WIDGET(sd->duplicate), TRUE, TRUE, 0);
 
   g_object_unref(liststore);
   g_object_unref(liststore_new);

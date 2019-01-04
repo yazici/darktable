@@ -37,7 +37,6 @@ http://www.youtube.com/watch?v=JVoUgR6bhBc
 #include "gui/presets.h"
 #include "gui/color_picker_proxy.h"
 #include "iop/iop_api.h"
-#include "common/iop_group.h"
 
 //#include <gtk/gtk.h>
 #include <stdlib.h>
@@ -171,9 +170,9 @@ int flags()
   return IOP_FLAGS_INCLUDE_IN_STYLES | IOP_FLAGS_SUPPORTS_BLENDING;
 }
 
-int groups()
+int default_group()
 {
-  return dt_iop_get_group("color balance", IOP_GROUP_COLOR);
+  return IOP_GROUP_COLOR;
 }
 
 int legacy_params(dt_iop_module_t *self, const void *const old_params, const int old_version, void *new_params,
@@ -1025,14 +1024,14 @@ static void apply_gamma_neutralize(dt_iop_module_t *self)
   // Get the parameter
   for(int c = 0; c < 3; ++c) RGB[c] = logf(XYZ[1])/ logf(RGB[c] * p->gain[c + 1] + p->lift[c + 1] - 1.0f);
 
-  p->gamma[CHANNEL_RED] = 2.0 - RGB[0];
-  p->gamma[CHANNEL_GREEN] = 2.0 - RGB[1];
-  p->gamma[CHANNEL_BLUE] = 2.0 - RGB[2];
+  p->gamma[CHANNEL_RED] = CLAMP(2.0 - RGB[0], 0.0001f, 2.0f);
+  p->gamma[CHANNEL_GREEN] = CLAMP(2.0 - RGB[1], 0.0001f, 2.0f);
+  p->gamma[CHANNEL_BLUE] = CLAMP(2.0 - RGB[2], 0.0001f, 2.0f);
 
   darktable.gui->reset = 1;
-  dt_bauhaus_slider_set_soft(g->gamma_r, RGB[0] - 1.0f);
-  dt_bauhaus_slider_set_soft(g->gamma_g, RGB[1] - 1.0f);
-  dt_bauhaus_slider_set_soft(g->gamma_b, RGB[2] - 1.0f);
+  dt_bauhaus_slider_set_soft(g->gamma_r, -RGB[0] + 1.0f);
+  dt_bauhaus_slider_set_soft(g->gamma_g, -RGB[1] + 1.0f);
+  dt_bauhaus_slider_set_soft(g->gamma_b, -RGB[2] + 1.0f);
   set_HSL_sliders(g->hue_gamma, g->sat_gamma, p->gamma);
   darktable.gui->reset = 0;
 
