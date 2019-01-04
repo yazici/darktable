@@ -115,8 +115,8 @@ void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const 
 {
   const dt_iop_toneequalizer_data_t *const d = (const dt_iop_toneequalizer_data_t *const)piece->data;
 
-  const float factors[12] = { 1.0f,
-                              1.0f,
+  const float factors[12] = { exp2f(d->params.noise),
+                              exp2f(d->params.noise),
                               exp2f(d->params.noise),
                               exp2f(d->params.ultra_deep_blacks),
                               exp2f(d->params.deep_blacks),
@@ -125,8 +125,8 @@ void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const 
                               exp2f(d->params.midtones),
                               exp2f(d->params.highlights),
                               exp2f(d->params.whites),
-                              1.0f,
-                              1.0f};
+                              exp2f(d->params.whites),
+                              exp2f(d->params.whites)};
 
   const int ch = piece->colors;
   const float *const in = (const float *const)ivoid;
