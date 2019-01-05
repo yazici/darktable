@@ -100,6 +100,13 @@ typedef struct dt_library_t
   int images_in_row;
   int max_rows;
 
+  int thumb_size;
+  int last_mouse_over_thumb;
+  int last_exposed_id;
+  int etot, eskip;
+  int offset_x, offset_y;
+  gboolean force_expose_all;
+
   uint8_t *full_res_thumb;
   int32_t full_res_thumb_id, full_res_thumb_wd, full_res_thumb_ht;
   dt_image_orientation_t full_res_thumb_orientation;
@@ -186,6 +193,8 @@ static void switch_layout_to(dt_library_t *lib, int new_layout)
     lib->center = 0;
 
     lib->offset_changed = TRUE;
+    lib->offset_x = 0;
+    lib->offset_y = 0;
   }
 }
 
@@ -432,6 +441,14 @@ void init(dt_view_t *self)
   lib->full_res_thumb_id = -1;
   lib->audio_player_id = -1;
 
+  lib->thumb_size = -1;
+  lib->last_mouse_over_thumb = -1;
+  lib->last_exposed_id = -1;
+  lib->etot = lib->eskip = 0;
+  lib->force_expose_all = FALSE;
+  lib->offset_x = 0;
+  lib->offset_y = 0;
+
   /* setup collection listener and initialize main_query statement */
   dt_control_signal_connect(darktable.signals, DT_SIGNAL_COLLECTION_CHANGED,
                             G_CALLBACK(_view_lighttable_collection_listener_callback), (gpointer)self);
@@ -499,13 +516,18 @@ static int expose_filemanager(dt_view_t *self, cairo_t *cr, int32_t width, int32
   int32_t mouse_over_id = dt_control_get_mouse_over_id(), mouse_over_group = -1;
 
   /* fill background */
-  dt_gui_gtk_set_source_rgb(cr, DT_GUI_COLOR_LIGHTTABLE_BG);
-  cairo_paint(cr);
+  if (mouse_over_id == -1 || lib->force_expose_all)
+  {
+    lib->force_expose_all = TRUE;
+    dt_gui_gtk_set_source_rgb(cr, DT_GUI_COLOR_LIGHTTABLE_BG);
+    cairo_paint(cr);
+  }
 
   offset_changed = lib->offset_changed;
 
   const float wd = width / (float)iir;
   const float ht = width / (float)iir;
+  lib->thumb_size = wd;
 
   int pi = pointerx / (float)wd;
   int pj = pointery / (float)ht;
@@ -643,6 +665,7 @@ end_query_cache:
   cairo_save(cr);
   int current_image = 0;
   int before_mouse_over_id = 0;
+  const int before_last_exposed_id = lib->last_exposed_id;
 
   if (lib->using_arrows)
   {
@@ -727,7 +750,7 @@ end_query_cache:
                 while (loop_count--)
                 {
                   // ex shift + down toggle selection on images_in_row images
-                  to_toggle =  idx+(-1*lib->key_jump_offset/abs(lib->key_jump_offset)*loop_count);
+                  to_toggle = idx+(-1*lib->key_jump_offset/abs(lib->key_jump_offset)*loop_count);
                   if (query_ids[to_toggle])
                     dt_selection_toggle(darktable.selection, query_ids[to_toggle]);
                 }
@@ -741,6 +764,8 @@ end_query_cache:
           mouse_over_id = id;
         }
 
+        if(!lib->pan && (iir != 1 || mouse_over_id != -1)) dt_control_set_mouse_over_id(mouse_over_id);
+
         cairo_save(cr);
         // if(iir == 1) dt_image_prefetch(image, DT_IMAGE_MIPF);
         if(iir == 1)
@@ -750,10 +775,14 @@ end_query_cache:
           // this single image.
           dt_selection_select_single(darktable.selection, id);
         }
-        missing += dt_view_image_expose(
+        if (id == mouse_over_id || lib->force_expose_all || id == before_last_exposed_id)
+        {
+          if(!lib->force_expose_all && id == mouse_over_id) lib->last_exposed_id = id;
+          missing += dt_view_image_expose(
             &(lib->image_over), id, cr, wd, iir == 1 ? height : ht, iir,
             pi == col && pj == row ? img_pointerx : -1,
             pi == col && pj == row ? img_pointery : -1, FALSE, FALSE);
+        }
 
         cairo_restore(cr);
       }
@@ -776,6 +805,24 @@ escape_image_loop:
     drawing_offset = lib->offset;
     offset = 0;
   }
+
+  // clear rows & cols around thumbs, needed to clear the group borders
+  cairo_save(cr);
+  dt_gui_gtk_set_source_rgb(cr, DT_GUI_COLOR_LIGHTTABLE_BG);
+  for(int row = 0; row < max_rows; row++)
+  {
+    cairo_move_to(cr, 0, row * ht);
+    cairo_line_to(cr, width, row * ht);
+  }
+  for(int col = 0; col < max_cols; col++)
+  {
+    cairo_move_to(cr, col * wd, 0);
+    cairo_line_to(cr, col * wd, height);
+  }
+  cairo_set_line_width(cr, 0.011 * wd);
+  cairo_stroke(cr);
+  cairo_restore(cr);
+
   for(int row = 0; row < max_rows; row++)
   {
     for(int col = 0; col < max_cols; col++)
@@ -791,7 +838,6 @@ escape_image_loop:
       }
 
       id = query_ids[current_image];
-
 
       if(id > 0)
       {
@@ -991,11 +1037,16 @@ static int expose_zoomable(dt_view_t *self, cairo_t *cr, int32_t width, int32_t 
   lib->images_in_row = zoom;
   lib->image_over = DT_VIEW_DESERT;
 
-  dt_gui_gtk_set_source_rgb(cr, DT_GUI_COLOR_LIGHTTABLE_BG);
-  cairo_paint(cr);
+  if (mouse_over_id == -1 || lib->force_expose_all || pan)
+  {
+    lib->force_expose_all = TRUE;
+    dt_gui_gtk_set_source_rgb(cr, DT_GUI_COLOR_LIGHTTABLE_BG);
+    cairo_paint(cr);
+  }
 
   const float wd = width / zoom;
   const float ht = width / zoom;
+  lib->thumb_size = wd;
 
   static float oldzoom = -1;
   if(oldzoom < 0) oldzoom = zoom;
@@ -1117,6 +1168,8 @@ static int expose_zoomable(dt_view_t *self, cairo_t *cr, int32_t width, int32_t 
       zoom_y = ht * ceilf((float)lib->collection_count / DT_LIBRARY_MAX_ZOOM) - ht;
   }
 
+  lib->offset_x = zoom_x;
+  lib->offset_y = zoom_y;
 
   int offset_i = (int)(zoom_x / wd);
   int offset_j = (int)(zoom_y / ht);
@@ -1137,8 +1190,8 @@ static int expose_zoomable(dt_view_t *self, cairo_t *cr, int32_t width, int32_t 
   const int max_cols = (zoom == 1) ? 1 : (MIN(DT_LIBRARY_MAX_ZOOM - MAX(0, offset_i), 1 + (int)(zoom + .5)));
 
   int offset = MAX(0, offset_i) + DT_LIBRARY_MAX_ZOOM * offset_j;
-  int img_pointerx = zoom == 1 ? pointerx : fmodf(pointerx + zoom_x, wd);
-  int img_pointery = zoom == 1 ? pointery : fmodf(pointery + zoom_y, ht);
+  const int img_pointerx = zoom == 1 ? pointerx : fmodf(pointerx + zoom_x, wd);
+  const int img_pointery = zoom == 1 ? pointery : fmodf(pointery + zoom_y, ht);
 
   // assure 1:1 is not switching images on resize/tab events:
   if(!track && lib->offset != 0x7fffffff && zoom == 1)
@@ -1159,6 +1212,7 @@ static int expose_zoomable(dt_view_t *self, cairo_t *cr, int32_t width, int32_t 
 
   cairo_translate(cr, -offset_x * wd, -offset_y * ht);
   cairo_translate(cr, -MIN(offset_i * wd, 0.0), 0.0);
+  const int before_last_exposed_id = lib->last_exposed_id;
 
   for(int row = 0; row < max_rows; row++)
   {
@@ -1191,8 +1245,13 @@ static int expose_zoomable(dt_view_t *self, cairo_t *cr, int32_t width, int32_t 
 
         cairo_save(cr);
         // if(zoom == 1) dt_image_prefetch(image, DT_IMAGE_MIPF);
-        missing += dt_view_image_expose(&(lib->image_over), id, cr, wd, zoom == 1 ? height : ht, zoom, img_pointerx,
-                             img_pointery, FALSE, FALSE);
+        if (id == mouse_over_id || lib->force_expose_all || id == before_last_exposed_id)
+        {
+          if(!lib->force_expose_all && id == mouse_over_id) lib->last_exposed_id = id;
+          missing += dt_view_image_expose(&(lib->image_over), id, cr, wd, zoom == 1 ? height : ht, zoom,
+                                          img_pointerx, img_pointery, FALSE, FALSE);
+        }
+
         cairo_restore(cr);
         if(zoom == 1)
         {
@@ -1458,6 +1517,8 @@ void expose(dt_view_t *self, cairo_t *cr, int32_t width, int32_t height, int32_t
     dt_print(DT_DEBUG_LIGHTTABLE, "[lighttable] expose took %0.04f sec\n", end - start);
   if(missing_thumbnails)
     g_timeout_add(500, _expose_again, 0);
+  else
+    lib->force_expose_all = FALSE;
 }
 
 static gboolean go_up_key_accel_callback(GtkAccelGroup *accel_group, GObject *acceleratable, guint keyval,
@@ -1759,8 +1820,10 @@ void mouse_enter(dt_view_t *self)
   if (lib->using_arrows == 0)
   {
     if(id == -1)
-      dt_control_set_mouse_over_id(
-          lib->last_mouse_over_id); // this seems to be needed to fix the strange events fluxbox emits
+    {
+      // this seems to be needed to fix the strange events fluxbox emits
+      dt_control_set_mouse_over_id(lib->last_mouse_over_id);
+    }
   }
 }
 
@@ -1805,6 +1868,7 @@ void scrollbar_changed(dt_view_t *self, double x, double y)
 void scrolled(dt_view_t *self, double x, double y, int up, int state)
 {
   dt_library_t *lib = (dt_library_t *)self->data;
+  lib->force_expose_all = TRUE;
   const int layout = dt_conf_get_int("plugins/lighttable/layout");
   if(lib->full_preview_id > -1)
   {
@@ -1846,7 +1910,40 @@ void scrolled(dt_view_t *self, double x, double y, int up, int state)
 
 void mouse_moved(dt_view_t *self, double x, double y, double pressure, int which)
 {
-  dt_control_queue_redraw_center();
+  dt_library_t *lib = (dt_library_t *)self->data;
+  const int px = x + lib->offset_x;
+  const int py = y + lib->offset_y;
+  gboolean do_redraw = FALSE;
+
+  lib->etot++;
+
+  if(lib->images_in_row == 1 || lib->full_preview_id != -1 || lib->thumb_size == -1 || px < 0 || py < 0)
+  {
+    do_redraw = TRUE;
+  }
+  else
+  {
+    const int mouse_over_thumb = (int)(1.0 + px / lib->thumb_size) + (lib->images_in_row * (int)(py / lib->thumb_size));
+    const int x_offset = (int)px % lib->thumb_size;
+    const int y_offset = (int)py % lib->thumb_size;
+    const int end_pos = (lib->thumb_size * 90) / 100;
+    const int start_pos = (lib->thumb_size * 10) / 100;
+
+    if (lib->last_mouse_over_thumb == -1 || lib->last_mouse_over_thumb != mouse_over_thumb
+        || (y_offset > end_pos || y_offset < start_pos)
+        || (x_offset > end_pos || x_offset < start_pos))
+    {
+      lib->last_mouse_over_thumb = mouse_over_thumb;
+      do_redraw = TRUE;
+    }
+    else
+      lib->eskip++;
+
+//    printf("evt (%.2f x %.2f) total %4d - skip %4d - done %4d\n     (thumb size %d, y_offet %d)\n",
+//           x, y, lib->etot, lib->eskip, lib->etot - lib->eskip, lib->thumb_size, y_offset);
+  }
+
+  if(do_redraw) dt_control_queue_redraw_center();
 }
 
 
@@ -1897,6 +1994,7 @@ int button_pressed(dt_view_t *self, double x, double y, double pressure, int whi
   lib->select_offset_y = lib->zoom_y;
   lib->select_offset_x += x;
   lib->select_offset_y += y;
+  lib->force_expose_all = TRUE;
 
   if (dt_control_get_mouse_over_id() < 0 || !_is_custom_image_order_required(self))
   {
