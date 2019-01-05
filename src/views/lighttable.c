@@ -807,20 +807,21 @@ escape_image_loop:
   }
 
   // clear rows & cols around thumbs, needed to clear the group borders
-  cairo_set_line_width(cr, 0.01 * wd);
+  cairo_save(cr);
   dt_gui_gtk_set_source_rgb(cr, DT_GUI_COLOR_LIGHTTABLE_BG);
   for(int row = 0; row < max_rows; row++)
   {
     cairo_move_to(cr, 0, row * ht);
     cairo_line_to(cr, width, row * ht);
-    cairo_stroke(cr);
   }
   for(int col = 0; col < max_cols; col++)
   {
     cairo_move_to(cr, col * wd, 0);
     cairo_line_to(cr, col * wd, height);
-    cairo_stroke(cr);
   }
+  cairo_set_line_width(cr, 0.011 * wd);
+  cairo_stroke(cr);
+  cairo_restore(cr);
 
   for(int row = 0; row < max_rows; row++)
   {
