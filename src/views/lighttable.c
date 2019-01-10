@@ -822,7 +822,6 @@ end_query_cache:
             &(lib->image_over), id, cr, wd, iir == 1 ? height : ht, iir,
             pi == col && pj == row ? img_pointerx : -1,
             pi == col && pj == row ? img_pointery : -1, FALSE, FALSE);
-        }
 
           // if thumb is missing, record it for expose int next round
           if(thumb_missed)
@@ -1540,13 +1539,10 @@ static int expose_full_preview(dt_view_t *self, cairo_t *cr, int32_t width, int3
 
 static gboolean _expose_again(gpointer user_data)
 {
-  dt_view_t *self = (dt_view_t *)user_data;
-  dt_library_t *lib = (dt_library_t *)self->data;
   // unfortunately there might have been images without thumbnails during expose.
   // this can have multiple reasons: not loaded yet (we'll receive a signal when done)
   // or still locked for writing.. we won't be notified when this changes.
   // so we just track whether there were missing images and expose again.
-  lib->force_expose_all = TRUE;
   dt_control_queue_redraw_center();
   return FALSE; // don't call again
 }
