@@ -1,6 +1,6 @@
 /*
     This file is part of darktable,
-    copyright (c) 2009--2010 johannes hanika.
+    copyright (c) 2019 pascal obry.
 
     darktable is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -15,25 +15,16 @@
     You should have received a copy of the GNU General Public License
     along with darktable.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
 
-#include "develop/pixelpipe_hb.c"
+#pragma once
 
-const char *dt_pixelpipe_name(dt_dev_pixelpipe_type_t pipe)
-{
-  switch(pipe)
-  {
-    case DT_DEV_PIXELPIPE_NONE: return "NONE";
-    case DT_DEV_PIXELPIPE_EXPORT: return "EXPORT";
-    case DT_DEV_PIXELPIPE_FULL: return "FULL";
-    case DT_DEV_PIXELPIPE_PREVIEW: return "PREVIEW";
-    case DT_DEV_PIXELPIPE_THUMBNAIL: return "THUMBNAIL";
-    case DT_DEV_PIXELPIPE_ANY: return "ANY";
-    default: return "(unknown)";
-  }
-}
+#include "common/darktable.h"
+
+/** save preset to file */
+void dt_presets_save_to_file(const int rowid, const char *preset_name, const char *filedir);
+
+/** load preset from file */
+int dt_presets_import_from_file(const char *preset_path);
 
 // modelines: These editor modelines have been set for all relevant files by tools/update_modelines.sh
 // vim: shiftwidth=2 expandtab tabstop=2 cindent

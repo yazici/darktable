@@ -107,7 +107,7 @@ static const char *mime(dt_imageio_module_data_t *data)
 
 static int write_image(dt_imageio_module_data_t *datai, const char *filename, const void *in,
                        dt_colorspaces_color_profile_type_t over_type, const char *over_filename,
-                       void *exif, int exif_len, int imgid, int num, int total)
+                       void *exif, int exif_len, int imgid, int num, int total, dt_dev_pixelpipe_t *pipe)
 {
   dt_slideshow_format_t *data = (dt_slideshow_format_t *)datai;
   dt_pthread_mutex_lock(&data->d->lock);
@@ -184,11 +184,11 @@ static int process_next_image(dt_slideshow_t *d)
   sqlite3_finalize(stmt);
 
   // this is a little slow, might be worth to do an option:
-  const int high_quality = dt_conf_get_bool("plugins/slideshow/high_quality");
+  const gboolean high_quality = dt_conf_get_bool("plugins/slideshow/high_quality");
   if(id)
     // the flags are: ignore exif, display byteorder, high quality, upscale, thumbnail
-    dt_imageio_export_with_flags(id, "unused", &buf, (dt_imageio_module_data_t *)&dat, 1, 1, high_quality, 1, 0,
-                                 0, 0, DT_COLORSPACE_DISPLAY, NULL, DT_INTENT_LAST, NULL, NULL, 1, 1);
+    dt_imageio_export_with_flags(id, "unused", &buf, (dt_imageio_module_data_t *)&dat, TRUE, TRUE, high_quality, TRUE,
+                                 FALSE, NULL, FALSE, DT_COLORSPACE_DISPLAY, NULL, DT_INTENT_LAST, NULL, NULL, 1, 1);
   return 0;
 }
 
