@@ -492,17 +492,13 @@ int try_enter(dt_view_t *self)
 
 static void select_this_image(const int imgid)
 {
-  // select this image, if no multiple selection:
-  if(dt_collection_get_selected_count(NULL) < 2)
-  {
-    sqlite3_stmt *stmt;
-    DT_DEBUG_SQLITE3_EXEC(dt_database_get(darktable.db), "DELETE FROM main.selected_images", NULL, NULL, NULL);
-    DT_DEBUG_SQLITE3_PREPARE_V2(dt_database_get(darktable.db),
-                                "INSERT OR IGNORE INTO main.selected_images VALUES (?1)", -1, &stmt, NULL);
-    DT_DEBUG_SQLITE3_BIND_INT(stmt, 1, imgid);
-    sqlite3_step(stmt);
-    sqlite3_finalize(stmt);
-  }
+  sqlite3_stmt *stmt;
+  DT_DEBUG_SQLITE3_EXEC(dt_database_get(darktable.db), "DELETE FROM main.selected_images", NULL, NULL, NULL);
+  DT_DEBUG_SQLITE3_PREPARE_V2(dt_database_get(darktable.db),
+                              "INSERT OR IGNORE INTO main.selected_images VALUES (?1)", -1, &stmt, NULL);
+  DT_DEBUG_SQLITE3_BIND_INT(stmt, 1, imgid);
+  sqlite3_step(stmt);
+  sqlite3_finalize(stmt);
 }
 
 static void dt_dev_cleanup_module_accels(dt_iop_module_t *module)
@@ -1945,6 +1941,13 @@ void mouse_leave(dt_view_t *self)
   dt_control_change_cursor(GDK_LEFT_PTR);
 }
 
+void mouse_enter(dt_view_t *self)
+{
+  dt_develop_t *dev = (dt_develop_t *)self->data;
+  // masks
+  dt_masks_events_mouse_enter(dev->gui_module);
+}
+
 void mouse_moved(dt_view_t *self, double x, double y, double pressure, int which)
 {
   const int32_t tb = DT_PIXEL_APPLY_DPI(dt_conf_get_int("plugins/darkroom/ui/border_size"));
@@ -2245,14 +2248,16 @@ void scrolled(dt_view_t *self, double x, double y, int up, int state)
     closeup = 1;  // enable closeup mode (pixel doubling)
   }
 
-  dt_control_set_dev_zoom_scale(scale);
   if(fabsf(scale - 1.0f) < 0.001f) zoom = DT_ZOOM_1;
   if(fabsf(scale - fitscale) < 0.001f) zoom = DT_ZOOM_FIT;
+  dt_control_set_dev_zoom_scale(scale);
+  dt_control_set_dev_closeup(closeup);
+  scale = dt_dev_get_zoom_scale(dev, zoom, 1<<closeup, 0);
+
   zoom_x -= mouse_off_x / (procw * scale);
   zoom_y -= mouse_off_y / (proch * scale);
   dt_dev_check_zoom_bounds(dev, &zoom_x, &zoom_y, zoom, closeup, NULL, NULL);
   dt_control_set_dev_zoom(zoom);
-  dt_control_set_dev_closeup(closeup);
   dt_control_set_dev_zoom_x(zoom_x);
   dt_control_set_dev_zoom_y(zoom_y);
 
