@@ -87,6 +87,7 @@ static void _update_softproof_gamut_checking(dt_develop_t *d);
 /* signal handler for filmstrip image switching */
 static void _view_darkroom_filmstrip_activate_callback(gpointer instance, gpointer user_data);
 
+#define DT_DARKROOM_PROCESS_TIMEOUT 500
 
 const char *name(dt_view_t *self)
 {
@@ -154,12 +155,16 @@ void expose(
     dev->gui_synch = 0;
   }
 
-  if(dev->image_status == DT_DEV_PIXELPIPE_DIRTY || dev->image_status == DT_DEV_PIXELPIPE_INVALID
-     || dev->pipe->input_timestamp < dev->preview_pipe->input_timestamp)
-    dt_dev_process_image(dev);
-  if(dev->preview_status == DT_DEV_PIXELPIPE_DIRTY || dev->preview_status == DT_DEV_PIXELPIPE_INVALID
-     || dev->pipe->input_timestamp > dev->preview_pipe->input_timestamp)
-    dt_dev_process_preview(dev);
+
+  if(dev->image_status == DT_DEV_PIXELPIPE_DIRTY || dev->image_status == DT_DEV_PIXELPIPE_INVALID)
+  {
+    dt_control_queue_redraw();
+    dev->image_timeout_handle = g_timeout_add(DT_DARKROOM_PROCESS_TIMEOUT, G_SOURCE_FUNC(dt_dev_process_image), dev);
+  }
+
+  if(dev->preview_status == DT_DEV_PIXELPIPE_DIRTY || dev->preview_status == DT_DEV_PIXELPIPE_INVALID)
+    dev->preview_timeout_handle = g_timeout_add(DT_DARKROOM_PROCESS_TIMEOUT, G_SOURCE_FUNC(dt_dev_process_preview), dev);
+
 
   dt_pthread_mutex_t *mutex = NULL;
   int stride;
@@ -845,7 +850,6 @@ static gboolean zoom_key_accel(GtkAccelGroup *accel_group, GObject *acceleratabl
     default:
       break;
   }
-  dt_control_queue_redraw_center();
   return TRUE;
 }
 
@@ -1063,8 +1067,7 @@ static void _overexposed_quickbutton_clicked(GtkWidget *w, gpointer user_data)
 {
   dt_develop_t *d = (dt_develop_t *)user_data;
   d->overexposed.enabled = !d->overexposed.enabled;
-  //   dt_dev_reprocess_center(d);
-  dt_dev_reprocess_all(d);
+  dt_dev_reprocess_center(d);
 }
 
 static gboolean _overexposed_quickbutton_pressed(GtkWidget *widget, GdkEvent *event, gpointer user_data)
@@ -1098,8 +1101,7 @@ static void colorscheme_callback(GtkWidget *combo, gpointer user_data)
   if(d->overexposed.enabled == FALSE)
     gtk_button_clicked(GTK_BUTTON(d->overexposed.button));
   else
-    //     dt_dev_reprocess_center(d);
-    dt_dev_reprocess_all(d);
+    dt_dev_reprocess_center(d);
 }
 
 static void lower_callback(GtkWidget *slider, gpointer user_data)
@@ -1109,8 +1111,7 @@ static void lower_callback(GtkWidget *slider, gpointer user_data)
   if(d->overexposed.enabled == FALSE)
     gtk_button_clicked(GTK_BUTTON(d->overexposed.button));
   else
-    //     dt_dev_reprocess_center(d);
-    dt_dev_reprocess_all(d);
+    dt_dev_reprocess_center(d);
 }
 
 static void upper_callback(GtkWidget *slider, gpointer user_data)
@@ -1120,8 +1121,7 @@ static void upper_callback(GtkWidget *slider, gpointer user_data)
   if(d->overexposed.enabled == FALSE)
     gtk_button_clicked(GTK_BUTTON(d->overexposed.button));
   else
-    //     dt_dev_reprocess_center(d);
-    dt_dev_reprocess_all(d);
+    dt_dev_reprocess_center(d);
 }
 
 /* rawoverexposed */
@@ -1129,8 +1129,7 @@ static void _rawoverexposed_quickbutton_clicked(GtkWidget *w, gpointer user_data
 {
   dt_develop_t *d = (dt_develop_t *)user_data;
   d->rawoverexposed.enabled = !d->rawoverexposed.enabled;
-  //   dt_dev_reprocess_center(d);
-  dt_dev_reprocess_all(d);
+  dt_dev_reprocess_center(d);
 }
 
 static gboolean _rawoverexposed_quickbutton_pressed(GtkWidget *widget, GdkEvent *event, gpointer user_data)
@@ -1164,8 +1163,7 @@ static void rawoverexposed_mode_callback(GtkWidget *combo, gpointer user_data)
   if(d->rawoverexposed.enabled == FALSE)
     gtk_button_clicked(GTK_BUTTON(d->rawoverexposed.button));
   else
-    //     dt_dev_reprocess_center(d);
-    dt_dev_reprocess_all(d);
+    dt_dev_reprocess_center(d);
 }
 
 static void rawoverexposed_colorscheme_callback(GtkWidget *combo, gpointer user_data)
@@ -1175,8 +1173,7 @@ static void rawoverexposed_colorscheme_callback(GtkWidget *combo, gpointer user_
   if(d->rawoverexposed.enabled == FALSE)
     gtk_button_clicked(GTK_BUTTON(d->rawoverexposed.button));
   else
-    //     dt_dev_reprocess_center(d);
-    dt_dev_reprocess_all(d);
+    dt_dev_reprocess_center(d);
 }
 
 static void rawoverexposed_threshold_callback(GtkWidget *slider, gpointer user_data)
@@ -1186,8 +1183,7 @@ static void rawoverexposed_threshold_callback(GtkWidget *slider, gpointer user_d
   if(d->rawoverexposed.enabled == FALSE)
     gtk_button_clicked(GTK_BUTTON(d->rawoverexposed.button));
   else
-    //     dt_dev_reprocess_center(d);
-    dt_dev_reprocess_all(d);
+    dt_dev_reprocess_center(d);
 }
 
 static gboolean _toolbox_toggle_callback(GtkAccelGroup *accel_group, GObject *acceleratable, guint keyval,
@@ -1809,6 +1805,8 @@ void enter(dt_view_t *self)
   dev->form_gui->formid = 0;
   dev->gui_leaving = 0;
   dev->gui_module = NULL;
+  dev->image_timeout_handle = 0;
+  dev->preview_timeout_handle = 0;
 
   select_this_image(dev->image_storage.id);
 
@@ -2185,7 +2183,9 @@ int button_pressed(dt_view_t *self, double x, double y, double pressure, int whi
       dev->preview_pipe->changed |= DT_DEV_PIPE_SYNCH;
       dt_dev_invalidate_all(dev);
     }
+
     dt_control_queue_redraw();
+
     return 1;
   }
   // masks
@@ -2361,9 +2361,7 @@ void scrolled(dt_view_t *self, double x, double y, int up, int state)
   dt_control_set_dev_zoom(zoom);
   dt_control_set_dev_zoom_x(zoom_x);
   dt_control_set_dev_zoom_y(zoom_y);
-
   dt_dev_invalidate(dev);
-
   dt_control_queue_redraw();
 }
 
@@ -2386,7 +2384,7 @@ int key_released(dt_view_t *self, guint key, guint state)
     dt_iop_request_focus(lib->full_preview_last_module);
     dt_masks_set_edit_mode(darktable.develop->gui_module, lib->full_preview_masks_state);
     dt_dev_invalidate(darktable.develop);
-    dt_control_queue_redraw_center();
+    dt_control_queue_redraw();
   }
   // add an option to allow skip mouse events while editing masks
   if(key == accels->darkroom_skip_mouse_events.accel_key && state == accels->darkroom_skip_mouse_events.accel_mods)
@@ -2431,7 +2429,6 @@ int key_pressed(dt_view_t *self, guint key, guint state)
       // we quit the active iop if any
       lib->full_preview_last_module = darktable.develop->gui_module;
       dt_iop_request_focus(NULL);
-      // and we redraw all
       dt_dev_invalidate(darktable.develop);
       dt_control_queue_redraw_center();
     }
