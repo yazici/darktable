@@ -1008,24 +1008,12 @@ static void _darkroom_ui_apply_style_popupmenu(GtkWidget *w, gpointer user_data)
 
       GtkMenuItem *smi = NULL;
 
-      // no sub-menu
-      if(!sm)
+      // no sub-menu, but we need one
+      if(!sm && split[1])
       {
-        // but do we need one, that is, next item starts with the same group
-        GList *next = g_list_next(styles);
-        if(next)
-        {
-          dt_style_t *next_style = (dt_style_t *)next->data;
-          gchar **next_split = g_strsplit(next_style->name, "|", 0);
-
-          if(!g_strcmp0(next_split[0],split[0]))
-          {
-            smi = (GtkMenuItem *)gtk_menu_item_new_with_label(split[0]);
-            sm = (GtkMenu *)gtk_menu_new();
-            gtk_menu_item_set_submenu(smi, GTK_WIDGET(sm));
-          }
-          g_strfreev(next_split);
-        }
+        smi = (GtkMenuItem *)gtk_menu_item_new_with_label(split[0]);
+        sm = (GtkMenu *)gtk_menu_new();
+        gtk_menu_item_set_submenu(smi, GTK_WIDGET(sm));
       }
 
       if(sm)
@@ -1635,8 +1623,8 @@ void gui_init(dt_view_t *self)
   /* create profile popup tool & buttons (softproof + gamut) */
   {
     // the softproof button
-    dev->profile.softproof_button
-    = dtgtk_togglebutton_new(dtgtk_cairo_paint_softproof, CPF_STYLE_FLAT | CPF_DO_NOT_USE_BORDER, NULL);
+    dev->profile.softproof_button =
+      dtgtk_togglebutton_new(dtgtk_cairo_paint_softproof, CPF_STYLE_FLAT | CPF_DO_NOT_USE_BORDER, NULL);
     gtk_widget_set_tooltip_text(dev->profile.softproof_button,
                                 _("toggle softproofing\nright click for profile options"));
     g_signal_connect(G_OBJECT(dev->profile.softproof_button), "clicked",
@@ -1649,8 +1637,8 @@ void gui_init(dt_view_t *self)
     dt_gui_add_help_link(dev->profile.softproof_button, dt_get_help_url("softproof"));
 
     // the gamut check button
-    dev->profile.gamut_button
-    = dtgtk_togglebutton_new(dtgtk_cairo_paint_gamut_check, CPF_STYLE_FLAT | CPF_DO_NOT_USE_BORDER, NULL);
+    dev->profile.gamut_button =
+      dtgtk_togglebutton_new(dtgtk_cairo_paint_gamut_check, CPF_STYLE_FLAT | CPF_DO_NOT_USE_BORDER, NULL);
     gtk_widget_set_tooltip_text(dev->profile.gamut_button,
                  _("toggle gamut checking\nright click for profile options"));
     g_signal_connect(G_OBJECT(dev->profile.gamut_button), "clicked",
@@ -1985,6 +1973,8 @@ void leave(dt_view_t *self)
   gtk_widget_hide(dev->profile.floating_window);
 
   dt_ui_scrollbars_show(darktable.gui->ui, FALSE);
+
+  darktable.develop->image_storage.id = -1;
 
   dt_print(DT_DEBUG_CONTROL, "[run_job-] 11 %f in darkroom mode\n", dt_get_wtime());
 }

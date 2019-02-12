@@ -636,8 +636,10 @@ int dt_view_manager_button_released(dt_view_manager_t *vm, double x, double y, i
     plugins = g_list_previous(plugins);
   }
 
+  if(handled) return 1;
   /* if not handled by any plugin let pass to view handler*/
-  if(!handled && v->button_released) v->button_released(v, x, y, which, state);
+  else if(v->button_released)
+    v->button_released(v, x, y, which, state);
 
   return 0;
 }
@@ -663,8 +665,10 @@ int dt_view_manager_button_pressed(dt_view_manager_t *vm, double x, double y, do
     plugins = g_list_previous(plugins);
   }
 
+  if(handled) return 1;
   /* if not handled by any plugin let pass to view handler*/
-  if(!handled && v->button_pressed) return v->button_pressed(v, x, y, pressure, which, type, state);
+  else if(v->button_pressed)
+    return v->button_pressed(v, x, y, pressure, which, type, state);
 
   return 0;
 }
@@ -842,7 +846,10 @@ int32_t dt_view_get_image_to_act_on()
   const int full_preview_id = darktable.view_manager->proxy.lighttable.get_full_preview_id(
       darktable.view_manager->proxy.lighttable.view);
 
-  if(zoom == 1 || full_preview_id > 1)
+  const int layout = darktable.view_manager->proxy.lighttable.get_layout(
+      darktable.view_manager->proxy.lighttable.module);
+
+  if(zoom == 1 || full_preview_id > 1 || layout == DT_LIGHTTABLE_LAYOUT_EXPOSE)
   {
     return mouse_over_id;
   }
@@ -1595,7 +1602,7 @@ int dt_view_image_expose(dt_view_image_over_t *image_over, uint32_t imgid, cairo
 
         if (zoom != 1)
         {
-          double x0 = DT_PIXEL_APPLY_DPI(1), y0 = DT_PIXEL_APPLY_DPI(1), rect_width = width - DT_PIXEL_APPLY_DPI(2),
+          const double x0 = DT_PIXEL_APPLY_DPI(1), y0 = DT_PIXEL_APPLY_DPI(1), rect_width = width - DT_PIXEL_APPLY_DPI(2),
                 radius = DT_PIXEL_APPLY_DPI(5);
           double x1, off, off1;
 
@@ -1616,9 +1623,9 @@ int dt_view_image_expose(dt_view_image_over_t *image_over, uint32_t imgid, cairo
         }
         else
         {
-          const float x_zoom = 0.325;
-          const float y_zoom = 0.112;
-          const float edge_length = 0.016 * fscale;
+          const float x_zoom = 0.280;
+          const float y_zoom = 0.110;
+          const float edge_length = 0.018 * fscale;
 
           cairo_rectangle(cr, x_zoom * fscale, y_zoom * fscale, edge_length, edge_length);
           cairo_set_source_rgb(cr, 0.5, 0.5, 0.5);
@@ -1930,6 +1937,22 @@ void dt_view_manager_module_toolbox_add(dt_view_manager_t *vm, GtkWidget *tool, 
 void dt_view_lighttable_set_zoom(dt_view_manager_t *vm, gint zoom)
 {
   if(vm->proxy.lighttable.module) vm->proxy.lighttable.set_zoom(vm->proxy.lighttable.module, zoom);
+}
+
+gint dt_view_lighttable_get_zoom(dt_view_manager_t *vm)
+{
+  if(vm->proxy.lighttable.module)
+    return vm->proxy.lighttable.get_zoom(vm->proxy.lighttable.module);
+  else
+    return 10;
+}
+
+dt_lighttable_layout_t dt_view_lighttable_get_layout(dt_view_manager_t *vm)
+{
+  if(vm->proxy.lighttable.module)
+    return vm->proxy.lighttable.get_layout(vm->proxy.lighttable.module);
+  else
+    return DT_LIGHTTABLE_LAYOUT_FILEMANAGER;
 }
 
 void dt_view_lighttable_set_position(dt_view_manager_t *vm, uint32_t pos)
