@@ -3188,7 +3188,7 @@ int button_released (struct dt_iop_module_t *module,
       if (g->last_hit.layer == DT_LIQUIFY_LAYER_CENTERPOINT)
       {
         const int oldsel = !!g->last_hit.elem->header.selected;
-	unselect_all (&g->params);
+  unselect_all (&g->params);
         g->last_hit.elem->header.selected = oldsel ? 0 : g->last_hit.layer;
         handled = 1;
         goto done;
@@ -3221,7 +3221,7 @@ int button_released (struct dt_iop_module_t *module,
         dt_liquify_path_data_t *prev = node_prev (&g->params, e);
         if (prev && e->header.type == DT_LIQUIFY_PATH_CURVE_TO_V1)
         {
-	  // add node to curve
+    // add node to curve
           dt_liquify_path_data_t *curve1 = (dt_liquify_path_data_t *) e;
 
           dt_liquify_path_data_t *curve2 = (dt_liquify_path_data_t *)alloc_curve_to (module, 0);
@@ -3251,7 +3251,7 @@ int button_released (struct dt_iop_module_t *module,
         }
         if (prev && e->header.type == DT_LIQUIFY_PATH_LINE_TO_V1)
         {
-	  // add node to line
+    // add node to line
           dt_liquify_warp_t *warp1 = &prev->warp;
           dt_liquify_warp_t *warp3 = &e->warp;
           const float t = find_nearest_on_line_t (warp1->point, warp3->point, pt);
@@ -3455,8 +3455,6 @@ void gui_update (dt_iop_module_t *module)
 
 void gui_init (dt_iop_module_t *module)
 {
-  const int bs = DT_PIXEL_APPLY_DPI(14);
-
   module->gui_data = malloc (sizeof (dt_iop_liquify_gui_data_t));
   dt_iop_liquify_gui_data_t *g = (dt_iop_liquify_gui_data_t *) module->gui_data;
 
@@ -3474,10 +3472,10 @@ void gui_init (dt_iop_module_t *module)
   dt_pthread_mutex_init (&g->lock, NULL);
   g->node_index = 0;
 
-  module->widget = gtk_box_new (GTK_ORIENTATION_VERTICAL, 5);
+  module->widget = gtk_box_new (GTK_ORIENTATION_VERTICAL, 0);
   dt_gui_add_help_link(module->widget, dt_get_help_url(module->op));
 
-  GtkWidget *hbox = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 5);
+  GtkWidget *hbox = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 0);
   gtk_widget_set_tooltip_text(hbox, _("use a tool to add warps.\nright-click to remove a warp."));
 
   gtk_box_pack_start(GTK_BOX(hbox), gtk_label_new (_("warps|nodes count:")), FALSE, TRUE, 0);
@@ -3489,7 +3487,6 @@ void gui_init (dt_iop_module_t *module)
   g_signal_connect(G_OBJECT(g->btn_node_tool), "toggled", G_CALLBACK (btn_make_radio_callback), module);
   gtk_widget_set_tooltip_text(GTK_WIDGET(g->btn_node_tool), _("node tool: edit, add and delete nodes"));
   gtk_toggle_button_set_active (g->btn_node_tool, 0);
-  gtk_widget_set_size_request(GTK_WIDGET(g->btn_node_tool), bs, bs);
   gtk_box_pack_end(GTK_BOX(hbox), GTK_WIDGET(g->btn_node_tool), FALSE, FALSE, 0);
 
   g->btn_curve_tool = GTK_TOGGLE_BUTTON(dtgtk_togglebutton_new(_liquify_cairo_paint_curve_tool,
@@ -3497,7 +3494,6 @@ void gui_init (dt_iop_module_t *module)
   g_signal_connect (G_OBJECT (g->btn_curve_tool), "toggled", G_CALLBACK (btn_make_radio_callback), module);
   gtk_widget_set_tooltip_text(GTK_WIDGET(g->btn_curve_tool), _("curve tool: draw curves"));
   gtk_toggle_button_set_active (g->btn_curve_tool, 0);
-  gtk_widget_set_size_request (GTK_WIDGET(g->btn_curve_tool), bs, bs);
   gtk_box_pack_end (GTK_BOX(hbox), GTK_WIDGET(g->btn_curve_tool), FALSE, FALSE, 0);
 
   g->btn_line_tool = GTK_TOGGLE_BUTTON(dtgtk_togglebutton_new(_liquify_cairo_paint_line_tool,
@@ -3505,7 +3501,6 @@ void gui_init (dt_iop_module_t *module)
   g_signal_connect (G_OBJECT (g->btn_line_tool), "toggled", G_CALLBACK (btn_make_radio_callback), module);
   gtk_widget_set_tooltip_text(GTK_WIDGET(g->btn_line_tool), _("line tool: draw lines"));
   gtk_toggle_button_set_active (g->btn_line_tool, 0);
-  gtk_widget_set_size_request (GTK_WIDGET(g->btn_line_tool), bs, bs);
   gtk_box_pack_end (GTK_BOX(hbox), GTK_WIDGET(g->btn_line_tool), FALSE, FALSE, 0);
 
   g->btn_point_tool = GTK_TOGGLE_BUTTON(dtgtk_togglebutton_new(_liquify_cairo_paint_point_tool,
@@ -3513,7 +3508,6 @@ void gui_init (dt_iop_module_t *module)
   g_signal_connect (G_OBJECT (g->btn_point_tool), "toggled", G_CALLBACK (btn_make_radio_callback), module);
   gtk_widget_set_tooltip_text(GTK_WIDGET(g->btn_point_tool), _("point tool: draw points"));
   gtk_toggle_button_set_active (g->btn_point_tool, 0);
-  gtk_widget_set_size_request (GTK_WIDGET(g->btn_point_tool), bs, bs);
   gtk_box_pack_end (GTK_BOX(hbox), GTK_WIDGET(g->btn_point_tool), FALSE, FALSE, 0);
 
   gtk_box_pack_start(GTK_BOX(module->widget), hbox, TRUE, TRUE, 0);
