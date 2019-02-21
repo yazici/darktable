@@ -24,9 +24,7 @@
 #include <string.h>
 
 #include "bauhaus/bauhaus.h"
-#include "common/colorspaces_inline_conversions.h"
 #include "common/darktable.h"
-#include "common/gaussian.h"
 #include "common/opencl.h"
 #include "control/conf.h"
 #include "control/control.h"
@@ -79,80 +77,114 @@ const char *name()
 
 int default_group()
 {
-  return IOP_GROUP_TONE;
+  return IOP_GROUP_BASIC;
 }
 
-#ifdef _OPENMP
-#pragma omp declare simd inbranch
-#endif
+int flags()
+{
+  return IOP_FLAGS_INCLUDE_IN_STYLES | IOP_FLAGS_SUPPORTS_BLENDING;
+}
+
 #define GAUSS(b, x) (expf((-(x - b) * (x - b) / 4.0f)))
 
-// From data/kernels/extended.cl
-static inline float fastlog2(float x)
-{
-  union { float f; unsigned int i; } vx = { x };
-  union { unsigned int i; float f; } mx = { (vx.i & 0x007FFFFF) | 0x3f000000 };
-
-  float y = vx.i;
-
-  y *= 1.1920928955078125e-7f;
-
-  return y - 124.22551499f
-    - 1.498030302f * mx.f
-    - 1.72587999f / (0.3520887068f + mx.f);
-}
-
 // Build the luma channels : band-pass filters with gaussian windows of std 2 EV, spaced by 2 EV
-const float centers[12] = { -16.0f, -14.0f, -12.0f, -10.0f, -8.0f, -6.0f, \
-                            -4.0f,  - 2.0f,   0.0f,  2.0f,   4.0f,  8.0f};
+const float centers[12] = { -18.0f, -16.0f, -14.0f, -12.0f, -10.0f, -8.0f, -6.0f, \
+                            -4.0f,  - 2.0f,   0.0f,  2.0f,   4.0f};
 
 // For every pixel luminance, the sum of the gaussian masks
 // evenly spaced by 2 EV with 2 EV std should be this constant
 #define w_sum 1.772637204826214f
+
+static inline void process_pixel(const float pixel_in[4], float pixel_out[4], const float factors[12])
+{
+  // get the luminance of the pixel - just average channels
+  const float luma = fmaxf(log2f((pixel_in[0] + pixel_in[1] + pixel_in[2]) / 3.0f), -18.0f);
+
+  // build the correction as the sum of the contribution of each luminance channel to current pixel
+  float correction = 0.0f;
+  for (int c = 0; c < 12; ++c) correction += GAUSS(centers[c], luma) * factors[c];
+  correction /= w_sum;
+
+  // build a vector to give a hint to auto-vectoriation
+  const float factor[4] = { correction, correction, correction, 1.0f };
+
+  // Apply the weighted contribution of each channel to the current pixel
+  for(int c = 0; c < 4; ++c) pixel_out[c] = factor[c] * pixel_in[c];
+}
+
+static inline void process_image(const float *const in, float *const out, size_t width, size_t height, size_t ch, const float factors[12])
+{
+#ifdef _OPENMP
+#pragma omp parallel
+#endif
+  for(size_t k = 0; k < (size_t)ch * width * height; k += 12 * ch)
+  {
+    // Manually unroll loops to saturate the cache, and be savage about it
+    // we process 12 contiguous pixels at a time
+    const float *const pixel_in_0 = in + k;
+    const float *const pixel_in_1 = pixel_in_0 + ch;
+    const float *const pixel_in_2 = pixel_in_1 + ch;
+    const float *const pixel_in_3 = pixel_in_2 + ch;
+    const float *const pixel_in_4 = pixel_in_3 + ch;
+    const float *const pixel_in_5 = pixel_in_4 + ch;
+    const float *const pixel_in_6 = pixel_in_5 + ch;
+    const float *const pixel_in_7 = pixel_in_6 + ch;
+    const float *const pixel_in_8 = pixel_in_7 + ch;
+    const float *const pixel_in_9 = pixel_in_8 + ch;
+    const float *const pixel_in_10 = pixel_in_9 + ch;
+    const float *const pixel_in_11 = pixel_in_10 + ch;
+
+    float *const pixel_out_0 = out + k;
+    float *const pixel_out_1 = pixel_out_0 + ch;
+    float *const pixel_out_2 = pixel_out_1 + ch;
+    float *const pixel_out_3 = pixel_out_2 + ch;
+    float *const pixel_out_4 = pixel_out_3 + ch;
+    float *const pixel_out_5 = pixel_out_4 + ch;
+    float *const pixel_out_6 = pixel_out_5 + ch;
+    float *const pixel_out_7 = pixel_out_6 + ch;
+    float *const pixel_out_8 = pixel_out_7 + ch;
+    float *const pixel_out_9 = pixel_out_8 + ch;
+    float *const pixel_out_10 = pixel_out_9 + ch;
+    float *const pixel_out_11 = pixel_out_10 + ch;
+
+    process_pixel(pixel_in_0, pixel_out_0, factors);
+    process_pixel(pixel_in_1, pixel_out_1, factors);
+    process_pixel(pixel_in_2, pixel_out_2, factors);
+    process_pixel(pixel_in_3, pixel_out_3, factors);
+    process_pixel(pixel_in_4, pixel_out_4, factors);
+    process_pixel(pixel_in_5, pixel_out_5, factors);
+    process_pixel(pixel_in_6, pixel_out_6, factors);
+    process_pixel(pixel_in_7, pixel_out_7, factors);
+    process_pixel(pixel_in_8, pixel_out_8, factors);
+    process_pixel(pixel_in_9, pixel_out_9, factors);
+    process_pixel(pixel_in_10, pixel_out_10, factors);
+    process_pixel(pixel_in_11, pixel_out_11, factors);
+  }
+}
 
 void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const void *const ivoid,
              void *const ovoid, const dt_iop_roi_t *const roi_in, const dt_iop_roi_t *const roi_out)
 {
   const dt_iop_toneequalizer_data_t *const d = (const dt_iop_toneequalizer_data_t *const)piece->data;
 
-  const float factors[12] = { exp2f(d->params.noise),
-                              exp2f(d->params.noise),
-                              exp2f(d->params.noise),
-                              exp2f(d->params.ultra_deep_blacks),
-                              exp2f(d->params.deep_blacks),
-                              exp2f(d->params.blacks),
-                              exp2f(d->params.shadows),
-                              exp2f(d->params.midtones),
-                              exp2f(d->params.highlights),
-                              exp2f(d->params.whites),
-                              exp2f(d->params.whites),
-                              exp2f(d->params.whites)};
+  const float factors[12] = { exp2f(d->params.noise),             // -18 EV
+                              exp2f(d->params.noise),             // -16 EV
+                              exp2f(d->params.noise),             // -14 EV
+                              exp2f(d->params.ultra_deep_blacks), // -12 EV
+                              exp2f(d->params.deep_blacks),       // -10 EV
+                              exp2f(d->params.blacks),            //  -8 EV
+                              exp2f(d->params.shadows),           //  -6 EV
+                              exp2f(d->params.midtones),          //  -4 EV
+                              exp2f(d->params.highlights),        //  -2 EV
+                              exp2f(d->params.whites),            //  0 EV
+                              exp2f(d->params.whites),            //  2 EV
+                              exp2f(d->params.whites)};           //  4 EV
 
   const int ch = piece->colors;
   const float *const in = (const float *const)ivoid;
   float *const out = (float *const)ovoid;
 
-  // correct the luminance
-#ifdef _OPENMP
-#pragma omp parallel for SIMD() default(none) schedule(simd:static)
-#endif
-  for(size_t k = 0; k < (size_t)ch * roi_out->width * roi_out->height; k += ch)
-  {
-    // get the luminance of the pixel
-    const float luma = fastlog2( (fmaxf(fmaxf(in[k], in[k+1]), in[k+2]) +
-                                  fminf(fminf(in[k], in[k+1]), in[k+2])) / 2.0f );
-
-    // build the pixel correction
-    float correction = 0.0f;
-
-    for (int c = 0; c < 12; ++c) correction += GAUSS(centers[c], luma) * factors[c];
-
-    correction /= w_sum;
-
-    // Apply the weighted contribution of each channel to the current pixel
-    for (int c = 0; c < 3; ++c) out[k + c] = correction * in[k + c];
-    out[k + 4] = in[k + 4];
-  }
+  process_image(in, out, roi_out->width, roi_out->height, ch, factors);
 }
 
 void init_global(dt_iop_module_so_t *module)
@@ -303,49 +335,52 @@ void gui_init(struct dt_iop_module_t *self)
 
   self->widget = gtk_box_new(GTK_ORIENTATION_VERTICAL, DT_GUI_IOP_MODULE_CONTROL_SPACING);
 
-  g->noise = dt_bauhaus_slider_new_with_range(self, -2.0, 2.0, 0.1, 0.0, 2);
+  const float top = 2.0;
+  const float bottom = -2.0;
+
+  g->noise = dt_bauhaus_slider_new_with_range(self, bottom, top, 0.1, 0.0, 2);
   dt_bauhaus_slider_set_format(g->noise, "%+.2f EV");
   dt_bauhaus_widget_set_label(g->noise, NULL, _("-14 EV : HDR noise"));
   gtk_box_pack_start(GTK_BOX(self->widget), g->noise, TRUE, TRUE, 0);
   g_signal_connect(G_OBJECT(g->noise), "value-changed", G_CALLBACK(noise_callback), self);
 
-  g->ultra_deep_blacks = dt_bauhaus_slider_new_with_range(self, -2.0, 2.0, 0.1, 0.0, 2);
+  g->ultra_deep_blacks = dt_bauhaus_slider_new_with_range(self, bottom, top, 0.1, 0.0, 2);
   dt_bauhaus_slider_set_format(g->ultra_deep_blacks, "%+.2f EV");
   dt_bauhaus_widget_set_label(g->ultra_deep_blacks, NULL, _("-12 EV : HDR ultra-deep blacks"));
   gtk_box_pack_start(GTK_BOX(self->widget), g->ultra_deep_blacks, TRUE, TRUE, 0);
   g_signal_connect(G_OBJECT(g->ultra_deep_blacks), "value-changed", G_CALLBACK(ultra_deep_blacks_callback), self);
 
-  g->deep_blacks = dt_bauhaus_slider_new_with_range(self, -2.0, 2.0, 0.1, 0.0, 2);
+  g->deep_blacks = dt_bauhaus_slider_new_with_range(self, bottom, top, 0.1, 0.0, 2);
   dt_bauhaus_slider_set_format(g->deep_blacks, "%+.2f EV");
   dt_bauhaus_widget_set_label(g->deep_blacks, NULL, _("-10 EV : HDR deep blacks"));
   gtk_box_pack_start(GTK_BOX(self->widget), g->deep_blacks, TRUE, TRUE, 0);
   g_signal_connect(G_OBJECT(g->deep_blacks), "value-changed", G_CALLBACK(deep_blacks_callback), self);
 
-  g->blacks = dt_bauhaus_slider_new_with_range(self, -2.0, 2.0, 0.1, 0.0, 2);
+  g->blacks = dt_bauhaus_slider_new_with_range(self, bottom, top, 0.1, 0.0, 2);
   dt_bauhaus_slider_set_format(g->blacks, "%+.2f EV");
   dt_bauhaus_widget_set_label(g->blacks, NULL, _("-08 EV : blacks"));
   gtk_box_pack_start(GTK_BOX(self->widget), g->blacks, TRUE, TRUE, 0);
   g_signal_connect(G_OBJECT(g->blacks), "value-changed", G_CALLBACK(blacks_callback), self);
 
-  g->shadows = dt_bauhaus_slider_new_with_range(self, -2.0, 2.0, 0.1, 0.0, 2);
+  g->shadows = dt_bauhaus_slider_new_with_range(self, bottom, top, 0.1, 0.0, 2);
   dt_bauhaus_slider_set_format(g->shadows, "%+.2f EV");
   dt_bauhaus_widget_set_label(g->shadows, NULL, _("-06 EV : shadows"));
   gtk_box_pack_start(GTK_BOX(self->widget), g->shadows, TRUE, TRUE, 0);
   g_signal_connect(G_OBJECT(g->shadows), "value-changed", G_CALLBACK(shadows_callback), self);
 
-  g->midtones = dt_bauhaus_slider_new_with_range(self, -2.0, 2.0, 0.1, 0.0, 2);
+  g->midtones = dt_bauhaus_slider_new_with_range(self, bottom, top, 0.1, 0.0, 2);
   dt_bauhaus_slider_set_format(g->midtones, "%+.2f EV");
   dt_bauhaus_widget_set_label(g->midtones, NULL, _("-04 EV : midtones"));
   gtk_box_pack_start(GTK_BOX(self->widget), g->midtones, TRUE, TRUE, 0);
   g_signal_connect(G_OBJECT(g->midtones), "value-changed", G_CALLBACK(midtones_callback), self);
 
-  g->highlights = dt_bauhaus_slider_new_with_range(self, -2.0, 2.0, 0.1, 0.0, 2);
+  g->highlights = dt_bauhaus_slider_new_with_range(self, bottom, top, 0.1, 0.0, 2);
   dt_bauhaus_slider_set_format(g->highlights, "%+.2f EV");
   dt_bauhaus_widget_set_label(g->highlights, NULL, _("-02 EV : highlights"));
   gtk_box_pack_start(GTK_BOX(self->widget), g->highlights, TRUE, TRUE, 0);
   g_signal_connect(G_OBJECT(g->highlights), "value-changed", G_CALLBACK(highlights_callback), self);
 
-  g->whites = dt_bauhaus_slider_new_with_range(self, -2.0, 2.0, 0.1, 0.0, 2);
+  g->whites = dt_bauhaus_slider_new_with_range(self, bottom, top, 0.1, 0.0, 2);
   dt_bauhaus_slider_set_format(g->whites, "%+.2f EV");
   dt_bauhaus_widget_set_label(g->whites, NULL, _("-00 EV : whites"));
   gtk_box_pack_start(GTK_BOX(self->widget), g->whites, TRUE, TRUE, 0);
