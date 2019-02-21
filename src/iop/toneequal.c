@@ -45,11 +45,20 @@
 
 DT_MODULE_INTROSPECTION(1, dt_iop_toneequalizer_params_t)
 
+typedef enum dt_iop_toneequalizer_method_t
+{
+  DT_TONEEQ_MEAN = 0,
+  DT_TONEEQ_LIGHTNESS,
+  DT_TONEEQ_VALUE,
+  DT_TONEEQ_NORM
+} dt_iop_toneequalizer_method_t;
+
 typedef struct dt_iop_toneequalizer_params_t
 {
   float noise, ultra_deep_blacks, deep_blacks, blacks, shadows, midtones, highlights, whites;
   float blending;
   int scales;
+  dt_iop_toneequalizer_method_t method;
 } dt_iop_toneequalizer_params_t;
 
 typedef struct dt_iop_toneequalizer_data_t
@@ -67,6 +76,8 @@ typedef struct dt_iop_toneequalizer_gui_data_t
 {
   GtkWidget *noise, *ultra_deep_blacks, *deep_blacks, *blacks, *shadows, *midtones, *highlights, *whites;
   GtkWidget *blending, *scales;
+  GtkWidget *method;
+  GtkWidget *details;
 } dt_iop_toneequalizer_gui_data_t;
 
 
@@ -95,32 +106,85 @@ const float centers[12] = { -18.0f, -16.0f, -14.0f, -12.0f, -10.0f, -8.0f, -6.0f
 // evenly spaced by 2 EV with 2 EV std should be this constant
 #define w_sum 1.772637204826214f
 
-static inline void process_pixel(const float pixel_in[4], float pixel_out[4], const float factors[12])
+#ifdef _OPENMP
+#pragma omp declare simd
+#endif
+static float RGB_light(const float pixel[4], const dt_iop_toneequalizer_method_t method)
 {
-  // get the luminance of the pixel - just average channels
-  const float luma = fmaxf(log2f((pixel_in[0] + pixel_in[1] + pixel_in[2]) / 3.0f), -18.0f);
+  // compute an estimation of the pixel lightness using several color models
+  switch(method)
+  {
+    case DT_TONEEQ_MEAN:
+      return (pixel[0] + pixel[1] + pixel[2]) / 3.0f;
 
-  // build the correction as the sum of the contribution of each luminance channel to current pixel
-  float correction = 0.0f;
-  for (int c = 0; c < 12; ++c) correction += GAUSS(centers[c], luma) * factors[c];
-  correction /= w_sum;
+    case DT_TONEEQ_LIGHTNESS:
+    {
+      const float pixel_min = fminf(pixel[0], fminf(pixel[1], pixel[2]));
+      const float pixel_max = fmaxf(pixel[0], fmaxf(pixel[1], pixel[2]));
+      return (pixel_min + pixel_max) / 2.0f;
+    }
 
-  // build a vector to give a hint to auto-vectoriation
-  const float factor[4] = { correction, correction, correction, 1.0f };
+    case DT_TONEEQ_VALUE:
+      return fmaxf(pixel[0], fmaxf(pixel[1], pixel[2]));
 
-  // Apply the weighted contribution of each channel to the current pixel
-  for(int c = 0; c < 4; ++c) pixel_out[c] = factor[c] * pixel_in[c];
+    case DT_TONEEQ_NORM:
+      return sqrtf(pixel[0] * pixel[0] + pixel[1] * pixel[1] + pixel[2] * pixel[2]);
+
+    default:
+      return -1.0;
+  }
 }
 
-static inline void process_image(const float *const in, float *const out, size_t width, size_t height, size_t ch, const float factors[12])
+#ifdef _OPENMP
+#pragma omp declare simd
+#endif
+static float compute_exposure(const float pixel[4], const dt_iop_toneequalizer_method_t method)
+{
+  // compute the exposure (in EV) of the current pixel
+  return fmaxf(log2f(RGB_light(pixel, method)), -18.0f);
+}
+
+#ifdef _OPENMP
+#pragma omp declare simd
+#endif
+static float compute_correction(const float factors[12], const float luma)
+{
+  // build the correction for the current pixel
+  // as the sum of the contribution of each luminance channel
+  float correction = 0.0f;
+  for (int c = 0; c < 12; ++c) correction += GAUSS(centers[c], luma) * factors[c];
+  return correction /= w_sum;
+}
+
+#ifdef _OPENMP
+#pragma omp declare simd
+#endif
+static void process_pixel(const float pixel_in[4], float pixel_out[4],
+                          const float correction)
+{
+  // Apply the weighted contribution of each channel to the current pixel
+
+  const float factor[4] = { correction, correction, correction, 1.0f };
+
+  pixel_out[0] = factor[0] * pixel_in[0];
+  pixel_out[1] = factor[1] * pixel_in[1];
+  pixel_out[2] = factor[2] * pixel_in[2];
+  pixel_out[3] = factor[3] * pixel_in[4];
+}
+
+static inline void process_image_loop(const float *const in, float *const out,
+                                      size_t width, size_t height, size_t ch,
+                                      const float factors[12],
+                                      const dt_iop_toneequalizer_method_t method)
 {
 #ifdef _OPENMP
-#pragma omp parallel
+#pragma omp parallel for simd
 #endif
   for(size_t k = 0; k < (size_t)ch * width * height; k += 12 * ch)
   {
     // Manually unroll loops to saturate the cache, and be savage about it
-    // we process 12 contiguous pixels at a time
+    // we process 12 contiguous pixels at a time and give every hint to the compiler
+    // to vectorize using the maximum SSE size available
     const float *const pixel_in_0 = in + k;
     const float *const pixel_in_1 = pixel_in_0 + ch;
     const float *const pixel_in_2 = pixel_in_1 + ch;
@@ -147,18 +211,74 @@ static inline void process_image(const float *const in, float *const out, size_t
     float *const pixel_out_10 = pixel_out_9 + ch;
     float *const pixel_out_11 = pixel_out_10 + ch;
 
-    process_pixel(pixel_in_0, pixel_out_0, factors);
-    process_pixel(pixel_in_1, pixel_out_1, factors);
-    process_pixel(pixel_in_2, pixel_out_2, factors);
-    process_pixel(pixel_in_3, pixel_out_3, factors);
-    process_pixel(pixel_in_4, pixel_out_4, factors);
-    process_pixel(pixel_in_5, pixel_out_5, factors);
-    process_pixel(pixel_in_6, pixel_out_6, factors);
-    process_pixel(pixel_in_7, pixel_out_7, factors);
-    process_pixel(pixel_in_8, pixel_out_8, factors);
-    process_pixel(pixel_in_9, pixel_out_9, factors);
-    process_pixel(pixel_in_10, pixel_out_10, factors);
-    process_pixel(pixel_in_11, pixel_out_11, factors);
+    const float luma_0 = compute_exposure(pixel_in_0, method);
+    const float luma_1 = compute_exposure(pixel_in_1, method);
+    const float luma_2 = compute_exposure(pixel_in_2, method);
+    const float luma_3 = compute_exposure(pixel_in_3, method);
+    const float luma_4 = compute_exposure(pixel_in_4, method);
+    const float luma_5 = compute_exposure(pixel_in_5, method);
+    const float luma_6 = compute_exposure(pixel_in_6, method);
+    const float luma_7 = compute_exposure(pixel_in_7, method);
+    const float luma_8 = compute_exposure(pixel_in_8, method);
+    const float luma_9 = compute_exposure(pixel_in_9, method);
+    const float luma_10 = compute_exposure(pixel_in_10, method);
+    const float luma_11 = compute_exposure(pixel_in_11, method);
+
+    const float correction_0 = compute_correction(factors, luma_0);
+    const float correction_1 = compute_correction(factors, luma_1);
+    const float correction_2 = compute_correction(factors, luma_2);
+    const float correction_3 = compute_correction(factors, luma_3);
+    const float correction_4 = compute_correction(factors, luma_4);
+    const float correction_5 = compute_correction(factors, luma_5);
+    const float correction_6 = compute_correction(factors, luma_6);
+    const float correction_7 = compute_correction(factors, luma_7);
+    const float correction_8 = compute_correction(factors, luma_8);
+    const float correction_9 = compute_correction(factors, luma_9);
+    const float correction_10 = compute_correction(factors, luma_10);
+    const float correction_11 = compute_correction(factors, luma_11);
+
+    process_pixel(pixel_in_0, pixel_out_0, correction_0);
+    process_pixel(pixel_in_1, pixel_out_1, correction_1);
+    process_pixel(pixel_in_2, pixel_out_2, correction_2);
+    process_pixel(pixel_in_3, pixel_out_3, correction_3);
+    process_pixel(pixel_in_4, pixel_out_4, correction_4);
+    process_pixel(pixel_in_5, pixel_out_5, correction_5);
+    process_pixel(pixel_in_6, pixel_out_6, correction_6);
+    process_pixel(pixel_in_7, pixel_out_7, correction_7);
+    process_pixel(pixel_in_8, pixel_out_8, correction_8);
+    process_pixel(pixel_in_9, pixel_out_9, correction_9);
+    process_pixel(pixel_in_10, pixel_out_10, correction_10);
+    process_pixel(pixel_in_11, pixel_out_11, correction_11);
+  }
+}
+
+static inline void process_image(const float *const in, float *const out,
+                                  size_t width, size_t height, size_t ch,
+                                  const float factors[12], const dt_iop_toneequalizer_method_t method)
+{
+  // Force the compiler to compile static variants of the loop and avoid inner branching at pixel-level
+  switch(method)
+  {
+    case DT_TONEEQ_MEAN:
+    {
+      process_image_loop(in, out, width, height, ch, factors, DT_TONEEQ_MEAN);
+      break;
+    }
+    case DT_TONEEQ_LIGHTNESS:
+    {
+      process_image_loop(in, out, width, height, ch, factors, DT_TONEEQ_LIGHTNESS);
+      break;
+    }
+    case DT_TONEEQ_VALUE:
+    {
+      process_image_loop(in, out, width, height, ch, factors, DT_TONEEQ_VALUE);
+      break;
+    }
+    case DT_TONEEQ_NORM:
+    {
+      process_image_loop(in, out, width, height, ch, factors, DT_TONEEQ_NORM);
+      break;
+    }
   }
 }
 
@@ -184,7 +304,7 @@ void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const 
   const float *const in = (const float *const)ivoid;
   float *const out = (float *const)ovoid;
 
-  process_image(in, out, roi_out->width, roi_out->height, ch, factors);
+  process_image(in, out, roi_out->width, roi_out->height, ch, factors, d->params.method);
 }
 
 void init_global(dt_iop_module_so_t *module)
@@ -328,6 +448,15 @@ static void whites_callback(GtkWidget *slider, gpointer user_data)
   dt_dev_add_history_item(darktable.develop, self, TRUE);
 }
 
+static void method_changed(GtkWidget *widget, gpointer user_data)
+{
+  dt_iop_module_t *self = (dt_iop_module_t *)user_data;
+  if(self->dt->gui->reset) return;
+  dt_iop_toneequalizer_params_t *p = (dt_iop_toneequalizer_params_t *)self->params;
+  p->method = dt_bauhaus_combobox_get(widget);
+  dt_dev_add_history_item(darktable.develop, self, TRUE);
+}
+
 void gui_init(struct dt_iop_module_t *self)
 {
   self->gui_data = malloc(sizeof(dt_iop_toneequalizer_gui_data_t));
@@ -385,6 +514,15 @@ void gui_init(struct dt_iop_module_t *self)
   dt_bauhaus_widget_set_label(g->whites, NULL, _("-00 EV : whites"));
   gtk_box_pack_start(GTK_BOX(self->widget), g->whites, TRUE, TRUE, 0);
   g_signal_connect(G_OBJECT(g->whites), "value-changed", G_CALLBACK(whites_callback), self);
+
+  g->method = dt_bauhaus_combobox_new(NULL);
+  dt_bauhaus_widget_set_label(g->method, NULL, _("compute pixel exposure using"));
+  gtk_box_pack_start(GTK_BOX(self->widget), g->method, TRUE, TRUE, 0);
+  dt_bauhaus_combobox_add(g->method, "RGB average");
+  dt_bauhaus_combobox_add(g->method, "RGB lightness");
+  dt_bauhaus_combobox_add(g->method, "RGB value");
+  dt_bauhaus_combobox_add(g->method, "RGB norm");
+  g_signal_connect(G_OBJECT(g->method), "value-changed", G_CALLBACK(method_changed), self);
 }
 
 void gui_cleanup(struct dt_iop_module_t *self)
