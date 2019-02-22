@@ -64,6 +64,7 @@ typedef struct dt_iop_toneequalizer_params_t
 typedef struct dt_iop_toneequalizer_data_t
 {
   dt_iop_toneequalizer_params_t params;
+  float factors[16] __attribute__((aligned(16)));
 } dt_iop_toneequalizer_data_t;
 
 typedef struct dt_iop_toneequalizer_global_data_t
@@ -99,8 +100,22 @@ int flags()
 #define GAUSS(b, x) (expf((-(x - b) * (x - b) / 4.0f)))
 
 // Build the luma channels : band-pass filters with gaussian windows of std 2 EV, spaced by 2 EV
-const float centers[12] = { -18.0f, -16.0f, -14.0f, -12.0f, -10.0f, -8.0f, -6.0f, \
-                            -4.0f,  - 2.0f,   0.0f,  2.0f,   4.0f};
+const float centers[16] __attribute__((aligned(16))) = { -22.0f,
+                                                         -20.0f,
+                                                         -18.0f,
+                                                         -16.0f,
+                                                         -14.0f,
+                                                         -12.0f,
+                                                         -10.0f,
+                                                         -8.0f,
+                                                         -6.0f,
+                                                         -4.0f,
+                                                         - 2.0f,
+                                                         0.0f,
+                                                         2.0f,
+                                                         4.0f,
+                                                         6.0f,
+                                                         8.0f};
 
 // For every pixel luminance, the sum of the gaussian masks
 // evenly spaced by 2 EV with 2 EV std should be this constant
@@ -147,12 +162,12 @@ static float compute_exposure(const float pixel[4], const dt_iop_toneequalizer_m
 #ifdef _OPENMP
 #pragma omp declare simd
 #endif
-static float compute_correction(const float factors[12], const float luma)
+static float compute_correction(const float factors[16], const float luma)
 {
   // build the correction for the current pixel
   // as the sum of the contribution of each luminance channel
   float correction = 0.0f;
-  for (int c = 0; c < 12; ++c) correction += GAUSS(centers[c], luma) * factors[c];
+  for (int c = 0; c < 16; ++c) correction += GAUSS(centers[c], luma) * factors[c];
   return correction /= w_sum;
 }
 
@@ -163,98 +178,84 @@ static void process_pixel(const float pixel_in[4], float pixel_out[4],
                           const float correction)
 {
   // Apply the weighted contribution of each channel to the current pixel
-
-  const float factor[4] = { correction, correction, correction, 1.0f };
-
-  pixel_out[0] = factor[0] * pixel_in[0];
-  pixel_out[1] = factor[1] * pixel_in[1];
-  pixel_out[2] = factor[2] * pixel_in[2];
-  pixel_out[3] = factor[3] * pixel_in[4];
+  const float factor[4] __attribute__((aligned(16))) = { correction, correction, correction, 1.0f };
+  for(int c = 0; c < 4; ++c) pixel_out[c] = factor[c] * pixel_in[c];
 }
 
-static inline void process_image_loop(const float *const in, float *const out,
+static inline void process_image_loop(const float *const restrict in, float *const restrict out,
                                       size_t width, size_t height, size_t ch,
-                                      const float factors[12],
+                                      const float factors[16],
                                       const dt_iop_toneequalizer_method_t method)
 {
 #ifdef _OPENMP
 #pragma omp parallel for simd
 #endif
-  for(size_t k = 0; k < (size_t)ch * width * height; k += 12 * ch)
+  for(size_t k = 0; k < (size_t)ch * width * height; k += 8 * ch)
   {
     // Manually unroll loops to saturate the cache, and be savage about it
-    // we process 12 contiguous pixels at a time and give every hint to the compiler
+    // we process 8 contiguous pixels at a time and give every hint to the compiler
     // to vectorize using the maximum SSE size available
+
+    // Input vectors
     const float *const pixel_in_0 = in + k;
     const float *const pixel_in_1 = pixel_in_0 + ch;
     const float *const pixel_in_2 = pixel_in_1 + ch;
     const float *const pixel_in_3 = pixel_in_2 + ch;
+
     const float *const pixel_in_4 = pixel_in_3 + ch;
     const float *const pixel_in_5 = pixel_in_4 + ch;
     const float *const pixel_in_6 = pixel_in_5 + ch;
     const float *const pixel_in_7 = pixel_in_6 + ch;
-    const float *const pixel_in_8 = pixel_in_7 + ch;
-    const float *const pixel_in_9 = pixel_in_8 + ch;
-    const float *const pixel_in_10 = pixel_in_9 + ch;
-    const float *const pixel_in_11 = pixel_in_10 + ch;
 
+    // Output vectors
     float *const pixel_out_0 = out + k;
     float *const pixel_out_1 = pixel_out_0 + ch;
     float *const pixel_out_2 = pixel_out_1 + ch;
     float *const pixel_out_3 = pixel_out_2 + ch;
+
     float *const pixel_out_4 = pixel_out_3 + ch;
     float *const pixel_out_5 = pixel_out_4 + ch;
     float *const pixel_out_6 = pixel_out_5 + ch;
     float *const pixel_out_7 = pixel_out_6 + ch;
-    float *const pixel_out_8 = pixel_out_7 + ch;
-    float *const pixel_out_9 = pixel_out_8 + ch;
-    float *const pixel_out_10 = pixel_out_9 + ch;
-    float *const pixel_out_11 = pixel_out_10 + ch;
 
+    // Pixel lightness
     const float luma_0 = compute_exposure(pixel_in_0, method);
     const float luma_1 = compute_exposure(pixel_in_1, method);
     const float luma_2 = compute_exposure(pixel_in_2, method);
     const float luma_3 = compute_exposure(pixel_in_3, method);
+
     const float luma_4 = compute_exposure(pixel_in_4, method);
     const float luma_5 = compute_exposure(pixel_in_5, method);
     const float luma_6 = compute_exposure(pixel_in_6, method);
     const float luma_7 = compute_exposure(pixel_in_7, method);
-    const float luma_8 = compute_exposure(pixel_in_8, method);
-    const float luma_9 = compute_exposure(pixel_in_9, method);
-    const float luma_10 = compute_exposure(pixel_in_10, method);
-    const float luma_11 = compute_exposure(pixel_in_11, method);
 
+    // Pixel corrections
     const float correction_0 = compute_correction(factors, luma_0);
     const float correction_1 = compute_correction(factors, luma_1);
     const float correction_2 = compute_correction(factors, luma_2);
     const float correction_3 = compute_correction(factors, luma_3);
+
     const float correction_4 = compute_correction(factors, luma_4);
     const float correction_5 = compute_correction(factors, luma_5);
     const float correction_6 = compute_correction(factors, luma_6);
     const float correction_7 = compute_correction(factors, luma_7);
-    const float correction_8 = compute_correction(factors, luma_8);
-    const float correction_9 = compute_correction(factors, luma_9);
-    const float correction_10 = compute_correction(factors, luma_10);
-    const float correction_11 = compute_correction(factors, luma_11);
 
+    // Actual processing
     process_pixel(pixel_in_0, pixel_out_0, correction_0);
     process_pixel(pixel_in_1, pixel_out_1, correction_1);
     process_pixel(pixel_in_2, pixel_out_2, correction_2);
     process_pixel(pixel_in_3, pixel_out_3, correction_3);
+
     process_pixel(pixel_in_4, pixel_out_4, correction_4);
     process_pixel(pixel_in_5, pixel_out_5, correction_5);
     process_pixel(pixel_in_6, pixel_out_6, correction_6);
     process_pixel(pixel_in_7, pixel_out_7, correction_7);
-    process_pixel(pixel_in_8, pixel_out_8, correction_8);
-    process_pixel(pixel_in_9, pixel_out_9, correction_9);
-    process_pixel(pixel_in_10, pixel_out_10, correction_10);
-    process_pixel(pixel_in_11, pixel_out_11, correction_11);
   }
 }
 
 static inline void process_image(const float *const in, float *const out,
                                   size_t width, size_t height, size_t ch,
-                                  const float factors[12], const dt_iop_toneequalizer_method_t method)
+                                  const float factors[16], const dt_iop_toneequalizer_method_t method)
 {
   // Force the compiler to compile static variants of the loop and avoid inner branching at pixel-level
   switch(method)
@@ -287,24 +288,11 @@ void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const 
 {
   const dt_iop_toneequalizer_data_t *const d = (const dt_iop_toneequalizer_data_t *const)piece->data;
 
-  const float factors[12] = { exp2f(d->params.noise),             // -18 EV
-                              exp2f(d->params.noise),             // -16 EV
-                              exp2f(d->params.noise),             // -14 EV
-                              exp2f(d->params.ultra_deep_blacks), // -12 EV
-                              exp2f(d->params.deep_blacks),       // -10 EV
-                              exp2f(d->params.blacks),            //  -8 EV
-                              exp2f(d->params.shadows),           //  -6 EV
-                              exp2f(d->params.midtones),          //  -4 EV
-                              exp2f(d->params.highlights),        //  -2 EV
-                              exp2f(d->params.whites),            //  0 EV
-                              exp2f(d->params.whites),            //  2 EV
-                              exp2f(d->params.whites)};           //  4 EV
-
   const int ch = piece->colors;
   const float *const in = (const float *const)ivoid;
   float *const out = (float *const)ovoid;
 
-  process_image(in, out, roi_out->width, roi_out->height, ch, factors, d->params.method);
+  process_image(in, out, roi_out->width, roi_out->height, ch, d->factors, d->params.method);
 }
 
 void init_global(dt_iop_module_so_t *module)
@@ -327,6 +315,27 @@ void commit_params(struct dt_iop_module_t *self, dt_iop_params_t *p1, dt_dev_pix
   dt_iop_toneequalizer_data_t *d = (dt_iop_toneequalizer_data_t *)piece->data;
 
   d->params = *p;
+
+  float factors[16] __attribute__((aligned(16))) = { d->params.noise,             // -22 EV
+                                                                d->params.noise,             // -20 EV
+                                                                d->params.noise,             // -18 EV
+                                                                d->params.noise,             // -16 EV
+                                                                d->params.noise,             // -14 EV
+                                                                d->params.ultra_deep_blacks, // -12 EV
+                                                                d->params.deep_blacks,       // -10 EV
+                                                                d->params.blacks,            //  -8 EV
+                                                                d->params.shadows,           //  -6 EV
+                                                                d->params.midtones,          //  -4 EV
+                                                                d->params.highlights,        //  -2 EV
+                                                                d->params.whites,            //  0 EV
+                                                                d->params.whites,            //  2 EV
+                                                                d->params.whites,            //  4 EV
+                                                                d->params.whites,            //  6 EV
+                                                                d->params.whites};           //  8 EV
+#ifdef _OPENMP
+#pragma omp for simd
+#endif
+  for(int c = 0; c < 16; ++c) d->factors[c] = exp2f(factors[c]);
 }
 
 void init_pipe(struct dt_iop_module_t *self, dt_dev_pixelpipe_t *pipe, dt_dev_pixelpipe_iop_t *piece)
