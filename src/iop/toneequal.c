@@ -119,6 +119,54 @@ const float centers[16] __attribute__((aligned(16))) = { -22.0f,
 // evenly spaced by 2 EV with 2 EV std should be this constant
 #define w_sum 1.772637204826214f
 
+
+/** Linear algebra stuff
+ * pixel ops written in a vectorizable way
+ * it basically duplicates SSE intrinsics
+ * */
+
+ #ifdef _OPENMP
+#pragma omp declare simd
+#endif
+static inline void pixsubpix(const float pixel_1[3], const float pixel_2[3], float pixel_out[3])
+{
+  for(int c = 0; c < 3; ++c) pixel_out[c] = pixel_1[c] - pixel_2[c];
+}
+
+#ifdef _OPENMP
+#pragma omp declare simd
+#endif
+static inline void pixmulpix(const float pixel_1[3], const float pixel_2[3], float pixel_out[3])
+{
+  for(int c = 0; c < 3; ++c) pixel_out[c] = pixel_1[c] * pixel_2[c];
+}
+
+#ifdef _OPENMP
+#pragma omp declare simd
+#endif
+static inline void pixaddpix(const float pixel_1[3], const float pixel_2[3], float pixel_out[3])
+{
+  for(int c = 0; c < 3; ++c) pixel_out[c] = pixel_1[c] + pixel_2[c];
+}
+
+#ifdef _OPENMP
+#pragma omp declare simd
+#endif
+static inline void pixdivpix(const float pixel_1[3], const float pixel_2[3], float pixel_out[3])
+{
+  for(int c = 0; c < 3; ++c) pixel_out[c] = pixel_1[c] / pixel_2[c];
+}
+
+#ifdef _OPENMP
+#pragma omp declare simd
+#endif
+static void pixmulsca(const float pixel_in[3], float pixel_out[3],
+                          const float scalar)
+{
+  for(int c = 0; c < 3; ++c) pixel_out[c] = scalar * pixel_in[c];
+}
+
+
 #ifdef _OPENMP
 #pragma omp declare simd
 #endif
@@ -169,17 +217,20 @@ static float compute_correction(const float factors[16], const float luma)
   return correction /= w_sum;
 }
 
+
 #ifdef _OPENMP
 #pragma omp declare simd
 #endif
-static void process_pixel(const float pixel_in[3], float pixel_out[3],
-                          const float correction)
+static void process_pixel(const float pixel_in[3], float pixel_out[3], const float factors[12],
+                          const dt_iop_toneequalizer_method_t method)
 {
-  // Apply the weighted contribution of each channel to the current pixel
-  for(int c = 0; c < 3; ++c) pixel_out[c] = correction * pixel_in[c];
+  const float luma = compute_exposure(pixel_in, method);
+  const float correction = compute_correction(factors, luma);
+  pixmulsca(pixel_in, pixel_out, correction);
 }
 
 
+__attribute__((optimize("unroll-loops")))
 static inline void process_image_loop(const float *const restrict in, float *const restrict out,
                                       size_t width, size_t height,
                                       const float factors[16],
@@ -190,66 +241,11 @@ static inline void process_image_loop(const float *const restrict in, float *con
 #ifdef _OPENMP
 #pragma omp parallel for simd
 #endif
-  for(size_t k = 0; k < (size_t)ch * width * height; k += 8 * ch)
+  for(size_t k = 0; k < (size_t)ch * width * height; k += ch)
   {
-    // Manually unroll loops to saturate the cache, and be savage about it
-    // we process 8 contiguous pixels at a time and give every hint to the compiler
-    // to vectorize using the maximum SSE size available
-
-    // Input vectors
-    const float *const pixel_in_0 = in + k;
-    const float *const pixel_in_1 = pixel_in_0 + ch;
-    const float *const pixel_in_2 = pixel_in_1 + ch;
-    const float *const pixel_in_3 = pixel_in_2 + ch;
-
-    const float *const pixel_in_4 = pixel_in_3 + ch;
-    const float *const pixel_in_5 = pixel_in_4 + ch;
-    const float *const pixel_in_6 = pixel_in_5 + ch;
-    const float *const pixel_in_7 = pixel_in_6 + ch;
-
-    // Output vectors
-    float *const pixel_out_0 = out + k;
-    float *const pixel_out_1 = pixel_out_0 + ch;
-    float *const pixel_out_2 = pixel_out_1 + ch;
-    float *const pixel_out_3 = pixel_out_2 + ch;
-
-    float *const pixel_out_4 = pixel_out_3 + ch;
-    float *const pixel_out_5 = pixel_out_4 + ch;
-    float *const pixel_out_6 = pixel_out_5 + ch;
-    float *const pixel_out_7 = pixel_out_6 + ch;
-
-    // Pixel lightness
-    const float luma_0 = compute_exposure(pixel_in_0, method);
-    const float luma_1 = compute_exposure(pixel_in_1, method);
-    const float luma_2 = compute_exposure(pixel_in_2, method);
-    const float luma_3 = compute_exposure(pixel_in_3, method);
-
-    const float luma_4 = compute_exposure(pixel_in_4, method);
-    const float luma_5 = compute_exposure(pixel_in_5, method);
-    const float luma_6 = compute_exposure(pixel_in_6, method);
-    const float luma_7 = compute_exposure(pixel_in_7, method);
-
-    // Pixel corrections
-    const float correction_0 = compute_correction(factors, luma_0);
-    const float correction_1 = compute_correction(factors, luma_1);
-    const float correction_2 = compute_correction(factors, luma_2);
-    const float correction_3 = compute_correction(factors, luma_3);
-
-    const float correction_4 = compute_correction(factors, luma_4);
-    const float correction_5 = compute_correction(factors, luma_5);
-    const float correction_6 = compute_correction(factors, luma_6);
-    const float correction_7 = compute_correction(factors, luma_7);
-
-    // Actual processing
-    process_pixel(pixel_in_0, pixel_out_0, correction_0);
-    process_pixel(pixel_in_1, pixel_out_1, correction_1);
-    process_pixel(pixel_in_2, pixel_out_2, correction_2);
-    process_pixel(pixel_in_3, pixel_out_3, correction_3);
-
-    process_pixel(pixel_in_4, pixel_out_4, correction_4);
-    process_pixel(pixel_in_5, pixel_out_5, correction_5);
-    process_pixel(pixel_in_6, pixel_out_6, correction_6);
-    process_pixel(pixel_in_7, pixel_out_7, correction_7);
+    const float *const pixel_in = in + k;
+    float *const pixel_out = out + k;
+    process_pixel(pixel_in, pixel_out, factors, method);
   }
 }
 
@@ -297,13 +293,17 @@ static void convolve_pixel(const float pixel_in[3], float pixel_out[3], const fl
 #endif
 static void copy_pixel(const float pixel_in[3], float pixel_out[3])
 {
+  // vectorizable memcpy
   for(int c = 0; c < 3; ++c) pixel_out[c] = pixel_in[c];
 }
 
-static inline void blur(const float *const in, float *const out, const float kernel[7],
-                      size_t width, size_t height)
+__attribute__((optimize("unroll-loops")))
+static inline void blur(const float *const in, float *const out, const float kernel[9],
+                      const size_t width, const size_t height)
 {
   const size_t ch = 4;
+  const size_t kernel_size = 9;
+  const size_t padding = floor(kernel_size / 2);
 
   float *const temp = dt_alloc_align(16, width * height * ch * sizeof(float));
 
@@ -311,9 +311,9 @@ static inline void blur(const float *const in, float *const out, const float ker
 #ifdef _OPENMP
 #pragma omp parallel for simd collapse(2)
 #endif
-  for(size_t i = 3; i < height - 3; ++i)
+  for(size_t i = padding; i < height - padding; ++i)
   {
-    for(size_t j = 3; j < width - 3; ++j)
+    for(size_t j = padding; j < width - padding; ++j)
     {
       const size_t index = (i * width + j) * ch;
       const float *pixel_in = in + index;
@@ -321,25 +321,11 @@ static inline void blur(const float *const in, float *const out, const float ker
 
       float pixel[3] __attribute__((aligned(16))) = { 0.0f };
 
-      const float *neighbour_0 = pixel_in - 4 * ch;
-      const float *neighbour_1 = pixel_in - 3 * ch;
-      const float *neighbour_2 = pixel_in - 2 * ch;
-      const float *neighbour_3 = pixel_in -  ch;
-      // neighbour_4 == pixel_in
-      const float *neighbour_5 = pixel_in + ch;
-      const float *neighbour_6 = pixel_in + 2 * ch;
-      const float *neighbour_7 = pixel_in + 3 * ch;
-      const float *neighbour_8 = pixel_in + 4 * ch;
-
-      convolve_pixel(neighbour_0, pixel, kernel, 0);
-      convolve_pixel(neighbour_1, pixel, kernel, 1);
-      convolve_pixel(neighbour_2, pixel, kernel, 2);
-      convolve_pixel(neighbour_3, pixel, kernel, 3);
-      convolve_pixel(pixel_in, pixel, kernel, 4);
-      convolve_pixel(neighbour_5, pixel, kernel, 5);
-      convolve_pixel(neighbour_6, pixel, kernel, 6);
-      convolve_pixel(neighbour_7, pixel, kernel, 7);
-      convolve_pixel(neighbour_8, pixel, kernel, 8);
+      for(size_t c = 0; c < kernel_size; ++c)
+      {
+        const float *neighbour = pixel_in + (- padding + c) * ch;
+        convolve_pixel(neighbour, pixel, kernel, c);
+      }
 
       copy_pixel(pixel, pixel_out);
     }
@@ -349,9 +335,9 @@ static inline void blur(const float *const in, float *const out, const float ker
 #ifdef _OPENMP
 #pragma omp parallel for simd collapse(2)
 #endif
-  for(size_t i = 4; i < height - 4; ++i)
+  for(size_t i = padding; i < height - padding; ++i)
   {
-    for(size_t j = 4; j < width - 4; ++j)
+    for(size_t j = padding; j < width - padding; ++j)
     {
       const size_t index = (i * width + j) * ch;
       const float *pixel_in = temp + index;
@@ -359,25 +345,11 @@ static inline void blur(const float *const in, float *const out, const float ker
 
       float pixel[3] __attribute__((aligned(16))) = { 0.0f };
 
-      const float *neighbour_0 = pixel_in - 4 * width * ch;
-      const float *neighbour_1 = pixel_in - 3 * width * ch;
-      const float *neighbour_2 = pixel_in - 2 * width * ch;
-      const float *neighbour_3 = pixel_in - width * ch;
-      // neighbour_4 = pixel_in
-      const float *neighbour_5 = pixel_in + width * ch;
-      const float *neighbour_6 = pixel_in + 2 * width * ch;
-      const float *neighbour_7 = pixel_in + 3 * width * ch;
-      const float *neighbour_8 = pixel_in + 4 * width * ch;
-
-      convolve_pixel(neighbour_0, pixel, kernel, 0);
-      convolve_pixel(neighbour_1, pixel, kernel, 1);
-      convolve_pixel(neighbour_2, pixel, kernel, 2);
-      convolve_pixel(neighbour_3, pixel, kernel, 3);
-      convolve_pixel(pixel_in, pixel, kernel, 4);
-      convolve_pixel(neighbour_5, pixel, kernel, 4);
-      convolve_pixel(neighbour_6, pixel, kernel, 5);
-      convolve_pixel(neighbour_7, pixel, kernel, 6);
-      convolve_pixel(neighbour_8, pixel, kernel, 7);
+      for(size_t c = 0; c < kernel_size; ++c)
+      {
+        const float *neighbour = pixel_in + (- padding + c) * width * ch;
+        convolve_pixel(neighbour, pixel, kernel, c);
+      }
 
       copy_pixel(pixel, pixel_out);
     }
@@ -399,7 +371,7 @@ static inline void matadd3(const float *const restrict in_1, const float *const 
     const float *pixel_2 = in_2 + k;
     float *const output = out + k;
 
-    for(int c = 0; c < 3; ++c) output[c] = pixel_1[c] + pixel_2[c];
+    pixaddpix(pixel_1, pixel_2, output);
   }
 }
 
@@ -424,6 +396,82 @@ static inline void matadd33(const float *const restrict in_1,
   }
 }
 
+
+__attribute__((optimize("unroll-loops")))
+static inline void process_scale(const float *const in, const float *const toned_in, float *const out, const float kernel[7],
+                      size_t width, size_t height, const float factors[16], const dt_iop_toneequalizer_method_t method)
+{
+  const size_t ch = 4;
+  const size_t kernel_size = 5;
+  const size_t padding = floor(kernel_size / 2);
+
+#ifdef _OPENMP
+#pragma omp parallel for simd collapse(2)
+#endif
+  for(size_t i = padding; i < height - padding; ++i)
+  {
+    for(size_t j = padding; j < width - padding; ++j)
+    {
+      const size_t index = (i * width + j) * ch;
+      const float *pixel_in = in + index;
+      const float *pixel_toned = toned_in + index;
+      float *pixel_out = out + index;
+
+      float weight = 0.0f;
+
+      const float luma_in_origin = RGB_light(pixel_in, DT_TONEEQ_MEAN);
+      const float luma_in_toned = RGB_light(pixel_toned, DT_TONEEQ_MEAN);
+
+      for(size_t m = 0; m < kernel_size; ++m)
+      {
+        for(size_t n = 0; n < kernel_size; ++n)
+        {
+          const size_t index_2 = ((- padding + m) + (- padding + n) * width) * ch;
+          const float *neighbour = pixel_in + index_2;
+          const float *neighbour_toned = pixel_toned + index_2;
+
+          const float differences = (RGB_light(neighbour, DT_TONEEQ_MEAN) - luma_in_origin) *
+                                      (RGB_light(neighbour_toned, DT_TONEEQ_MEAN) - luma_in_toned);
+
+          weight += differences * kernel[m] * kernel[n];
+        }
+      }
+
+      for(int c = 0; c < 3; ++c) pixel_out[c] = pixel_toned[c] + weight;
+    }
+  }
+}
+
+
+// Add the RGB components of 3 RGBa pictures
+static inline void blend_scales(const float *const restrict low_scale,
+                              const float *const restrict high_scale,
+                              float *const restrict out,
+                              const float sigma,
+                              size_t width, size_t height)
+{
+#ifdef _OPENMP
+#pragma omp parallel for simd
+#endif
+  for(size_t k = 0; k < (size_t)4 * width * height; k += 4)
+  {
+    const float *low = low_scale + k;
+    const float *high = low_scale + k;
+    float *const output = out + k;
+
+    const float luma_low = (low[0] + low[1] + low[2]) / 3.0f;
+    const float luma_high = (high[0] + high[1] + high[2]) / 3.0f;
+    const float geo_mean = sqrt(luma_high * luma_low);
+
+    for(int c = 0; c < 3; ++c)
+    {
+      const float alpha = (high[c] - low[c]) / geo_mean;
+      const float beta = 1.0f - alpha;
+      output[c] =  beta * low[c] + alpha * high[c];
+    }
+  }
+}
+
 // Subtract the RGB components of 2 RGBa pictures
 static inline void matsub3(const float *const restrict in_1, const float *const restrict in_2,
                               float *const restrict out,
@@ -445,11 +493,11 @@ static inline void matsub3(const float *const restrict in_1, const float *const 
 #ifdef _OPENMP
 #pragma omp declare simd
 #endif
-static inline void normalize_kernel(float kernel[9])
+static inline void normalize_kernel(float kernel[5])
 {
   float sum = 0.0f;
-  for(int i = 0; i < 9; ++i) sum += kernel[i];
-  for(int i = 0; i < 9; ++i) kernel[i] /= sum;
+  for(int i = 0; i < 5; ++i) sum += kernel[i];
+  for(int i = 0; i < 5; ++i) kernel[i] /= sum;
 }
 
 void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const void *const ivoid,
@@ -469,49 +517,16 @@ void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const 
   }
   else
   {
+    const float scale = piece->iscale / roi_in->scale;
+    const float sigma = d->params.blending / scale;
 
-    //const float scale = piece->iscale / roi_in->scale;
-    float sigma = d->params.blending;
-
-    float gauss_kernel_high[9] __attribute__((aligned(16))) = {
-                                                           GAUSSIAN_COEF(-4.0f, 0.0f, sigma),
-                                                           GAUSSIAN_COEF(-3.0f, 0.0f, sigma),
+    float gauss_kernel_high[5] __attribute__((aligned(16))) = {
                                                            GAUSSIAN_COEF(-2.0f, 0.0f, sigma),
                                                            GAUSSIAN_COEF(-1.0f, 0.0f, sigma),
                                                            GAUSSIAN_COEF(0.0f, 0.0f, sigma),
                                                            GAUSSIAN_COEF(1.0f, 0.0f, sigma),
-                                                           GAUSSIAN_COEF(2.0f, 0.0f, sigma),
-                                                           GAUSSIAN_COEF(3.0f, 0.0f, sigma),
-                                                           GAUSSIAN_COEF(4.0f, 0.0f, sigma) };
+                                                           GAUSSIAN_COEF(2.0f, 0.0f, sigma)};
     normalize_kernel(gauss_kernel_high);
-
-    sigma *= 2.0;
-
-    float gauss_kernel_med[9] __attribute__((aligned(16))) = {
-                                                           GAUSSIAN_COEF(-4.0f, 0.0f, sigma),
-                                                           GAUSSIAN_COEF(-3.0f, 0.0f, sigma),
-                                                           GAUSSIAN_COEF(-2.0f, 0.0f, sigma),
-                                                           GAUSSIAN_COEF(-1.0f, 0.0f, sigma),
-                                                           GAUSSIAN_COEF(0.0f, 0.0f, sigma),
-                                                           GAUSSIAN_COEF(1.0f, 0.0f, sigma),
-                                                           GAUSSIAN_COEF(2.0f, 0.0f, sigma),
-                                                           GAUSSIAN_COEF(3.0f, 0.0f, sigma),
-                                                           GAUSSIAN_COEF(4.0f, 0.0f, sigma) };
-    normalize_kernel(gauss_kernel_med);
-
-    sigma *= 2.0;
-
-    float gauss_kernel_low[9] __attribute__((aligned(16))) = {
-                                                           GAUSSIAN_COEF(-4.0f, 0.0f, sigma),
-                                                           GAUSSIAN_COEF(-3.0f, 0.0f, sigma),
-                                                           GAUSSIAN_COEF(-2.0f, 0.0f, sigma),
-                                                           GAUSSIAN_COEF(-1.0f, 0.0f, sigma),
-                                                           GAUSSIAN_COEF(0.0f, 0.0f, sigma),
-                                                           GAUSSIAN_COEF(1.0f, 0.0f, sigma),
-                                                           GAUSSIAN_COEF(2.0f, 0.0f, sigma),
-                                                           GAUSSIAN_COEF(3.0f, 0.0f, sigma),
-                                                           GAUSSIAN_COEF(4.0f, 0.0f, sigma) };
-    normalize_kernel(gauss_kernel_low);
 
     float *const blured_high = dt_alloc_align(16, roi_out->width * roi_in->height * ch * sizeof(float));
     float *const blured_med = dt_alloc_align(16, roi_out->width * roi_in->height * ch * sizeof(float));
@@ -526,32 +541,16 @@ void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const 
     float *const tone_low = dt_alloc_align(16, roi_out->width * roi_in->height * ch * sizeof(float));
 
     // because we don't pad for now…
-    memcpy(blured_high, in, roi_out->width * roi_in->height * ch * sizeof(float));
+    memcpy(out, in, roi_out->width * roi_in->height * ch * sizeof(float));
 
-    // Compute the first low freq
-    blur(in, blured_high, gauss_kernel_high, roi_out->width, roi_out->height);
-    matsub3(in, blured_high, residual_high, roi_out->width, roi_out->height);
+    // Tonemap the high scale
+    process_image(in, tone_high, roi_out->width, roi_out->height, d->factors, d->params.method);
 
-    // Compute the second low freq
-    blur(blured_high, blured_med, gauss_kernel_med, roi_out->width, roi_out->height);
-    matsub3(blured_high, blured_med, residual_med, roi_out->width, roi_out->height);
+    //
 
-    // Compute the third low freq
-    blur(blured_med, blured_low, gauss_kernel_low, roi_out->width, roi_out->height);
-    matsub3(blured_med, blured_low, residual_low, roi_out->width, roi_out->height);
 
-    // Tonemap the low freqs
-    process_image(blured_low, tone_low, roi_out->width, roi_out->height, d->factors, d->params.method);
-    process_image(blured_med, tone_high, roi_out->width, roi_out->height, d->factors, d->params.method);
-    process_image(blured_high, tone_high, roi_out->width, roi_out->height, d->factors, d->params.method);
-
-    // Add back high freq
-    matadd3(tone_low, residual_low, blured_low, roi_out->width, roi_out->height);
-    matadd3(tone_med, residual_med, blured_med, roi_out->width, roi_out->height);
-    matadd3(tone_high, residual_high, blured_high, roi_out->width, roi_out->height);
-
-    // synthetize
-    matadd33(blured_high, blured_med, blured_low, out, roi_out->width, roi_out->height);
+    process_scale(in, tone_high, out, gauss_kernel_high, roi_out->width, roi_out->height, d->factors, d->params.method);
+    //blur(in, out, gauss_kernel_high, roi_out->width, roi_out->height);
 
     dt_free_align(blured_high);
     dt_free_align(blured_med);
@@ -834,7 +833,7 @@ void gui_init(struct dt_iop_module_t *self)
   dt_bauhaus_combobox_add(g->details, "yes (slow)");
   g_signal_connect(G_OBJECT(g->details), "value-changed", G_CALLBACK(details_changed), self);
 
-  g->blending = dt_bauhaus_slider_new_with_range(self, 5, 9, 0.1, 0.0, 2);
+  g->blending = dt_bauhaus_slider_new_with_range(self, 1.0, 9.0, 0.1, 0.0, 2);
   dt_bauhaus_slider_set_format(g->blending, "%.2f px");
   dt_bauhaus_widget_set_label(g->blending, NULL, _("details size"));
   gtk_box_pack_start(GTK_BOX(self->widget), g->blending, TRUE, TRUE, 0);
