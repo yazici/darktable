@@ -147,20 +147,7 @@ void connect_key_accels(dt_iop_module_t *self)
     (a), (a), (a), (a)                                                                                       \
   }
 
-static const __m128 fone ALIGNED(64) = VEC4(0x3f800000u);
-static const __m128 femo ALIGNED(64) = VEC4(0x00adf880u);
-static const __m128 ooo1 ALIGNED(64) = { 0.f, 0.f, 0.f, 1.f };
-
-/* SSE intrinsics version of dt_fast_expf defined in darktable.h */
-static inline __m128 dt_fast_expf_sse2(const __m128 x)
-{
-  __m128 f = _mm_add_ps(fone, _mm_mul_ps(x, femo)); // f(n) = i1 + x(n)*(i2-i1)
-  __m128i i = _mm_cvtps_epi32(f);                   // i(n) = int(f(n))
-  __m128i mask = _mm_srai_epi32(i, 31);             // mask(n) = 0xffffffff if i(n) < 0
-  i = _mm_andnot_si128(mask, i);                    // i(n) = 0 if i(n) < 0
-  return _mm_castsi128_ps(i);                       // return *(float*)&i
-}
-
+static const __m128 ooo1 ALIGNED(16) = { 0.f, 0.f, 0.f, 1.f };
 #endif
 
 static inline void weight(const float *c1, const float *c2, const float sharpen, float *weight)
@@ -197,9 +184,10 @@ static inline __m128 weight_sse2(const __m128 c1, const __m128 c2, const float s
   const __m128 diff = (c1 - c2);
   const __m128 square = diff * diff;                                // (?, d3, d2, d1)
   const __m128 square2 = _mm_shuffle_ps(square, square, _MM_SHUFFLE(3, 1, 2, 0)); // (?, d2, d3, d1)
-  const __m128 added = square + square2 - square;                   // (?, d2+d3, d2+d3, d1)
+  __m128 added = square + square2;                                  // (?, d2+d3, d2+d3, 2*d1)
+  added = _mm_sub_ss(added, square);                                // (?, d2+d3, d2+d3, d1)
   const __m128 sharpened = added * vsharpen;                        // (?, -s*(d2+d3), -s*(d2+d3), -s*d1)
-  __m128 exp = _mm_expf_ps(sharpened);                        // (?, wc, wc, wl)
+  __m128 exp = _mm_expf_ps(sharpened);                              // (?, wc, wc, wl)
   exp = _mm_castsi128_ps(_mm_slli_si128(_mm_castps_si128(exp), 4)); // (wc, wc, wl, 0)
   exp = _mm_castsi128_ps(_mm_srli_si128(_mm_castps_si128(exp), 4)); // (0, wc, wc, wl)
   return _mm_or_ps(exp, ooo1);                                      // (1, wc, wc, wl)
@@ -1606,7 +1594,7 @@ static gboolean area_draw(GtkWidget *widget, cairo_t *crf, gpointer user_data)
     layout = pango_cairo_create_layout(cr);
     pango_layout_set_font_description(layout, desc);
     gdk_cairo_set_source_rgba(cr, &really_dark_bg_color);
-    //cairo_select_font_face(cr, "Roboto", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_BOLD);
+    cairo_select_font_face(cr, "sans-serif", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_BOLD);
     cairo_set_font_size(cr, .06 * height);
     pango_layout_set_text(layout, _("coarse"), -1);
     pango_layout_get_pixel_extents(layout, &ink, NULL);
