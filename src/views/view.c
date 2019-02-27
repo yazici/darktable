@@ -34,6 +34,7 @@
 #include "develop/develop.h"
 #include "dtgtk/expander.h"
 #include "gui/accelerators.h"
+#include "gui/draw.h"
 #include "gui/gtk.h"
 #include "libs/lib.h"
 #ifdef GDK_WINDOWING_QUARTZ
@@ -487,19 +488,6 @@ int dt_view_manager_switch_by_view(dt_view_manager_t *vm, const dt_view_t *nv)
   /* raise view changed signal */
   dt_control_signal_raise(darktable.signals, DT_SIGNAL_VIEWMANAGER_VIEW_CHANGED, old_view, new_view);
 
-  /* add endmarkers to left and right center containers */
-  GtkWidget *endmarker = gtk_drawing_area_new();
-  dt_ui_container_add_widget(darktable.gui->ui, DT_UI_CONTAINER_PANEL_LEFT_CENTER, endmarker);
-  g_signal_connect(G_OBJECT(endmarker), "draw", G_CALLBACK(dt_control_draw_endmarker), 0);
-  gtk_widget_set_size_request(endmarker, -1, DT_PIXEL_APPLY_DPI(50));
-  gtk_widget_show(endmarker);
-
-  endmarker = gtk_drawing_area_new();
-  dt_ui_container_add_widget(darktable.gui->ui, DT_UI_CONTAINER_PANEL_RIGHT_CENTER, endmarker);
-  g_signal_connect(G_OBJECT(endmarker), "draw", G_CALLBACK(dt_control_draw_endmarker), GINT_TO_POINTER(1));
-  gtk_widget_set_size_request(endmarker, -1, DT_PIXEL_APPLY_DPI(50));
-  gtk_widget_show(endmarker);
-
   return 0;
 }
 
@@ -675,32 +663,6 @@ int dt_view_manager_button_pressed(dt_view_manager_t *vm, double x, double y, do
 
 int dt_view_manager_key_pressed(dt_view_manager_t *vm, guint key, guint state)
 {
-  // ↑ ↑ ↓ ↓ ← → ← → b a
-  static int konami_state = 0;
-  static guint konami_sequence[] = {
-    GDK_KEY_Up,
-    GDK_KEY_Up,
-    GDK_KEY_Down,
-    GDK_KEY_Down,
-    GDK_KEY_Left,
-    GDK_KEY_Right,
-    GDK_KEY_Left,
-    GDK_KEY_Right,
-    GDK_KEY_b,
-    GDK_KEY_a
-  };
-  if(key == konami_sequence[konami_state])
-  {
-    konami_state++;
-    if(konami_state == G_N_ELEMENTS(konami_sequence))
-    {
-      dt_ctl_switch_mode_to("knight");
-      konami_state = 0;
-    }
-  }
-  else
-    konami_state = 0;
-
   int film_strip_result = 0;
   if(!vm->current_view) return 0;
   if(vm->current_view->key_pressed)
@@ -814,22 +776,6 @@ static inline void dt_view_draw_audio(cairo_t *cr, const float x, const float y,
   cairo_stroke(cr);
 }
 
-static inline void dt_view_star(cairo_t *cr, float x, float y, float r1, float r2)
-{
-  const float d = 2.0 * M_PI * 0.1f;
-  const float dx[10] = { sinf(0.0),   sinf(d),     sinf(2 * d), sinf(3 * d), sinf(4 * d),
-                         sinf(5 * d), sinf(6 * d), sinf(7 * d), sinf(8 * d), sinf(9 * d) };
-  const float dy[10] = { cosf(0.0),   cosf(d),     cosf(2 * d), cosf(3 * d), cosf(4 * d),
-                         cosf(5 * d), cosf(6 * d), cosf(7 * d), cosf(8 * d), cosf(9 * d) };
-  cairo_move_to(cr, x + r1 * dx[0], y - r1 * dy[0]);
-  for(int k = 1; k < 10; k++)
-    if(k & 1)
-      cairo_line_to(cr, x + r2 * dx[k], y - r2 * dy[k]);
-    else
-      cairo_line_to(cr, x + r1 * dx[k], y - r1 * dy[k]);
-  cairo_close_path(cr);
-}
-
 int32_t dt_view_get_image_to_act_on()
 {
   // this works as follows:
@@ -893,6 +839,12 @@ int dt_view_process_image_over(dt_view_image_over_t what, int active, cairo_t *c
     r2 = 0.007 * fscale;
   }
 
+  if(cr)
+  {
+    cairo_set_line_width(cr, DT_PIXEL_APPLY_DPI(1));
+    cairo_set_line_cap(cr, CAIRO_LINE_CAP_ROUND);
+  }
+
   gboolean extended_thumb_overlay = dt_conf_get_bool("plugins/lighttable/extended_thumb_overlay");
   float x, y;
   if(zoom != 1)
@@ -914,7 +866,7 @@ int dt_view_process_image_over(dt_view_image_over_t what, int active, cairo_t *c
       else
         x = (.08 + (what - DT_VIEW_STAR_1) * 0.04) * fscale;
 
-      if(cr) dt_view_star(cr, x, y, r1, r2);
+      if(cr) dt_draw_star(cr, x, y, r1, r2);
 
       if(active && (px - x) * (px - x) + (py - y) * (py - y) < r1 * r1)
       {
@@ -954,7 +906,7 @@ int dt_view_process_image_over(dt_view_image_over_t what, int active, cairo_t *c
 
       if(cr)
       {
-        if(rejected) cairo_set_line_width(cr, DT_PIXEL_APPLY_DPI(2.5));
+        if(rejected) cairo_set_line_width(cr, DT_PIXEL_APPLY_DPI(2));
 
         // reject cross:
         cairo_move_to(cr, x - r2, y - r2);
@@ -964,7 +916,7 @@ int dt_view_process_image_over(dt_view_image_over_t what, int active, cairo_t *c
         cairo_close_path(cr);
         cairo_stroke(cr);
         dt_gui_gtk_set_source_rgb(cr, outlinecol);
-        cairo_set_line_width(cr, DT_PIXEL_APPLY_DPI(1.5));
+        cairo_set_line_width(cr, DT_PIXEL_APPLY_DPI(1));
       }
 
       break;
@@ -973,7 +925,7 @@ int dt_view_process_image_over(dt_view_image_over_t what, int active, cairo_t *c
     {
       // draw grouping icon and border if the current group is expanded
       // align to the right, left of altered
-      float s = (r1 + r2) * .6;
+      float s = (r1 + r2) * .5;
       if(zoom != 1)
       {
         x = width * 0.9 - s * 2.5;
@@ -1355,10 +1307,6 @@ int dt_view_image_expose(dt_view_image_over_t *image_over, uint32_t imgid, cairo
         cairo_set_line_width(cr, DT_PIXEL_APPLY_DPI(1. / scale));
         if(zoom == 1)
         {
-          // draw shadow around border
-          cairo_set_source_rgb(cr, 0.2, 0.2, 0.2);
-          cairo_stroke(cr);
-          // cairo_new_path(cr);
           cairo_set_fill_rule(cr, CAIRO_FILL_RULE_EVEN_ODD);
           float alpha = 1.0f;
           for(int k = 0; k < 16; k++)
@@ -1400,7 +1348,7 @@ int dt_view_image_expose(dt_view_image_over_t *image_over, uint32_t imgid, cairo
     if(draw_metadata && width > DECORATION_SIZE_LIMIT)
     {
       // draw mouseover hover effects, set event hook for mouse button down!
-      cairo_set_line_width(cr, DT_PIXEL_APPLY_DPI(1.5));
+      cairo_set_line_width(cr, DT_PIXEL_APPLY_DPI(1));
       dt_gui_gtk_set_source_rgb(cr, outlinecol);
       cairo_set_line_join(cr, CAIRO_LINE_JOIN_ROUND);
 
@@ -1529,9 +1477,8 @@ int dt_view_image_expose(dt_view_image_over_t *image_over, uint32_t imgid, cairo
   // kill all paths, in case img was not loaded yet, or is blocked:
   cairo_new_path(cr);
 
-  if (draw_colorlabels)
+  if (draw_colorlabels && (darktable.gui->show_overlays || imgsel == imgid || full_preview || zoom == 1))
   {
-    // TODO: make mouse sensitive, just as stars!
     // TODO: cache in image struct!
 
     // TODO: there is a branch that sets the bg == colorlabel
