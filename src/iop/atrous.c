@@ -147,7 +147,20 @@ void connect_key_accels(dt_iop_module_t *self)
     (a), (a), (a), (a)                                                                                       \
   }
 
-static const __m128 ooo1 ALIGNED(16) = { 0.f, 0.f, 0.f, 1.f };
+static const __m128 fone ALIGNED(64) = VEC4(0x3f800000u);
+static const __m128 femo ALIGNED(64) = VEC4(0x00adf880u);
+static const __m128 ooo1 ALIGNED(64) = { 0.f, 0.f, 0.f, 1.f };
+
+/* SSE intrinsics version of dt_fast_expf defined in darktable.h */
+static inline __m128 dt_fast_expf_sse2(const __m128 x)
+{
+  __m128 f = _mm_add_ps(fone, _mm_mul_ps(x, femo)); // f(n) = i1 + x(n)*(i2-i1)
+  __m128i i = _mm_cvtps_epi32(f);                   // i(n) = int(f(n))
+  __m128i mask = _mm_srai_epi32(i, 31);             // mask(n) = 0xffffffff if i(n) < 0
+  i = _mm_andnot_si128(mask, i);                    // i(n) = 0 if i(n) < 0
+  return _mm_castsi128_ps(i);                       // return *(float*)&i
+}
+
 #endif
 
 static inline void weight(const float *c1, const float *c2, const float sharpen, float *weight)
