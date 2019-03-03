@@ -303,10 +303,10 @@ static inline void image_luminance(const float *const restrict in, float *const 
 #ifdef _OPENMP
 #pragma omp declare simd
 #endif
-static float compute_exposure(const float pixel[4], const dt_iop_toneequalizer_method_t method)
+static float compute_exposure(const float light)
 {
-  // compute the exposure (in EV) of the current pixel
-  return fmaxf(log2f(RGB_light(pixel, method)), -20.0f);
+  // compute the exposure (in EV) of the current luminance or lightness
+  return fmaxf(log2f(light), -20.0f);
 }
 
 
@@ -332,12 +332,12 @@ static float compute_correction(const float factors[PIXEL_CHAN], const float lum
 static void process_pixel(const float pixel_in[4], float pixel_out[4], const float factors[PIXEL_CHAN],
                           const dt_iop_toneequalizer_method_t method, float *const restrict luminance)
 {
-  const float luma = compute_exposure(pixel_in, method);
+  const float luma = RGB_light(pixel_in, method);
 
   // Save the luminance map - used in laplacian processing only
   if(luminance) *luminance = luma;
 
-  const float correction = compute_correction(factors, luma);
+  const float correction = compute_correction(factors, compute_exposure(luma));
   pixmulsca(pixel_in, pixel_out, correction);
 }
 
@@ -382,13 +382,13 @@ static inline void laplacian_filter(  const float *const restrict in_toned,
     {
       // Monochrome pictures - luminance maps
       size_t index = (i * width + j);
-      const float *pixel_lum_in = luminance_in + index;
-      const float *pixel_lum_toned = luminance_toned + index;
+      const float *pixel_lum_in = __builtin_assume_aligned(luminance_in + index, 4);
+      const float *pixel_lum_toned = __builtin_assume_aligned(luminance_toned + index, 4);
 
       // RGBa pictures
       index *= ch;
-      const float *pixel_in = in_toned + index;
-      float *pixel_out = out + index;
+      const float *pixel_in = __builtin_assume_aligned(in_toned + index, 16);
+      float *pixel_out = __builtin_assume_aligned(out + index, 16);
 
       // Convolution filter
       float weight = 0.0f;
@@ -427,7 +427,6 @@ static inline void process_scale( const float *const restrict in,
 
   process_image(in, in_toned, width, height, factors, method, luma_in);
   image_luminance(in_toned, luma_toned, width, height, method);
-  image_luminance(in, luma_in, width, height, method); // FIXME: process_image direct luminance output is broken but should give that
   laplacian_filter(in_toned, luma_in, luma_toned, out, width, height, kernel);
 
   dt_free_align(in_toned);
@@ -571,8 +570,8 @@ static inline void unpad_image( const float *const restrict in,
       size_t index = (i * width + j) * ch;
       size_t index_padded = (i_padded * corrected_width + j_padded) * ch;
 
-      const float *const pixel_in  = in + index_padded;
-      float *const pixel_out = out + index;
+      const float *const pixel_in  = __builtin_assume_aligned(in + index_padded, 16);
+      float *const pixel_out = __builtin_assume_aligned(out + index, 16);
 
       for(int c = 0; c < 4; ++c) pixel_out[c] = pixel_in[c];
     }
@@ -606,7 +605,7 @@ void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const 
   else
   {
     const float scale = piece->iscale / roi_in->scale;
-    const float sigma = d->params.blending / scale;
+    const float sigma = d->params.blending * scale;
 
     float gauss[KERNEL_SIZE] __attribute__((aligned(64)));
     for(int m = 0; m < KERNEL_SIZE; ++m)
