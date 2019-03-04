@@ -15,6 +15,12 @@
     You should have received a copy of the GNU General Public License
     along with darktable.  If not, see <http://www.gnu.org/licenses/>.
 */
+
+
+/** Local laplacian filter adapted from https://www.di.ens.fr/willow/pdfscurrent/Aubry14tog.pdf
+ **/
+
+
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -36,21 +42,34 @@
 #include "iop/iop_api.h"
 #include "common/iop_group.h"
 
-#if defined(__SSE__)
-#include <xmmintrin.h>
-#endif
-
-
-#define GAUSS(b, x) (expf((-(x - b) * (x - b) / 4.0f)))
-#define GAUSSIAN_COEF(x, mu, sigma) (expf( - (x - mu) * (x - mu)/(sigma * sigma) / 2.0f) /(sqrtf(2.0f * M_PI) * sigma))
 #define KERNEL_SIZE 7
 #define PADDING 3
 #define CHANNELS 8
 #define PIXEL_CHAN 12
 
-#define __OPTIM__ __attribute__((optimize("unroll-loops", "tree-loop-if-convert", "tree-loop-distribution", \
-                                          "loop-interchange", "loop-nest-optimize", "tree-loop-im", \
-                                          "unswitch-loops", "tree-loop-ivcanon", "ira-loop-pressure")))
+// For every pixel luminance, the sum of the gaussian masks
+// evenly spaced by 2 EV with 1 EV std should be this constant
+#define w_sum 1.7726372048266452f
+
+/** Note :
+ * we use finite-math-only and fast-math because divisions by zero are manually avoided in the code
+ * fp-contract=fast enables hardware-accelerated Fused Multiply-Add
+ * the rest is loop reorganization and vectorization optimization
+ **/
+
+#if defined(__GNUC__)
+#pragma GCC push_options
+#pragma GCC optimize ("tree-vectorize", "unroll-loops", "tree-loop-if-convert", \
+                      "tree-loop-distribution", "no-strict-aliasing",\
+                      "loop-interchange", "loop-nest-optimize", "tree-loop-im", \
+                      "unswitch-loops", "tree-loop-ivcanon", "ira-loop-pressure", \
+                      "split-ivs-in-unroller", "variable-expansion-in-unroller", \
+                      "split-loops", "ivopts", "predictive-commoning",\
+                      "tree-loop-linear", "loop-block", "loop-strip-mine", \
+                      "finite-math-only", "fp-contract=fast", "fast-math")
+
+#pragma GCC target("sse2", "sse3", "sse4.1", "sse4.2", "popcnt", "avx", "avx2")
+#endif
 
 
 DT_MODULE_INTROSPECTION(1, dt_iop_toneequalizer_params_t)
@@ -75,7 +94,9 @@ typedef struct dt_iop_toneequalizer_params_t
 
 typedef struct dt_iop_toneequalizer_data_t
 {
-  dt_iop_toneequalizer_params_t params;
+  dt_iop_toneequalizer_method_t method;
+  int details;
+  float blending;
   float factors[PIXEL_CHAN] __attribute__((aligned(64)));
 } dt_iop_toneequalizer_data_t;
 
@@ -125,45 +146,36 @@ const float centers[PIXEL_CHAN] __attribute__((aligned(64))) = {
                                                          2.0f,
                                                          4.0f};
 
-// For every pixel luminance, the sum of the gaussian masks
-// evenly spaced by 2 EV with 2 EV std should be this constant
-#define w_sum 1.772637204826214f
-
-
 /***
- *
- * Linear algebra stuff
- * pixel ops written in a vectorizable way
- * it basically duplicates SSE intrinsics
- *
+ * Maths
  ***/
 
 #ifdef _OPENMP
 #pragma omp declare simd
 #endif
-static void pixmulsca(const float pixel_in[4], float pixel_out[4],
-                          const float scalar)
+static float square(const float x)
 {
-  for(int c = 0; c < 4; ++c) pixel_out[c] = scalar * pixel_in[c];
+  return x * x;
 }
 
-// Subtract the RGB components of 2 RGBa pictures
-static inline void matsub3(const float *const restrict in_1, const float *const restrict in_2,
-                              float *const restrict out,
-                              size_t width, size_t height)
-{
 #ifdef _OPENMP
-#pragma omp parallel for simd
+#pragma omp declare simd
 #endif
-  for(size_t k = 0; k < (size_t)4 * width * height; k += 4)
-  {
-    const float *pixel_1 = in_1 + k;
-    const float *pixel_2 = in_2 + k;
-    float *const output = out + k;
-
-    for(int c = 0; c < 4; ++c) output[c] = pixel_1[c] - pixel_2[c];
-  }
+static float gauss(const float x, const float mean)
+{
+  // gaussian coefficient un-normalized of std = 1.0
+  return expf(-square(x - mean)/ 4.0f);
 }
+
+#ifdef _OPENMP
+#pragma omp declare simd
+#endif
+static float gaussian_coef(const float x, const float mean, const float std)
+{
+  // gaussiun coefficient normalized of arbitrary std
+  return expf(-square((x - mean)/ std)/ 2.0f) / (sqrtf(2.0f * M_PI) * std);
+}
+
 
 /***
  *
@@ -211,7 +223,12 @@ static float _RGB_norm_1(const float pixel[4])
 static float _RGB_norm_2(const float pixel[4])
 {
   float RGB_square[4] __attribute__((aligned(16)));
-  for(int i = 0; i < 4; ++i) RGB_square[i] = pixel[i] * pixel[i];
+
+#ifdef _OPENMP
+#pragma omp simd
+#endif
+  for(int i = 0; i < 4; ++i) RGB_square[i] = square(pixel[i]);
+
   return sqrtf(RGB_square[0] + RGB_square[1] + RGB_square[2]);
 }
 
@@ -223,7 +240,14 @@ static float _RGB_norm_power(const float pixel[4])
   float RGB_square[4] __attribute__((aligned(16)));
   float RGB_cubic[4] __attribute__((aligned(16)));
 
-  for(int i = 0; i < 4; ++i) RGB_square[i] = pixel[i] * pixel[i];
+#ifdef _OPENMP
+#pragma omp simd
+#endif
+  for(int i = 0; i < 4; ++i) RGB_square[i] = square(pixel[i]);
+
+#ifdef _OPENMP
+#pragma omp simd
+#endif
   for(int i = 0; i < 4; ++i) RGB_cubic[i] = RGB_square[i] * pixel[i];
 
   return (RGB_cubic[0] + RGB_cubic[1] + RGB_cubic[2]) / (RGB_square[0] + RGB_square[1] + RGB_square[2]);
@@ -275,7 +299,7 @@ static inline float RGB_light(const float pixel[4], const dt_iop_toneequalizer_m
   return -1.0;
 }
 
-__OPTIM__
+
 static inline void image_luminance(const float *const restrict in, float *const restrict out,
                                    size_t width, size_t height, const dt_iop_toneequalizer_method_t method)
 {
@@ -303,46 +327,27 @@ static inline void image_luminance(const float *const restrict in, float *const 
 #ifdef _OPENMP
 #pragma omp declare simd
 #endif
-static float compute_exposure(const float light)
-{
-  // compute the exposure (in EV) of the current luminance or lightness
-  return fmaxf(log2f(light), -20.0f);
-}
-
-
-#ifdef _OPENMP
-#pragma omp declare simd
-#endif
-static float compute_correction(const float factors[PIXEL_CHAN], const float luma)
+static float compute_correction(const float factors[PIXEL_CHAN], const float exposure)
 {
   // build the correction for the current pixel
   // as the sum of the contribution of each luminance channel
   float correction = 0.0f;
   float weights[PIXEL_CHAN] __attribute__((aligned(64)));
 
-  for (int c = 0; c < PIXEL_CHAN; ++c) weights[c] = GAUSS(centers[c], luma);
+#ifdef _OPENMP
+#pragma omp simd
+#endif
+  for (int c = 0; c < PIXEL_CHAN; ++c) weights[c] = gauss(centers[c], exposure);
+
+#ifdef _OPENMP
+#pragma omp simd reduction(+:correction)
+#endif
   for (int c = 0; c < PIXEL_CHAN; ++c) correction += weights[c] * factors[c];
+
   return correction /= w_sum;
 }
 
 
-#ifdef _OPENMP
-#pragma omp declare simd
-#endif
-static void process_pixel(const float pixel_in[4], float pixel_out[4], const float factors[PIXEL_CHAN],
-                          const dt_iop_toneequalizer_method_t method, float *const restrict luminance)
-{
-  const float luma = RGB_light(pixel_in, method);
-
-  // Save the luminance map - used in laplacian processing only
-  if(luminance) *luminance = luma;
-
-  const float correction = compute_correction(factors, compute_exposure(luma));
-  pixmulsca(pixel_in, pixel_out, correction);
-}
-
-
-__OPTIM__
 static inline void process_image(const float *const restrict in, float *const restrict out,
                                   size_t width, size_t height,
                                   const float factors[PIXEL_CHAN], const dt_iop_toneequalizer_method_t method,
@@ -351,19 +356,59 @@ static inline void process_image(const float *const restrict in, float *const re
   const size_t ch = 4;
 
 #ifdef _OPENMP
-#pragma omp parallel for simd schedule(static)
+#pragma omp parallel for schedule(static)
 #endif
-  for(size_t k = 0; k < (size_t)ch * width * height; k += ch)
+  for(size_t k = 0; k < (size_t)ch * width * height; k += 4 * ch)
   {
-    const float *const pixel_in = __builtin_assume_aligned(in + k, 16);
-    float *const pixel_out = __builtin_assume_aligned(out + k, 16);
-    float *const pixel_lum = (luminance) ? __builtin_assume_aligned(luminance + k / ch, 4) : NULL;
-    process_pixel(pixel_in, pixel_out, factors, method, pixel_lum);
+    /** Process 4 pixels at every loop step to saturate the cache and SIMD **/
+
+    const float *const pixel_in = __builtin_assume_aligned(in + k, 64);
+    float *const pixel_out = __builtin_assume_aligned(out + k, 64);
+    float *const pixel_lum = (luminance) ? __builtin_assume_aligned(luminance + k / ch, 16) : NULL;
+
+    // Get the lightness/luminance estimator
+    float luma[4] __attribute__((aligned(16)));
+
+#ifdef _OPENMP
+#pragma omp simd
+#endif
+    for(int i = 0; i < 4; ++i) luma[i] = RGB_light(pixel_in + i * ch, method);
+
+    // Save the luminance map - used in laplacian processing only
+    if(luminance)
+    {
+#ifdef _OPENMP
+#pragma omp simd
+#endif
+      for(int i = 0; i < 4; ++i) pixel_lum[i] = luma[i];
+    }
+
+    // Get the exposure
+    float exposure[4] __attribute__((aligned(16)));
+
+#ifdef _OPENMP
+#pragma omp simd
+#endif
+    for(int i = 0; i < 4; ++i) exposure[i] = fmaxf(log2f(luma[i]), -20.0f);
+
+    // Get the correction
+    float correction[4] __attribute__((aligned(16)));
+
+#ifdef _OPENMP
+#pragma omp simd
+#endif
+    for(int i = 0; i < 4; ++i) correction[i] = compute_correction(factors, exposure[i]);
+
+    // Apply the correction
+#ifdef _OPENMP
+#pragma omp simd
+#endif
+    for(int i = 0; i < 16; ++i) pixel_out[i] = correction[i / ch] * pixel_in[i];
   }
 }
 
 
-__OPTIM__
+
 static inline void laplacian_filter(  const float *const restrict in_toned,
                                       const float *const restrict luminance_in,
                                       const float *const restrict luminance_toned,
@@ -374,43 +419,61 @@ static inline void laplacian_filter(  const float *const restrict in_toned,
   const size_t ch = 4;
 
 #ifdef _OPENMP
-#pragma omp parallel for simd collapse(2) schedule(static)
+#pragma omp parallel for collapse(2) schedule(static)
 #endif
-  for(size_t i = PADDING; i < height - PADDING; ++i)
+  for(size_t i = PADDING; i < height - PADDING - 1; ++i)
   {
-    for(size_t j = PADDING; j < width - PADDING; ++j)
+    for(size_t j = PADDING; j < width - PADDING - 1; ++j)
     {
       // Monochrome pictures - luminance maps
       size_t index = (i * width + j);
-      const float *pixel_lum_in = __builtin_assume_aligned(luminance_in + index, 4);
-      const float *pixel_lum_toned = __builtin_assume_aligned(luminance_toned + index, 4);
+      const float *const pixel_lum_in = __builtin_assume_aligned(luminance_in + index, 4);
+      const float *const pixel_lum_toned = __builtin_assume_aligned(luminance_toned + index, 4);
 
       // RGBa pictures
       index *= ch;
-      const float *pixel_in = __builtin_assume_aligned(in_toned + index, 16);
-      float *pixel_out = __builtin_assume_aligned(out + index, 16);
+      const float *const pixel_in = __builtin_assume_aligned(in_toned + index, 16);
+      float *const pixel_out = __builtin_assume_aligned(out + index, 16);
+
+      // Values
+      const float in_value = *pixel_lum_in ;
+      const float toned_value = *pixel_lum_toned;
 
       // Convolution filter
       float weight = 0.0f;
 
+#ifdef _OPENMP
+#pragma omp simd reduction(+:weight)
+#endif
       for(size_t m = 0; m < KERNEL_SIZE; ++m)
       {
         for(size_t n = 0; n < KERNEL_SIZE; ++n)
         {
-          const size_t index_2 = (- PADDING + m) + (- PADDING + n) * width;
-          const float *neighbour_in = __builtin_assume_aligned(pixel_lum_in + index_2, 4);
-          const float *neighbour_toned  = __builtin_assume_aligned(pixel_lum_toned + index_2, 4);
-          weight += (*neighbour_toned - *pixel_lum_toned) * (*neighbour_in - *pixel_lum_in) *
-                    kernel[m][n];
+          const size_t index_2 = (- PADDING + n) + (- PADDING + m) * width;
+
+          // Neighbours
+          const float *const neighbour_in = __builtin_assume_aligned(pixel_lum_in + index_2, 4);
+          const float *const neighbour_toned  = __builtin_assume_aligned(pixel_lum_toned + index_2, 4);
+
+          // Values - We need to copy them to use hardware FMA
+          const float in_nei_value = *neighbour_in;
+          const float toned_nei_value = *neighbour_toned;
+
+          weight += (toned_nei_value - toned_value) * (in_nei_value - in_value) * kernel[m][n];
         }
       }
 
       // Corrective ratio to apply on the toned image
-      const float ratio =  *pixel_lum_toned / (*pixel_lum_toned + weight);
+      const float ratio =  toned_value / (toned_value + weight);
+
+#ifdef _OPENMP
+#pragma omp simd
+#endif
       for(int c = 0; c < 4; ++c) pixel_out[c] = pixel_in[c] * ratio;
     }
   }
 }
+
 
 
 static inline void process_scale( const float *const restrict in,
@@ -421,18 +484,32 @@ static inline void process_scale( const float *const restrict in,
                                   const dt_iop_toneequalizer_method_t method)
 {
   const size_t ch = 4;
-  float *in_toned = (float *)__builtin_assume_aligned(dt_alloc_align(64, width * height * ch * sizeof(float)), 64);
-  float *luma_in = (float *)__builtin_assume_aligned(dt_alloc_align(64, width * height * sizeof(float)), 64);
-  float *luma_toned = (float *)__builtin_assume_aligned(dt_alloc_align(64, width * height * sizeof(float)), 64);
+
+  float *in_toned = NULL;
+  float *luma_in = NULL;
+  float *luma_toned = NULL;
+
+  in_toned = dt_alloc_align(64, width * height * ch * sizeof(float));
+  luma_in = dt_alloc_align(64, width * height * sizeof(float));
+  luma_toned = dt_alloc_align(64, width * height * sizeof(float));
+
+  if(in_toned == NULL || luma_in == NULL || luma_toned == NULL)
+  {
+    dt_control_log(_("tone equalizer : unable to allocate memory"));
+    goto clean;
+  }
 
   process_image(in, in_toned, width, height, factors, method, luma_in);
   image_luminance(in_toned, luma_toned, width, height, method);
   laplacian_filter(in_toned, luma_in, luma_toned, out, width, height, kernel);
 
+clean:
   dt_free_align(in_toned);
   dt_free_align(luma_in);
   dt_free_align(luma_toned);
+  return;
 }
+
 
 static inline void pad_image( const float *const restrict in,
                                float *const restrict out,
@@ -449,7 +526,7 @@ static inline void pad_image( const float *const restrict in,
 
   // Duplicate the valid region shifted of (padding ; padding)
 #ifdef _OPENMP
-#pragma omp parallel for simd collapse(2) schedule(static)
+#pragma omp parallel for collapse(2) schedule(dynamic, 8)
 #endif
   for(size_t i = 0; i < height; ++i)
   {
@@ -462,13 +539,17 @@ static inline void pad_image( const float *const restrict in,
       size_t index_padded = (i_padded * corrected_width + j_padded) * ch;
       const float *const pixel_in  = __builtin_assume_aligned(in + index, 16);
       float *const pixel_out = __builtin_assume_aligned(out + index_padded, 16);
+
+#ifdef _OPENMP
+#pragma omp simd
+#endif
       for(int c = 0; c < 4; ++c) pixel_out[c] = pixel_in[c];
     }
   }
 
   // Symmetrize top rows
 #ifdef _OPENMP
-#pragma omp parallel for simd collapse(2) schedule(static)
+#pragma omp parallel for collapse(2) schedule(dynamic, 8)
 #endif
   for(size_t i = 1; i < PADDING; ++i)
   {
@@ -481,15 +562,19 @@ static inline void pad_image( const float *const restrict in,
       size_t index_padded = (i_padded * corrected_width + j_padded) * ch;
       const float *const pixel_in  = __builtin_assume_aligned(in + index, 16);
       float *const pixel_out = __builtin_assume_aligned(out + index_padded, 16);
+
+#ifdef _OPENMP
+#pragma omp simd
+#endif
       for(int c = 0; c < 4; ++c) pixel_out[c] = pixel_in[c];
     }
   }
 
   // Symmetrize bottom rows
 #ifdef _OPENMP
-#pragma omp parallel for simd collapse(2) schedule(static)
+#pragma omp parallel for collapse(2) schedule(dynamic, 8)
 #endif
-  for(size_t i = height - PADDING; i < height; ++i)
+  for(size_t i = height - PADDING - 1; i < height; ++i)
   {
     for(size_t j = 0; j < width; ++j)
     {
@@ -500,13 +585,17 @@ static inline void pad_image( const float *const restrict in,
       size_t index_padded = (i_padded * corrected_width + j_padded) * ch;
       const float *const pixel_in  = __builtin_assume_aligned(in + index, 16);
       float *const pixel_out = __builtin_assume_aligned(out + index_padded, 16);
+
+#ifdef _OPENMP
+#pragma omp simd
+#endif
       for(int c = 0; c < 4; ++c) pixel_out[c] = pixel_in[c];
     }
   }
 
   // Symmetrize left columns
 #ifdef _OPENMP
-#pragma omp parallel for simd collapse(2) schedule(static)
+#pragma omp parallel for collapse(2) schedule(dynamic, 8)
 #endif
   for(size_t i = 0; i < height; ++i)
   {
@@ -519,17 +608,21 @@ static inline void pad_image( const float *const restrict in,
       size_t index_padded = (i_padded * corrected_width + j_padded) * ch;
       const float *const pixel_in  = __builtin_assume_aligned(in + index, 16);
       float *const pixel_out = __builtin_assume_aligned(out + index_padded, 16);
+
+#ifdef _OPENMP
+#pragma omp simd
+#endif
       for(int c = 0; c < 4; ++c) pixel_out[c] = pixel_in[c];
     }
   }
 
   // Symmetrize right columns
 #ifdef _OPENMP
-#pragma omp parallel for simd collapse(2) schedule(static)
+#pragma omp parallel for collapse(2) schedule(dynamic, 8)
 #endif
   for(size_t i = 0; i < height; ++i)
   {
-    for(size_t j = width - PADDING; j < width; ++j)
+    for(size_t j = width - PADDING - 1; j < width; ++j)
     {
       // Note : i and j are relative to the smaller (input) space
       const size_t i_padded = i + PADDING;
@@ -538,10 +631,15 @@ static inline void pad_image( const float *const restrict in,
       size_t index_padded = (i_padded * corrected_width + j_padded) * ch;
       const float *const pixel_in  = __builtin_assume_aligned(in + index, 16);
       float *const pixel_out = __builtin_assume_aligned(out + index_padded, 16);
+
+#ifdef _OPENMP
+#pragma omp simd
+#endif
       for(int c = 0; c < 4; ++c) pixel_out[c] = pixel_in[c];
     }
   }
 }
+
 
 static inline void unpad_image( const float *const restrict in,
                                 float *const restrict out,
@@ -555,9 +653,9 @@ static inline void unpad_image( const float *const restrict in,
   const size_t ch = 4;
   const size_t corrected_width = (width + 2 * PADDING);
 
-  // Duplicate the valid region shifted
+  // Duplicate the inner valid region shifted by (padding;padding)
 #ifdef _OPENMP
-#pragma omp parallel for simd collapse(2) schedule(static)
+#pragma omp parallel for collapse(2) schedule(dynamic, 8)
 #endif
   for(size_t i = 0; i < height; ++i)
   {
@@ -573,6 +671,9 @@ static inline void unpad_image( const float *const restrict in,
       const float *const pixel_in  = __builtin_assume_aligned(in + index_padded, 16);
       float *const pixel_out = __builtin_assume_aligned(out + index, 16);
 
+#ifdef _OPENMP
+#pragma omp simd
+#endif
       for(int c = 0; c < 4; ++c) pixel_out[c] = pixel_in[c];
     }
   }
@@ -584,54 +685,71 @@ static inline void unpad_image( const float *const restrict in,
 static inline void normalize_kernel(float kernel[KERNEL_SIZE])
 {
   float sum = 0.0f;
+
+#ifdef _OPENMP
+#pragma omp simd reduction(+:sum)
+#endif
   for(int i = 0; i < KERNEL_SIZE; ++i) sum += kernel[i];
+
+#ifdef _OPENMP
+#pragma omp simd
+#endif
   for(int i = 0; i < KERNEL_SIZE; ++i) kernel[i] /= sum;
 }
+
 
 void process(struct dt_iop_module_t *self, dt_dev_pixelpipe_iop_t *piece, const void *const ivoid,
              void *const ovoid, const dt_iop_roi_t *const roi_in, const dt_iop_roi_t *const roi_out)
 {
   const dt_iop_toneequalizer_data_t *const d = (const dt_iop_toneequalizer_data_t *const)piece->data;
 
-  const float *const in  = (const float *const)__builtin_assume_aligned(ivoid, 64);
-  float *const out  = (float *const)__builtin_assume_aligned(ovoid, 64);
+  const float *const in  = (const float *const)ivoid;
+  float *const out  = (float *const)ovoid;
 
   assert(piece->colors == 4);
 
-  if(!d->params.details)
+  if(!d->details)
   {
-    process_image(in, out, roi_out->width, roi_out->height, d->factors, d->params.method, NULL);
+    process_image(in, out, roi_out->width, roi_out->height, d->factors, d->method, NULL);
   }
   else
   {
     const float scale = piece->iscale / roi_in->scale;
-    const float sigma = d->params.blending * scale;
+    const float sigma = d->blending * scale;
 
-    float gauss[KERNEL_SIZE] __attribute__((aligned(64)));
+    float gauss_1D[KERNEL_SIZE] __attribute__((aligned(64)));
     for(int m = 0; m < KERNEL_SIZE; ++m)
-      gauss[m] = GAUSSIAN_COEF(m - PADDING, 0.0f, sigma);
-    normalize_kernel(gauss);
+      gauss_1D[m] = gaussian_coef((float)(m - PADDING), 0.0f, sigma);
+
+    normalize_kernel(gauss_1D);
 
     float gauss_kernel[KERNEL_SIZE][KERNEL_SIZE] __attribute__((aligned(64)));
     for(int m = 0; m < KERNEL_SIZE; ++m)
       for(int n = 0; n < KERNEL_SIZE; ++n)
-        gauss_kernel[m][n] = gauss[m] * gauss[n];
+        gauss_kernel[m][n] = gauss_1D[m] * gauss_1D[n];
 
     const size_t width_padded = roi_out->width + 2 * PADDING;
     const size_t height_padded = roi_out->height + 2 * PADDING;
     const size_t ch = 4;
 
-    float *in_padded = (float *)__builtin_assume_aligned(dt_alloc_align(64, width_padded * height_padded * ch * sizeof(float)), 64);
-    float *out_padded = (float *)__builtin_assume_aligned(dt_alloc_align(64, width_padded * height_padded * ch * sizeof(float)), 64);
+    float *in_padded = dt_alloc_align(64, width_padded * height_padded * ch * sizeof(float));
+    float *out_padded = dt_alloc_align(64, width_padded * height_padded * ch * sizeof(float));
 
     pad_image(in, in_padded, roi_out->width, roi_out->height);
-    process_scale(in_padded, out_padded, width_padded, height_padded, gauss_kernel, d->factors, d->params.method);
+    process_scale(in_padded, out_padded, width_padded, height_padded, gauss_kernel, d->factors, d->method);
     unpad_image(out_padded, out, roi_out->width, roi_out->height);
 
     dt_free_align(in_padded);
     dt_free_align(out_padded);
   }
+
+  if(piece->pipe->mask_display & DT_DEV_PIXELPIPE_DISPLAY_MASK) dt_iop_alpha_copy(in, out, roi_in->width, roi_in->height);
+
 }
+
+#if defined(__GNUC__)
+#pragma GCC pop_options
+#endif
 
 void init_global(dt_iop_module_so_t *module)
 {
@@ -652,24 +770,27 @@ void commit_params(struct dt_iop_module_t *self, dt_iop_params_t *p1, dt_dev_pix
   dt_iop_toneequalizer_params_t *p = (dt_iop_toneequalizer_params_t *)p1;
   dt_iop_toneequalizer_data_t *d = (dt_iop_toneequalizer_data_t *)piece->data;
 
-  d->params = *p;
-
   float factors[PIXEL_CHAN] __attribute__((aligned(64))) = {0.0f,             // -18 EV
-                                                    d->params.noise,             // -16 EV
-                                                    d->params.noise,             // -14 EV
-                                                    d->params.ultra_deep_blacks, // -12 EV
-                                                    d->params.deep_blacks,       // -10 EV
-                                                    d->params.blacks,            //  -8 EV
-                                                    d->params.shadows,           //  -6 EV
-                                                    d->params.midtones,          //  -4 EV
-                                                    d->params.highlights,        //  -2 EV
-                                                    d->params.whites,            //  0 EV
-                                                    d->params.whites,            //  2 EV
+                                                    p->noise,             // -16 EV
+                                                    p->noise,             // -14 EV
+                                                    p->ultra_deep_blacks, // -12 EV
+                                                    p->deep_blacks,       // -10 EV
+                                                    p->blacks,            //  -8 EV
+                                                    p->shadows,           //  -6 EV
+                                                    p->midtones,          //  -4 EV
+                                                    p->highlights,        //  -2 EV
+                                                    p->whites,            //  0 EV
+                                                    p->whites,            //  2 EV
                                                     0.0f};           //  4 EV
+
 #ifdef _OPENMP
-#pragma omp for simd schedule(static)
+#pragma omp simd
 #endif
   for(int c = 0; c < PIXEL_CHAN; ++c) d->factors[c] = exp2f(factors[c]);
+
+  d->blending = p->blending;
+  d->method = p->method;
+  d->details = p->details;
 }
 
 void init_pipe(struct dt_iop_module_t *self, dt_dev_pixelpipe_t *pipe, dt_dev_pixelpipe_iop_t *piece)
@@ -829,8 +950,8 @@ void gui_init(struct dt_iop_module_t *self)
 
   self->widget = gtk_box_new(GTK_ORIENTATION_VERTICAL, DT_GUI_IOP_MODULE_CONTROL_SPACING);
 
-  const float top = 2.0;
-  const float bottom = -2.0;
+  const float top = 4.0;
+  const float bottom = -4.0;
 
   g->noise = dt_bauhaus_slider_new_with_range(self, bottom, top, 0.1, 0.0, 2);
   dt_bauhaus_slider_set_format(g->noise, "%+.2f EV");
@@ -898,7 +1019,7 @@ void gui_init(struct dt_iop_module_t *self)
   dt_bauhaus_combobox_add(g->details, "laplacian (slow)");
   g_signal_connect(G_OBJECT(g->details), "value-changed", G_CALLBACK(details_changed), self);
 
-  g->blending = dt_bauhaus_slider_new_with_range(self, 0.5, 14.0, 0.1, 5.0, 2);
+  g->blending = dt_bauhaus_slider_new_with_range(self, 0.5, 35.0, 0.1, 5.0, 2);
   dt_bauhaus_slider_set_format(g->blending, "%.2f px");
   dt_bauhaus_widget_set_label(g->blending, NULL, _("details size"));
   gtk_box_pack_start(GTK_BOX(self->widget), g->blending, TRUE, TRUE, 0);
